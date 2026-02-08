@@ -100,7 +100,7 @@
 				"npm run test passes"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the central nervous system of chat. The onMessage callback from AgentStreamManager should update the assistant message in the messages store in-place so Svelte reactivity picks up the streaming text. Optimistic user messages get a temporary ID, replaced by the real ID from the server ack."
 		},
 		{

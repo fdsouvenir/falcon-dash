@@ -11,6 +11,10 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
 - All types re-exported via `src/lib/gateway/index.ts` barrel (`export * from './types'`)
 - Stores barrel: `src/lib/stores/index.ts` — explicitly named exports (not `export *`)
 - Svelte store Maps need `new Map(map)` on update to trigger reactivity
+- Chat store wires gateway.on('agent') to stream manager's handleEvent in initChatListeners()
+- Optimistic inserts use temp IDs (`temp-{timestamp}-{counter}`), replaced after server ack
+- For arrays inside a Map store, spread into new array `[...list]` to trigger Svelte reactivity
+- activeRun derived store uses polling (setInterval 200ms) since stream manager is not a store
 
 ---
 
@@ -54,4 +58,21 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Svelte store reactivity with Maps requires creating a new Map instance on update (`new Map(map)`)
   - updateSession() takes Omit<SessionPatchParams, 'sessionKey'> for clean API — sessionKey passed separately
   - `get()` from svelte/store used for one-off reads (e.g., checking activeSessionKey in removeSession)
+---
+
+## 2026-02-08 - US-020
+- Created `src/lib/stores/chat.ts` — central chat store managing messages, streaming, and gateway ops
+- Added: messages store (Map<string, ChatMessage[]>), getMessages(), activeRun derived store
+- Functions: sendMessage(), loadHistory(), injectMessage(), abortRun(), initChatListeners(), destroyChatListeners()
+- sendMessage() does optimistic user message insert with temp ID, replaces after ack
+- initChatListeners() wires gateway.on('agent') to stream manager's handleEvent
+- onMessage callback updates assistant messages in-place for streaming reactivity
+- loadHistory() supports afterSeq param for reconnection gap fill (deduplicates by ID)
+- Updated `src/lib/stores/index.ts` barrel with all chat exports
+- Files changed: `src/lib/stores/chat.ts` (new), `src/lib/stores/index.ts`
+- **Learnings for future iterations:**
+  - activeRun uses polling (setInterval 200ms) since AgentStreamManager is a plain class, not a Svelte store
+  - Optimistic insert pattern: insert temp message → call gateway → replace temp ID with server ID → stream manager handles ack
+  - Array reactivity in Map stores requires both `[...list]` spread and `new Map(map)` for Svelte to detect changes
+  - destroyChatListeners() resets stream manager to prevent stale state across route navigations
 ---
