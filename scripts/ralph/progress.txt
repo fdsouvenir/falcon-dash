@@ -148,3 +148,15 @@ Branch: ralph/phase-1-core-infrastructure
 - **Learnings for future iterations:**
   - eslint-plugin-svelte enforces `resolve()` for href — disable for Svelte 4 static routes
 ---
+
+## 2026-02-08 - US-011
+- Created src/lib/components/Sidebar.svelte — extracted from layout
+- Active route highlighting using $page store from $app/stores
+- Channels section (placeholder), Apps section (Projects, Files, Agent Jobs)
+- Settings + Passwords links at bottom
+- Keyed each blocks to satisfy `svelte/require-each-key` ESLint rule
+- Layout now imports and renders Sidebar component
+- **Learnings for future iterations:**
+  - eslint-plugin-svelte requires keys on each blocks (`{#each items as item (item.key)}`)
+  - Use `$page.url.pathname` for active route detection
+---

@@ -235,7 +235,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 13,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §11 for sidebar layout. Use $app/stores for page store. Links can point to placeholder routes for now."
 		},
 		{

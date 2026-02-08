@@ -1,5 +1,6 @@
 <script>
 	import '../app.css';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let sidebarOpen = false;
 
@@ -26,75 +27,7 @@
 		class:translate-x-0={sidebarOpen}
 		class:-translate-x-full={!sidebarOpen}
 	>
-		<!-- Logo -->
-		<div class="flex h-14 items-center border-b border-slate-700 px-4">
-			<span class="text-lg font-semibold text-slate-100">falcon-dash</span>
-		</div>
-
-		<!-- Channels section -->
-		<div class="flex-1 overflow-y-auto px-3 py-4">
-			<h3 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-				Channels
-			</h3>
-			<ul class="space-y-1">
-				<li>
-					<span class="block rounded px-2 py-1.5 text-sm text-slate-400">No channels yet</span>
-				</li>
-			</ul>
-
-			<!-- Apps section -->
-			<h3 class="mb-2 mt-6 px-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-				Apps
-			</h3>
-			<ul class="space-y-1">
-				<li>
-					<a
-						href="/projects"
-						class="block rounded px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
-					>
-						Projects
-					</a>
-				</li>
-				<li>
-					<a
-						href="/files"
-						class="block rounded px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
-					>
-						Files
-					</a>
-				</li>
-				<li>
-					<a
-						href="/jobs"
-						class="block rounded px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
-					>
-						Agent Jobs
-					</a>
-				</li>
-			</ul>
-		</div>
-
-		<!-- Sidebar footer -->
-		<div class="border-t border-slate-700 px-3 py-3">
-			<ul class="space-y-1">
-				<li>
-					<a
-						href="/settings"
-						class="block rounded px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
-					>
-						Settings
-					</a>
-				</li>
-				<li>
-					<a
-						href="/passwords"
-						class="block rounded px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
-					>
-						Passwords
-					</a>
-				</li>
-			</ul>
-		</div>
+		<Sidebar />
 	</aside>
 
 	<!-- Main content area -->
