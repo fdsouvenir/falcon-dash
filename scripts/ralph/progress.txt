@@ -218,3 +218,46 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run check: 0 errors, 14 pre-existing warnings
 - npm run build: pass
 - **Learnings for future iterations:** Lit web components must be loaded via script tag (not ES module import) since the bundle self-registers the custom element. Use customElements.whenDefined() to wait for registration. The action bridge must be set up on globalThis BEFORE the bundle loads. Cache the bundle load promise globally to prevent double-loading across multiple A2UIHost instances. The A2UIHostElement interface abstracts the Lit component's public API for TypeScript consumers.
+
+## 2026-02-08 - US-071: Canvas iframe and custom apps
+- Added types to `src/lib/types/canvas.ts`:
+  - CanvasFrameConfig (baseUrl, path, title)
+  - CustomAppMode ('a2ui' | 'canvas')
+  - CustomApp (id, name, mode, order, canvasPath, a2uiMessages, pinnedAt)
+- Created `src/lib/stores/apps.ts`:
+  - customApps writable store with localStorage persistence (falcon-dash:custom-apps)
+  - sortedCustomApps derived store sorted by order field
+  - pinApp() — add new custom app with deduplication
+  - unpinApp() — remove by id
+  - renameApp() — update display name
+  - reorderApps() — drag-and-drop reorder by fromIndex/toIndex
+  - updateAppMessages() — update A2UI messages for a pinned app
+  - getApp() — lookup by id
+- Created `src/lib/components/canvas/CanvasFrame.svelte`:
+  - Sandboxed iframe with sandbox="allow-scripts" (no allow-same-origin for security)
+  - Constructs src URL from baseUrl + path props
+  - Loading spinner overlay while iframe loads
+  - Error state with helpful message if canvas host unavailable
+  - Dispatches load and error events
+  - Fills container (h-full w-full) with rounded border
+- Updated `src/lib/components/Sidebar.svelte`:
+  - Added "Custom Apps" section below built-in Apps when custom apps exist
+  - Each custom app links to /apps/{id} with active state highlighting
+  - Drag-and-drop reorder via HTML5 Drag API (dragstart/dragover/drop/dragend)
+  - Unpin button (X icon) appears on hover for each custom app
+  - Uses sortedCustomApps derived store for display order
+- Created `src/routes/apps/[id]/+page.ts` with ssr = false
+- Created `src/routes/apps/[id]/+page.svelte`:
+  - Header bar with app name, rename (pencil icon), mode badge (A2UI/Canvas), unpin button
+  - Inline rename with Enter to save, Escape to cancel
+  - Canvas mode renders CanvasFrame component
+  - A2UI mode renders A2UIHost component in standalone mode
+  - Empty state for apps with no content
+  - 404-like state for unknown app IDs with "Go Home" link
+  - Unpin navigates back to home
+- Updated barrel exports: canvas/index.ts, stores/index.ts, types/index.ts
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- npm run build: pass
+- npm run test: pass (1 test)
+- **Learnings for future iterations:** Custom apps stored in localStorage since no backend persistence exists yet. HTML5 Drag API (draggable, dragstart, dragover, drop) works well for simple reorder in Svelte 4 with on:event syntax. SvelteKit route params ($page.params.id) can be undefined — use nullish coalescing. The CanvasFrame security model uses sandbox="allow-scripts" without allow-same-origin to prevent the iframe from accessing the parent document.

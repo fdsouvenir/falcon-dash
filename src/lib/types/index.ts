@@ -120,5 +120,8 @@ export type {
 	A2UIUserAction,
 	A2UIActionPayload,
 	A2UIHostElement,
-	A2UIBundleState
+	A2UIBundleState,
+	CanvasFrameConfig,
+	CustomAppMode,
+	CustomApp
 } from './canvas';

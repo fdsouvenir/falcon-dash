@@ -196,7 +196,7 @@
 				"npm run test passes"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §2.4 and §12. Canvas host URL is http://<host>:18793/__openclaw__/canvas/. Custom apps are stored in localStorage since there's no backend persistence for pinned apps yet."
 		}
 	]

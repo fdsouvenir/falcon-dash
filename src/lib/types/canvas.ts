@@ -106,3 +106,42 @@ export interface A2UIHostElement extends HTMLElement {
 // ---------------------------------------------------------------------------
 
 export type A2UIBundleState = 'idle' | 'loading' | 'ready' | 'error';
+
+// ---------------------------------------------------------------------------
+// Canvas Frame (Sandboxed HTML Canvas)
+// ---------------------------------------------------------------------------
+
+/** Configuration for a sandboxed HTML canvas iframe */
+export interface CanvasFrameConfig {
+	/** Canvas host base URL (e.g. http://host:18793/__openclaw__/canvas/) */
+	baseUrl: string;
+	/** Canvas path relative to the base URL */
+	path: string;
+	/** Optional title for the canvas */
+	title?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Custom Apps (Pinned Canvas Views)
+// ---------------------------------------------------------------------------
+
+/** Rendering mode for a custom app */
+export type CustomAppMode = 'a2ui' | 'canvas';
+
+/** A pinned custom app entry */
+export interface CustomApp {
+	/** Unique identifier */
+	id: string;
+	/** Display name (agent-provided or user-edited) */
+	name: string;
+	/** Rendering mode */
+	mode: CustomAppMode;
+	/** Sort order (lower = higher in list) */
+	order: number;
+	/** For canvas mode: iframe URL path */
+	canvasPath?: string;
+	/** For a2ui mode: last known messages */
+	a2uiMessages?: Array<Record<string, unknown>>;
+	/** Timestamp when pinned */
+	pinnedAt: number;
+}

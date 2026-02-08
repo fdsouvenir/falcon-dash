@@ -173,3 +173,13 @@ export {
 	initSettingsListeners,
 	destroySettingsListeners
 } from './settings';
+export {
+	customApps,
+	sortedCustomApps,
+	pinApp,
+	unpinApp,
+	renameApp,
+	reorderApps,
+	updateAppMessages,
+	getApp
+} from './apps';
