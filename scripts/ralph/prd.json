@@ -200,7 +200,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 11,
-			"passes": false,
+			"passes": true,
 			"notes": "This store bridges the gateway client to Svelte components. Components subscribe to this for connection-aware rendering."
 		},
 		{

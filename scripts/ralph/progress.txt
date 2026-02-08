@@ -130,3 +130,10 @@ Branch: ralph/phase-1-core-infrastructure
   - waitForHelloOk() intercepts the connect response (id=1) before normal routing
   - Unused type imports trigger ESLint errors — clean up imports carefully
 ---
+
+## 2026-02-08 - US-009
+- Created src/lib/stores/connection.ts — connection store
+- connectionState derived from gateway.state, isReconnecting derived from connectionState
+- gatewayUrl, connId, serverVersion as writable stores
+- Created src/lib/stores/index.ts — barrel export
+---
