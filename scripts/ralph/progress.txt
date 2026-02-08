@@ -47,3 +47,23 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run check: 0 errors, 14 pre-existing warnings
 - npm run build: pass
 - **Learnings for future iterations:** URL hash tracking uses `$page.url.hash` from `$app/stores` and `goto` with `replaceState: true`. Tab pattern follows jobs route closely. Tabs overflow handled with `overflow-x-auto` wrapper + `min-w-max` inner div.
+
+## 2026-02-08 - US-064: Workspace tab — agent file editor
+- Created `src/lib/components/settings/WorkspaceTab.svelte`:
+  - Left pane: list of 8 known workspace files (SOUL.md, AGENTS.md, TOOLS.md, USER.md, IDENTITY.md, HEARTBEAT.md, BOOTSTRAP.md, MEMORY.md)
+  - Each file shows name, purpose description, and relative last-modified time
+  - Files that don't exist show "Create" button; existing files are clickable to preview
+  - Right pane: FilePreview for rendered markdown, FileEditor for editing
+  - Edit/Reset buttons in preview header; Reset uses ConfirmDialog for confirmation
+  - Save via PUT /api/workspace/files/:name with hash concurrency (reuses saveFile store)
+  - Create via createFile store function with empty content
+  - Success/error toast notification with 3-second auto-dismiss
+  - Responsive: stacked on mobile, side-by-side on md+
+- Updated `src/routes/settings/+page.svelte`:
+  - Imported WorkspaceTab component
+  - Replaced workspace placeholder with `<WorkspaceTab />`
+  - Adjusted tab content container to remove padding for workspace tab (WorkspaceTab manages its own layout)
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- npm run build: pass
+- **Learnings for future iterations:** Settings tab panels that have their own layout (split pane) need the outer container to drop `overflow-y-auto p-6` and use `overflow-hidden` instead. Conditional class on tab content div works well for this.

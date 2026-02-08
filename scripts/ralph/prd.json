@@ -62,7 +62,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Known workspace files: SOUL.md, AGENTS.md, TOOLS.md, USER.md, IDENTITY.md, HEARTBEAT.md, BOOTSTRAP.md, MEMORY.md. Reuse components from src/lib/components/files/."
 		},
 		{

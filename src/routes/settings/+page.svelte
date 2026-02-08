@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import WorkspaceTab from '$lib/components/settings/WorkspaceTab.svelte';
 
 	type SettingsTab =
 		| 'workspace'
@@ -80,17 +81,9 @@
 	</div>
 
 	<!-- Tab content -->
-	<div class="flex-1 overflow-y-auto p-6">
+	<div class="flex-1 overflow-hidden {activeTab === 'workspace' ? '' : 'overflow-y-auto p-6'}">
 		{#if activeTab === 'workspace'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">
-					Workspace
-				</h2>
-				<p class="text-sm text-slate-400">
-					Edit workspace definition files — SOUL.md, AGENTS.md, TOOLS.md, USER.md, IDENTITY.md, and
-					more.
-				</p>
-			</div>
+			<WorkspaceTab />
 		{:else if activeTab === 'information'}
 			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
 				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">
