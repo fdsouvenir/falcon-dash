@@ -19,7 +19,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 1,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference builddocs/falcon-dash-architecture-v02.md §2.2 for the full method surface (~45 methods across 13 groups). Reference builddocs/pm-spec.md for entity schema details."
 		},
 		{
@@ -39,7 +39,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Follow the gateway event listener pattern from src/lib/stores/chat.ts. Optimistic updates: set store value immediately, call gateway, revert on error. stateVersion comes from event frames — if gap detected, refetch affected entities."
 		},
 		{
@@ -61,7 +61,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the default view when clicking Projects in the sidebar. Reference architecture doc §14 for PM dashboard layout."
 		},
 		{
@@ -83,7 +83,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "This sidebar appears within the /projects route, not the main app sidebar. It's a secondary navigation panel for the PM module."
 		},
 		{
