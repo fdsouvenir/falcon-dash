@@ -76,7 +76,7 @@
 				"npm run test passes"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Wire to gateway via gateway.call('sessions.list') and gateway.call('sessions.patch'). The session store is consumed by the sidebar for session switching and by the chat route for active session context."
 		},
 		{

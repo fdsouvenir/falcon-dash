@@ -9,6 +9,8 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
 - Response types named as `{Method}Response` or `{Method}Ack` for ack patterns
 - AgentEvent types use `kind` discriminator field with `sessionKey` and `runId` for routing
 - All types re-exported via `src/lib/gateway/index.ts` barrel (`export * from './types'`)
+- Stores barrel: `src/lib/stores/index.ts` — explicitly named exports (not `export *`)
+- Svelte store Maps need `new Map(map)` on update to trigger reactivity
 
 ---
 
@@ -37,4 +39,19 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - sessionRuns map provides O(1) lookup of active run by sessionKey
   - cleanup() removes from all three maps (runs, sessionRuns, messages) after text_end or abort
   - getStreamMessage(runId) allows chat store to read in-progress message for reactive updates
+---
+
+## 2026-02-08 - US-019
+- Created `src/lib/stores/sessions.ts` with Svelte writable/derived stores for session management
+- Added: sessions (Map<string, Session>), activeSessionKey, activeSession (derived)
+- Functions: loadSessions(), switchSession(), updateSession(), incrementUnread(), addSession(), removeSession()
+- switchSession() auto-resets unread count for the newly active session
+- removeSession() clears activeSessionKey if the removed session was active
+- Updated `src/lib/stores/index.ts` barrel export with all session exports
+- Files changed: `src/lib/stores/sessions.ts` (new), `src/lib/stores/index.ts`
+- **Learnings for future iterations:**
+  - Session store uses Map<string, Session> keyed by session key for O(1) lookup
+  - Svelte store reactivity with Maps requires creating a new Map instance on update (`new Map(map)`)
+  - updateSession() takes Omit<SessionPatchParams, 'sessionKey'> for clean API — sessionKey passed separately
+  - `get()` from svelte/store used for one-off reads (e.g., checking activeSessionKey in removeSession)
 ---
