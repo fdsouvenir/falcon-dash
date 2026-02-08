@@ -44,3 +44,17 @@ export {
 	renameFile,
 	navigateTo
 } from './files';
+export {
+	cronJobs,
+	cronRuns,
+	loadCronJobs,
+	addCronJob,
+	editCronJob,
+	removeCronJob,
+	enableCronJob,
+	disableCronJob,
+	runCronJob,
+	loadCronRuns,
+	initCronListeners,
+	destroyCronListeners
+} from './cron';

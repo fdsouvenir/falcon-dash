@@ -324,6 +324,63 @@ export interface ModelsListResponse {
 	models: ModelInfo[];
 }
 
+// --- Cron Job Types ---
+
+export type CronScheduleType = 'cron' | 'interval' | 'oneshot';
+
+export interface CronJobPayload {
+	type: string;
+	prompt: string;
+	sessionKey?: string;
+}
+
+export interface CronJob {
+	id: string;
+	name: string;
+	schedule: string;
+	scheduleType: CronScheduleType;
+	enabled: boolean;
+	nextRun?: number;
+	lastRun?: number;
+	payload: CronJobPayload;
+}
+
+export type CronRunStatus = 'success' | 'error' | 'running';
+
+export interface CronRun {
+	id: string;
+	jobId: string;
+	startedAt: number;
+	completedAt?: number;
+	status: CronRunStatus;
+	output?: string;
+}
+
+export interface CronListResponse {
+	jobs: CronJob[];
+}
+
+export interface CronRunsResponse {
+	runs: CronRun[];
+}
+
+export interface CronAddParams {
+	name: string;
+	schedule: string;
+	scheduleType: CronScheduleType;
+	payload: CronJobPayload;
+	enabled?: boolean;
+}
+
+export interface CronEditParams {
+	jobId: string;
+	name?: string;
+	schedule?: string;
+	scheduleType?: CronScheduleType;
+	payload?: CronJobPayload;
+	enabled?: boolean;
+}
+
 // --- Gateway Config ---
 
 export interface GatewayConfig {
