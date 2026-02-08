@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.svelte-kit/
+build/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# Build docs (local reference only)
+builddocs/
+
+# Ralph runtime files
+scripts/ralph/.last-branch
+scripts/ralph/archive/

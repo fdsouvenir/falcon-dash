@@ -1,0 +1,4 @@
+# Ralph Progress Log — falcon-dash Phase 1: Core Infrastructure
+Started: 2026-02-08
+Branch: ralph/phase-1-core-infrastructure
+---
