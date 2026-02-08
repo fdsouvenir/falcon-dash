@@ -147,7 +147,7 @@
 				"npm run test passes"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Copies raw markdown (message.content), NOT rendered HTML. The action bar sits outside the message bubble but within a group container so hover on the message reveals it. Future-proof: more actions (reactions, bookmark, edit) can be added to the bar later."
 		},
 		{

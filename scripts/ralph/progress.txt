@@ -115,3 +115,15 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - Wrap remaining blockquote children in a content div by creating a fake `blockquote` node with `data.hName='div'` — remarkRehype processes children recursively
   - No new npm dependencies needed — custom remark plugin uses only `unist-util-visit` (already installed) and mdast types
 ---
+
+## 2026-02-08 - US-033
+- Created MessageActionBar component with copy button for assistant messages
+- Files created:
+  - `src/lib/components/chat/MessageActionBar.svelte` — copy button with clipboard API, 2s "Copied!" feedback, hidden until hover via Tailwind group/group-hover
+- Files modified:
+  - `src/routes/chat/+page.svelte` — split message rendering: assistant messages wrapped in `group` div with MessageActionBar below bubble; non-assistant messages use existing plain text rendering
+- **Learnings for future iterations:**
+  - Tailwind `group`/`group-hover:opacity-100` pattern works well for hover-reveal actions on sibling elements
+  - Splitting the `{#each}` loop into `{#if message.role === 'assistant'}` / `{:else}` branches keeps each path clean when assistant messages need extra wrapper elements
+  - For assistant messages in the split branch, hardcode `bg-slate-700/50 mr-12` directly instead of calling `roleClass()` to avoid the extra wrapper div complexity
+---
