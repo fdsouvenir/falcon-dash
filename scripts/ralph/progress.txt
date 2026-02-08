@@ -94,3 +94,17 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - formatRelativeTime accepts optional `now` parameter so Svelte template picks up the dependency for re-renders
   - Chat component directory: `src/lib/components/chat/`
 ---
+
+## 2026-02-08 - US-022
+- Created `src/lib/components/chat/ThinkingBlock.svelte` — displays thinking content with native `<details>` element
+- Features: collapsed by default with `bind:open`, "Thinking..." while streaming, "Thought for Xs" when complete
+- Reactive duration calculation from `durationMs` or computed from `completedAt - startedAt`
+- Styled with Tailwind: muted text, left border, indented content
+- Content updates live during streaming via Svelte reactivity on the `thinking` prop
+- Files changed: `src/lib/components/chat/ThinkingBlock.svelte` (new)
+- **Learnings for future iterations:**
+  - `bind:open` on `<details>` preserves collapse state across re-renders automatically
+  - `$: isStreaming = !thinking.completedAt` — simple streaming detection from the ThinkingBlock type
+  - Duration fallback chain: durationMs → computed from completedAt-startedAt → empty string
+  - Component is minimal (~28 lines) — no need for event dispatchers or lifecycle hooks
+---

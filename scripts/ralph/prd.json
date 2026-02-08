@@ -142,7 +142,7 @@
 				"npm run test passes"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Use Svelte 4 syntax: export let thinking, bind:open. The thinking prop will update reactively as the stream manager accumulates thinking content. Use $: reactive declarations for computed values like duration display."
 		},
 		{
