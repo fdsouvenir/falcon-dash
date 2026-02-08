@@ -19,7 +19,14 @@ export type {
 	LogLevel,
 	LogEntry,
 	LogTailParams,
-	LogTailResponse
+	LogTailResponse,
+	GatewayStatusInfo,
+	UsageByProvider,
+	UsageStats,
+	SubAgentRun,
+	SubAgentListResponse,
+	HealthResponse,
+	StatusResponse
 } from './settings';
 export type { PasswordEntry, PasswordEntryFull, VaultStatus, VaultState } from './passwords';
 export { PmStatus, PmPriority } from './pm';

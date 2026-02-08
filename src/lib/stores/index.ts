@@ -161,6 +161,13 @@ export {
 	loadExecAllowlist,
 	addExecAllowlistEntry,
 	removeExecAllowlistEntry,
+	gatewayStatus,
+	usageStats,
+	subAgentRuns,
+	loadGatewayStatus,
+	loadUsageStats,
+	loadSubAgentRuns,
+	restartGateway,
 	initSettingsListeners,
 	destroySettingsListeners
 } from './settings';

@@ -16,7 +16,13 @@ import type {
 	LogEntry,
 	LogTailParams,
 	LogTailResponse,
-	ExecAllowlistEntry
+	ExecAllowlistEntry,
+	GatewayStatusInfo,
+	UsageStats,
+	SubAgentRun,
+	HealthResponse,
+	StatusResponse,
+	SubAgentListResponse
 } from '$lib/types/settings';
 
 // --- Config Stores ---
@@ -191,6 +197,76 @@ export async function removeExecAllowlistEntry(pattern: string): Promise<void> {
 		execAllowlist.set(prev);
 		throw err;
 	}
+}
+
+// --- Gateway Status Stores ---
+
+export const gatewayStatus = writable<GatewayStatusInfo>({
+	connectionState: 'DISCONNECTED',
+	url: '',
+	uptimeMs: 0,
+	serverVersion: '',
+	connId: '',
+	sessionCount: 0
+});
+
+export const usageStats = writable<UsageStats>({
+	providers: [],
+	totalInputTokens: 0,
+	totalOutputTokens: 0,
+	totalCacheTokens: 0
+});
+
+export const subAgentRuns = writable<SubAgentRun[]>([]);
+
+export async function loadGatewayStatus(): Promise<void> {
+	try {
+		const [healthRes, statusRes] = await Promise.all([
+			gateway.call<HealthResponse>('health'),
+			gateway.call<StatusResponse>('status')
+		]);
+		gatewayStatus.set({
+			connectionState: statusRes.status ?? 'unknown',
+			url: '',
+			uptimeMs: healthRes.uptimeMs ?? statusRes.uptimeMs ?? 0,
+			serverVersion: statusRes.version ?? '',
+			connId: statusRes.connId ?? '',
+			model: statusRes.model ?? healthRes.model,
+			sessionCount: statusRes.sessions ?? 0
+		});
+		if (healthRes.usage) {
+			usageStats.set(healthRes.usage);
+		}
+	} catch {
+		// Status unavailable — keep defaults
+	}
+}
+
+export async function loadUsageStats(): Promise<void> {
+	try {
+		const response = await gateway.call<HealthResponse>('health');
+		if (response.usage) {
+			usageStats.set(response.usage);
+		}
+	} catch {
+		// Usage data unavailable
+	}
+}
+
+export async function loadSubAgentRuns(): Promise<void> {
+	try {
+		const response = await gateway.call<SubAgentListResponse>('sessions.list', {
+			kinds: ['sub-agent'],
+			limit: 50
+		} as unknown as Record<string, unknown>);
+		subAgentRuns.set(response.runs ?? []);
+	} catch {
+		// Sub-agent data unavailable — may not be supported yet
+	}
+}
+
+export async function restartGateway(): Promise<void> {
+	await gateway.call('config.apply', { restart: true });
 }
 
 // --- Event Listeners ---

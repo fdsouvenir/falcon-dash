@@ -110,6 +110,67 @@ export interface ExecAllowlistEntry {
 	addedAt: number;
 }
 
+// --- Gateway Status Types ---
+
+export interface GatewayStatusInfo {
+	connectionState: string;
+	url: string;
+	uptimeMs: number;
+	serverVersion: string;
+	connId: string;
+	model?: string;
+	sessionCount: number;
+}
+
+export interface UsageByProvider {
+	provider: string;
+	inputTokens: number;
+	outputTokens: number;
+	cacheTokens: number;
+	estimatedCost?: number;
+}
+
+export interface UsageStats {
+	providers: UsageByProvider[];
+	totalInputTokens: number;
+	totalOutputTokens: number;
+	totalCacheTokens: number;
+	totalEstimatedCost?: number;
+}
+
+export interface SubAgentRun {
+	runId: string;
+	sessionKey: string;
+	task: string;
+	model?: string;
+	status: 'running' | 'complete' | 'error';
+	startedAt: number;
+	completedAt?: number;
+	durationMs?: number;
+}
+
+export interface SubAgentListResponse {
+	runs: SubAgentRun[];
+}
+
+export interface HealthResponse {
+	status: string;
+	uptimeMs: number;
+	usage?: UsageStats;
+	model?: string;
+	[key: string]: unknown;
+}
+
+export interface StatusResponse {
+	status: string;
+	version: string;
+	connId: string;
+	uptimeMs: number;
+	sessions: number;
+	model?: string;
+	[key: string]: unknown;
+}
+
 // --- Log Types ---
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
