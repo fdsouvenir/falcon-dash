@@ -9,6 +9,10 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - `<!-- eslint-disable-next-line svelte/no-at-html-tags -->` must be placed directly above the `{@html}` usage line, not as a file-level comment
 - Streaming detection for a message: `isRunning && !!message.runId && !!$activeRun && $activeRun.runId === message.runId`
 - Prettier will reformat markdown tables in .md files — use `git checkout --` to restore instructions files before commit
+- Shiki's createHighlighter() is async, but codeToHtml() is sync after init — HighlighterManager singleton wraps this pattern
+- Custom rehype plugins use unist-util-visit to traverse hast trees; `fromHtml` from hast-util-from-html to parse HTML strings into hast nodes
+- Svelte actions (use:actionName) are the correct pattern for attaching event listeners to {@html} rendered content
+- sanitize-schema.ts must allow `style` on `span` for Shiki inline token colors, and `button` with attributes for copy buttons
 
 ---
 
@@ -27,4 +31,24 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - rehype-sanitize Schema type import from 'rehype-sanitize' fails — it's re-exported as `export type` which TypeScript resolves differently; let inference handle it
   - The svelte/infinite-reactive-loop ESLint rule triggers on `$:` blocks with setTimeout that assign reactive vars — wrapping in a function avoids detection
   - Pipeline: remarkParse → remarkGfm → remarkRehype → rehypeSanitize(customSchema) → rehypeStringify (later stories add plugins between these)
+---
+
+## 2026-02-08 - US-029
+- Integrated Shiki syntax highlighting into markdown pipeline with copy button and language label
+- Files created:
+  - `src/lib/utils/markdown/highlighter.ts` — HighlighterManager singleton with async init, sync highlight, 17 pre-loaded languages, github-dark theme
+  - `src/lib/utils/markdown/shiki-plugin.ts` — custom rehype plugin that applies Shiki to code blocks and injects copy button + language label header
+  - `src/lib/actions/codeBlockActions.ts` — Svelte action attaching click handlers to copy buttons in rendered HTML
+- Files modified:
+  - `src/lib/utils/markdown/pipeline.ts` — added rehypeShikiPlugin between remarkRehype and rehypeSanitize
+  - `src/lib/utils/markdown/sanitize-schema.ts` — allowed style on span (Shiki token colors), style/tabIndex on pre, button element with className/type/ariaLabel
+  - `src/lib/utils/markdown/index.ts` — added barrel exports for highlighterManager and rehypeShikiPlugin
+  - `src/lib/components/chat/RenderedContent.svelte` — calls highlighterManager.init() on mount, re-renders when ready, applies use:codeBlockActions action, added code block wrapper/header/copy button styles
+  - `package.json` / `package-lock.json` — added shiki, hast-util-from-html
+- **Learnings for future iterations:**
+  - Shiki 3.x uses `createHighlighter()` (not `getHighlighter()`) and `codeToHtml()` is sync after init
+  - The rehype plugin replaces `<pre>` nodes with a `<div class="code-block-wrapper">` containing a header and the highlighted `<pre>`
+  - `hast-util-from-html` with `{ fragment: true }` parses HTML strings into hast fragment nodes for insertion
+  - For unknown languages, catch the error and fall back to `lang: 'text'`
+  - Pipeline order now: remarkParse → remarkGfm → remarkRehype → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
 ---

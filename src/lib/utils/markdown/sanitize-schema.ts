@@ -9,8 +9,11 @@ export const sanitizeSchema = {
 	attributes: {
 		...defaultSchema.attributes,
 		code: [...(defaultSchema.attributes?.code ?? []), ['className', /^language-./]],
-		pre: [...(defaultSchema.attributes?.pre ?? []), 'className'],
+		pre: [...(defaultSchema.attributes?.pre ?? []), 'className', 'style', 'tabIndex'],
 		div: [...(defaultSchema.attributes?.div ?? []), 'className', /^data-/],
-		span: [...(defaultSchema.attributes?.span ?? []), 'className']
-	}
+		span: [...(defaultSchema.attributes?.span ?? []), 'className', 'style'],
+		// US-029: copy button in code blocks
+		button: ['className', 'type', 'ariaLabel']
+	},
+	tagNames: [...(defaultSchema.tagNames ?? []), 'button']
 };

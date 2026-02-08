@@ -55,7 +55,7 @@
 				"npm run test passes"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "CRITICAL: rehype-sanitize strips style attributes by default — MUST allowlist style on span elements for Shiki token colors. Use Shiki's codeToHtml() which is synchronous after createHighlighter() resolves. Do NOT use rehype-shiki — write a custom rehype plugin for control over copy button injection. The Svelte action pattern (use:codeBlockActions) is the correct way to attach event listeners to {@html} rendered content."
 		},
 		{

@@ -1,18 +1,21 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { renderMarkdown } from '$lib/utils/markdown';
+	import { highlighterManager } from '$lib/utils/markdown/highlighter';
+	import { codeBlockActions } from '$lib/actions/codeBlockActions';
 
 	export let content: string;
 	export let isStreaming: boolean;
 
 	let renderedHtml = '';
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let highlighterReady = highlighterManager.isReady();
 
 	function doRender(text: string) {
 		renderedHtml = renderMarkdown(text);
 	}
 
-	$: if (content) {
+	$: if (content || highlighterReady) {
 		if (isStreaming) {
 			clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(() => {
@@ -24,10 +27,18 @@
 		}
 	}
 
+	onMount(() => {
+		if (!highlighterManager.isReady()) {
+			highlighterManager.init().then(() => {
+				highlighterReady = true;
+			});
+		}
+	});
+
 	onDestroy(() => clearTimeout(debounceTimer));
 </script>
 
-<div class="rendered-content">
+<div class="rendered-content" use:codeBlockActions>
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html renderedHtml}
 </div>
@@ -91,12 +102,60 @@
 		font-size: 0.85em;
 	}
 
-	.rendered-content :global(pre) {
-		background-color: rgb(15 23 42); /* slate-900 */
+	/* Code block wrapper with header */
+	.rendered-content :global(.code-block-wrapper) {
+		margin-top: 0.75em;
+		margin-bottom: 0.75em;
 		border: 1px solid rgb(51 65 85); /* slate-700 */
 		border-radius: 0.5rem;
+		overflow: hidden;
+	}
+
+	.rendered-content :global(.code-block-header) {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.375rem 0.75rem;
+		background-color: rgb(30 41 59); /* slate-800 */
+		border-bottom: 1px solid rgb(51 65 85); /* slate-700 */
+	}
+
+	.rendered-content :global(.code-block-lang) {
+		font-size: 0.75rem;
+		color: rgb(148 163 184); /* slate-400 */
+		text-transform: lowercase;
+	}
+
+	.rendered-content :global(.code-block-copy) {
+		font-size: 0.75rem;
+		color: rgb(148 163 184); /* slate-400 */
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.125rem 0.5rem;
+		border-radius: 0.25rem;
+		transition:
+			color 150ms,
+			background-color 150ms;
+	}
+
+	.rendered-content :global(.code-block-copy:hover) {
+		color: rgb(226 232 240); /* slate-200 */
+		background-color: rgb(51 65 85); /* slate-700 */
+	}
+
+	.rendered-content :global(pre) {
+		background-color: rgb(15 23 42); /* slate-900 */
+		border-radius: 0;
 		padding: 0.75rem 1rem;
 		overflow-x: auto;
+		margin: 0;
+	}
+
+	/* Standalone pre (not inside code-block-wrapper) */
+	.rendered-content :global(pre:not(.code-block-wrapper pre)) {
+		border: 1px solid rgb(51 65 85); /* slate-700 */
+		border-radius: 0.5rem;
 		margin-top: 0.75em;
 		margin-bottom: 0.75em;
 	}
@@ -107,6 +166,11 @@
 		padding: 0;
 		border-radius: 0;
 		font-size: 0.85em;
+	}
+
+	/* Shiki highlighted code — override inline color for tokens */
+	.rendered-content :global(.shiki) {
+		background-color: rgb(15 23 42) !important; /* slate-900, override Shiki theme bg */
 	}
 
 	.rendered-content :global(blockquote) {

@@ -5,11 +5,13 @@ import remarkRehype from 'remark-rehype';
 import rehypeSanitize, { type defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import { sanitizeSchema } from './sanitize-schema';
+import { rehypeShikiPlugin } from './shiki-plugin';
 
 const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
 	.use(remarkRehype)
+	.use(rehypeShikiPlugin)
 	.use(rehypeSanitize, sanitizeSchema as typeof defaultSchema)
 	.use(rehypeStringify);
 
