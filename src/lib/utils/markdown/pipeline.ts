@@ -1,7 +1,9 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
+import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { type defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import { sanitizeSchema } from './sanitize-schema';
@@ -10,7 +12,9 @@ import { rehypeShikiPlugin } from './shiki-plugin';
 const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
+	.use(remarkMath)
 	.use(remarkRehype)
+	.use(rehypeKatex)
 	.use(rehypeShikiPlugin)
 	.use(rehypeSanitize, sanitizeSchema as typeof defaultSchema)
 	.use(rehypeStringify);

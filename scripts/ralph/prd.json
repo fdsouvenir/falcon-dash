@@ -78,7 +78,7 @@
 				"npm run test passes"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Pipeline order is critical: remark-math runs in remark phase (mdast), rehype-katex runs in rehype phase (hast) BEFORE sanitize. Single $ for currency won't conflict — remark-math requires no space after opening $. KaTeX generates hundreds of spans for complex equations — this is normal. rehype-katex MUST run before rehype-sanitize or the generated KaTeX HTML will be stripped."
 		},
 		{

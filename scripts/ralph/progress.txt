@@ -13,6 +13,10 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - Custom rehype plugins use unist-util-visit to traverse hast trees; `fromHtml` from hast-util-from-html to parse HTML strings into hast nodes
 - Svelte actions (use:actionName) are the correct pattern for attaching event listeners to {@html} rendered content
 - sanitize-schema.ts must allow `style` on `span` for Shiki inline token colors, and `button` with attributes for copy buttons
+- rehype-katex Options type omits `throwOnError` and `displayMode` — the plugin handles errors internally (catches ParseError, re-renders with throwOnError:false, or shows katex-error span)
+- KaTeX CSS must be loaded from CDN in app.html, version-matched to npm katex package
+- MathML elements (math, semantics, mrow, etc.) must be allowlisted in sanitize-schema.ts tagNames
+- `math` element needs `xmlns` and `display` attributes; `annotation` needs `encoding`
 
 ---
 
@@ -51,4 +55,19 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - `hast-util-from-html` with `{ fragment: true }` parses HTML strings into hast fragment nodes for insertion
   - For unknown languages, catch the error and fall back to `lang: 'text'`
   - Pipeline order now: remarkParse → remarkGfm → remarkRehype → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
+---
+
+## 2026-02-08 - US-030
+- Added KaTeX math rendering to markdown pipeline (inline $...$ and display $$...$$)
+- Files modified:
+  - `src/lib/utils/markdown/pipeline.ts` — added remarkMath (remark phase) and rehypeKatex (rehype phase, before shiki and sanitize)
+  - `src/lib/utils/markdown/sanitize-schema.ts` — added 19 MathML elements to tagNames, added `math` (xmlns, display) and `annotation` (encoding) attributes, added `style` to `div` for KaTeX styling
+  - `src/app.html` — added KaTeX CSS CDN link (v0.16.28, version-matched to npm package)
+  - `package.json` / `package-lock.json` — added remark-math, rehype-katex, katex
+- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkRehype → rehypeKatex → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
+- **Learnings for future iterations:**
+  - rehype-katex Options type `Omit<KatexOptions, 'displayMode' | 'throwOnError'>` — do NOT pass throwOnError option, the plugin handles errors internally with try/catch fallback
+  - rehype-katex internally tries with throwOnError:true first, catches ParseError, then retries with throwOnError:false, and if that also fails, generates a `<span class="katex-error">` with red color
+  - KaTeX CSS version in CDN link must match the npm katex package version exactly
+  - MathML elements need to be individually allowlisted — there are 19 common ones used by KaTeX
 ---

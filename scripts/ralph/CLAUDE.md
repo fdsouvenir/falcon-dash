@@ -88,48 +88,48 @@ Plugins in brackets `[]` are added by later stories. The pipeline is **synchrono
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/utils/markdown/pipeline.ts` | `renderMarkdown(text): string` — the pipeline |
-| `src/lib/utils/markdown/sanitize-schema.ts` | Custom rehype-sanitize schema, extended per story |
-| `src/lib/utils/markdown/highlighter.ts` | Shiki HighlighterManager singleton (US-029) |
-| `src/lib/utils/markdown/mermaid-plugin.ts` | Rehype plugin for mermaid placeholders (US-031) |
-| `src/lib/utils/markdown/admonition-plugin.ts` | Remark plugin for admonitions (US-032) |
-| `src/lib/utils/markdown/index.ts` | Barrel exports |
-| `src/lib/components/chat/RenderedContent.svelte` | `{@html}` wrapper with streaming debounce |
+| File                                             | Purpose                                           |
+| ------------------------------------------------ | ------------------------------------------------- |
+| `src/lib/utils/markdown/pipeline.ts`             | `renderMarkdown(text): string` — the pipeline     |
+| `src/lib/utils/markdown/sanitize-schema.ts`      | Custom rehype-sanitize schema, extended per story |
+| `src/lib/utils/markdown/highlighter.ts`          | Shiki HighlighterManager singleton (US-029)       |
+| `src/lib/utils/markdown/mermaid-plugin.ts`       | Rehype plugin for mermaid placeholders (US-031)   |
+| `src/lib/utils/markdown/admonition-plugin.ts`    | Remark plugin for admonitions (US-032)            |
+| `src/lib/utils/markdown/index.ts`                | Barrel exports                                    |
+| `src/lib/components/chat/RenderedContent.svelte` | `{@html}` wrapper with streaming debounce         |
 
 ### RenderedContent.svelte Pattern
 
 ```svelte
 <!-- eslint-disable svelte/no-at-html-tags -->
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { renderMarkdown } from '$lib/utils/markdown';
+	import { onMount, onDestroy } from 'svelte';
+	import { renderMarkdown } from '$lib/utils/markdown';
 
-  export let content: string;
-  export let isStreaming: boolean;
+	export let content: string;
+	export let isStreaming: boolean;
 
-  let renderedHtml = '';
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let renderedHtml = '';
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // Debounce during streaming, immediate otherwise
-  $: if (content) {
-    if (isStreaming) {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        renderedHtml = renderMarkdown(content);
-      }, 50);
-    } else {
-      clearTimeout(debounceTimer);
-      renderedHtml = renderMarkdown(content);
-    }
-  }
+	// Debounce during streaming, immediate otherwise
+	$: if (content) {
+		if (isStreaming) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				renderedHtml = renderMarkdown(content);
+			}, 50);
+		} else {
+			clearTimeout(debounceTimer);
+			renderedHtml = renderMarkdown(content);
+		}
+	}
 
-  onDestroy(() => clearTimeout(debounceTimer));
+	onDestroy(() => clearTimeout(debounceTimer));
 </script>
 
 <div class="rendered-content">
-  {@html renderedHtml}
+	{@html renderedHtml}
 </div>
 ```
 
@@ -148,22 +148,24 @@ Each story extends the SAME schema file — do not create separate schemas.
 
 ```typescript
 class HighlighterManager {
-  private highlighter: Highlighter | null = null;
-  private initPromise: Promise<void> | null = null;
+	private highlighter: Highlighter | null = null;
+	private initPromise: Promise<void> | null = null;
 
-  async init(): Promise<void> {
-    if (this.highlighter) return;
-    if (this.initPromise) return this.initPromise;
-    this.initPromise = this.doInit();
-    return this.initPromise;
-  }
+	async init(): Promise<void> {
+		if (this.highlighter) return;
+		if (this.initPromise) return this.initPromise;
+		this.initPromise = this.doInit();
+		return this.initPromise;
+	}
 
-  isReady(): boolean { return this.highlighter !== null; }
+	isReady(): boolean {
+		return this.highlighter !== null;
+	}
 
-  highlight(code: string, lang: string): string {
-    if (!this.highlighter) return ''; // fallback handled by caller
-    return this.highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
-  }
+	highlight(code: string, lang: string): string {
+		if (!this.highlighter) return ''; // fallback handled by caller
+		return this.highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
+	}
 }
 
 export const highlighterManager = new HighlighterManager();
@@ -188,7 +190,7 @@ Both code block copy buttons (US-029) and mermaid rendering (US-031) use Svelte 
 ```svelte
 <!-- In RenderedContent.svelte -->
 <div class="rendered-content" use:codeBlockActions use:mermaidAction>
-  {@html renderedHtml}
+	{@html renderedHtml}
 </div>
 ```
 
@@ -209,19 +211,19 @@ Actions fire on mount and must handle DOM content changes. The `update` function
 ```typescript
 // src/lib/chat/commands/registry.ts
 export interface SlashCommand {
-  name: string;
-  description: string;
-  usage?: string;
-  execute: (args: string, context: CommandContext) => void | Promise<void>;
+	name: string;
+	description: string;
+	usage?: string;
+	execute: (args: string, context: CommandContext) => void | Promise<void>;
 }
 
 export interface CommandContext {
-  sessionKey: string;
-  sendMessage: (content: string) => void;
-  abortRun: () => void;
-  updateSession: (key: string, patch: Record<string, unknown>) => void;
-  injectMessage: (sessionKey: string, role: string, content: string) => void;
-  gateway: GatewayClient;
+	sessionKey: string;
+	sendMessage: (content: string) => void;
+	abortRun: () => void;
+	updateSession: (key: string, patch: Record<string, unknown>) => void;
+	injectMessage: (sessionKey: string, role: string, content: string) => void;
+	gateway: GatewayClient;
 }
 
 export const commands: SlashCommand[] = [];
