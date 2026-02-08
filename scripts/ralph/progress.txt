@@ -65,3 +65,24 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - `onMount` with async function cannot return a cleanup function (TypeScript error). Use `onDestroy` for cleanup instead, or use `.catch()/.finally()` on the promise
   - Helper functions like `isFileActive(file)` are cleaner than inline expressions with store values in template attributes
 ---
+
+## 2026-02-08 - US-041
+- Implemented file preview and editor components for the /files route
+- Files created:
+  - `src/lib/components/files/FilePreview.svelte` — renders .md via RenderedContent, code files via HighlighterManager, plain text as pre
+  - `src/lib/components/files/FileEditor.svelte` — textarea with save/cancel, dirty state, Ctrl+S/Escape shortcuts
+- Files modified:
+  - `src/routes/files/+page.svelte` — replaced plain text preview with FilePreview, added Edit button toggling to FileEditor, hash-based save with 409 conflict error display
+- Features:
+  - Extension-to-Shiki-language mapping function (18 extensions)
+  - Markdown files rendered via existing RenderedContent pipeline (markdown, math, mermaid, admonitions)
+  - Code files highlighted via Shiki (lazy init on mount)
+  - Unrecognized extensions shown as plain text
+  - FileEditor dispatches save/cancel events, tracks dirty state
+  - Save passes baseHash from activeFile, handles 409 conflict with user-facing error message
+  - Editing state resets on file switch and directory navigation
+- **Learnings for future iterations:**
+  - FilePreview and FileEditor are in `src/lib/components/files/` and will be reused by US-045 (heartbeat HEARTBEAT.md editing)
+  - RenderedContent requires `isStreaming` prop — pass `false` for static file preview
+  - createEventDispatcher generic typing: `createEventDispatcher<{ save: { content: string }; cancel: void }>()`
+---

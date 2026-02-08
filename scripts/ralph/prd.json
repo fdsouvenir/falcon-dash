@@ -109,7 +109,7 @@
 				"npm run test passes"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Reuses RenderedContent.svelte and HighlighterManager from Phase 2b chat module. Needs a mapping from file extensions to Shiki language names (e.g., .ts → typescript, .py → python, .md → markdown). FilePreview will also be reused by the Agent Jobs module (US-045) for rendering HEARTBEAT.md. FileEditor similarly reused."
 		},
 		{
