@@ -30,3 +30,16 @@ export {
 	trackSessionCreated,
 	getUsageStats
 } from './usage';
+export {
+	files,
+	currentPath,
+	activeFile,
+	activeFileName,
+	loadFiles,
+	loadFile,
+	saveFile,
+	deleteFile,
+	createFile,
+	renameFile,
+	navigateTo
+} from './files';
