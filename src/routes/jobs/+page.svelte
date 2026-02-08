@@ -7,11 +7,25 @@
 		loadHeartbeatConfig,
 		updateHeartbeatConfig,
 		loadHeartbeatFile,
-		saveHeartbeatFile
+		saveHeartbeatFile,
+		cronJobs,
+		loadCronJobs,
+		addCronJob,
+		editCronJob,
+		removeCronJob,
+		enableCronJob,
+		disableCronJob,
+		runCronJob,
+		initCronListeners,
+		destroyCronListeners
 	} from '$lib/stores';
+	import type { CronJob, CronAddParams, CronEditParams } from '$lib/gateway/types';
 	import { formatRelativeTime } from '$lib/utils/time';
 	import FilePreview from '$lib/components/files/FilePreview.svelte';
 	import FileEditor from '$lib/components/files/FileEditor.svelte';
+	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
+	import CronJobList from '$lib/components/jobs/CronJobList.svelte';
+	import CronJobForm from '$lib/components/jobs/CronJobForm.svelte';
 
 	type Tab = 'heartbeat' | 'cron';
 
@@ -27,6 +41,110 @@
 	$: intervalDirty = intervalValue !== $heartbeatConfig.intervalMinutes;
 
 	let refreshInterval: ReturnType<typeof setInterval>;
+
+	// --- Cron state ---
+	let cronLoading = false;
+	let cronError = '';
+	let cronLoaded = false;
+	let formOpen = false;
+	let editingJob: CronJob | null = null;
+	let deleteConfirmOpen = false;
+	let deleteTarget: CronJob | null = null;
+	let selectedJobId: string | null = null;
+
+	async function loadCronTab(): Promise<void> {
+		if (cronLoaded) return;
+		cronLoading = true;
+		cronError = '';
+		try {
+			await loadCronJobs();
+			cronLoaded = true;
+		} catch (err) {
+			cronError = err instanceof Error ? err.message : 'Failed to load cron jobs';
+		} finally {
+			cronLoading = false;
+		}
+	}
+
+	function handleCreateJob(): void {
+		editingJob = null;
+		formOpen = true;
+	}
+
+	function handleEditJob(event: CustomEvent<{ job: CronJob }>): void {
+		editingJob = event.detail.job;
+		formOpen = true;
+	}
+
+	async function handleFormSave(
+		event: CustomEvent<{ params: CronAddParams | CronEditParams }>
+	): Promise<void> {
+		formOpen = false;
+		try {
+			if ('jobId' in event.detail.params) {
+				await editCronJob(event.detail.params as CronEditParams);
+			} else {
+				await addCronJob(event.detail.params as CronAddParams);
+			}
+		} catch (err) {
+			cronError = err instanceof Error ? err.message : 'Failed to save cron job';
+		}
+	}
+
+	function handleFormCancel(): void {
+		formOpen = false;
+		editingJob = null;
+	}
+
+	function handleDeleteRequest(event: CustomEvent<{ job: CronJob }>): void {
+		deleteTarget = event.detail.job;
+		deleteConfirmOpen = true;
+	}
+
+	async function handleDeleteConfirm(): Promise<void> {
+		deleteConfirmOpen = false;
+		if (!deleteTarget) return;
+		const jobId = deleteTarget.id;
+		deleteTarget = null;
+		if (selectedJobId === jobId) selectedJobId = null;
+		try {
+			await removeCronJob(jobId);
+		} catch (err) {
+			cronError = err instanceof Error ? err.message : 'Failed to delete cron job';
+		}
+	}
+
+	function handleDeleteCancel(): void {
+		deleteConfirmOpen = false;
+		deleteTarget = null;
+	}
+
+	async function handleToggle(event: CustomEvent<{ job: CronJob }>): Promise<void> {
+		const job = event.detail.job;
+		try {
+			if (job.enabled) {
+				await disableCronJob(job.id);
+			} else {
+				await enableCronJob(job.id);
+			}
+		} catch (err) {
+			cronError = err instanceof Error ? err.message : 'Failed to toggle cron job';
+		}
+	}
+
+	async function handleRunNow(event: CustomEvent<{ job: CronJob }>): Promise<void> {
+		try {
+			await runCronJob(event.detail.job.id);
+		} catch (err) {
+			cronError = err instanceof Error ? err.message : 'Failed to run cron job';
+		}
+	}
+
+	function handleSelectJob(event: CustomEvent<{ job: CronJob }>): void {
+		selectedJobId = selectedJobId === event.detail.job.id ? null : event.detail.job.id;
+	}
+
+	// --- Heartbeat ---
 
 	async function toggleEnabled(): Promise<void> {
 		try {
@@ -78,7 +196,16 @@
 		}
 	}
 
+	function switchTab(tab: Tab): void {
+		activeTab = tab;
+		if (tab === 'cron') {
+			loadCronTab();
+		}
+	}
+
 	onMount(() => {
+		initCronListeners();
+
 		refreshInterval = setInterval(() => {
 			now = Date.now();
 		}, 30000);
@@ -97,6 +224,7 @@
 
 	onDestroy(() => {
 		clearInterval(refreshInterval);
+		destroyCronListeners();
 	});
 </script>
 
@@ -104,7 +232,7 @@
 	<!-- Tab bar -->
 	<div class="flex border-b border-slate-700">
 		<button
-			on:click={() => (activeTab = 'heartbeat')}
+			on:click={() => switchTab('heartbeat')}
 			class="px-6 py-3 text-sm font-medium transition-colors {activeTab === 'heartbeat'
 				? 'border-b-2 border-blue-500 text-slate-100'
 				: 'text-slate-400 hover:text-slate-200'}"
@@ -112,7 +240,7 @@
 			Heartbeat
 		</button>
 		<button
-			on:click={() => (activeTab = 'cron')}
+			on:click={() => switchTab('cron')}
 			class="px-6 py-3 text-sm font-medium transition-colors {activeTab === 'cron'
 				? 'border-b-2 border-blue-500 text-slate-100'
 				: 'text-slate-400 hover:text-slate-200'}"
@@ -264,9 +392,60 @@
 				</div>
 			{/if}
 		{:else if activeTab === 'cron'}
-			<div class="flex items-center justify-center p-8">
-				<p class="text-sm text-slate-400">Cron job management coming soon.</p>
+			<div class="p-6">
+				<!-- Toolbar -->
+				<div class="mb-4 flex items-center justify-between">
+					<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Cron Jobs</h3>
+					<button
+						on:click={handleCreateJob}
+						class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500"
+					>
+						New Job
+					</button>
+				</div>
+
+				{#if cronError}
+					<div class="mb-4 rounded border border-red-800 bg-red-900/30 px-4 py-2">
+						<p class="text-sm text-red-400">{cronError}</p>
+					</div>
+				{/if}
+
+				{#if cronLoading}
+					<div class="flex items-center justify-center p-8">
+						<p class="text-sm text-slate-400">Loading cron jobs...</p>
+					</div>
+				{:else}
+					<div class="rounded-lg border border-slate-700 bg-slate-800/50">
+						<CronJobList
+							jobs={$cronJobs}
+							{now}
+							{selectedJobId}
+							on:edit={handleEditJob}
+							on:delete={handleDeleteRequest}
+							on:run={handleRunNow}
+							on:toggle={handleToggle}
+							on:select={handleSelectJob}
+						/>
+					</div>
+				{/if}
 			</div>
+
+			<CronJobForm
+				open={formOpen}
+				job={editingJob}
+				on:save={handleFormSave}
+				on:cancel={handleFormCancel}
+			/>
+
+			<ConfirmDialog
+				title="Delete Cron Job"
+				message="Are you sure you want to delete &quot;{deleteTarget?.name ??
+					''}&quot;? This action cannot be undone."
+				confirmLabel="Delete"
+				open={deleteConfirmOpen}
+				on:confirm={handleDeleteConfirm}
+				on:cancel={handleDeleteCancel}
+			/>
 		{/if}
 	</div>
 </div>
