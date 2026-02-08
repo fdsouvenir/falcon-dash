@@ -22,6 +22,8 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - SVG elements for sanitize-schema need extensive per-element attribute allowlists (viewBox, transform, d, fill, stroke, etc.)
 - Remark plugins use `data.hName`/`data.hProperties` on mdast nodes to control remarkRehype HTML output — no `allowDangerousHtml` needed
 - For icons in sanitized HTML, use CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs instead of inline SVG nodes
+- SVG elements in Svelte 4 don't accept `title` as a direct attribute — wrap in `<span title="...">` instead
+- `createEventDispatcher()` must have type params: `createEventDispatcher<{ eventName: PayloadType }>()`
 
 ---
 
@@ -126,4 +128,16 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - Tailwind `group`/`group-hover:opacity-100` pattern works well for hover-reveal actions on sibling elements
   - Splitting the `{#each}` loop into `{#if message.role === 'assistant'}` / `{:else}` branches keeps each path clean when assistant messages need extra wrapper elements
   - For assistant messages in the split branch, hardcode `bg-slate-700/50 mr-12` directly instead of calling `roleClass()` to avoid the extra wrapper div complexity
+---
+
+## 2026-02-08 - US-034
+- Extracted inline session header to ChatHeader.svelte component with model badge, thinking indicator, and settings gear
+- Files created:
+  - `src/lib/components/chat/ChatHeader.svelte` — session header with model pill, brain SVG thinking indicator (off=muted, on=blue, stream=animated pulse), settings gear dispatching 'settings' event
+- Files modified:
+  - `src/routes/chat/+page.svelte` — replaced inline header div (lines 138-143) with `<ChatHeader session={$activeSession} />`
+- **Learnings for future iterations:**
+  - SVG elements in Svelte 4 don't accept `title` as an HTML attribute — wrap SVG in a `<span>` with the title attribute instead
+  - ESLint rule `svelte/require-event-dispatcher-types` requires type parameters on `createEventDispatcher()` — use `createEventDispatcher<{ eventName: void }>()` for events with no payload
+  - Thinking level uses `session.thinkingLevel` which can be 'off', 'on', 'stream', or undefined (defaults to 'off')
 ---

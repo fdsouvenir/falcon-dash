@@ -168,7 +168,7 @@
 				"npm run test passes"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "The existing inline header is just a simple h2 in a flex container (around line 137-141 of +page.svelte). Extract it to a component and add the model/thinking indicators. Use Svelte 4: export let session, createEventDispatcher. The parent page will handle the 'settings' event to open the settings panel (US-035)."
 		},
 		{
