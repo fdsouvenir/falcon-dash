@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import WorkspaceTab from '$lib/components/settings/WorkspaceTab.svelte';
 	import InformationTab from '$lib/components/settings/InformationTab.svelte';
+	import SkillsTab from '$lib/components/settings/SkillsTab.svelte';
 
 	type SettingsTab =
 		| 'workspace'
@@ -83,7 +84,9 @@
 
 	<!-- Tab content -->
 	<div
-		class="flex-1 overflow-hidden {activeTab === 'workspace' || activeTab === 'information'
+		class="flex-1 overflow-hidden {activeTab === 'workspace' ||
+		activeTab === 'information' ||
+		activeTab === 'skills'
 			? ''
 			: 'overflow-y-auto p-6'}"
 	>
@@ -92,12 +95,7 @@
 		{:else if activeTab === 'information'}
 			<InformationTab />
 		{:else if activeTab === 'skills'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">Skills</h2>
-				<p class="text-sm text-slate-400">
-					Manage installed skills — enable, disable, and configure agent capabilities.
-				</p>
-			</div>
+			<SkillsTab />
 		{:else if activeTab === 'security'}
 			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
 				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">Security</h2>
