@@ -1,294 +1,294 @@
 {
-  "project": "falcon-dash",
-  "branchName": "ralph/phase-1-core-infrastructure",
-  "description": "Phase 1: Core Infrastructure — SvelteKit app shell, WS client layer, connection lifecycle, PWA basics",
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "SvelteKit project scaffold",
-      "description": "Create a new SvelteKit project with TypeScript, Tailwind CSS 3, ESLint, and Prettier. Set up the folder structure per the architecture doc §7.",
-      "acceptanceCriteria": [
-        "SvelteKit 2 project initialized with TypeScript",
-        "Tailwind CSS 3 configured and working",
-        "ESLint with svelte plugin + typescript-eslint configured",
-        "Prettier configured: tabs, single quotes, no trailing commas",
-        "Folder structure created: src/lib/gateway/, src/lib/stores/, src/lib/components/, src/lib/utils/, src/routes/",
-        "npm run format passes",
-        "npm run check passes with 0 errors",
-        "npm run lint passes",
-        "npm run build succeeds"
-      ],
-      "priority": 1,
-      "passes": false,
-      "notes": "This is the foundation. All other stories depend on this. Reference builddocs/falcon-dash-architecture-v02.md §7 for folder structure."
-    },
-    {
-      "id": "US-016",
-      "title": "Playwright E2E smoke test",
-      "description": "Install Playwright with chromium only. Create a smoke test that starts the app, navigates to /, listens for console errors, and asserts the page loads successfully.",
-      "acceptanceCriteria": [
-        "@playwright/test installed as dev dependency",
-        "npx playwright install chromium run (chromium only, no firefox/webkit)",
-        "playwright.config.ts at project root: webServer runs npm run dev on port 5173, chromium only, headless",
-        "tests/smoke.test.ts: navigates to /, listens for console errors and fails if any, asserts 200 status and body element exists",
-        "\"test\": \"playwright test\" added to package.json scripts",
-        "npm run test passes",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 2,
-      "passes": false,
-      "notes": "Chromium only — skip firefox and webkit. Every story after this benefits from the smoke test as a quality gate."
-    },
-    {
-      "id": "US-002",
-      "title": "Gateway protocol types",
-      "description": "Create src/lib/gateway/types.ts with all TypeScript types for the WS protocol: frame types (req/res/event), connect params, hello-ok response, agent events, error shape, connection states.",
-      "acceptanceCriteria": [
-        "All frame types defined: RequestFrame, ResponseFrame, EventFrame",
-        "ConnectParams type with client, auth, device fields",
-        "HelloOkPayload type with server, features, policy, snapshot, auth fields",
-        "ConnectionState enum: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING",
-        "Error shape type: { code, message, details?, retryable?, retryAfterMs? }",
-        "Agent event types: thinking, tool_start, tool_result, text_delta, text_end",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "Reference builddocs/ws-protocol.md for exact protocol shapes. client.id must be 'openclaw-control-ui', client.mode must be 'webchat', protocol version 3."
-    },
-    {
-      "id": "US-003",
-      "title": "Gateway connection class",
-      "description": "Create src/lib/gateway/connection.ts — low-level WebSocket management: open, send frames, receive frames, close. Implements the connection state machine (DISCONNECTED → CONNECTING → AUTHENTICATING → CONNECTED → READY → RECONNECTING).",
-      "acceptanceCriteria": [
-        "GatewayConnection class manages raw WebSocket lifecycle",
-        "State machine transitions: DISCONNECTED → CONNECTING → AUTHENTICATING → CONNECTED/PAIRING_REQUIRED/AUTH_FAILED → READY → RECONNECTING",
-        "send(frame) serializes and sends JSON",
-        "Incoming frames parsed and emitted via callbacks",
-        "connect(url, params) opens WS and sends connect frame",
-        "close() cleanly closes the connection",
-        "State exposed as Svelte readable store",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 4,
-      "passes": false,
-      "notes": "First frame must be connect request. Challenge nonce handling for non-local connections. Reference architecture doc §4.2 for state machine."
-    },
-    {
-      "id": "US-004",
-      "title": "Request correlator",
-      "description": "Create src/lib/gateway/correlator.ts — maps request IDs to pending Promises, handles timeouts, generates unique request IDs and idempotency keys.",
-      "acceptanceCriteria": [
-        "RequestCorrelator class tracks pending requests by ID",
-        "send(method, params) returns Promise that resolves/rejects on matching response",
-        "Configurable per-request timeout (default 30s)",
-        "Generates unique request IDs (incrementing counter or UUID)",
-        "Generates idempotency keys for mutation methods",
-        "Rejects all pending requests on disconnect",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 5,
-      "passes": false,
-      "notes": "Side-effecting methods (chat.send, agent) require idempotency keys. Request IDs must be unique per request for response correlation."
-    },
-    {
-      "id": "US-005",
-      "title": "Event bus",
-      "description": "Create src/lib/gateway/events.ts — typed event emitter for gateway events. Maps event names to handler sets with support for wildcards (e.g. pm.*) and auto-cleanup on disconnect.",
-      "acceptanceCriteria": [
-        "EventBus class with on(event, handler), off(event, handler), emit(event, payload)",
-        "Wildcard support: 'pm.*' matches 'pm.task.created', 'pm.project.updated', etc.",
-        "on() returns unsubscribe function",
-        "once(event) returns Promise that resolves on next emission",
-        "clear() removes all handlers (called on disconnect)",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 6,
-      "passes": false,
-      "notes": "Events from server: agent, chat, presence, tick, shutdown, exec.approval.requested, health, heartbeat, cron, pm."
-    },
-    {
-      "id": "US-006",
-      "title": "Snapshot store",
-      "description": "Create src/lib/gateway/snapshot.ts — hydrated from hello-ok snapshot data, exports Svelte readable stores for presence, health, and stateVersion.",
-      "acceptanceCriteria": [
-        "SnapshotStore class hydrated from hello-ok payload",
-        "Exports Svelte readable stores: presence, health, stateVersion",
-        "hydrate(snapshot) populates all stores from hello-ok data",
-        "updatePresence(delta) applies incremental presence updates",
-        "updateHealth(data) updates health store",
-        "stateVersion tracked per domain (presence, health)",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 7,
-      "passes": false,
-      "notes": "stateVersion is an object with per-domain versions: { presence: N, health: N }. Presence and health are updated incrementally from events."
-    },
-    {
-      "id": "US-007",
-      "title": "Auth module",
-      "description": "Create src/lib/gateway/auth.ts — handles token storage in localStorage and device ID generation. For dev mode, supports token-only auth with allowInsecureAuth flag.",
-      "acceptanceCriteria": [
-        "Store and retrieve gateway token from localStorage",
-        "Store and retrieve gateway URL from localStorage",
-        "Generate stable device ID (fingerprint-based or random UUID persisted in localStorage)",
-        "Generate unique instanceId per tab/session",
-        "Build auth params for connect frame",
-        "Support dev mode: token-only auth (no device keypair)",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 8,
-      "passes": false,
-      "notes": "Dev mode: gateway.controlUi.allowInsecureAuth: true skips device identity. Full Ed25519 device identity via WebCrypto is a Phase 6 concern."
-    },
-    {
-      "id": "US-015",
-      "title": "Reconnection with backoff",
-      "description": "Implement exponential backoff reconnection in GatewayConnection. Base delay 800ms, multiplier 1.7x, cap 15s. Handle tick timeout (2x tickIntervalMs). Handle shutdown event with restartExpectedMs delay.",
-      "acceptanceCriteria": [
-        "Exponential backoff: 800ms base, 1.7x multiplier, 15s cap",
-        "Auto-reconnect on unexpected disconnect",
-        "Tick timeout detection: no tick within 2x tickIntervalMs (60s) triggers reconnect",
-        "Handle shutdown event: wait restartExpectedMs before reconnecting",
-        "Reset backoff counter on successful reconnect",
-        "State transitions to RECONNECTING during retry",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 9,
-      "passes": false,
-      "notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs. Must be done before gateway client (US-008) since the client composes connection with reconnection built in."
-    },
-    {
-      "id": "US-008",
-      "title": "Gateway client (public API)",
-      "description": "Create src/lib/gateway/client.ts — composes Connection, Correlator, EventBus, Snapshot, and Auth into the public GatewayClient API. Singleton export. Also create src/lib/gateway/index.ts barrel export.",
-      "acceptanceCriteria": [
-        "GatewayClient class composes all gateway modules",
-        "connect(config) connects to gateway and returns HelloOk",
-        "disconnect() cleanly disconnects",
-        "call(method, params) sends request and returns typed response Promise",
-        "on(event, handler) subscribes to gateway events",
-        "once(event) returns Promise for next event",
-        "state readable store exposed for connection state",
-        "Singleton instance exported",
-        "Barrel export from src/lib/gateway/index.ts",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 10,
-      "passes": false,
-      "notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing. Reconnection with backoff (US-015) must be done first."
-    },
-    {
-      "id": "US-009",
-      "title": "Connection store",
-      "description": "Create src/lib/stores/connection.ts — Svelte writable store exposing connection state, gateway URL, and reconnection status. Wired to the GatewayClient state.",
-      "acceptanceCriteria": [
-        "Connection store with: state, gatewayUrl, isReconnecting, connId, serverVersion",
-        "Derives from GatewayClient.state",
-        "Updates reactively when connection state changes",
-        "Barrel export from src/lib/stores/index.ts",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 11,
-      "passes": false,
-      "notes": "This store bridges the gateway client to Svelte components. Components subscribe to this for connection-aware rendering."
-    },
-    {
-      "id": "US-010",
-      "title": "App shell layout",
-      "description": "Create src/routes/+layout.svelte with a sidebar (channels and apps sections), main content area, and connection status indicator. Tailwind CSS styling with responsive breakpoints.",
-      "acceptanceCriteria": [
-        "Layout with sidebar + main content area",
-        "Sidebar has Channels section (placeholder list) and Apps section",
-        "Main content area renders slot for page content",
-        "Responsive: sidebar visible on desktop (md+), hidden on mobile",
-        "Tailwind CSS styling with dark theme base (slate/zinc palette)",
-        "npm run format passes",
-        "npm run check passes with 0 errors",
-        "npm run build succeeds"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": "Reference architecture doc §11 for navigation model. Sidebar: Channels (chat sessions) at top, Apps (Projects, Files, Agent Jobs) below, Settings + Passwords at bottom."
-    },
-    {
-      "id": "US-011",
-      "title": "Sidebar navigation component",
-      "description": "Create a sidebar component with Channels section (placeholder list), Apps section (Projects, Files, Agent Jobs links), and Settings/Passwords links at the bottom. Active route highlighting.",
-      "acceptanceCriteria": [
-        "Sidebar component with Channels section header + placeholder items",
-        "Apps section with Projects, Files, Agent Jobs links",
-        "Settings and Passwords links at bottom of sidebar",
-        "Active route highlighting using SvelteKit $page store",
-        "Tailwind styling consistent with app shell",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": "Reference architecture doc §11 for sidebar layout. Use $app/stores for page store. Links can point to placeholder routes for now."
-    },
-    {
-      "id": "US-012",
-      "title": "Connection status indicator",
-      "description": "Create a component showing the WebSocket connection state (connected/connecting/disconnected/reconnecting) with a colored dot indicator. Wire to the connection store.",
-      "acceptanceCriteria": [
-        "Component shows colored dot: green=connected/ready, yellow=connecting/reconnecting, red=disconnected/error",
-        "Text label shows current state",
-        "Subscribes to connection store",
-        "Placed in app shell (sidebar footer or header)",
-        "npm run format passes",
-        "npm run check passes with 0 errors"
-      ],
-      "priority": 14,
-      "passes": false,
-      "notes": "ConnectionState values: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING."
-    },
-    {
-      "id": "US-013",
-      "title": "Gateway connection page",
-      "description": "Create a landing/connection page with gateway URL input, token input, and connect button. Persist settings in localStorage. On successful connect, show the app shell.",
-      "acceptanceCriteria": [
-        "Connection page with gateway URL input (default ws://127.0.0.1:18789)",
-        "Token input field (password type)",
-        "Connect button that initiates WS connection",
-        "Persists gateway URL and token in localStorage via auth module",
-        "Shows error state if connection fails",
-        "On successful connect, transitions to app shell layout",
-        "npm run format passes",
-        "npm run check passes with 0 errors",
-        "npm run build succeeds"
-      ],
-      "priority": 15,
-      "passes": false,
-      "notes": "This is the entry point before the user is connected. After connect, the app shell with sidebar takes over."
-    },
-    {
-      "id": "US-014",
-      "title": "PWA manifest and config",
-      "description": "Add vite-plugin-pwa, create manifest with app name and icons, configure basic service worker for installability.",
-      "acceptanceCriteria": [
-        "vite-plugin-pwa installed and configured in vite.config.ts",
-        "Web app manifest with name 'Falcon Dash', short_name, icons, theme_color, background_color",
-        "Basic service worker registered for PWA installability",
-        "App is installable in Chrome/Edge",
-        "npm run format passes",
-        "npm run check passes with 0 errors",
-        "npm run build succeeds"
-      ],
-      "priority": 16,
-      "passes": false,
-      "notes": "Keep PWA config minimal for Phase 1. Full offline support and push notifications are Phase 6."
-    }
-  ]
+	"project": "falcon-dash",
+	"branchName": "ralph/phase-1-core-infrastructure",
+	"description": "Phase 1: Core Infrastructure — SvelteKit app shell, WS client layer, connection lifecycle, PWA basics",
+	"userStories": [
+		{
+			"id": "US-001",
+			"title": "SvelteKit project scaffold",
+			"description": "Create a new SvelteKit project with TypeScript, Tailwind CSS 3, ESLint, and Prettier. Set up the folder structure per the architecture doc §7.",
+			"acceptanceCriteria": [
+				"SvelteKit 2 project initialized with TypeScript",
+				"Tailwind CSS 3 configured and working",
+				"ESLint with svelte plugin + typescript-eslint configured",
+				"Prettier configured: tabs, single quotes, no trailing commas",
+				"Folder structure created: src/lib/gateway/, src/lib/stores/, src/lib/components/, src/lib/utils/, src/routes/",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run lint passes",
+				"npm run build succeeds"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": "This is the foundation. All other stories depend on this. Reference builddocs/falcon-dash-architecture-v02.md §7 for folder structure."
+		},
+		{
+			"id": "US-016",
+			"title": "Playwright E2E smoke test",
+			"description": "Install Playwright with chromium only. Create a smoke test that starts the app, navigates to /, listens for console errors, and asserts the page loads successfully.",
+			"acceptanceCriteria": [
+				"@playwright/test installed as dev dependency",
+				"npx playwright install chromium run (chromium only, no firefox/webkit)",
+				"playwright.config.ts at project root: webServer runs npm run dev on port 5173, chromium only, headless",
+				"tests/smoke.test.ts: navigates to /, listens for console errors and fails if any, asserts 200 status and body element exists",
+				"\"test\": \"playwright test\" added to package.json scripts",
+				"npm run test passes",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 2,
+			"passes": false,
+			"notes": "Chromium only — skip firefox and webkit. Every story after this benefits from the smoke test as a quality gate."
+		},
+		{
+			"id": "US-002",
+			"title": "Gateway protocol types",
+			"description": "Create src/lib/gateway/types.ts with all TypeScript types for the WS protocol: frame types (req/res/event), connect params, hello-ok response, agent events, error shape, connection states.",
+			"acceptanceCriteria": [
+				"All frame types defined: RequestFrame, ResponseFrame, EventFrame",
+				"ConnectParams type with client, auth, device fields",
+				"HelloOkPayload type with server, features, policy, snapshot, auth fields",
+				"ConnectionState enum: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING",
+				"Error shape type: { code, message, details?, retryable?, retryAfterMs? }",
+				"Agent event types: thinking, tool_start, tool_result, text_delta, text_end",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 3,
+			"passes": false,
+			"notes": "Reference builddocs/ws-protocol.md for exact protocol shapes. client.id must be 'openclaw-control-ui', client.mode must be 'webchat', protocol version 3."
+		},
+		{
+			"id": "US-003",
+			"title": "Gateway connection class",
+			"description": "Create src/lib/gateway/connection.ts — low-level WebSocket management: open, send frames, receive frames, close. Implements the connection state machine (DISCONNECTED → CONNECTING → AUTHENTICATING → CONNECTED → READY → RECONNECTING).",
+			"acceptanceCriteria": [
+				"GatewayConnection class manages raw WebSocket lifecycle",
+				"State machine transitions: DISCONNECTED → CONNECTING → AUTHENTICATING → CONNECTED/PAIRING_REQUIRED/AUTH_FAILED → READY → RECONNECTING",
+				"send(frame) serializes and sends JSON",
+				"Incoming frames parsed and emitted via callbacks",
+				"connect(url, params) opens WS and sends connect frame",
+				"close() cleanly closes the connection",
+				"State exposed as Svelte readable store",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 4,
+			"passes": false,
+			"notes": "First frame must be connect request. Challenge nonce handling for non-local connections. Reference architecture doc §4.2 for state machine."
+		},
+		{
+			"id": "US-004",
+			"title": "Request correlator",
+			"description": "Create src/lib/gateway/correlator.ts — maps request IDs to pending Promises, handles timeouts, generates unique request IDs and idempotency keys.",
+			"acceptanceCriteria": [
+				"RequestCorrelator class tracks pending requests by ID",
+				"send(method, params) returns Promise that resolves/rejects on matching response",
+				"Configurable per-request timeout (default 30s)",
+				"Generates unique request IDs (incrementing counter or UUID)",
+				"Generates idempotency keys for mutation methods",
+				"Rejects all pending requests on disconnect",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 5,
+			"passes": false,
+			"notes": "Side-effecting methods (chat.send, agent) require idempotency keys. Request IDs must be unique per request for response correlation."
+		},
+		{
+			"id": "US-005",
+			"title": "Event bus",
+			"description": "Create src/lib/gateway/events.ts — typed event emitter for gateway events. Maps event names to handler sets with support for wildcards (e.g. pm.*) and auto-cleanup on disconnect.",
+			"acceptanceCriteria": [
+				"EventBus class with on(event, handler), off(event, handler), emit(event, payload)",
+				"Wildcard support: 'pm.*' matches 'pm.task.created', 'pm.project.updated', etc.",
+				"on() returns unsubscribe function",
+				"once(event) returns Promise that resolves on next emission",
+				"clear() removes all handlers (called on disconnect)",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 6,
+			"passes": false,
+			"notes": "Events from server: agent, chat, presence, tick, shutdown, exec.approval.requested, health, heartbeat, cron, pm."
+		},
+		{
+			"id": "US-006",
+			"title": "Snapshot store",
+			"description": "Create src/lib/gateway/snapshot.ts — hydrated from hello-ok snapshot data, exports Svelte readable stores for presence, health, and stateVersion.",
+			"acceptanceCriteria": [
+				"SnapshotStore class hydrated from hello-ok payload",
+				"Exports Svelte readable stores: presence, health, stateVersion",
+				"hydrate(snapshot) populates all stores from hello-ok data",
+				"updatePresence(delta) applies incremental presence updates",
+				"updateHealth(data) updates health store",
+				"stateVersion tracked per domain (presence, health)",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 7,
+			"passes": false,
+			"notes": "stateVersion is an object with per-domain versions: { presence: N, health: N }. Presence and health are updated incrementally from events."
+		},
+		{
+			"id": "US-007",
+			"title": "Auth module",
+			"description": "Create src/lib/gateway/auth.ts — handles token storage in localStorage and device ID generation. For dev mode, supports token-only auth with allowInsecureAuth flag.",
+			"acceptanceCriteria": [
+				"Store and retrieve gateway token from localStorage",
+				"Store and retrieve gateway URL from localStorage",
+				"Generate stable device ID (fingerprint-based or random UUID persisted in localStorage)",
+				"Generate unique instanceId per tab/session",
+				"Build auth params for connect frame",
+				"Support dev mode: token-only auth (no device keypair)",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 8,
+			"passes": false,
+			"notes": "Dev mode: gateway.controlUi.allowInsecureAuth: true skips device identity. Full Ed25519 device identity via WebCrypto is a Phase 6 concern."
+		},
+		{
+			"id": "US-015",
+			"title": "Reconnection with backoff",
+			"description": "Implement exponential backoff reconnection in GatewayConnection. Base delay 800ms, multiplier 1.7x, cap 15s. Handle tick timeout (2x tickIntervalMs). Handle shutdown event with restartExpectedMs delay.",
+			"acceptanceCriteria": [
+				"Exponential backoff: 800ms base, 1.7x multiplier, 15s cap",
+				"Auto-reconnect on unexpected disconnect",
+				"Tick timeout detection: no tick within 2x tickIntervalMs (60s) triggers reconnect",
+				"Handle shutdown event: wait restartExpectedMs before reconnecting",
+				"Reset backoff counter on successful reconnect",
+				"State transitions to RECONNECTING during retry",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 9,
+			"passes": false,
+			"notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs. Must be done before gateway client (US-008) since the client composes connection with reconnection built in."
+		},
+		{
+			"id": "US-008",
+			"title": "Gateway client (public API)",
+			"description": "Create src/lib/gateway/client.ts — composes Connection, Correlator, EventBus, Snapshot, and Auth into the public GatewayClient API. Singleton export. Also create src/lib/gateway/index.ts barrel export.",
+			"acceptanceCriteria": [
+				"GatewayClient class composes all gateway modules",
+				"connect(config) connects to gateway and returns HelloOk",
+				"disconnect() cleanly disconnects",
+				"call(method, params) sends request and returns typed response Promise",
+				"on(event, handler) subscribes to gateway events",
+				"once(event) returns Promise for next event",
+				"state readable store exposed for connection state",
+				"Singleton instance exported",
+				"Barrel export from src/lib/gateway/index.ts",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 10,
+			"passes": false,
+			"notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing. Reconnection with backoff (US-015) must be done first."
+		},
+		{
+			"id": "US-009",
+			"title": "Connection store",
+			"description": "Create src/lib/stores/connection.ts — Svelte writable store exposing connection state, gateway URL, and reconnection status. Wired to the GatewayClient state.",
+			"acceptanceCriteria": [
+				"Connection store with: state, gatewayUrl, isReconnecting, connId, serverVersion",
+				"Derives from GatewayClient.state",
+				"Updates reactively when connection state changes",
+				"Barrel export from src/lib/stores/index.ts",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 11,
+			"passes": false,
+			"notes": "This store bridges the gateway client to Svelte components. Components subscribe to this for connection-aware rendering."
+		},
+		{
+			"id": "US-010",
+			"title": "App shell layout",
+			"description": "Create src/routes/+layout.svelte with a sidebar (channels and apps sections), main content area, and connection status indicator. Tailwind CSS styling with responsive breakpoints.",
+			"acceptanceCriteria": [
+				"Layout with sidebar + main content area",
+				"Sidebar has Channels section (placeholder list) and Apps section",
+				"Main content area renders slot for page content",
+				"Responsive: sidebar visible on desktop (md+), hidden on mobile",
+				"Tailwind CSS styling with dark theme base (slate/zinc palette)",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 12,
+			"passes": false,
+			"notes": "Reference architecture doc §11 for navigation model. Sidebar: Channels (chat sessions) at top, Apps (Projects, Files, Agent Jobs) below, Settings + Passwords at bottom."
+		},
+		{
+			"id": "US-011",
+			"title": "Sidebar navigation component",
+			"description": "Create a sidebar component with Channels section (placeholder list), Apps section (Projects, Files, Agent Jobs links), and Settings/Passwords links at the bottom. Active route highlighting.",
+			"acceptanceCriteria": [
+				"Sidebar component with Channels section header + placeholder items",
+				"Apps section with Projects, Files, Agent Jobs links",
+				"Settings and Passwords links at bottom of sidebar",
+				"Active route highlighting using SvelteKit $page store",
+				"Tailwind styling consistent with app shell",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 13,
+			"passes": false,
+			"notes": "Reference architecture doc §11 for sidebar layout. Use $app/stores for page store. Links can point to placeholder routes for now."
+		},
+		{
+			"id": "US-012",
+			"title": "Connection status indicator",
+			"description": "Create a component showing the WebSocket connection state (connected/connecting/disconnected/reconnecting) with a colored dot indicator. Wire to the connection store.",
+			"acceptanceCriteria": [
+				"Component shows colored dot: green=connected/ready, yellow=connecting/reconnecting, red=disconnected/error",
+				"Text label shows current state",
+				"Subscribes to connection store",
+				"Placed in app shell (sidebar footer or header)",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 14,
+			"passes": false,
+			"notes": "ConnectionState values: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING."
+		},
+		{
+			"id": "US-013",
+			"title": "Gateway connection page",
+			"description": "Create a landing/connection page with gateway URL input, token input, and connect button. Persist settings in localStorage. On successful connect, show the app shell.",
+			"acceptanceCriteria": [
+				"Connection page with gateway URL input (default ws://127.0.0.1:18789)",
+				"Token input field (password type)",
+				"Connect button that initiates WS connection",
+				"Persists gateway URL and token in localStorage via auth module",
+				"Shows error state if connection fails",
+				"On successful connect, transitions to app shell layout",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 15,
+			"passes": false,
+			"notes": "This is the entry point before the user is connected. After connect, the app shell with sidebar takes over."
+		},
+		{
+			"id": "US-014",
+			"title": "PWA manifest and config",
+			"description": "Add vite-plugin-pwa, create manifest with app name and icons, configure basic service worker for installability.",
+			"acceptanceCriteria": [
+				"vite-plugin-pwa installed and configured in vite.config.ts",
+				"Web app manifest with name 'Falcon Dash', short_name, icons, theme_color, background_color",
+				"Basic service worker registered for PWA installability",
+				"App is installable in Chrome/Edge",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 16,
+			"passes": false,
+			"notes": "Keep PWA config minimal for Phase 1. Full offline support and push notifications are Phase 6."
+		}
+	]
 }

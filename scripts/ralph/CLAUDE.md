@@ -7,6 +7,7 @@ You are an autonomous coding agent building **falcon-dash**, a SvelteKit web das
 Read the root `CLAUDE.md` at the project root for tech stack, conventions, and folder structure. That file is the source of truth for coding standards.
 
 Reference docs live in `builddocs/`:
+
 - `builddocs/falcon-dash-architecture-v02.md` — full architecture, module specs, data flows
 - `builddocs/ws-protocol.md` — WebSocket protocol reference (frames, methods, events)
 - `builddocs/pm-spec.md` — project management specification
@@ -49,6 +50,7 @@ Reference docs live in `builddocs/`:
 ## Progress Report Format
 
 APPEND to `scripts/ralph/progress.txt` (never replace, always append):
+
 ```
 ## [Date/Time] - [Story ID]
 - What was implemented

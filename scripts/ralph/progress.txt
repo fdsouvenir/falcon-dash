@@ -1,4 +1,30 @@
 # Ralph Progress Log — falcon-dash Phase 1: Core Infrastructure
 Started: 2026-02-08
 Branch: ralph/phase-1-core-infrastructure
+
+## Codebase Patterns
+- SvelteKit 2 with Svelte 4 (NOT Svelte 5) — use `on:event`, `export let`, `$:` syntax
+- `@sveltejs/vite-plugin-svelte@^3` is required for Svelte 4 compat (v4+ needs Svelte 5)
+- `vite@^5` is required (not v6+) for vite-plugin-svelte v3 compat
+- `eslint@^9` is required (not v10) for eslint-plugin-svelte compat
+- ESLint uses flat config (eslint.config.js), NOT legacy .eslintrc
+- Prettier config: tabs, singleQuote, trailingComma: "none"
+- Folder structure: src/lib/gateway/, stores/, components/, utils/
+- Tailwind CSS 3 via postcss.config.js + tailwind.config.js
+- Build warnings about `untrack`/`fork`/`settled` are harmless (SvelteKit 2.50+ has Svelte 5 imports but works fine with Svelte 4)
+
+---
+
+## 2026-02-08 - US-001
+- Scaffolded SvelteKit 2 + Svelte 4 + TypeScript project
+- Configured Tailwind CSS 3 with PostCSS + autoprefixer
+- Configured ESLint 9 with svelte plugin + typescript-eslint (flat config)
+- Configured Prettier: tabs, single quotes, no trailing commas
+- Created folder structure: src/lib/gateway/, stores/, components/, utils/
+- Files created: package.json, svelte.config.js, vite.config.ts, tsconfig.json, eslint.config.js, .prettierrc, .prettierignore, postcss.config.js, tailwind.config.js, src/app.html, src/app.css, src/app.d.ts, src/routes/+layout.svelte, src/routes/+page.svelte
+- **Learnings for future iterations:**
+  - Must pin @sveltejs/vite-plugin-svelte@^3 for Svelte 4 (v4+ requires Svelte 5)
+  - Must pin vite@^5 for vite-plugin-svelte v3
+  - Must pin eslint@^9 (v10 conflicts with eslint-plugin-svelte)
+  - `npm create svelte@latest` (sv create) is interactive, not scriptable — scaffold manually
 ---

@@ -12,6 +12,7 @@ Web dashboard for the OpenClaw AI platform. Connects to the OpenClaw Gateway via
 ## Critical: Svelte 4 Syntax
 
 This project uses **Svelte 4**, NOT Svelte 5. Use:
+
 - `on:click`, `on:input`, `on:submit` (NOT `onclick`, `oninput`)
 - `export let prop` for component props (NOT `$props()`)
 - `$:` reactive declarations (NOT `$derived()` or `$effect()`)
