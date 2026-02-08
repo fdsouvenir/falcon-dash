@@ -227,7 +227,7 @@
 				"npm run test passes"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the integration story — it wires all the pieces together. Use Svelte 4 syntax throughout: on:send, on:abort, $activeSessionKey, $connectionState. The +page.ts must have export const ssr = false (chat needs browser APIs). ThinkingBlock and ToolCallCard render inline within assistant messages, not as separate list items."
 		},
 		{

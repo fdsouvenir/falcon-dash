@@ -19,6 +19,8 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
 - Time utilities live in `src/lib/utils/time.ts`
 - ESLint `svelte/no-reactive-functions` disallows `$: fn = (x) => ...` — use plain `function` declarations instead
 - For reactive timestamps, pass a `now` variable to formatting functions so Svelte detects the dependency
+- ESLint `svelte/require-each-key` enforces keyed `{#each}` blocks — use index `(i)` when items lack unique IDs
+- Chat route: `src/routes/chat/+page.svelte` with `+page.ts` (ssr: false)
 
 ---
 
@@ -153,4 +155,23 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Sidebar already uses `class:` conditional directives for active state — same pattern reused for sessions
   - Converting Map to array for `{#each}`: `$: sessionList = [...$sessions.values()]` with reactive declaration
   - Prettier reformatted the file (minor whitespace adjustments) — always run format before checking
+---
+
+## 2026-02-08 - US-026
+- Created `src/routes/chat/+page.ts` with `ssr: false` (chat needs browser APIs)
+- Created `src/routes/chat/+page.svelte` — main chat page composing all chat components
+- Page renders inline ThinkingBlock and ToolCallCard within assistant messages (not using MessageList)
+- Features: session header, auto-scroll with "Jump to bottom" button, relative timestamps, empty states
+- Three view states: not connected, no session selected, active chat
+- onMount: initChatListeners(), loadSessions() when READY
+- onDestroy: destroyChatListeners(), unsubscribe from messages store
+- Reactive session switching: subscribes/unsubscribes to message store per active session
+- Reactive history loading: loads history when activeSessionKey + connectionState changes
+- Wires MessageComposer send/abort events to chat store functions
+- Files changed: `src/routes/chat/+page.ts` (new), `src/routes/chat/+page.svelte` (new)
+- **Learnings for future iterations:**
+  - ESLint `svelte/require-each-key` enforces keyed `{#each}` blocks — use index `(i)` when items lack unique IDs
+  - Chat page renders messages directly (not via MessageList) to support inline thinking/tools within message bubbles
+  - Manual store subscription pattern: `store.subscribe()` in a function + cleanup in `onDestroy` for dynamic derived stores
+  - Reactive statements with side effects (`$: if (...)`) work for triggering loads on store changes
 ---
