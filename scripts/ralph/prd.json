@@ -331,7 +331,7 @@
 				"npm run test passes"
 			],
 			"priority": 12,
-			"passes": false,
+			"passes": true,
 			"notes": "Fetch-based stores like the file stores. The session token is deliberately memory-only — page refresh requires re-entering the master password. This is a security feature. All API calls include the X-Vault-Token header for server-side session validation."
 		},
 		{

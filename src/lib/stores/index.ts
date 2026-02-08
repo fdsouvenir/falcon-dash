@@ -67,3 +67,16 @@ export {
 	loadHeartbeatFile,
 	saveHeartbeatFile
 } from './heartbeat';
+export {
+	vaultState,
+	passwordEntries,
+	sessionToken,
+	checkVault,
+	unlockVault,
+	lockVault,
+	initVault,
+	getEntry,
+	createEntry,
+	editEntry,
+	deleteEntry
+} from './passwords';

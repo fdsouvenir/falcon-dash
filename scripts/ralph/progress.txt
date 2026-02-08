@@ -235,3 +235,24 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - Session token pattern: server stores token + master password in memory, client sends token in `X-Vault-Token` header
   - Vault path configurable via `OPENCLAW_VAULT_PATH` env var, defaults to `~/.openclaw/passwords.kdbx`
 ---
+
+## 2026-02-08 - US-049
+- Implemented password types and fetch-based store for vault operations
+- Files created:
+  - `src/lib/types/passwords.ts` — PasswordEntry, PasswordEntryFull, VaultStatus, VaultState types
+  - `src/lib/stores/passwords.ts` — writable stores (vaultState, passwordEntries, sessionToken), fetch functions (checkVault, unlockVault, lockVault, initVault, getEntry, createEntry, editEntry, deleteEntry)
+- Files modified:
+  - `src/lib/types/index.ts` — added barrel exports for password types
+  - `src/lib/stores/index.ts` — added barrel exports for password store
+- Features:
+  - Fetch-based store pattern matching files.ts
+  - Session token stored in memory only (writable store, never localStorage) — page refresh requires re-entering master password
+  - All API calls include X-Vault-Token header via authHeaders() helper
+  - checkVault() determines vault status: unavailable, locked, or unlocked
+  - Server returns entry titles as string[] from listEntries — mapped to PasswordEntry[] in store
+  - Error responses parsed for message field when available
+- **Learnings for future iterations:**
+  - Server listEntries returns string[] (entry titles), not full PasswordEntry objects — client maps these to PasswordEntry with just `title` field
+  - `get()` from svelte/store is needed to read store values in non-reactive contexts (e.g., building headers)
+  - Memory-only session token is a deliberate security pattern — never persist to localStorage or cookies
+---
