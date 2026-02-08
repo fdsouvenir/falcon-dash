@@ -168,3 +168,15 @@ Branch: ralph/phase-1-core-infrastructure
 - Subscribes to connectionState store
 - Placed in sidebar footer (above Settings/Passwords links)
 ---
+
+## 2026-02-08 - US-013
+- Updated src/routes/+page.svelte with gateway connection form
+- Connection form: gateway URL input (default ws://127.0.0.1:18789), token input (password), connect button
+- Persists URL and token in localStorage via auth module
+- Connected state: shows server details (URL, connection ID, version) + disconnect button
+- Conditional rendering: form when disconnected, dashboard info when connected
+- Created src/routes/+page.ts with `export const ssr = false` to avoid SSR localStorage error
+- **Learnings for future iterations:**
+  - SvelteKit SSR tries to render pages server-side; localStorage is not available in SSR
+  - Use `export const ssr = false` in +page.ts to disable SSR for pages that need browser APIs
+---

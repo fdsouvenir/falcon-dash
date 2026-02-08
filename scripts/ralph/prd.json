@@ -270,7 +270,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 15,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the entry point before the user is connected. After connect, the app shell with sidebar takes over."
 		},
 		{
