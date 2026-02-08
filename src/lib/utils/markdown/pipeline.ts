@@ -9,11 +9,13 @@ import rehypeStringify from 'rehype-stringify';
 import { sanitizeSchema } from './sanitize-schema';
 import { rehypeShikiPlugin } from './shiki-plugin';
 import { rehypeMermaidPlugin } from './mermaid-plugin';
+import { remarkAdmonitionPlugin } from './admonition-plugin';
 
 const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
 	.use(remarkMath)
+	.use(remarkAdmonitionPlugin)
 	.use(remarkRehype)
 	.use(rehypeKatex)
 	.use(rehypeMermaidPlugin)
