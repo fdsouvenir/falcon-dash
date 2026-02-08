@@ -37,7 +37,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Chromium only — skip firefox and webkit. Every story after this benefits from the smoke test as a quality gate."
 		},
 		{

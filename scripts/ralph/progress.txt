@@ -27,4 +27,18 @@ Branch: ralph/phase-1-core-infrastructure
   - Must pin vite@^5 for vite-plugin-svelte v3
   - Must pin eslint@^9 (v10 conflicts with eslint-plugin-svelte)
   - `npm create svelte@latest` (sv create) is interactive, not scriptable — scaffold manually
+- Playwright E2E: tests/ dir at project root, playwright.config.ts at root
+- Smoke test: listen for console errors, assert 200 + body exists
+
+---
+
+## 2026-02-08 - US-016
+- Installed @playwright/test, chromium only
+- Created playwright.config.ts: webServer on port 5173, chromium only, headless
+- Created tests/smoke.test.ts: navigates to /, listens for console errors, asserts 200 + body
+- Added "test": "playwright test" to package.json scripts
+- All quality gates pass: check, lint, build, format, test
+- **Learnings for future iterations:**
+  - Playwright chromium was already cached, `npx playwright install chromium` is idempotent
+  - Test runs in ~6s with cold server start
 ---
