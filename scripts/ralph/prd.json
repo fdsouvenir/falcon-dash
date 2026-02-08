@@ -218,7 +218,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 12,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §11 for navigation model. Sidebar: Channels (chat sessions) at top, Apps (Projects, Files, Agent Jobs) below, Settings + Passwords at bottom."
 		},
 		{

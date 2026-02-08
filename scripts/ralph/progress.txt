@@ -137,3 +137,14 @@ Branch: ralph/phase-1-core-infrastructure
 - gatewayUrl, connId, serverVersion as writable stores
 - Created src/lib/stores/index.ts — barrel export
 ---
+
+## 2026-02-08 - US-010
+- Updated src/routes/+layout.svelte with sidebar + main content area
+- Sidebar: Channels section (placeholder), Apps section (Projects, Files, Agent Jobs)
+- Sidebar footer: Settings, Passwords links
+- Responsive: sidebar visible on md+, toggle button on mobile
+- Dark theme: slate-900/slate-800 palette with Tailwind CSS
+- Disabled `svelte/no-navigation-without-resolve` ESLint rule (Svelte 5 feature)
+- **Learnings for future iterations:**
+  - eslint-plugin-svelte enforces `resolve()` for href — disable for Svelte 4 static routes
+---
