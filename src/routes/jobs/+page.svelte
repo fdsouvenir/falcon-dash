@@ -26,6 +26,7 @@
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 	import CronJobList from '$lib/components/jobs/CronJobList.svelte';
 	import CronJobForm from '$lib/components/jobs/CronJobForm.svelte';
+	import CronRunHistory from '$lib/components/jobs/CronRunHistory.svelte';
 
 	type Tab = 'heartbeat' | 'cron';
 
@@ -427,6 +428,15 @@
 							on:select={handleSelectJob}
 						/>
 					</div>
+
+					{#if selectedJobId}
+						<div class="mt-4 rounded-lg border border-slate-700 bg-slate-800/50">
+							<div class="border-b border-slate-700 px-5 py-3">
+								<h4 class="text-sm font-semibold text-slate-300">Run History</h4>
+							</div>
+							<CronRunHistory jobId={selectedJobId} {now} />
+						</div>
+					{/if}
 				{/if}
 			</div>
 
