@@ -128,3 +128,22 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - Real-time cron events use action-based dispatch: 'added'/'updated' carry full job, 'removed' carries jobId, 'run_update' carries full run
   - Event listener name is 'cron' (matches gateway.on('cron', handler)), not 'event:cron'
 ---
+
+## 2026-02-08 - US-044
+- Implemented heartbeat config store — hybrid store combining gateway config and workspace file API
+- Files created:
+  - `src/lib/stores/heartbeat.ts` — writable stores (heartbeatConfig, heartbeatFileContent, heartbeatFileHash), gateway functions (loadHeartbeatConfig, updateHeartbeatConfig), fetch functions (loadHeartbeatFile, saveHeartbeatFile)
+- Files modified:
+  - `src/lib/gateway/types.ts` — added HeartbeatConfig, GatewayConfigResponse interfaces
+  - `src/lib/stores/index.ts` — added barrel exports for heartbeat store
+- Features:
+  - Gateway-based: heartbeat config via config.get/config.patch
+  - Fetch-based: HEARTBEAT.md content via workspace file API routes
+  - loadHeartbeatFile handles 404 gracefully (empty content/hash)
+  - saveHeartbeatFile handles 409 conflict with user-facing error
+  - updateHeartbeatConfig applies optimistic local update after gateway call
+- **Learnings for future iterations:**
+  - Hybrid stores combine both data sources (gateway.call + fetch) — keep each function clearly typed
+  - GatewayConfigResponse.payload is Record<string, unknown> and needs `as unknown as HeartbeatConfig` cast
+  - 404 handling for optional files: set empty defaults rather than throwing
+---

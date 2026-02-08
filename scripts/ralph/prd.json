@@ -189,7 +189,7 @@
 				"npm run test passes"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "Hybrid store: heartbeat settings come from gateway config.get/config.patch, but HEARTBEAT.md content comes from the workspace file API (fetch-based, using routes from US-038). This is the first store that bridges both data sources."
 		},
 		{
