@@ -74,7 +74,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "First frame must be connect request. Challenge nonce handling for non-local connections. Reference architecture doc §4.2 for state machine."
 		},
 		{

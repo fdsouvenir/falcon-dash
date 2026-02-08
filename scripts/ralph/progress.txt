@@ -54,3 +54,15 @@ Branch: ralph/phase-1-core-infrastructure
   - Keep types close to ws-protocol.md shapes
   - ClientInfo.id is literal type 'openclaw-control-ui' (gateway validates)
 ---
+
+## 2026-02-08 - US-003
+- Created src/lib/gateway/connection.ts — GatewayConnection class
+- State machine: DISCONNECTED → CONNECTING → AUTHENTICATING (sends connect frame) → CONNECTED/READY/etc.
+- send(frame) serializes JSON, connect(url, params) opens WS, close() cleans up
+- State exposed as Svelte readable store via getter
+- Response and event handlers registered via setResponseHandler/setEventHandler
+- setState() method for higher-level modules to drive transitions
+- **Learnings for future iterations:**
+  - Keep connection class low-level — reconnection/backoff will be added in US-015
+  - WS onclose always fires after onerror, so no state update needed in onerror
+---
