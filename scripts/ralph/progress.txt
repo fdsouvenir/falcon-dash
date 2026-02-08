@@ -180,3 +180,20 @@ Branch: ralph/phase-1-core-infrastructure
   - SvelteKit SSR tries to render pages server-side; localStorage is not available in SSR
   - Use `export const ssr = false` in +page.ts to disable SSR for pages that need browser APIs
 ---
+
+## 2026-02-08 - US-014
+- Installed @vite-pwa/sveltekit as devDependency
+- Updated vite.config.ts with SvelteKitPWA plugin configuration
+- Manifest: name 'Falcon Dash', theme_color #0f172a, standalone display
+- Icons: 192x192 and 512x512 placeholder PNGs (slate-900 background)
+- Workbox: globPatterns for client assets (js, css, ico, png, svg, etc.)
+- Service worker registered with autoUpdate strategy
+- All quality gates pass: format, check, lint, build, test
+- **Learnings for future iterations:**
+  - Use `@vite-pwa/sveltekit` (SvelteKit-specific package), not plain `vite-plugin-pwa`
+  - `SvelteKitPWA` handles SvelteKit's SSR + client split automatically
+---
+
+## PHASE 1 COMPLETE
+All 15 user stories (US-001 through US-016, US-013, US-014) pass all quality gates.
+Branch: ralph/phase-1-core-infrastructure
