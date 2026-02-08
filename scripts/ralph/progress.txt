@@ -49,6 +49,16 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 - `toStatus(val: string)` helper avoids `as PmStatus` in template expressions
 - Collapsible tree: `Set<number>` with reassignment for reactivity
 
+### PM View Switcher Pattern
+- `/projects` route serves as the integrated PM module entry point
+- View state synced with URL via `?view=dashboard|list|kanban` query param
+- `goto(url, { replaceState: true, noScroll: true })` for view param updates
+- Filter state (selectedDomainId, selectedFocusId) preserved across view switches via shared parent state
+- PmDashboard extracted into component for clean view switching
+- PM sidebar uses fixed positioning on mobile with overlay backdrop (z-30 overlay, z-40 sidebar)
+- TaskDetail panel opens from kanban task select and search result select
+- `isActiveView(view)` helper avoids `as` casts in template class bindings
+
 ### PM Types Pattern
 - Entity types prefixed with `Pm`: `PmDomain`, `PmFocus`, `PmProject`, etc.
 - Method param/response types: `Pm{Group}{Action}Params` / `Pm{Group}{Action}Response`
@@ -189,3 +199,17 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - Selection state as `Set<number>` with reassignment pattern works well for Svelte reactivity: `selectedTaskIds = selectedTaskIds`
   - `e.stopPropagation()` on checkbox click prevents triggering the parent row's navigation click handler
   - Bulk action confirmation delegates the actual async work to a stored callback function (`confirmAction.fn`), keeping the dialog generic
+
+## 2026-02-08 - US-061
+- Rewrote `src/routes/projects/+page.svelte` as integrated PM module entry point with view switcher, PM sidebar, search, and task detail panel
+- Created `src/lib/components/pm/PmDashboard.svelte` — extracted dashboard view into standalone component for view switching
+- Updated `src/lib/components/pm/index.ts` barrel export with PmDashboard
+- Features: view switcher tabs (Dashboard, List, Kanban) in header with URL sync (?view=kanban, ?view=list), PM sidebar with domain/focus tree on the left, main content area renders selected view, filter state (domain/focus) preserved across view switches, default view is Dashboard, search panel toggle in header, task detail slide-over panel from kanban/search, mobile sidebar collapse with overlay, mobile view switcher as bottom tabs
+- Data loading: parallel fetch of stats, activities, projects, blocks, domains, focuses on mount
+- Files changed: `src/routes/projects/+page.svelte` (rewritten), `src/lib/components/pm/PmDashboard.svelte` (new), `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - Extracting dashboard into a component keeps the route file clean when adding view switching logic
+  - `goto(url, { replaceState: true, noScroll: true })` is ideal for view parameter updates — avoids polluting browser history
+  - `loadTasks(projectId)` requires a projectId — can't bulk-load all tasks at once; let individual views handle their own task loading
+  - PM sidebar uses fixed positioning on mobile with z-index layering — same pattern as the app's main sidebar in +layout.svelte
+  - `isActiveView()` helper function avoids `as` casts in Svelte template class expressions

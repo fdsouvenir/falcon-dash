@@ -232,7 +232,7 @@
 				"npm run test passes"
 			],
 			"priority": 11,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the integration story — wiring all PM components into a cohesive module. The /projects route becomes the entry point with the view switcher and sidebar."
 		}
 	]
