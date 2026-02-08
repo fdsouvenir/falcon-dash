@@ -79,3 +79,12 @@ Branch: ralph/phase-1-core-infrastructure
   - Returning { frame, promise } lets the connection layer handle the actual sending
   - MUTATION_METHODS set keeps idempotency key logic centralized
 ---
+
+## 2026-02-08 - US-005
+- Created src/lib/gateway/events.ts — EventBus class
+- on(event, handler) returns unsubscribe function
+- Wildcard support: 'pm.*' matches 'pm.task.created', etc.
+- once(event) returns Promise that resolves on next emission
+- clear() removes all handlers (for disconnect cleanup)
+- off(event, handler) for explicit unsubscription
+---
