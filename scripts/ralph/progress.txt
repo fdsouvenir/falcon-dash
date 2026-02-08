@@ -172,3 +172,20 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - `getFlatIndex()` helper maps group-relative index to flat array index for keyboard navigation across grouped results
   - Sticky group headers (`sticky top-0 bg-slate-900/95`) work well for scrollable grouped result lists
   - `data-search-active` attribute + `scrollIntoView({ block: 'nearest' })` via `requestAnimationFrame` provides smooth keyboard scrolling
+
+## 2026-02-08 - US-060
+- Created `src/lib/components/pm/BulkActions.svelte` — floating toolbar for bulk task operations
+- Updated `src/lib/components/pm/KanbanBoard.svelte` — added selection checkboxes on task cards
+- Updated `src/routes/projects/[id]/+page.svelte` — added selection checkboxes on task tree rows (all 3 nesting levels)
+- Updated `src/lib/components/pm/index.ts` barrel export with BulkActions
+- Features: checkbox selection on task cards and task rows, select all/deselect all toggle, selection count indicator, bulk status change (all 6 statuses), bulk move to different project, bulk milestone assignment, confirmation dialog before all bulk actions, selection cleared after successful action, selected card border highlighting in kanban
+- BulkActions component dispatches `clear` and `selectAll` events for parent coordination
+- Uses `bulkUpdateTasks()` and `bulkMoveTasks()` from PM store (already implemented in US-052)
+- Reuses ConfirmDialog from Phase 3 for confirmation before destructive bulk actions
+- Files changed: `src/lib/components/pm/BulkActions.svelte` (new), `src/lib/components/pm/KanbanBoard.svelte`, `src/routes/projects/[id]/+page.svelte`, `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - BulkActions toolbar is best positioned as a floating bar at bottom center (`fixed bottom-6 left-1/2 -translate-x-1/2`) — always visible regardless of scroll position
+  - Dropdown menus in a fixed-position toolbar should open UPWARD (`bottom-full mb-2`) to avoid going off-screen
+  - Selection state as `Set<number>` with reassignment pattern works well for Svelte reactivity: `selectedTaskIds = selectedTaskIds`
+  - `e.stopPropagation()` on checkbox click prevents triggering the parent row's navigation click handler
+  - Bulk action confirmation delegates the actual async work to a stored callback function (`confirmAction.fn`), keeping the dialog generic

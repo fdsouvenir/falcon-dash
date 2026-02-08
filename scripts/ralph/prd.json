@@ -210,7 +210,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "Bulk operations should work in both list view and kanban view. Use the existing ConfirmDialog component from Phase 3."
 		},
 		{
