@@ -53,7 +53,7 @@
 				"npm run test passes"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "CRITICAL: text_delta.content contains the FULL accumulated text, not an incremental diff. Replace the assistant message content entirely on each text_delta — do NOT concatenate. The stream manager does NOT own gateway subscription — the chat store will wire gateway.on('agent', ...) to this. Switch on event.kind (discriminated union). Track latest seq on AgentRunState for reconnection gap detection."
 		},
 		{

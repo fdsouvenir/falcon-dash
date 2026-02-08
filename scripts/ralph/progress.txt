@@ -22,3 +22,19 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Idempotency keys are NOT in param types — correlator auto-generates them
   - All types auto-exported through existing barrel export in index.ts
 ---
+
+## 2026-02-08 - US-018
+- Created `src/lib/gateway/stream.ts` with AgentStreamManager class
+- Tracks active runs by runId, routes agent events by kind discriminator
+- text_delta replaces content (full accumulated text, NOT append)
+- Thinking accumulation: creates new ThinkingBlock or appends to last incomplete one
+- Tool tracking: tool_start creates pending ToolCall, tool_result matches by toolName (last pending)
+- Callbacks: onMessage, onRunComplete, onRunError for chat store integration
+- Exported from `src/lib/gateway/index.ts` barrel
+- Files changed: `src/lib/gateway/stream.ts` (new), `src/lib/gateway/index.ts`
+- **Learnings for future iterations:**
+  - Stream manager is stateless regarding gateway — chat store wires gateway.on('agent') to handleEvent
+  - sessionRuns map provides O(1) lookup of active run by sessionKey
+  - cleanup() removes from all three maps (runs, sessionRuns, messages) after text_end or abort
+  - getStreamMessage(runId) allows chat store to read in-progress message for reactive updates
+---
