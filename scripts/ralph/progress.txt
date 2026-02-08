@@ -88,3 +88,12 @@ Branch: ralph/phase-1-core-infrastructure
 - clear() removes all handlers (for disconnect cleanup)
 - off(event, handler) for explicit unsubscription
 ---
+
+## 2026-02-08 - US-006
+- Created src/lib/gateway/snapshot.ts — SnapshotStore class
+- Svelte readable stores: presence, health, stateVersion
+- hydrate(snapshot) populates all stores from hello-ok data
+- updatePresence(delta) and updateHealth(data) for incremental updates
+- setStateVersion(domain, version) for event-driven version tracking
+- stateVersion tracked per domain: { presence: N, health: N }
+---

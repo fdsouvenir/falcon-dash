@@ -127,7 +127,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "stateVersion is an object with per-domain versions: { presence: N, health: N }. Presence and health are updated incrementally from events."
 		},
 		{
