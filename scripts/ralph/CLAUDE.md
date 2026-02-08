@@ -1,6 +1,6 @@
-# Ralph Agent Instructions — falcon-dash Phase 2a: Chat Core
+# Ralph Agent Instructions — falcon-dash Phase 2b: Chat Enhanced
 
-You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform. Phase 1 (Core Infrastructure) is complete. You are now implementing **Phase 2a: Chat Core** — the minimum working chat module.
+You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform. Phase 1 (Core Infrastructure) and Phase 2a (Chat Core) are complete. You are now implementing **Phase 2b: Chat Enhanced** — rich markdown rendering, syntax highlighting, math, diagrams, message actions, and slash commands.
 
 ## Project Context
 
@@ -14,20 +14,37 @@ Reference docs live in `builddocs/`:
 
 ## What Phase 1 Built
 
-Phase 1 created the core infrastructure you build on:
-
-- **Gateway client layer:** `src/lib/gateway/` — connection, correlator, events, snapshot, auth, client, types
+- **Gateway client layer:** `src/lib/gateway/` — connection, correlator, events, snapshot, auth, client, types, stream
 - **Stores:** `src/lib/stores/connection.ts` — connection state bridged to Svelte
 - **Components:** `src/lib/components/Sidebar.svelte`, `ConnectionStatus.svelte`
 - **Routes:** `/` (connection page), app shell layout
 - **Tests:** Playwright smoke test, PWA config
 
-Key files you'll extend:
+## What Phase 2a Built
 
-- `src/lib/gateway/types.ts` — add chat/session types here
-- `src/lib/gateway/index.ts` — update barrel exports
-- `src/lib/stores/index.ts` — update barrel exports
-- `src/lib/components/Sidebar.svelte` — add session list (US-025)
+Phase 2a created the working chat infrastructure you now enhance:
+
+- **Gateway types:** `src/lib/gateway/types.ts` — ChatMessage, ToolCall, ThinkingBlock, Session, AgentRunState, all chat/session method params/responses
+- **Stream manager:** `src/lib/gateway/stream.ts` — AgentStreamManager handling text_delta (full accumulated, NOT incremental), thinking, tool tracking
+- **Stores:**
+  - `src/lib/stores/sessions.ts` — sessions Map store, activeSessionKey, loadSessions(), switchSession(), updateSession()
+  - `src/lib/stores/chat.ts` — messages Map store, getMessages(), sendMessage(), loadHistory(), abortRun(), initChatListeners(), reconnection gap fill
+- **Components:**
+  - `src/lib/components/chat/MessageList.svelte` — (unused by chat route, renders messages with auto-scroll)
+  - `src/lib/components/chat/ThinkingBlock.svelte` — `<details>` with live streaming
+  - `src/lib/components/chat/ToolCallCard.svelte` — `<details>` with status badges
+  - `src/lib/components/chat/MessageComposer.svelte` — textarea with auto-resize, Enter send, abort button
+- **Utils:** `src/lib/utils/time.ts` — formatRelativeTime(), formatFullTimestamp()
+- **Routes:** `src/routes/chat/+page.svelte` + `+page.ts` (ssr: false) — full chat UI, inline thinking/tools in messages
+- **Sidebar:** Session list with active highlighting, unread badges, New Chat button
+
+### Key Phase 2a Architecture Decisions
+
+- Chat route renders messages directly (not via MessageList) with inline ThinkingBlock/ToolCallCard
+- Messages stored as `Map<string, ChatMessage[]>` keyed by sessionKey
+- Manual store subscriptions for dynamic session switching (subscribe/unsubscribe pattern)
+- `$: if (condition)` reactive statements for triggering loads on store changes
+- activeRun uses polling (setInterval 200ms) since AgentStreamManager is a plain class
 
 ## Your Task
 
@@ -56,49 +73,175 @@ Key files you'll extend:
 - `{@html}` requires `<!-- eslint-disable svelte/no-at-html-tags -->` comment
 - `EventListener` global type triggers ESLint `no-undef` — use wrapper functions instead of `as EventListener`
 
-## Gateway WS Protocol — Chat Methods
+## Markdown Rendering Pipeline Architecture
 
-### Existing (Phase 1)
+### Pipeline Overview
 
-- `connect` — initial handshake, returns hello-ok
-- Gateway events: `agent`, `presence`, `health`, `tick`, `shutdown`
+The markdown pipeline converts raw text to sanitized HTML using the unified ecosystem:
 
-### New for Phase 2a
+```
+remarkParse → remarkGfm → [remarkMath] → [admonition plugin] → remarkRehype
+→ [rehypeKatex] → [shiki plugin] → rehypeSanitize(customSchema) → rehypeStringify
+```
 
-**Request methods (via gateway.call()):**
+Plugins in brackets `[]` are added by later stories. The pipeline is **synchronous** and returns an HTML string.
 
-- `chat.send` — Send a user message. Params: `{ sessionKey, content, model?, thinkingLevel? }`. Returns ack: `{ runId, status: 'started' }`.
-- `chat.history` — Fetch message history. Params: `{ sessionKey, afterSeq?, limit? }`. Returns: `{ messages[], hasMore }`.
-- `chat.abort` — Abort an active agent run. Params: `{ sessionKey }`.
-- `chat.inject` — Inject a system/context message. Params: `{ sessionKey, role, content }`.
-- `sessions.list` — List all sessions. Returns: `{ sessions[] }`.
-- `sessions.patch` — Update session metadata. Params: `{ sessionKey, displayName?, model?, thinkingLevel? }`.
+### Key Files
 
-**Two-stage response pattern for chat.send:**
+| File | Purpose |
+|------|---------|
+| `src/lib/utils/markdown/pipeline.ts` | `renderMarkdown(text): string` — the pipeline |
+| `src/lib/utils/markdown/sanitize-schema.ts` | Custom rehype-sanitize schema, extended per story |
+| `src/lib/utils/markdown/highlighter.ts` | Shiki HighlighterManager singleton (US-029) |
+| `src/lib/utils/markdown/mermaid-plugin.ts` | Rehype plugin for mermaid placeholders (US-031) |
+| `src/lib/utils/markdown/admonition-plugin.ts` | Remark plugin for admonitions (US-032) |
+| `src/lib/utils/markdown/index.ts` | Barrel exports |
+| `src/lib/components/chat/RenderedContent.svelte` | `{@html}` wrapper with streaming debounce |
 
-1. **Ack response** (immediate): `{ runId, status: 'started' }` — confirms the run began
-2. **Agent events** (streaming): `agent` EventFrames with `kind` discriminator
-3. **Final response** (completion): `{ runId, status: 'ok', summary }` — run finished
+### RenderedContent.svelte Pattern
 
-**CRITICAL: text_delta contains FULL accumulated text, NOT incremental diffs.**
-When you receive a `text_delta` agent event, the `content` field contains the complete text so far. REPLACE the assistant message content — do NOT append/concatenate.
+```svelte
+<!-- eslint-disable svelte/no-at-html-tags -->
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+  import { renderMarkdown } from '$lib/utils/markdown';
 
-**Agent event routing:**
+  export let content: string;
+  export let isStreaming: boolean;
 
-- Events arrive as EventFrames with `event: 'agent'`
-- The payload is an AgentEvent union, discriminated by `kind` field
-- Kinds: `thinking`, `tool_start`, `tool_result`, `text_delta`, `text_end`
-- Each event includes `sessionKey` and `runId` for routing to the correct stream
+  let renderedHtml = '';
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-**Idempotency keys:**
+  // Debounce during streaming, immediate otherwise
+  $: if (content) {
+    if (isStreaming) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        renderedHtml = renderMarkdown(content);
+      }, 50);
+    } else {
+      clearTimeout(debounceTimer);
+      renderedHtml = renderMarkdown(content);
+    }
+  }
 
-- Auto-generated by RequestCorrelator for chat.send, chat.inject, chat.abort
-- Do NOT include idempotency keys in your param types — the correlator handles this
+  onDestroy(() => clearTimeout(debounceTimer));
+</script>
 
-**EventFrame.seq:**
+<div class="rendered-content">
+  {@html renderedHtml}
+</div>
+```
 
-- Each EventFrame has an optional `seq` number for ordering
-- Track the latest seq for reconnection gap detection (US-027)
+### Sanitization Strategy
+
+`sanitize-schema.ts` starts with the GitHub schema from rehype-sanitize and extends it progressively:
+
+- **US-028 (base):** Allow `class` on code/pre/div/span, `data-*` on div
+- **US-029 (Shiki):** Allow `style` on `span` (for Shiki inline token colors)
+- **US-030 (KaTeX):** Allow MathML elements, KaTeX class names, `style` on KaTeX elements
+- **US-031 (Mermaid):** Allow SVG elements (svg, g, rect, path, text, etc.)
+
+Each story extends the SAME schema file — do not create separate schemas.
+
+### Shiki Async Init Pattern (US-029)
+
+```typescript
+class HighlighterManager {
+  private highlighter: Highlighter | null = null;
+  private initPromise: Promise<void> | null = null;
+
+  async init(): Promise<void> {
+    if (this.highlighter) return;
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this.doInit();
+    return this.initPromise;
+  }
+
+  isReady(): boolean { return this.highlighter !== null; }
+
+  highlight(code: string, lang: string): string {
+    if (!this.highlighter) return ''; // fallback handled by caller
+    return this.highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
+  }
+}
+
+export const highlighterManager = new HighlighterManager();
+```
+
+RenderedContent calls `highlighterManager.init()` in `onMount` and triggers re-render when ready.
+
+### Mermaid Post-Pipeline Pattern (US-031)
+
+Mermaid cannot run in the rehype pipeline (needs DOM). Pattern:
+
+1. **Rehype plugin** replaces ` ```mermaid ` code blocks with `<div class="mermaid-placeholder" data-mermaid-source="BASE64_ENCODED_SOURCE">`
+2. **Svelte action** (`use:mermaidAction`) finds `.mermaid-placeholder` divs after DOM update
+3. **Dynamic import** of `mermaid` on first use
+4. **`mermaid.render()`** returns SVG string, inserted into placeholder div
+5. Errors caught per-diagram — broken diagrams show raw source
+
+### Svelte Action Pattern for Post-DOM Work
+
+Both code block copy buttons (US-029) and mermaid rendering (US-031) use Svelte actions:
+
+```svelte
+<!-- In RenderedContent.svelte -->
+<div class="rendered-content" use:codeBlockActions use:mermaidAction>
+  {@html renderedHtml}
+</div>
+```
+
+Actions fire on mount and must handle DOM content changes. The `update` function in the action re-runs when the action's parameter changes, or use a MutationObserver.
+
+### Streaming Performance
+
+- **50ms debounce** during active streaming (`isStreaming=true`)
+- **Immediate render** when streaming stops (`isStreaming=false`, i.e., after `text_end`)
+- Incomplete markdown during streaming (unclosed fences, partial tables) is acceptable
+- Final render on text_end corrects any incomplete markup
+- Clear debounce timer on component destroy to prevent memory leaks
+
+## Slash Command Architecture (US-036, US-037)
+
+### Registry Pattern
+
+```typescript
+// src/lib/chat/commands/registry.ts
+export interface SlashCommand {
+  name: string;
+  description: string;
+  usage?: string;
+  execute: (args: string, context: CommandContext) => void | Promise<void>;
+}
+
+export interface CommandContext {
+  sessionKey: string;
+  sendMessage: (content: string) => void;
+  abortRun: () => void;
+  updateSession: (key: string, patch: Record<string, unknown>) => void;
+  injectMessage: (sessionKey: string, role: string, content: string) => void;
+  gateway: GatewayClient;
+}
+
+export const commands: SlashCommand[] = [];
+```
+
+### / Detection in Composer
+
+MessageComposer detects `/` at position 0, shows CommandPalette above textarea. When palette is open, Enter selects command instead of sending. If no commands match, message is sent normally.
+
+### CommandContext Wiring
+
+CommandContext is constructed in `src/routes/chat/+page.svelte` and passed to MessageComposer as a prop. The composer passes it to command.execute() when a command is selected.
+
+## Chat Route Current Structure
+
+The chat route (`src/routes/chat/+page.svelte`) currently has:
+
+- **Lines 137-141:** Inline session header (h2 with displayName) — extracted to ChatHeader in US-034
+- **Lines 172-174:** Plain text assistant message rendering (`whitespace-pre-wrap {message.content}`) — replaced by RenderedContent in US-028
+- **Line 198:** MessageComposer — modified for slash commands in US-036
 
 ## Progress Report Format
 
@@ -122,7 +265,6 @@ If you discover a **reusable pattern**, add it to the `## Codebase Patterns` sec
 ```
 ## Codebase Patterns
 - Example: Svelte stores use writable() from svelte/store
-- Example: Gateway types are in src/lib/gateway/types.ts
 ```
 
 Only add patterns that are **general and reusable**, not story-specific details.
