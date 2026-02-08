@@ -8,10 +8,13 @@
 		activeFileName,
 		loadFiles,
 		loadFile,
+		saveFile,
 		navigateTo
 	} from '$lib/stores';
 	import { formatRelativeTime } from '$lib/utils/time';
 	import { formatFileSize } from '$lib/utils/format';
+	import FilePreview from '$lib/components/files/FilePreview.svelte';
+	import FileEditor from '$lib/components/files/FileEditor.svelte';
 
 	type SortKey = 'name' | 'mtime' | 'size';
 	type SortDir = 'asc' | 'desc';
@@ -27,6 +30,8 @@
 	let sortKey: SortKey = 'name';
 	let sortDir: SortDir = 'asc';
 	let now = Date.now();
+	let editing = false;
+	let saveError = '';
 
 	$: pathSegments = $currentPath ? $currentPath.split('/').filter(Boolean) : [];
 
@@ -68,6 +73,8 @@
 	async function handleNavigate(dir: string): Promise<void> {
 		loading = true;
 		errorMessage = '';
+		editing = false;
+		saveError = '';
 		activeFile.set(null);
 		activeFileName.set('');
 		try {
@@ -88,6 +95,8 @@
 			const dir = $currentPath ? `${$currentPath}/${file.name}` : file.name;
 			await handleNavigate(dir);
 		} else {
+			editing = false;
+			saveError = '';
 			const filePath = $currentPath ? `${$currentPath}/${file.name}` : file.name;
 			try {
 				await loadFile(filePath);
@@ -106,6 +115,32 @@
 			errorMessage = err instanceof Error ? err.message : 'Failed to load directory';
 		} finally {
 			loading = false;
+		}
+	}
+
+	function startEditing(): void {
+		editing = true;
+		saveError = '';
+	}
+
+	function cancelEditing(): void {
+		editing = false;
+		saveError = '';
+	}
+
+	async function handleSave(event: CustomEvent<{ content: string }>): Promise<void> {
+		if (!$activeFile || !$activeFileName) return;
+		saveError = '';
+		try {
+			const result = await saveFile($activeFileName, event.detail.content, $activeFile.hash);
+			activeFile.set({
+				content: event.detail.content,
+				hash: result.hash,
+				mtime: new Date().toISOString()
+			});
+			editing = false;
+		} catch (err) {
+			saveError = err instanceof Error ? err.message : 'Failed to save file';
 		}
 	}
 
@@ -258,12 +293,32 @@
 		<!-- Preview pane (right pane) -->
 		<div class="flex flex-1 flex-col overflow-hidden">
 			{#if $activeFile}
-				<div class="border-b border-slate-700 px-4 py-2">
-					<h3 class="text-sm font-medium text-slate-200">{$activeFileName}</h3>
-				</div>
-				<div class="flex-1 overflow-y-auto p-4">
-					<pre class="whitespace-pre-wrap text-sm text-slate-300">{$activeFile.content}</pre>
-				</div>
+				{#if editing}
+					{#if saveError}
+						<div class="border-b border-red-800 bg-red-900/30 px-4 py-2">
+							<p class="text-sm text-red-400">{saveError}</p>
+						</div>
+					{/if}
+					<FileEditor
+						content={$activeFile.content}
+						filename={$activeFileName}
+						on:save={handleSave}
+						on:cancel={cancelEditing}
+					/>
+				{:else}
+					<div class="flex items-center justify-between border-b border-slate-700 px-4 py-2">
+						<h3 class="text-sm font-medium text-slate-200">{$activeFileName}</h3>
+						<button
+							on:click={startEditing}
+							class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
+						>
+							Edit
+						</button>
+					</div>
+					<div class="flex-1 overflow-y-auto p-4">
+						<FilePreview content={$activeFile.content} filename={$activeFileName} />
+					</div>
+				{/if}
 			{:else}
 				<div class="flex flex-1 items-center justify-center">
 					<p class="text-sm text-slate-400">Select a file to preview</p>
