@@ -31,6 +31,7 @@ This project uses **Svelte 4**, NOT Svelte 5. Use:
 npm run check    # svelte-check — must be 0 errors
 npm run lint     # prettier --check + eslint
 npm run build    # vite build (SSR + client)
+npm run test     # playwright e2e tests (chromium, headless)
 npm run format   # prettier --write
 npm run dev      # dev server on localhost:5173
 ```

@@ -18,7 +18,7 @@ Reference docs live in `builddocs/`:
 3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
 4. Pick the **highest priority** user story where `passes: false`
 5. Implement that single user story
-6. Run quality checks: `npm run check`, `npm run lint`, `npm run build`
+6. Run quality checks: `npm run check`, `npm run lint`, `npm run build`, `npm run test`
 7. Run `npm run format` before committing (agents never match Prettier config exactly)
 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
 9. Update the PRD (`scripts/ralph/prd.json`) to set `passes: true` for the completed story
@@ -74,7 +74,7 @@ Only add patterns that are **general and reusable**, not story-specific details.
 
 ## Quality Requirements
 
-- ALL commits must pass: `npm run check` (0 errors), `npm run lint`, `npm run build`
+- ALL commits must pass: `npm run check` (0 errors), `npm run lint`, `npm run build`, `npm run test`
 - Always run `npm run format` before committing
 - Do NOT commit broken code
 - Keep changes focused and minimal

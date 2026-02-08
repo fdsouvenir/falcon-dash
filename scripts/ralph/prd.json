@@ -23,6 +23,24 @@
       "notes": "This is the foundation. All other stories depend on this. Reference builddocs/falcon-dash-architecture-v02.md §7 for folder structure."
     },
     {
+      "id": "US-016",
+      "title": "Playwright E2E smoke test",
+      "description": "Install Playwright with chromium only. Create a smoke test that starts the app, navigates to /, listens for console errors, and asserts the page loads successfully.",
+      "acceptanceCriteria": [
+        "@playwright/test installed as dev dependency",
+        "npx playwright install chromium run (chromium only, no firefox/webkit)",
+        "playwright.config.ts at project root: webServer runs npm run dev on port 5173, chromium only, headless",
+        "tests/smoke.test.ts: navigates to /, listens for console errors and fails if any, asserts 200 status and body element exists",
+        "\"test\": \"playwright test\" added to package.json scripts",
+        "npm run test passes",
+        "npm run format passes",
+        "npm run check passes with 0 errors"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Chromium only — skip firefox and webkit. Every story after this benefits from the smoke test as a quality gate."
+    },
+    {
       "id": "US-002",
       "title": "Gateway protocol types",
       "description": "Create src/lib/gateway/types.ts with all TypeScript types for the WS protocol: frame types (req/res/event), connect params, hello-ok response, agent events, error shape, connection states.",
@@ -36,7 +54,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 2,
+      "priority": 3,
       "passes": false,
       "notes": "Reference builddocs/ws-protocol.md for exact protocol shapes. client.id must be 'openclaw-control-ui', client.mode must be 'webchat', protocol version 3."
     },
@@ -55,7 +73,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 3,
+      "priority": 4,
       "passes": false,
       "notes": "First frame must be connect request. Challenge nonce handling for non-local connections. Reference architecture doc §4.2 for state machine."
     },
@@ -73,7 +91,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 4,
+      "priority": 5,
       "passes": false,
       "notes": "Side-effecting methods (chat.send, agent) require idempotency keys. Request IDs must be unique per request for response correlation."
     },
@@ -90,7 +108,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 5,
+      "priority": 6,
       "passes": false,
       "notes": "Events from server: agent, chat, presence, tick, shutdown, exec.approval.requested, health, heartbeat, cron, pm."
     },
@@ -108,7 +126,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 6,
+      "priority": 7,
       "passes": false,
       "notes": "stateVersion is an object with per-domain versions: { presence: N, health: N }. Presence and health are updated incrementally from events."
     },
@@ -126,7 +144,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 7,
+      "priority": 8,
       "passes": false,
       "notes": "Dev mode: gateway.controlUi.allowInsecureAuth: true skips device identity. Full Ed25519 device identity via WebCrypto is a Phase 6 concern."
     },
@@ -144,7 +162,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 8,
+      "priority": 9,
       "passes": false,
       "notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs. Must be done before gateway client (US-008) since the client composes connection with reconnection built in."
     },
@@ -165,7 +183,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 9,
+      "priority": 10,
       "passes": false,
       "notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing. Reconnection with backoff (US-015) must be done first."
     },
@@ -181,7 +199,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 10,
+      "priority": 11,
       "passes": false,
       "notes": "This store bridges the gateway client to Svelte components. Components subscribe to this for connection-aware rendering."
     },
@@ -199,7 +217,7 @@
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 11,
+      "priority": 12,
       "passes": false,
       "notes": "Reference architecture doc §11 for navigation model. Sidebar: Channels (chat sessions) at top, Apps (Projects, Files, Agent Jobs) below, Settings + Passwords at bottom."
     },
@@ -216,7 +234,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 12,
+      "priority": 13,
       "passes": false,
       "notes": "Reference architecture doc §11 for sidebar layout. Use $app/stores for page store. Links can point to placeholder routes for now."
     },
@@ -232,7 +250,7 @@
         "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 13,
+      "priority": 14,
       "passes": false,
       "notes": "ConnectionState values: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING."
     },
@@ -251,7 +269,7 @@
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 14,
+      "priority": 15,
       "passes": false,
       "notes": "This is the entry point before the user is connected. After connect, the app shell with sidebar takes over."
     },
@@ -268,7 +286,7 @@
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 15,
+      "priority": 16,
       "passes": false,
       "notes": "Keep PWA config minimal for Phase 1. Full offline support and push notifications are Phase 6."
     }
