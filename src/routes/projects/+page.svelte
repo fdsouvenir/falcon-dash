@@ -20,6 +20,11 @@
 		PmSearch,
 		TaskDetail
 	} from '$lib/components/pm';
+	import { pullToRefresh } from '$lib/utils/gestures';
+
+	async function refreshProjects() {
+		await Promise.all([loadStats(), loadProjects()]);
+	}
 
 	// --- Types ---
 
@@ -153,7 +158,7 @@
 				<!-- Mobile PM sidebar toggle -->
 				<button
 					on:click={togglePmSidebar}
-					class="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200 lg:hidden"
+					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-slate-200 lg:hidden"
 					aria-label="Toggle sidebar"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +208,7 @@
 				<!-- Search toggle -->
 				<button
 					on:click={toggleSearch}
-					class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 					aria-label="Search"
 					class:bg-slate-700={showSearch}
 					class:text-slate-200={showSearch}
@@ -224,7 +229,7 @@
 		<div class="flex border-b border-slate-700 sm:hidden">
 			<button
 				on:click={() => setView('dashboard')}
-				class="flex-1 py-2 text-center text-xs font-medium transition-colors {isActiveView(
+				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
 					'dashboard'
 				)
 					? 'border-b-2 border-blue-500 text-blue-400'
@@ -234,7 +239,9 @@
 			</button>
 			<button
 				on:click={() => setView('list')}
-				class="flex-1 py-2 text-center text-xs font-medium transition-colors {isActiveView('list')
+				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
+					'list'
+				)
 					? 'border-b-2 border-blue-500 text-blue-400'
 					: 'text-slate-400'}"
 			>
@@ -242,7 +249,9 @@
 			</button>
 			<button
 				on:click={() => setView('kanban')}
-				class="flex-1 py-2 text-center text-xs font-medium transition-colors {isActiveView('kanban')
+				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
+					'kanban'
+				)
 					? 'border-b-2 border-blue-500 text-blue-400'
 					: 'text-slate-400'}"
 			>
@@ -285,7 +294,7 @@
 			</div>
 
 			<!-- View content -->
-			<div class="flex-1 overflow-y-auto">
+			<div class="flex-1 overflow-y-auto" use:pullToRefresh={{ onRefresh: refreshProjects }}>
 				{#if currentView === 'dashboard'}
 					<div class="p-6">
 						<PmDashboard />

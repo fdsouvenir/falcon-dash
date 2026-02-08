@@ -129,7 +129,7 @@
 	{#if isRunning}
 		<button
 			on:click={abort}
-			class="rounded-lg bg-red-600/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-600/30"
+			class="min-h-[44px] min-w-[44px] rounded-lg bg-red-600/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-600/30"
 		>
 			Abort
 		</button>
@@ -137,7 +137,7 @@
 		<button
 			on:click={send}
 			disabled={!content.trim()}
-			class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+			class="min-h-[44px] min-w-[44px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			Send
 		</button>

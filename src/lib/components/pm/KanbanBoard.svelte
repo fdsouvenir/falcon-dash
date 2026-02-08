@@ -11,6 +11,30 @@
 		createTask
 	} from '$lib/stores';
 	import BulkActions from './BulkActions.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
+	import { longpress } from '$lib/utils/gestures';
+
+	// Long-press context menu state for tasks
+	let taskMenuOpen = false;
+	let taskMenuTask: PmTask | null = null;
+
+	function handleTaskLongPress(task: PmTask) {
+		return () => {
+			taskMenuTask = task;
+			taskMenuOpen = true;
+		};
+	}
+
+	function closeTaskMenu() {
+		taskMenuOpen = false;
+		taskMenuTask = null;
+	}
+
+	async function quickChangeStatus(status: PmStatus) {
+		if (!taskMenuTask) return;
+		await updateTask({ id: taskMenuTask.id, status });
+		closeTaskMenu();
+	}
 
 	// --- Props ---
 
@@ -347,7 +371,7 @@
 				</div>
 				<button
 					on:click={() => startAddTask(status)}
-					class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 					title="Add task"
 				>
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -397,6 +421,7 @@
 						on:dragstart={(e) => handleDragStart(e, task.id)}
 						on:dragend={handleDragEnd}
 						on:click={() => selectTask(task.id)}
+						use:longpress={{ onLongPress: handleTaskLongPress(task) }}
 						class="cursor-pointer rounded-lg border bg-slate-800 p-3 transition-all hover:bg-slate-750
 							{isDragging(task.id) ? 'opacity-50' : 'opacity-100'}
 							{isSelected(task.id) ? 'border-blue-500' : 'border-slate-700 hover:border-slate-600'}"
@@ -474,3 +499,54 @@
 	on:clear={clearSelection}
 	on:selectAll={selectAllTasks}
 />
+
+<!-- Long-press task actions (bottom sheet on mobile) -->
+<BottomSheet
+	open={taskMenuOpen}
+	title={taskMenuTask ? taskMenuTask.title : 'Task Actions'}
+	on:close={closeTaskMenu}
+>
+	<div class="space-y-1">
+		<p class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-400">Change Status</p>
+		{#each kanbanStatuses as status}
+			<button
+				on:click={() => quickChangeStatus(status)}
+				class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700 {taskMenuTask?.status ===
+				status
+					? 'bg-slate-700/50'
+					: ''}"
+			>
+				<span class="h-2.5 w-2.5 rounded-full {statusHeaderColor(status)}"></span>
+				<span>{statusLabel(status)}</span>
+				{#if taskMenuTask?.status === status}
+					<span class="ml-auto text-xs text-slate-400">Current</span>
+				{/if}
+			</button>
+		{/each}
+		<div class="border-t border-slate-700 pt-2">
+			<button
+				on:click={() => {
+					if (taskMenuTask) selectTask(taskMenuTask.id);
+					closeTaskMenu();
+				}}
+				class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
+			>
+				<svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+					/>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+					/>
+				</svg>
+				<span>View Details</span>
+			</button>
+		</div>
+	</div>
+</BottomSheet>

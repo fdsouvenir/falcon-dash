@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { fly, fade } from 'svelte/transition';
 
 	export let title: string;
 	export let message: string;
@@ -73,10 +74,11 @@
 <svelte:window on:keydown={handleWindowKeydown} />
 
 {#if open}
+	<!-- Desktop: centered modal -->
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+		class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 md:flex"
 		on:click={handleBackdropClick}
 	>
 		<div
@@ -91,17 +93,51 @@
 			<div class="mt-6 flex justify-end space-x-3">
 				<button
 					on:click={handleCancel}
-					class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
+					class="min-h-[44px] rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 				>
 					Cancel
 				</button>
 				<button
 					on:click={handleConfirm}
-					class="rounded bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-500"
+					class="min-h-[44px] rounded bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-500"
 				>
 					{confirmLabel}
 				</button>
 			</div>
+		</div>
+	</div>
+
+	<!-- Mobile: bottom sheet -->
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div
+		class="fixed inset-0 z-50 bg-black/50 md:hidden"
+		on:click={handleBackdropClick}
+		transition:fade={{ duration: 200 }}
+	></div>
+	<div
+		class="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-slate-800 p-4 md:hidden"
+		role="dialog"
+		aria-modal="true"
+		aria-label={title}
+		transition:fly={{ y: 300, duration: 200 }}
+	>
+		<div class="mx-auto mb-3 h-1 w-12 rounded-full bg-slate-600"></div>
+		<h3 class="text-lg font-medium text-slate-100">{title}</h3>
+		<p class="mt-2 text-sm text-slate-400">{message}</p>
+		<div class="mt-5 space-y-2">
+			<button
+				on:click={handleConfirm}
+				class="min-h-[44px] w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-red-500"
+			>
+				{confirmLabel}
+			</button>
+			<button
+				on:click={handleCancel}
+				class="min-h-[44px] w-full rounded-lg bg-slate-700 px-4 py-3 text-sm text-slate-200 transition-colors hover:bg-slate-600"
+			>
+				Cancel
+			</button>
 		</div>
 	</div>
 {/if}

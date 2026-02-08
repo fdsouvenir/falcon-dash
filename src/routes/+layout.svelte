@@ -50,7 +50,7 @@
 		<header class="flex h-14 items-center border-b border-slate-700 px-4 md:hidden">
 			<button
 				on:click={toggleSidebar}
-				class="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+				class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100"
 				aria-label="Toggle sidebar"
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

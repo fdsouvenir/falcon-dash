@@ -21,6 +21,11 @@
 	import FileEditor from '$lib/components/files/FileEditor.svelte';
 	import FileActions from '$lib/components/files/FileActions.svelte';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
+	import { pullToRefresh } from '$lib/utils/gestures';
+
+	async function refreshFileList() {
+		await loadFiles($currentPath || undefined);
+	}
 
 	type SortKey = 'name' | 'mtime' | 'size';
 	type SortDir = 'asc' | 'desc';
@@ -349,7 +354,7 @@
 			{:else}
 				<!-- Column headers -->
 				<div
-					class="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-slate-700 px-4 py-2 text-xs font-medium uppercase tracking-wider text-slate-400"
+					class="grid grid-cols-[1fr_auto] gap-2 border-b border-slate-700 px-4 py-2 text-xs font-medium uppercase tracking-wider text-slate-400 md:grid-cols-[1fr_auto_auto_auto]"
 				>
 					<button
 						on:click={() => toggleSort('name')}
@@ -359,24 +364,24 @@
 					</button>
 					<button
 						on:click={() => toggleSort('mtime')}
-						class="w-24 text-right transition-colors hover:text-slate-200"
+						class="hidden w-24 text-right transition-colors hover:text-slate-200 md:block"
 					>
 						Modified{sortIndicator('mtime')}
 					</button>
 					<button
 						on:click={() => toggleSort('size')}
-						class="w-20 text-right transition-colors hover:text-slate-200"
+						class="hidden w-20 text-right transition-colors hover:text-slate-200 md:block"
 					>
 						Size{sortIndicator('size')}
 					</button>
-					<span class="w-8"></span>
+					<span class="w-10"></span>
 				</div>
 
 				<!-- File rows -->
-				<div class="flex-1 overflow-y-auto">
+				<div class="flex-1 overflow-y-auto" use:pullToRefresh={{ onRefresh: refreshFileList }}>
 					{#each sortedFiles as file (file.name)}
 						<div
-							class="group grid w-full grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 {isFileActive(
+							class="group grid w-full grid-cols-[1fr_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 md:grid-cols-[1fr_auto_auto_auto] {isFileActive(
 								file
 							)
 								? 'bg-slate-700/30'
@@ -432,7 +437,7 @@
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<span
-								class="w-24 cursor-pointer text-right text-xs text-slate-500"
+								class="hidden w-24 cursor-pointer text-right text-xs text-slate-500 md:block"
 								title={new Date(file.mtime).toLocaleString()}
 								on:click={() => handleFileClick(file)}
 							>
@@ -441,15 +446,15 @@
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<span
-								class="w-20 cursor-pointer text-right text-xs text-slate-500"
+								class="hidden w-20 cursor-pointer text-right text-xs text-slate-500 md:block"
 								on:click={() => handleFileClick(file)}
 							>
 								{file.isDirectory ? '--' : formatFileSize(file.size)}
 							</span>
-							<span class="flex w-8 items-center justify-center">
+							<span class="flex w-10 items-center justify-center">
 								<button
 									on:click={(e) => requestDelete(e, file)}
-									class="rounded p-1 text-slate-500 opacity-0 transition-all hover:bg-red-900/30 hover:text-red-400 group-hover:opacity-100"
+									class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-500 opacity-100 transition-all hover:bg-red-900/30 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100"
 									title="Delete {file.name}"
 								>
 									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

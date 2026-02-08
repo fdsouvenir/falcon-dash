@@ -9,11 +9,14 @@
 	import MessageActionBar from '$lib/components/chat/MessageActionBar.svelte';
 	import ChatHeader from '$lib/components/chat/ChatHeader.svelte';
 	import ChannelSettings from '$lib/components/chat/ChannelSettings.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
+	import { swipe, longpress } from '$lib/utils/gestures';
 	import {
 		connectionState,
 		activeSessionKey,
 		activeSession,
+		switchSession,
 		loadSessions,
 		activeRun,
 		getMessages,
@@ -27,6 +30,7 @@
 		destroyChatListeners
 	} from '$lib/stores';
 	import { gateway } from '$lib/gateway';
+	import { goto } from '$app/navigation';
 	import type { SessionPatchParams } from '$lib/gateway/types';
 	import type { CommandContext } from '$lib/chat/commands';
 
@@ -36,6 +40,52 @@
 	let isAtBottom = true;
 	let now = Date.now();
 	let settingsOpen = false;
+
+	// Long-press context menu state
+	let contextMenuOpen = false;
+	let contextMenuMessage: ChatMessage | null = null;
+	let copiedMessageId: string | null = null;
+	let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function handleSwipeRight() {
+		// On mobile, swipe right to go back to session list
+		if (window.innerWidth < 768 && $activeSession) {
+			goto('/chat');
+			switchSession('');
+		}
+	}
+
+	function handleMessageLongPress(message: ChatMessage) {
+		return (x: number, y: number) => {
+			contextMenuMessage = message;
+			contextMenuOpen = true;
+		};
+	}
+
+	function closeContextMenu() {
+		contextMenuOpen = false;
+		contextMenuMessage = null;
+	}
+
+	async function copyMessageContent() {
+		if (!contextMenuMessage) return;
+		try {
+			await navigator.clipboard.writeText(contextMenuMessage.content);
+			copiedMessageId = contextMenuMessage.id;
+			clearTimeout(copiedTimer);
+			copiedTimer = setTimeout(() => {
+				copiedMessageId = null;
+			}, 2000);
+		} catch {
+			// Clipboard API may fail in insecure contexts
+		}
+		closeContextMenu();
+	}
+
+	async function replyToMessage() {
+		// Placeholder: could pre-fill composer with quote
+		closeContextMenu();
+	}
 
 	$: commandContext = $activeSessionKey
 		? ({
@@ -171,7 +221,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full flex-col">
+	<div class="flex h-full flex-col" use:swipe={{ onSwipeRight: handleSwipeRight }}>
 		<!-- Session header -->
 		<ChatHeader session={$activeSession} on:settings={toggleSettings} />
 
@@ -186,7 +236,10 @@
 					<div class="space-y-3">
 						{#each currentMessages as message (message.id)}
 							{#if message.role === 'assistant'}
-								<div class="group mr-12">
+								<div
+									class="group mr-4 md:mr-12"
+									use:longpress={{ onLongPress: handleMessageLongPress(message) }}
+								>
 									<div class="rounded-lg bg-slate-700/50 px-4 py-3">
 										<div class="mb-1 flex items-center justify-between">
 											<span class="text-xs font-medium text-slate-300">
@@ -229,7 +282,10 @@
 									{/if}
 								</div>
 							{:else}
-								<div class="rounded-lg px-4 py-3 {roleClass(message.role)}">
+								<div
+									class="rounded-lg px-4 py-3 {roleClass(message.role)}"
+									use:longpress={{ onLongPress: handleMessageLongPress(message) }}
+								>
 									<div class="mb-1 flex items-center justify-between">
 										<span class="text-xs font-medium text-slate-300">
 											{roleLabel(message.role)}
@@ -280,4 +336,36 @@
 		<!-- Composer -->
 		<MessageComposer {isRunning} {commandContext} on:send={handleSend} on:abort={handleAbort} />
 	</div>
+
+	<!-- Long-press context menu (bottom sheet on mobile) -->
+	<BottomSheet open={contextMenuOpen} title="Message Actions" on:close={closeContextMenu}>
+		<div class="space-y-1">
+			<button
+				on:click={copyMessageContent}
+				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
+				style="min-height: 44px;"
+			>
+				<svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2" />
+					<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2" />
+				</svg>
+				<span>Copy message</span>
+			</button>
+			<button
+				on:click={replyToMessage}
+				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
+				style="min-height: 44px;"
+			>
+				<svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+					/>
+				</svg>
+				<span>Reply</span>
+			</button>
+		</div>
+	</BottomSheet>
 {/if}

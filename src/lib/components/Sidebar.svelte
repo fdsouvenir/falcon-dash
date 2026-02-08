@@ -2,8 +2,13 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import ConnectionStatus from './ConnectionStatus.svelte';
-	import { sessions, activeSessionKey, switchSession } from '$lib/stores/sessions';
+	import { sessions, activeSessionKey, switchSession, loadSessions } from '$lib/stores/sessions';
 	import { sortedCustomApps, reorderApps, unpinApp } from '$lib/stores/apps';
+	import { pullToRefresh } from '$lib/utils/gestures';
+
+	async function refreshSessions() {
+		await loadSessions();
+	}
 
 	$: currentPath = $page.url.pathname;
 	$: sessionList = [...$sessions.values()];
@@ -75,7 +80,7 @@
 </div>
 
 <!-- Channels section -->
-<div class="flex-1 overflow-y-auto px-3 py-4">
+<div class="flex-1 overflow-y-auto px-3 py-4" use:pullToRefresh={{ onRefresh: refreshSessions }}>
 	<div class="mb-2 flex items-center justify-between px-2">
 		<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Channels</h3>
 		<button
