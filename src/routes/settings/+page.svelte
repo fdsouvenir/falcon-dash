@@ -6,6 +6,9 @@
 	import InformationTab from '$lib/components/settings/InformationTab.svelte';
 	import SkillsTab from '$lib/components/settings/SkillsTab.svelte';
 	import SecurityTab from '$lib/components/settings/SecurityTab.svelte';
+	import DashboardTab from '$lib/components/settings/DashboardTab.svelte';
+	import AdvancedTab from '$lib/components/settings/AdvancedTab.svelte';
+	import AboutTab from '$lib/components/settings/AboutTab.svelte';
 
 	type SettingsTab =
 		| 'workspace'
@@ -84,14 +87,7 @@
 	</div>
 
 	<!-- Tab content -->
-	<div
-		class="flex-1 overflow-hidden {activeTab === 'workspace' ||
-		activeTab === 'information' ||
-		activeTab === 'skills' ||
-		activeTab === 'security'
-			? ''
-			: 'overflow-y-auto p-6'}"
-	>
+	<div class="flex-1 overflow-hidden">
 		{#if activeTab === 'workspace'}
 			<WorkspaceTab />
 		{:else if activeTab === 'information'}
@@ -101,28 +97,11 @@
 		{:else if activeTab === 'security'}
 			<SecurityTab />
 		{:else if activeTab === 'dashboard'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">
-					Dashboard
-				</h2>
-				<p class="text-sm text-slate-400">
-					Theme preferences, notification settings, and display options.
-				</p>
-			</div>
+			<DashboardTab />
 		{:else if activeTab === 'advanced'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">Advanced</h2>
-				<p class="text-sm text-slate-400">
-					Execution approvals, raw gateway configuration, and schema reference.
-				</p>
-			</div>
+			<AdvancedTab />
 		{:else if activeTab === 'about'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">About</h2>
-				<p class="text-sm text-slate-400">
-					Agent identity, OpenClaw version, dashboard version, and system uptime.
-				</p>
-			</div>
+			<AboutTab />
 		{/if}
 	</div>
 </div>

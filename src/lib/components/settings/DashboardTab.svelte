@@ -1,0 +1,174 @@
+<script lang="ts">
+	type Theme = 'dark' | 'light' | 'system';
+
+	let theme: Theme = 'dark';
+	let notificationsEnabled = true;
+	let compactMode = false;
+
+	function loadPreferences(): void {
+		try {
+			const stored = localStorage.getItem('falcon-dash:preferences');
+			if (stored) {
+				const prefs = JSON.parse(stored);
+				if (prefs.theme) theme = prefs.theme;
+				if (typeof prefs.notificationsEnabled === 'boolean')
+					notificationsEnabled = prefs.notificationsEnabled;
+				if (typeof prefs.compactMode === 'boolean') compactMode = prefs.compactMode;
+			}
+		} catch {
+			// Invalid stored prefs — keep defaults
+		}
+	}
+
+	function savePreferences(): void {
+		localStorage.setItem(
+			'falcon-dash:preferences',
+			JSON.stringify({ theme, notificationsEnabled, compactMode })
+		);
+	}
+
+	function setTheme(value: Theme): void {
+		theme = value;
+		applyTheme(value);
+		savePreferences();
+	}
+
+	function applyTheme(value: Theme): void {
+		const root = document.documentElement;
+		if (value === 'light') {
+			root.classList.remove('dark');
+		} else if (value === 'dark') {
+			root.classList.add('dark');
+		} else {
+			// system
+			const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+			if (prefersDark) {
+				root.classList.add('dark');
+			} else {
+				root.classList.remove('dark');
+			}
+		}
+	}
+
+	function toggleNotifications(): void {
+		notificationsEnabled = !notificationsEnabled;
+		savePreferences();
+	}
+
+	function toggleCompactMode(): void {
+		compactMode = !compactMode;
+		savePreferences();
+	}
+
+	loadPreferences();
+</script>
+
+<div class="space-y-6 overflow-y-auto p-6">
+	<!-- Theme -->
+	<section class="rounded-lg border border-slate-700 bg-slate-800/50">
+		<div class="border-b border-slate-700 px-5 py-3">
+			<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Theme</h2>
+		</div>
+		<div class="p-5">
+			<p class="mb-4 text-sm text-slate-400">
+				Choose the appearance of the dashboard. System follows your OS preference.
+			</p>
+			<div class="flex gap-3">
+				<button
+					on:click={() => setTheme('dark')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					'dark'
+						? 'border-blue-500 bg-blue-500/10 text-blue-400'
+						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"
+				>
+					<div class="mb-1 text-lg">&#9790;</div>
+					Dark
+				</button>
+				<button
+					on:click={() => setTheme('light')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					'light'
+						? 'border-blue-500 bg-blue-500/10 text-blue-400'
+						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"
+				>
+					<div class="mb-1 text-lg">&#9728;</div>
+					Light
+				</button>
+				<button
+					on:click={() => setTheme('system')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					'system'
+						? 'border-blue-500 bg-blue-500/10 text-blue-400'
+						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"
+				>
+					<div class="mb-1 text-lg">&#9881;</div>
+					System
+				</button>
+			</div>
+		</div>
+	</section>
+
+	<!-- Notifications -->
+	<section class="rounded-lg border border-slate-700 bg-slate-800/50">
+		<div class="border-b border-slate-700 px-5 py-3">
+			<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Notifications</h2>
+		</div>
+		<div class="p-5">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm font-medium text-slate-200">Enable Notifications</p>
+					<p class="mt-0.5 text-xs text-slate-400">
+						Show toast notifications for events and status changes.
+					</p>
+				</div>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<button
+					role="switch"
+					aria-checked={notificationsEnabled}
+					on:click={toggleNotifications}
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {notificationsEnabled
+						? 'bg-blue-600'
+						: 'bg-slate-600'}"
+				>
+					<span
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {notificationsEnabled
+							? 'translate-x-6'
+							: 'translate-x-1'}"
+					/>
+				</button>
+			</div>
+		</div>
+	</section>
+
+	<!-- Display -->
+	<section class="rounded-lg border border-slate-700 bg-slate-800/50">
+		<div class="border-b border-slate-700 px-5 py-3">
+			<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Display</h2>
+		</div>
+		<div class="p-5">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm font-medium text-slate-200">Compact Mode</p>
+					<p class="mt-0.5 text-xs text-slate-400">
+						Reduce spacing and padding for a denser layout.
+					</p>
+				</div>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<button
+					role="switch"
+					aria-checked={compactMode}
+					on:click={toggleCompactMode}
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {compactMode
+						? 'bg-blue-600'
+						: 'bg-slate-600'}"
+				>
+					<span
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {compactMode
+							? 'translate-x-6'
+							: 'translate-x-1'}"
+					/>
+				</button>
+			</div>
+		</div>
+	</section>
+</div>
