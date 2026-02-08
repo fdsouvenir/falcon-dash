@@ -126,7 +126,7 @@
 				"npm run test passes"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "Remark plugins run BEFORE remarkRehype (mdast transform). Check if remark-github-blockquote-admonitions package exists and is compatible — if not, write a custom remark plugin that transforms blockquotes matching > [!TYPE] pattern into styled div containers."
 		},
 		{

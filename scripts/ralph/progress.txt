@@ -20,6 +20,8 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - For post-DOM rendering (mermaid, etc.): rehype plugin creates placeholder → Svelte action + dynamic import renders after mount → MutationObserver catches re-renders
 - rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin in pipeline order
 - SVG elements for sanitize-schema need extensive per-element attribute allowlists (viewBox, transform, d, fill, stroke, etc.)
+- Remark plugins use `data.hName`/`data.hProperties` on mdast nodes to control remarkRehype HTML output — no `allowDangerousHtml` needed
+- For icons in sanitized HTML, use CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs instead of inline SVG nodes
 
 ---
 
@@ -95,4 +97,21 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - Mermaid errors can leave orphan SVG nodes; clean them up with `document.getElementById(id)?.remove()`
   - Base64 encoding with `btoa(unescape(encodeURIComponent(source)))` handles Unicode in mermaid source
   - rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin so mermaid code blocks aren't treated as regular code
+---
+
+## 2026-02-08 - US-032
+- Added GitHub-style blockquote admonitions (> [!NOTE], > [!TIP], > [!WARNING], > [!CAUTION], > [!IMPORTANT])
+- Files created:
+  - `src/lib/utils/markdown/admonition-plugin.ts` — custom remark plugin that transforms blockquote admonitions into styled div containers
+- Files modified:
+  - `src/lib/utils/markdown/pipeline.ts` — added remarkAdmonitionPlugin after remarkMath, before remarkRehype
+  - `src/lib/utils/markdown/index.ts` — added barrel export for remarkAdmonitionPlugin
+  - `src/lib/components/chat/RenderedContent.svelte` — added admonition styles with colored borders, backgrounds, titles, and SVG icons via CSS ::before pseudo-elements
+- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkAdmonitionPlugin → remarkRehype → rehypeKatex → rehypeMermaidPlugin → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
+- **Learnings for future iterations:**
+  - Remark plugins operate on mdast (before remarkRehype); use `data.hName` and `data.hProperties` on mdast nodes to control what HTML remarkRehype generates — no `allowDangerousHtml` needed
+  - Cannot use `type: 'html'` mdast nodes when `allowDangerousHtml` is disabled on remarkRehype — SVG icons are better done via CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs
+  - The `[!TYPE]` marker regex should match an optional trailing newline (`/^\[!(NOTE|TIP|WARNING|CAUTION|IMPORTANT)\]\n?/`) to handle both inline and next-line content
+  - Wrap remaining blockquote children in a content div by creating a fake `blockquote` node with `data.hName='div'` — remarkRehype processes children recursively
+  - No new npm dependencies needed — custom remark plugin uses only `unist-util-visit` (already installed) and mdast types
 ---
