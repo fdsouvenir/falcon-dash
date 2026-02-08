@@ -162,7 +162,7 @@
 				"npm run test passes"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "Use Svelte 4 syntax: export let toolCall. JSON.stringify(args, null, 2) for formatted display. Use {@html} with eslint-disable comment if needed for syntax highlighting, otherwise use <pre><code> blocks."
 		},
 		{

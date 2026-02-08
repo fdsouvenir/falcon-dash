@@ -108,3 +108,17 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Duration fallback chain: durationMs → computed from completedAt-startedAt → empty string
   - Component is minimal (~28 lines) — no need for event dispatchers or lifecycle hooks
 ---
+
+## 2026-02-08 - US-023
+- Created `src/lib/components/chat/ToolCallCard.svelte` — displays tool calls with native `<details>` element
+- Features: collapsed by default with `bind:open`, tool name + status badge (pending=yellow, complete=green, error=red)
+- Expanded view shows formatted JSON for args and result (if available)
+- Uses `<pre>` blocks with `font-mono` for JSON display, `overflow-x-auto` for wide content
+- Styled with Tailwind: status color badges, monospace JSON, subtle border
+- Files changed: `src/lib/components/chat/ToolCallCard.svelte` (new)
+- **Learnings for future iterations:**
+  - Same pattern as ThinkingBlock: `<details>` + `bind:open` + Tailwind styling
+  - `JSON.stringify(value, null, 2)` with try/catch fallback to `String(value)` for safe formatting
+  - No `{@html}` needed — `<pre>` blocks handle JSON display without XSS risk
+  - Status badge uses ternary chain with `$:` reactive declaration for color/label mapping
+---
