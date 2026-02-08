@@ -15,6 +15,13 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - Mobile visibility: Use `opacity-100 md:opacity-0 md:group-hover:opacity-100` (not `opacity-0 group-hover:opacity-100`) for hover actions
 - ConfirmDialog: Shows as centered modal on desktop (`hidden md:flex`), bottom sheet on mobile (`md:hidden`)
 - Tailwind class: directive: `class:bg-slate-700/50={cond}` breaks Svelte parser — use string interpolation instead
+- Offline store: `src/lib/stores/offline.ts` — `isOnline`, `isOffline` stores + `offlineQueue` for background sync
+- OfflineIndicator: `src/lib/components/OfflineIndicator.svelte` — amber banner with slide transition when offline
+- Notification service: `src/lib/services/notifications.ts` — push registration, browser notifications, tab title, sound
+- Services barrel: `src/lib/services/index.ts` — barrel export for notification service
+- Preferences key: `falcon-dash:preferences` — includes `notificationSound` alongside existing fields
+- Web Audio API: Use `AudioContext` with oscillator for notification sounds (no external audio files needed)
+- `Uint8Array.buffer` type: Returns `ArrayBufferLike`, needs cast `as ArrayBuffer` for `PushManager.subscribe`
 
 ## 2026-02-08 17:30 - US-072
 - Implemented mobile bottom tab bar with 5 tabs (Chat, Projects, Files, Jobs, More)
@@ -69,3 +76,45 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - MessageActionBar used `opacity-0 group-hover:opacity-100` — completely invisible on mobile. Fix: show by default, hide on md+
   - File list grid with fixed-width columns (w-24, w-20) overflows on small screens — hide on mobile with `hidden md:block`
   - Svelte actions (`use:directive`) work great as Svelte 4 patterns for touch gestures
+
+## 2026-02-08 17:55 - US-074
+- Implemented PWA offline mode and push notifications
+- Enhanced workbox config in `vite.config.ts`:
+  - Added `navigateFallback: '/'` for offline navigation
+  - Added runtime caching: CacheFirst for images/fonts, StaleWhileRevalidate for JS/CSS
+- Created `src/lib/stores/offline.ts`:
+  - `isOnline`/`isOffline` reactive stores with browser `online`/`offline` event listeners
+  - `offlineQueue` store with `queueAction`/`dequeueAction`/`clearQueue` for background sync
+  - Queue persisted to localStorage under `falcon-dash:offline-queue`
+- Created `src/lib/components/OfflineIndicator.svelte`:
+  - Fixed amber banner at top with slide transition
+  - Shows "You're offline — viewing cached data" with pending action count
+  - Uses `aria-live="assertive"` for screen reader announcements
+- Created `src/lib/services/notifications.ts`:
+  - `showNotification()` — browser Notification API with sound, respects preferences
+  - `requestNotificationPermission()` / `getNotificationPermission()` — permission management
+  - `registerPushNotifications(vapidPublicKey)` — VAPID-based push subscription
+  - `updateTabTitle(unreadCount)` — tab title with unread count badge `(N) Falcon Dash`
+  - `playNotificationSound()` — Web Audio API oscillator (no external files)
+- Updated `DashboardTab.svelte`:
+  - Added "Notification Sound" toggle (persisted in preferences)
+  - Added "Push Notifications" section with permission status (Enabled/Blocked/Enable button)
+- Updated `+layout.svelte`:
+  - Integrated OfflineIndicator component
+  - Wired `initOfflineListeners()` in onMount
+  - Reactive `updateTabTitle(totalUnread)` for tab title badge
+  - Notification on unread count increase when tab is not focused
+- Updated barrel exports: `src/lib/stores/index.ts`, created `src/lib/services/index.ts`
+- Files changed:
+  - `vite.config.ts` (enhanced workbox config)
+  - `src/lib/stores/offline.ts` (new)
+  - `src/lib/services/notifications.ts` (new)
+  - `src/lib/services/index.ts` (new)
+  - `src/lib/components/OfflineIndicator.svelte` (new)
+  - `src/lib/components/settings/DashboardTab.svelte` (notification sound + push UI)
+  - `src/lib/stores/index.ts` (added offline exports)
+  - `src/routes/+layout.svelte` (offline indicator + notification wiring)
+- **Learnings for future iterations:**
+  - `Uint8Array.buffer` returns `ArrayBufferLike` not `ArrayBuffer` — cast with `as ArrayBuffer` for `PushManager.subscribe`
+  - Web Audio API oscillator is a lightweight alternative to shipping audio files for notification sounds
+  - `document.hasFocus()` is the simplest way to suppress notifications when the user is already looking at the tab
