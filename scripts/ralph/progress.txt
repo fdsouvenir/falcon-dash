@@ -110,3 +110,21 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - File row changed from `<button>` to `<div>` with inner clickable `<span>` elements to support nested interactive elements (rename input, delete button)
   - `svelte-ignore a11y-click-events-have-key-events` and `a11y-no-static-element-interactions` needed for clickable spans
 ---
+
+## 2026-02-08 - US-043
+- Implemented cron job types and gateway-based store
+- Files created:
+  - `src/lib/stores/cron.ts` — writable stores (cronJobs, cronRuns), gateway.call functions (loadCronJobs, addCronJob, editCronJob, removeCronJob, enableCronJob, disableCronJob, runCronJob, loadCronRuns), real-time event listeners (initCronListeners, destroyCronListeners)
+- Files modified:
+  - `src/lib/gateway/types.ts` — added CronScheduleType, CronJobPayload, CronJob, CronRunStatus, CronRun, CronListResponse, CronRunsResponse, CronAddParams, CronEditParams
+  - `src/lib/stores/index.ts` — added barrel exports for cron store
+- Features:
+  - Gateway-based store using gateway.call() (not fetch)
+  - Listener pattern matching initChatListeners/destroyChatListeners from chat.ts
+  - Real-time event handling for cron events: added, updated, removed, run_update actions
+  - Optimistic local updates for enable/disable/remove (+ full reload for add/edit)
+- **Learnings for future iterations:**
+  - Gateway.call params typed as Record<string, unknown>, so interfaces need `as unknown as Record<string, unknown>` cast for nested objects
+  - Real-time cron events use action-based dispatch: 'added'/'updated' carry full job, 'removed' carries jobId, 'run_update' carries full run
+  - Event listener name is 'cron' (matches gateway.on('cron', handler)), not 'event:cron'
+---

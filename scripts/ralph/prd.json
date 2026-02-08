@@ -167,7 +167,7 @@
 				"npm run test passes"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Gateway-based store pattern (uses gateway.call(), not fetch). Follow the same listener init/destroy pattern used by initChatListeners/destroyChatListeners in src/lib/stores/chat.ts. The event:cron updates should add/update/remove jobs in the cronJobs store in real-time. Import gateway from $lib/gateway."
 		},
 		{
