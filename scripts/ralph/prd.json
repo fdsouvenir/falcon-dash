@@ -136,7 +136,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "Theme switching: add a class to <html> element, persist in localStorage, respect prefers-color-scheme. Config editor uses config.get for current, config.schema for validation, config.apply to save."
 		},
 		{

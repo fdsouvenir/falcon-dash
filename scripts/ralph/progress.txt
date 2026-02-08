@@ -138,3 +138,33 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run format: pass
 - npm run check: 0 errors, 14 pre-existing warnings
 - **Learnings for future iterations:** Security tab follows self-scrolling pattern. Channel status is a separate gateway call (channels.status), not embedded in health snapshot. Device sections should be split by status for clear UX (pending/approved/rejected+revoked).
+
+## 2026-02-08 - US-068: Dashboard tab and Advanced tab
+- Created `src/lib/components/settings/DashboardTab.svelte`:
+  - Theme section: dark/light/system toggle buttons with visual selection indicator
+  - Theme persists in localStorage (`falcon-dash:preferences`) and applies via `<html>` class
+  - System theme respects `prefers-color-scheme` media query
+  - Notifications section: enable/disable toggle switch (same pattern as SkillsTab)
+  - Display section: compact mode toggle switch
+  - All preferences saved/loaded from localStorage
+- Created `src/lib/components/settings/AdvancedTab.svelte`:
+  - Exec approvals allowlist: view current entries, add new pattern+description, remove with ConfirmDialog
+  - Uses loadExecAllowlist, addExecAllowlistEntry, removeExecAllowlistEntry stores
+  - Raw config editor: textarea with JSON syntax, validation on input, reset button
+  - Apply config with ConfirmDialog confirmation, uses applyConfig with baseHash for concurrency
+  - Config schema reference: expandable section listing all schema properties with types, descriptions, defaults
+  - Nested schema properties displayed with dot-notation keys
+  - Loading, error, toast states
+- Created `src/lib/components/settings/AboutTab.svelte`:
+  - Agent Identity section: model name, connection ID from gatewayStatus store
+  - Version Information section: dashboard version (0.1.0), gateway version (from serverVersion store), protocol version (3)
+  - System Status section: uptime (formatUptime), connection state with color dot, active session count
+  - About footer: product name and tech stack
+  - Auto-refreshes uptime counter every second
+- Updated `src/routes/settings/+page.svelte`:
+  - Imported DashboardTab, AdvancedTab, AboutTab
+  - Replaced all three placeholder cards with components
+  - Simplified tab content container to always use overflow-hidden (each tab manages own scrolling)
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** All tabs can manage their own scrolling with overflow-y-auto, simplifying the parent container. localStorage preferences use a namespaced key (falcon-dash:preferences) to avoid conflicts. Theme switching uses classList.add/remove('dark') on document.documentElement.
