@@ -189,7 +189,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "pm.search uses FTS5 full-text search on the backend. Results include entity type, id, title, and a relevance score."
 		},
 		{

@@ -159,3 +159,16 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - `loadBlocks(taskId)` must be re-called after add/remove block operations since the store is global
   - The `navigate` event enables parent to switch which task the panel shows (e.g., clicking a subtask or blocker)
   - ConfirmDialog z-index (z-50) is above the slide panel (z-40), ensuring it renders on top
+
+## 2026-02-08 - US-059
+- Created `src/lib/components/pm/PmSearch.svelte` — full-text search across PM entities with grouped results and keyboard navigation
+- Updated `src/lib/components/pm/index.ts` barrel export with PmSearch
+- Features: debounced search input (300ms), results grouped by entity type (projects, tasks, comments, etc.), keyboard navigation (arrow keys + Enter to select, Escape to clear), loading indicator, empty state for no results, context info per result (focus name for projects, snippet for tasks/comments), clear button, result count display
+- Dispatches `select` event with `{ entityType, id }` for parent navigation
+- Uses `searchPm()` from PM store which calls `pm.search` gateway method
+- Files changed: `src/lib/components/pm/PmSearch.svelte` (new), `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - `{@const}` must be a direct child of `{#each}`, NOT nested inside HTML elements — move all `{@const}` declarations to immediately after the `{#each}` opening
+  - `getFlatIndex()` helper maps group-relative index to flat array index for keyboard navigation across grouped results
+  - Sticky group headers (`sticky top-0 bg-slate-900/95`) work well for scrollable grouped result lists
+  - `data-search-active` attribute + `scrollIntoView({ block: 'nearest' })` via `requestAnimationFrame` provides smooth keyboard scrolling
