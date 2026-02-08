@@ -10,3 +10,14 @@ export {
 	addSession,
 	removeSession
 } from './sessions';
+export {
+	messages,
+	getMessages,
+	activeRun,
+	sendMessage,
+	loadHistory,
+	injectMessage,
+	abortRun,
+	initChatListeners,
+	destroyChatListeners
+} from './chat';
