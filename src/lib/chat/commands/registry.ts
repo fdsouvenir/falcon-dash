@@ -6,6 +6,7 @@ export interface CommandContext {
 	abortRun: () => void;
 	updateSession: (key: string, patch: Record<string, unknown>) => void;
 	injectMessage: (sessionKey: string, role: string, content: string) => void;
+	insertLocalMessage: (sessionKey: string, role: string, content: string) => void;
 	gateway: GatewayClient;
 }
 

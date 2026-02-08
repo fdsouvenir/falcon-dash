@@ -37,6 +37,7 @@ export const activeRun: Readable<AgentRunState | undefined> = derived(
 let unsubAgent: (() => void) | null = null;
 let unsubReconnect: (() => void) | null = null;
 let tempIdCounter = 0;
+let localIdCounter = 0;
 let lastKnownSeq = 0;
 let previousConnectionState: ConnectionState = ConnectionState.DISCONNECTED;
 
@@ -181,13 +182,32 @@ export async function loadHistory(sessionKey: string, afterSeq?: number): Promis
 	messages.update((map) => {
 		const existing = map.get(sessionKey) ?? [];
 		if (afterSeq !== undefined && existing.length > 0) {
-			// Merge: deduplicate by ID
+			// Merge: deduplicate by ID, keep local-only messages
 			const ids = new Set(existing.map((m) => m.id));
 			const newMsgs = res.messages.filter((m) => !ids.has(m.id));
 			map.set(sessionKey, [...existing, ...newMsgs]);
 		} else {
-			map.set(sessionKey, res.messages);
+			// Preserve local-only messages when replacing history
+			const localMsgs = existing.filter((m) => m.localOnly);
+			map.set(sessionKey, [...res.messages, ...localMsgs]);
 		}
+		return new Map(map);
+	});
+}
+
+/** Insert a local-only message (not sent to gateway, excluded from history/gap-fill) */
+export function insertLocalMessage(sessionKey: string, role: MessageRole, content: string): void {
+	const msg: ChatMessage = {
+		id: `local-${Date.now()}-${++localIdCounter}`,
+		sessionKey,
+		role,
+		content,
+		timestamp: Date.now(),
+		localOnly: true
+	};
+	messages.update((map) => {
+		const list = map.get(sessionKey) ?? [];
+		map.set(sessionKey, [...list, msg]);
 		return new Map(map);
 	});
 }

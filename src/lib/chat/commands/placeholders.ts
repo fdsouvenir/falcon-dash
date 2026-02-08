@@ -1,25 +1,13 @@
-import { registerCommand } from './registry';
+import { commands, registerCommand } from './registry';
 
 registerCommand({
 	name: 'help',
 	description: 'Show available commands',
-	execute() {
-		// Placeholder — real implementation in US-037
-	}
-});
-
-registerCommand({
-	name: 'ping',
-	description: 'Check gateway connectivity',
-	execute() {
-		// Placeholder — real implementation in US-037
-	}
-});
-
-registerCommand({
-	name: 'status',
-	description: 'Show session status and metadata',
-	execute() {
-		// Placeholder — real implementation in US-037
+	execute(args, context) {
+		const lines = ['**Available Commands**', ''];
+		for (const cmd of commands) {
+			lines.push(`- **/${cmd.name}** — ${cmd.description}`);
+		}
+		context.insertLocalMessage(context.sessionKey, 'system', lines.join('\n'));
 	}
 });

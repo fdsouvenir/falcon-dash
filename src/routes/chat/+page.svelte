@@ -22,6 +22,7 @@
 		abortRun,
 		updateSession,
 		injectMessage,
+		insertLocalMessage,
 		initChatListeners,
 		destroyChatListeners
 	} from '$lib/stores';
@@ -45,6 +46,12 @@
 					updateSession(key, patch as Omit<SessionPatchParams, 'sessionKey'>),
 				injectMessage: (sessionKey: string, role: string, content: string) =>
 					injectMessage(sessionKey, role as 'user' | 'assistant' | 'system' | 'inject', content),
+				insertLocalMessage: (sessionKey: string, role: string, content: string) =>
+					insertLocalMessage(
+						sessionKey,
+						role as 'user' | 'assistant' | 'system' | 'inject',
+						content
+					),
 				gateway
 			} satisfies CommandContext)
 		: undefined;

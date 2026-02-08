@@ -224,6 +224,8 @@ export interface ChatMessage {
 	runId?: string;
 	thinking?: ThinkingBlock[];
 	toolCalls?: ToolCall[];
+	/** Local-only messages are excluded from history requests and gap-fill */
+	localOnly?: boolean;
 }
 
 // --- Chat Method Params/Responses ---

@@ -17,8 +17,16 @@ export {
 	sendMessage,
 	loadHistory,
 	injectMessage,
+	insertLocalMessage,
 	abortRun,
 	initChatListeners,
 	destroyChatListeners
 } from './chat';
 export { models, loadModels, invalidateModels } from './models';
+export {
+	usage,
+	trackMessageSent,
+	trackCommandUsed,
+	trackSessionCreated,
+	getUsageStats
+} from './usage';
