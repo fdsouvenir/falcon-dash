@@ -360,7 +360,7 @@
 				"npm run test passes"
 			],
 			"priority": 13,
-			"passes": false,
+			"passes": true,
 			"notes": "Four states managed by vaultState.status from the store. The idle timeout on the client mirrors the server-side timeout — both independently lock after 15 minutes. Click-to-reveal uses a timer that auto-hides after 30 seconds for security. Clipboard auto-clear uses setTimeout to write empty string to clipboard. Reuses ConfirmDialog from US-042 for delete confirmation."
 		}
 	]

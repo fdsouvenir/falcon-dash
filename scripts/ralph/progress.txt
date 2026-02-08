@@ -256,3 +256,32 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - `get()` from svelte/store is needed to read store values in non-reactive contexts (e.g., building headers)
   - Memory-only session token is a deliberate security pattern — never persist to localStorage or cookies
 ---
+
+## 2026-02-08 - US-050
+- Implemented /passwords route with four-state vault UI
+- Files created:
+  - `src/routes/passwords/+page.ts` — SSR disabled
+  - `src/routes/passwords/+page.svelte` — full password vault UI with four states (unavailable, first-run, locked, unlocked)
+- Features:
+  - **Unavailable state:** keepassxc-cli not installed message with install instructions (Ubuntu, macOS, Arch) and recheck button
+  - **First-run state:** create vault form with master password + confirm password, 8-char minimum validation, match validation
+  - **Locked state:** unlock form with master password input, Enter to submit
+  - **Unlocked state:** two-pane layout — entry list (left) with search filter, entry detail (right) with click-to-reveal password
+  - Entry list: title, username columns, key icon, delete button (hover reveal), selected row highlighting, search filter
+  - Entry detail: username (with copy), password (with reveal toggle + copy), URL, notes, group sections
+  - Click-to-reveal: password initially shown as dots, toggles to show, auto-hides after 30 seconds
+  - Copy-to-clipboard: copies username/password, auto-clears clipboard after 30 seconds
+  - Create entry form: modal with title, username, password (with generate button), URL, notes
+  - Edit entry form: pre-fills from existing data, password shows "Unchanged" placeholder when empty
+  - Password generation: 24 chars from alphanumeric + symbols via crypto.getRandomValues
+  - Delete entry: ConfirmDialog confirmation (reused from US-042)
+  - Idle timeout: 15-minute auto-lock on mousemove/keydown/click activity, mirrors server-side timeout
+  - Loading/error states throughout
+  - Responsive: stacked on mobile, side-by-side on desktop
+- **Learnings for future iterations:**
+  - `svelte:window` event handlers (on:mousemove, on:keydown, on:click) are clean for tracking idle state
+  - Role="button" + tabindex="0" + on:keydown for accessible clickable divs avoids a11y ESLint warnings
+  - Unused helper functions caught by @typescript-eslint/no-unused-vars — remove before committing
+  - Clipboard API is async and can fail silently — wrap in try/catch with best-effort error handling
+  - All Phase 3 stories (US-038 through US-050) are now complete
+---
