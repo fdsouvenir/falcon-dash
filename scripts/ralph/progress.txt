@@ -1,26 +1,30 @@
-# Ralph Progress Log — Phase 2b: Chat Enhanced
-Started: Sun Feb  8 2026
+# Ralph Progress Log
+Started: Sun Feb  8 11:50:41 AM CST 2026
 ---
 
 ## Codebase Patterns
-- Chat/session types live in `src/lib/gateway/types.ts` (single file, no separate types file)
-- Type unions use string literal types (e.g., `'user' | 'assistant' | 'system' | 'inject'`)
-- Params types for gateway methods named as `{Method}Params` (e.g., `ChatSendParams`)
-- Response types named as `{Method}Response` or `{Method}Ack` for ack patterns
-- AgentEvent types use `kind` discriminator field with `sessionKey` and `runId` for routing
-- All types re-exported via `src/lib/gateway/index.ts` barrel (`export * from './types'`)
-- Stores barrel: `src/lib/stores/index.ts` — explicitly named exports (not `export *`)
-- Svelte store Maps need `new Map(map)` on update to trigger reactivity
-- Chat store wires gateway.on('agent') to stream manager's handleEvent in initChatListeners()
-- Optimistic inserts use temp IDs (`temp-{timestamp}-{counter}`), replaced after server ack
-- For arrays inside a Map store, spread into new array `[...list]` to trigger Svelte reactivity
-- activeRun derived store uses polling (setInterval 200ms) since stream manager is not a store
-- Chat components live in `src/lib/components/chat/` directory
-- Time utilities live in `src/lib/utils/time.ts`
-- ESLint `svelte/no-reactive-functions` disallows `$: fn = (x) => ...` — use plain `function` declarations instead
-- For reactive timestamps, pass a `now` variable to formatting functions so Svelte detects the dependency
-- ESLint `svelte/require-each-key` enforces keyed `{#each}` blocks — use index `(i)` when items lack unique IDs
-- Chat route: `src/routes/chat/+page.svelte` with `+page.ts` (ssr: false)
-- Reconnection gap fill: track lastKnownSeq from agent events, detect RECONNECTING→READY via connectionState subscription, reload sessions + fill history gap
+- unified/remark/rehype pipeline is synchronous via processSync() — all plugins must be sync
+- rehype-sanitize Schema type from hast-util-sanitize has strict PropertyDefinition types — avoid explicit type annotation on custom schema objects, let TypeScript infer then cast at usage site with `as typeof defaultSchema`
+- RenderedContent.svelte uses `doRender()` function wrapper to avoid svelte/infinite-reactive-loop lint rule while still doing debounced rendering
+- `<!-- eslint-disable-next-line svelte/no-at-html-tags -->` must be placed directly above the `{@html}` usage line, not as a file-level comment
+- Streaming detection for a message: `isRunning && !!message.runId && !!$activeRun && $activeRun.runId === message.runId`
+- Prettier will reformat markdown tables in .md files — use `git checkout --` to restore instructions files before commit
 
+---
+
+## 2026-02-08 - US-028
+- Implemented markdown rendering pipeline with unified/remark/rehype ecosystem
+- Files created:
+  - `src/lib/utils/markdown/pipeline.ts` — renderMarkdown(text) returns sanitized HTML
+  - `src/lib/utils/markdown/sanitize-schema.ts` — custom schema extending GitHub default (allows class on code/pre/div/span, data-* on div)
+  - `src/lib/utils/markdown/index.ts` — barrel exports
+  - `src/lib/components/chat/RenderedContent.svelte` — {@html} wrapper with 50ms debounced re-render during streaming
+- Files modified:
+  - `src/routes/chat/+page.svelte` — assistant messages now use RenderedContent, user messages remain plain text
+  - `package.json` / `package-lock.json` — added unified, remark-parse, remark-gfm, remark-rehype, rehype-sanitize, rehype-stringify
+- Prose styling via :global() CSS in RenderedContent.svelte (dark slate theme, no @tailwindcss/typography)
+- **Learnings for future iterations:**
+  - rehype-sanitize Schema type import from 'rehype-sanitize' fails — it's re-exported as `export type` which TypeScript resolves differently; let inference handle it
+  - The svelte/infinite-reactive-loop ESLint rule triggers on `$:` blocks with setTimeout that assign reactive vars — wrapping in a function avoids detection
+  - Pipeline: remarkParse → remarkGfm → remarkRehype → rehypeSanitize(customSchema) → rehypeStringify (later stories add plugins between these)
 ---

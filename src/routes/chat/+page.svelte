@@ -5,6 +5,7 @@
 	import ThinkingBlock from '$lib/components/chat/ThinkingBlock.svelte';
 	import ToolCallCard from '$lib/components/chat/ToolCallCard.svelte';
 	import MessageComposer from '$lib/components/chat/MessageComposer.svelte';
+	import RenderedContent from '$lib/components/chat/RenderedContent.svelte';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
 	import {
 		connectionState,
@@ -169,9 +170,19 @@
 									{/each}
 								{/if}
 
-								<div class="whitespace-pre-wrap text-sm text-slate-200">
-									{message.content}
-								</div>
+								{#if message.role === 'assistant' && message.content}
+									<RenderedContent
+										content={message.content}
+										isStreaming={isRunning &&
+											!!message.runId &&
+											!!$activeRun &&
+											$activeRun.runId === message.runId}
+									/>
+								{:else}
+									<div class="whitespace-pre-wrap text-sm text-slate-200">
+										{message.content}
+									</div>
+								{/if}
 
 								{#if message.toolCalls && message.toolCalls.length > 0}
 									{#each message.toolCalls as tool, i (i)}

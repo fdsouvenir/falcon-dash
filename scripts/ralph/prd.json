@@ -28,7 +28,7 @@
 				"npm run test passes"
 			],
 			"priority": 1,
-			"passes": false,
+			"passes": true,
 			"notes": "unified ecosystem is ESM-only (Vite handles fine). Incomplete markdown during streaming (unclosed fences) is acceptable — final render on text_end corrects it. The sanitize schema is in its own file because later stories (US-029, US-030, US-031) will extend it with additional allowlisted elements."
 		},
 		{
