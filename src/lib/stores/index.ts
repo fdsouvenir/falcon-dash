@@ -58,3 +58,12 @@ export {
 	initCronListeners,
 	destroyCronListeners
 } from './cron';
+export {
+	heartbeatConfig,
+	heartbeatFileContent,
+	heartbeatFileHash,
+	loadHeartbeatConfig,
+	updateHeartbeatConfig,
+	loadHeartbeatFile,
+	saveHeartbeatFile
+} from './heartbeat';

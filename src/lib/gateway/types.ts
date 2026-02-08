@@ -387,3 +387,17 @@ export interface GatewayConfig {
 	url: string;
 	token: string;
 }
+
+// --- Heartbeat Config ---
+
+export interface HeartbeatConfig {
+	enabled: boolean;
+	intervalMinutes: number;
+	lastRun?: number;
+	status?: string;
+}
+
+export interface GatewayConfigResponse {
+	payload: Record<string, unknown>;
+	hash: string;
+}
