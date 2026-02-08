@@ -9,6 +9,12 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - Mobile padding: Main content uses `pb-14 md:pb-0` to avoid tab bar overlap
 - Unread badge: Derived from sessions store, passed as `totalUnread` prop to tab bar
 - Tab active state: Uses `$page.url.pathname` matching with wildcard support
+- Gesture utilities: `src/lib/utils/gestures.ts` — Svelte actions for `swipe`, `longpress`, `pullToRefresh`
+- BottomSheet: `BottomSheet.svelte` — reusable bottom sheet with backdrop, fly transition, drag handle
+- Touch targets: Use `min-h-[44px] min-w-[44px]` on mobile, `md:min-h-0 md:min-w-0` to reset on desktop
+- Mobile visibility: Use `opacity-100 md:opacity-0 md:group-hover:opacity-100` (not `opacity-0 group-hover:opacity-100`) for hover actions
+- ConfirmDialog: Shows as centered modal on desktop (`hidden md:flex`), bottom sheet on mobile (`md:hidden`)
+- Tailwind class: directive: `class:bg-slate-700/50={cond}` breaks Svelte parser — use string interpolation instead
 
 ## 2026-02-08 17:30 - US-072
 - Implemented mobile bottom tab bar with 5 tabs (Chat, Projects, Files, Jobs, More)
@@ -24,3 +30,42 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - CustomApp type has no `icon` field — don't assume properties exist
   - No `/apps` index route exists, only `/apps/[id]` — don't link to non-existent routes
   - a11y ignore comments needed for click-only backdrop divs
+
+## 2026-02-08 17:45 - US-073
+- Implemented touch gestures and mobile interactions across the app
+- Created `src/lib/utils/gestures.ts` with three Svelte actions:
+  - `swipe`: Detect swipe left/right/up/down with configurable threshold
+  - `longpress`: Detect long-press with position callback, cancels on move
+  - `pullToRefresh`: Pull-down refresh on scrollable containers with indicator
+- Created `src/lib/components/BottomSheet.svelte` — reusable bottom sheet modal
+- Added swipe-to-go-back on chat conversation view (swipe right = back to session list)
+- Added pull-to-refresh on: Sidebar session list, file browser list, projects view
+- Added long-press context menus:
+  - Chat messages: bottom sheet with Copy, Reply actions
+  - Kanban task cards: bottom sheet with status change quick actions + View Details
+- Updated ConfirmDialog to show as bottom sheet on mobile, centered modal on desktop
+- Fixed 44x44px tap targets on:
+  - MessageActionBar (copy button — also fixed mobile visibility, was hover-only)
+  - MessageComposer (Send/Abort buttons)
+  - Layout mobile header hamburger button
+  - File delete buttons (also fixed mobile visibility)
+  - Projects sidebar toggle, search toggle, view switcher tabs
+  - Kanban add task button
+- Fixed file list horizontal scroll on mobile by hiding Modified/Size columns
+- Files changed:
+  - `src/lib/utils/gestures.ts` (new)
+  - `src/lib/components/BottomSheet.svelte` (new)
+  - `src/lib/components/Sidebar.svelte` (pull-to-refresh on sessions)
+  - `src/lib/components/chat/MessageActionBar.svelte` (44px targets, mobile visibility)
+  - `src/lib/components/chat/MessageComposer.svelte` (44px button targets)
+  - `src/lib/components/files/ConfirmDialog.svelte` (desktop modal + mobile bottom sheet)
+  - `src/lib/components/pm/KanbanBoard.svelte` (longpress, task action bottom sheet, 44px targets)
+  - `src/routes/+layout.svelte` (44px hamburger button)
+  - `src/routes/chat/+page.svelte` (swipe-back, longpress messages, context menu)
+  - `src/routes/files/+page.svelte` (pull-to-refresh, responsive grid, 44px delete button)
+  - `src/routes/projects/+page.svelte` (pull-to-refresh, 44px sidebar/search/view targets)
+- **Learnings for future iterations:**
+  - `class:bg-slate-700/50={cond}` breaks Svelte parser — the `/50` confuses it. Use string interpolation `class="{cond ? 'bg-slate-700/50' : ''}"` instead
+  - MessageActionBar used `opacity-0 group-hover:opacity-100` — completely invisible on mobile. Fix: show by default, hide on md+
+  - File list grid with fixed-width columns (w-24, w-20) overflows on small screens — hide on mobile with `hidden md:block`
+  - Svelte actions (`use:directive`) work great as Svelte 4 patterns for touch gestures

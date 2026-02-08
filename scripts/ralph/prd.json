@@ -42,7 +42,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Use touch events (touchstart, touchmove, touchend) for swipe detection. Pull-to-refresh: detect overscroll at top + pull down gesture. Bottom sheet: fixed bottom panel that slides up with backdrop."
 		},
 		{
