@@ -1,215 +1,27 @@
 # Ralph Progress Log
-Started: Sun Feb  8 11:50:41 AM CST 2026
----
+Started: Sun Feb  8 01:33:42 PM CST 2026
 
 ## Codebase Patterns
-- unified/remark/rehype pipeline is synchronous via processSync() — all plugins must be sync
-- rehype-sanitize Schema type from hast-util-sanitize has strict PropertyDefinition types — avoid explicit type annotation on custom schema objects, let TypeScript infer then cast at usage site with `as typeof defaultSchema`
-- RenderedContent.svelte uses `doRender()` function wrapper to avoid svelte/infinite-reactive-loop lint rule while still doing debounced rendering
-- `<!-- eslint-disable-next-line svelte/no-at-html-tags -->` must be placed directly above the `{@html}` usage line, not as a file-level comment
-- Streaming detection for a message: `isRunning && !!message.runId && !!$activeRun && $activeRun.runId === message.runId`
-- Prettier will reformat markdown tables in .md files — use `git checkout --` to restore instructions files before commit
-- Shiki's createHighlighter() is async, but codeToHtml() is sync after init — HighlighterManager singleton wraps this pattern
-- Custom rehype plugins use unist-util-visit to traverse hast trees; `fromHtml` from hast-util-from-html to parse HTML strings into hast nodes
-- Svelte actions (use:actionName) are the correct pattern for attaching event listeners to {@html} rendered content
-- sanitize-schema.ts must allow `style` on `span` for Shiki inline token colors, and `button` with attributes for copy buttons
-- rehype-katex Options type omits `throwOnError` and `displayMode` — the plugin handles errors internally (catches ParseError, re-renders with throwOnError:false, or shows katex-error span)
-- KaTeX CSS must be loaded from CDN in app.html, version-matched to npm katex package
-- MathML elements (math, semantics, mrow, etc.) must be allowlisted in sanitize-schema.ts tagNames
-- `math` element needs `xmlns` and `display` attributes; `annotation` needs `encoding`
-- For post-DOM rendering (mermaid, etc.): rehype plugin creates placeholder → Svelte action + dynamic import renders after mount → MutationObserver catches re-renders
-- rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin in pipeline order
-- SVG elements for sanitize-schema need extensive per-element attribute allowlists (viewBox, transform, d, fill, stroke, etc.)
-- Remark plugins use `data.hName`/`data.hProperties` on mdast nodes to control remarkRehype HTML output — no `allowDangerousHtml` needed
-- For icons in sanitized HTML, use CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs instead of inline SVG nodes
-- SVG elements in Svelte 4 don't accept `title` as a direct attribute — wrap in `<span title="...">` instead
-- `createEventDispatcher()` must have type params: `createEventDispatcher<{ eventName: PayloadType }>()`
-- Slash commands: registry pattern with `registerCommand()` + side-effect imports in barrel `index.ts` for auto-registration
-- CommandPalette exports `handleKeydown()` method for parent to delegate keyboard events via `bind:this`
-- ESLint no-unused-vars: `_` prefix does NOT suppress — use empty param list `execute()` instead of `execute(_args, _context)`
-- `ChatMessage.localOnly` flag marks client-side-only messages excluded from history/gap-fill; `insertLocalMessage()` in chat store creates them
-- Usage/verbose stores use localStorage for persistence; writable + subscribe pattern auto-persists on change
+- SvelteKit server routes: export named handlers (GET, POST, PUT, DELETE, PATCH) from `+server.ts`
+- Use `json()` and `error()` from `@sveltejs/kit` in server routes
+- Type handlers with `RequestHandler` from `./$types` (auto-generated)
+- Server-only code goes in `src/lib/server/` — SvelteKit excludes from client bundles
+- `[...path]` catch-all routes: `params.path` is a single string
+- `@types/node` is installed as devDependency for Node.js API types in server routes
+- Error casting pattern: `(err as NodeJS.ErrnoException).code === 'ENOENT'`
+- SvelteKit error objects have a `.status` property for HTTP status codes
 
 ---
 
-## 2026-02-08 - US-028
-- Implemented markdown rendering pipeline with unified/remark/rehype ecosystem
+## 2026-02-08 - US-038
+- Implemented workspace file server routes (first +server.ts files in the project)
 - Files created:
-  - `src/lib/utils/markdown/pipeline.ts` — renderMarkdown(text) returns sanitized HTML
-  - `src/lib/utils/markdown/sanitize-schema.ts` — custom schema extending GitHub default (allows class on code/pre/div/span, data-* on div)
-  - `src/lib/utils/markdown/index.ts` — barrel exports
-  - `src/lib/components/chat/RenderedContent.svelte` — {@html} wrapper with 50ms debounced re-render during streaming
-- Files modified:
-  - `src/routes/chat/+page.svelte` — assistant messages now use RenderedContent, user messages remain plain text
-  - `package.json` / `package-lock.json` — added unified, remark-parse, remark-gfm, remark-rehype, rehype-sanitize, rehype-stringify
-- Prose styling via :global() CSS in RenderedContent.svelte (dark slate theme, no @tailwindcss/typography)
+  - `src/lib/server/workspace.ts` — getWorkspacePath(), computeHash(), validatePath()
+  - `src/routes/api/workspace/files/+server.ts` — GET directory listing
+  - `src/routes/api/workspace/files/[...path]/+server.ts` — GET, PUT, DELETE, PATCH file CRUD
+- Also installed `@types/node` as devDependency (needed for Node.js types in server routes)
 - **Learnings for future iterations:**
-  - rehype-sanitize Schema type import from 'rehype-sanitize' fails — it's re-exported as `export type` which TypeScript resolves differently; let inference handle it
-  - The svelte/infinite-reactive-loop ESLint rule triggers on `$:` blocks with setTimeout that assign reactive vars — wrapping in a function avoids detection
-  - Pipeline: remarkParse → remarkGfm → remarkRehype → rehypeSanitize(customSchema) → rehypeStringify (later stories add plugins between these)
----
-
-## 2026-02-08 - US-029
-- Integrated Shiki syntax highlighting into markdown pipeline with copy button and language label
-- Files created:
-  - `src/lib/utils/markdown/highlighter.ts` — HighlighterManager singleton with async init, sync highlight, 17 pre-loaded languages, github-dark theme
-  - `src/lib/utils/markdown/shiki-plugin.ts` — custom rehype plugin that applies Shiki to code blocks and injects copy button + language label header
-  - `src/lib/actions/codeBlockActions.ts` — Svelte action attaching click handlers to copy buttons in rendered HTML
-- Files modified:
-  - `src/lib/utils/markdown/pipeline.ts` — added rehypeShikiPlugin between remarkRehype and rehypeSanitize
-  - `src/lib/utils/markdown/sanitize-schema.ts` — allowed style on span (Shiki token colors), style/tabIndex on pre, button element with className/type/ariaLabel
-  - `src/lib/utils/markdown/index.ts` — added barrel exports for highlighterManager and rehypeShikiPlugin
-  - `src/lib/components/chat/RenderedContent.svelte` — calls highlighterManager.init() on mount, re-renders when ready, applies use:codeBlockActions action, added code block wrapper/header/copy button styles
-  - `package.json` / `package-lock.json` — added shiki, hast-util-from-html
-- **Learnings for future iterations:**
-  - Shiki 3.x uses `createHighlighter()` (not `getHighlighter()`) and `codeToHtml()` is sync after init
-  - The rehype plugin replaces `<pre>` nodes with a `<div class="code-block-wrapper">` containing a header and the highlighted `<pre>`
-  - `hast-util-from-html` with `{ fragment: true }` parses HTML strings into hast fragment nodes for insertion
-  - For unknown languages, catch the error and fall back to `lang: 'text'`
-  - Pipeline order now: remarkParse → remarkGfm → remarkRehype → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
----
-
-## 2026-02-08 - US-030
-- Added KaTeX math rendering to markdown pipeline (inline $...$ and display $$...$$)
-- Files modified:
-  - `src/lib/utils/markdown/pipeline.ts` — added remarkMath (remark phase) and rehypeKatex (rehype phase, before shiki and sanitize)
-  - `src/lib/utils/markdown/sanitize-schema.ts` — added 19 MathML elements to tagNames, added `math` (xmlns, display) and `annotation` (encoding) attributes, added `style` to `div` for KaTeX styling
-  - `src/app.html` — added KaTeX CSS CDN link (v0.16.28, version-matched to npm package)
-  - `package.json` / `package-lock.json` — added remark-math, rehype-katex, katex
-- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkRehype → rehypeKatex → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
-- **Learnings for future iterations:**
-  - rehype-katex Options type `Omit<KatexOptions, 'displayMode' | 'throwOnError'>` — do NOT pass throwOnError option, the plugin handles errors internally with try/catch fallback
-  - rehype-katex internally tries with throwOnError:true first, catches ParseError, then retries with throwOnError:false, and if that also fails, generates a `<span class="katex-error">` with red color
-  - KaTeX CSS version in CDN link must match the npm katex package version exactly
-  - MathML elements need to be individually allowlisted — there are 19 common ones used by KaTeX
----
-
-## 2026-02-08 - US-031
-- Added Mermaid diagram rendering via post-pipeline DOM rendering pattern
-- Files created:
-  - `src/lib/utils/markdown/mermaid-plugin.ts` — rehype plugin that replaces ```mermaid code blocks with `<div class="mermaid-placeholder" data-mermaid-source="BASE64">` placeholders
-  - `src/lib/actions/mermaidAction.ts` — Svelte action that finds .mermaid-placeholder divs, dynamically imports mermaid, and renders SVGs
-- Files modified:
-  - `src/lib/utils/markdown/pipeline.ts` — added rehypeMermaidPlugin before rehypeShikiPlugin (so mermaid blocks are replaced before Shiki tries to highlight them)
-  - `src/lib/utils/markdown/sanitize-schema.ts` — added 21 SVG element tag names (svg, g, rect, path, text, circle, line, polyline, polygon, ellipse, foreignObject, tspan, marker, defs, use, style, clipPath, linearGradient, radialGradient, stop, title, desc) with full attribute lists for each
-  - `src/lib/utils/markdown/index.ts` — added barrel export for rehypeMermaidPlugin
-  - `src/lib/components/chat/RenderedContent.svelte` — imported mermaidAction and applied use:mermaidAction on container; added mermaid diagram styles (placeholder, loading, diagram, error, fallback)
-  - `package.json` / `package-lock.json` — added mermaid
-- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkRehype → rehypeKatex → rehypeMermaidPlugin → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
-- **Learnings for future iterations:**
-  - Mermaid cannot run in the rehype pipeline (needs DOM) — use placeholder div + Svelte action + dynamic import pattern
-  - MutationObserver on the container catches DOM changes from re-renders so new placeholders are rendered
-  - `.mermaid-rendered` class prevents re-rendering already-processed diagrams
-  - Each diagram needs a unique ID for mermaid.render() — use `mermaid-${Date.now()}-${counter++}`
-  - Mermaid errors can leave orphan SVG nodes; clean them up with `document.getElementById(id)?.remove()`
-  - Base64 encoding with `btoa(unescape(encodeURIComponent(source)))` handles Unicode in mermaid source
-  - rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin so mermaid code blocks aren't treated as regular code
----
-
-## 2026-02-08 - US-032
-- Added GitHub-style blockquote admonitions (> [!NOTE], > [!TIP], > [!WARNING], > [!CAUTION], > [!IMPORTANT])
-- Files created:
-  - `src/lib/utils/markdown/admonition-plugin.ts` — custom remark plugin that transforms blockquote admonitions into styled div containers
-- Files modified:
-  - `src/lib/utils/markdown/pipeline.ts` — added remarkAdmonitionPlugin after remarkMath, before remarkRehype
-  - `src/lib/utils/markdown/index.ts` — added barrel export for remarkAdmonitionPlugin
-  - `src/lib/components/chat/RenderedContent.svelte` — added admonition styles with colored borders, backgrounds, titles, and SVG icons via CSS ::before pseudo-elements
-- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkAdmonitionPlugin → remarkRehype → rehypeKatex → rehypeMermaidPlugin → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
-- **Learnings for future iterations:**
-  - Remark plugins operate on mdast (before remarkRehype); use `data.hName` and `data.hProperties` on mdast nodes to control what HTML remarkRehype generates — no `allowDangerousHtml` needed
-  - Cannot use `type: 'html'` mdast nodes when `allowDangerousHtml` is disabled on remarkRehype — SVG icons are better done via CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs
-  - The `[!TYPE]` marker regex should match an optional trailing newline (`/^\[!(NOTE|TIP|WARNING|CAUTION|IMPORTANT)\]\n?/`) to handle both inline and next-line content
-  - Wrap remaining blockquote children in a content div by creating a fake `blockquote` node with `data.hName='div'` — remarkRehype processes children recursively
-  - No new npm dependencies needed — custom remark plugin uses only `unist-util-visit` (already installed) and mdast types
----
-
-## 2026-02-08 - US-033
-- Created MessageActionBar component with copy button for assistant messages
-- Files created:
-  - `src/lib/components/chat/MessageActionBar.svelte` — copy button with clipboard API, 2s "Copied!" feedback, hidden until hover via Tailwind group/group-hover
-- Files modified:
-  - `src/routes/chat/+page.svelte` — split message rendering: assistant messages wrapped in `group` div with MessageActionBar below bubble; non-assistant messages use existing plain text rendering
-- **Learnings for future iterations:**
-  - Tailwind `group`/`group-hover:opacity-100` pattern works well for hover-reveal actions on sibling elements
-  - Splitting the `{#each}` loop into `{#if message.role === 'assistant'}` / `{:else}` branches keeps each path clean when assistant messages need extra wrapper elements
-  - For assistant messages in the split branch, hardcode `bg-slate-700/50 mr-12` directly instead of calling `roleClass()` to avoid the extra wrapper div complexity
----
-
-## 2026-02-08 - US-034
-- Extracted inline session header to ChatHeader.svelte component with model badge, thinking indicator, and settings gear
-- Files created:
-  - `src/lib/components/chat/ChatHeader.svelte` — session header with model pill, brain SVG thinking indicator (off=muted, on=blue, stream=animated pulse), settings gear dispatching 'settings' event
-- Files modified:
-  - `src/routes/chat/+page.svelte` — replaced inline header div (lines 138-143) with `<ChatHeader session={$activeSession} />`
-- **Learnings for future iterations:**
-  - SVG elements in Svelte 4 don't accept `title` as an HTML attribute — wrap SVG in a `<span>` with the title attribute instead
-  - ESLint rule `svelte/require-event-dispatcher-types` requires type parameters on `createEventDispatcher()` — use `createEventDispatcher<{ eventName: void }>()` for events with no payload
-  - Thinking level uses `session.thinkingLevel` which can be 'off', 'on', 'stream', or undefined (defaults to 'off')
-- Models store uses a simple `loaded` boolean flag for caching — `invalidateModels()` resets it for re-fetch on reconnect
-- ChannelSettings uses `absolute` positioning within the `relative` message area container for overlay behavior
-- `svelte/transition` `fly` works well for slide-out panels: `transition:fly={{ x: 320, duration: 200 }}`
----
-
-## 2026-02-08 - US-035
-- Created ChannelSettings slide-out panel and models store for session configuration
-- Files created:
-  - `src/lib/components/chat/ChannelSettings.svelte` — slide-out panel with session rename, model dropdown, thinking toggle (off/on/stream), close on Escape/backdrop click
-  - `src/lib/stores/models.ts` — models store with loadModels() cache and invalidateModels() for reconnect
-- Files modified:
-  - `src/lib/gateway/types.ts` — added ModelInfo and ModelsListResponse types
-  - `src/lib/stores/index.ts` — added barrel exports for models, loadModels, invalidateModels
-  - `src/routes/chat/+page.svelte` — wired ChatHeader settings event to toggle ChannelSettings, added settingsOpen state, close on session switch
-- **Learnings for future iterations:**
-  - `transition:fly` from `svelte/transition` provides smooth slide-in/out animations for panels
-  - ChannelSettings positioned absolutely within the relative message container, with a backdrop div for outside click
-  - `svelte:window on:keydown` is the correct pattern for Escape key handling in Svelte 4
-  - Models store uses try/catch on `gateway.call('models.list')` since the method may not be available on all gateway versions
-  - Session rename uses blur + Enter key events on the input to trigger updateSession()
----
-
-## 2026-02-08 - US-036
-- Created slash command framework: registry, CommandPalette, and MessageComposer integration
-- Files created:
-  - `src/lib/chat/commands/registry.ts` — SlashCommand interface, CommandContext interface, commands array, registerCommand(), findCommands()
-  - `src/lib/chat/commands/placeholders.ts` — 3 placeholder commands (help, ping, status) for UI testing
-  - `src/lib/chat/commands/index.ts` — barrel exports, imports placeholders for side-effect registration
-  - `src/lib/components/chat/CommandPalette.svelte` — autocomplete dropdown above textarea, arrow key navigation, Enter select, Escape close
-- Files modified:
-  - `src/lib/components/chat/MessageComposer.svelte` — detects / prefix, shows CommandPalette, intercepts Enter for command selection, falls back to normal send for unrecognized commands
-  - `src/routes/chat/+page.svelte` — constructs CommandContext from stores/gateway, passes to MessageComposer
-- **Learnings for future iterations:**
-  - ESLint `@typescript-eslint/no-unused-vars` doesn't recognize `_` prefix convention by default — use `execute()` with no params instead of `execute(_args, _context)` for placeholder functions
-  - CommandPalette uses `bind:this` and an exported `handleKeydown()` method so the parent (MessageComposer) can delegate keyboard events to it
-  - The `satisfies CommandContext` pattern ensures type safety when constructing the context object in the chat route
-  - `findCommands()` uses simple `includes()` filter on command name — keeps filtering logic in the registry module
----
-
-## 2026-02-08 - US-037
-- Implemented 10 core slash commands plus updated /help command
-- Files created:
-  - `src/lib/chat/commands/new.ts` — /new: creates new session via gateway
-  - `src/lib/chat/commands/stop.ts` — /stop: aborts active agent run
-  - `src/lib/chat/commands/status.ts` — /status: shows session metadata (model, thinking, message count)
-  - `src/lib/chat/commands/reasoning.ts` — /reasoning [off|on|stream]: sets thinking level
-  - `src/lib/chat/commands/compact.ts` — /compact: sends context compaction request via chat.inject
-  - `src/lib/chat/commands/usage.ts` — /usage: shows usage stats from localStorage
-  - `src/lib/chat/commands/verbose.ts` — /verbose [on|off]: toggles verbose mode in localStorage
-  - `src/lib/chat/commands/context.ts` — /context: calls gateway chat.context for token info
-  - `src/lib/chat/commands/subagents.ts` — /subagents: calls gateway agents.list
-  - `src/lib/chat/commands/send.ts` — /send [message]: sends message (for messages starting with /)
-  - `src/lib/stores/usage.ts` — usage stats store with localStorage persistence
-- Files modified:
-  - `src/lib/gateway/types.ts` — added `localOnly?: boolean` to ChatMessage
-  - `src/lib/stores/chat.ts` — added `insertLocalMessage()` function, preserved localOnly messages during history reload
-  - `src/lib/stores/index.ts` — exported insertLocalMessage and usage store functions
-  - `src/lib/chat/commands/registry.ts` — added `insertLocalMessage` to CommandContext interface
-  - `src/lib/chat/commands/placeholders.ts` — replaced placeholder /help with real implementation listing all commands
-  - `src/lib/chat/commands/index.ts` — added side-effect imports for all 10 new command files
-  - `src/routes/chat/+page.svelte` — imported insertLocalMessage, wired into CommandContext
-- **Learnings for future iterations:**
-  - `localOnly` flag on ChatMessage is the clean pattern for client-side-only messages that shouldn't persist across reconnects or be sent to gateway
-  - When replacing history (loadHistory without afterSeq), preserve localOnly messages by filtering and appending them
-  - Commands that call gateway methods should always try/catch and show error as local system message
-  - Usage store pattern: writable + subscribe for auto-persist to localStorage on every change
-  - Help command references the `commands` array directly to auto-include newly registered commands
+  - `@types/node` was not previously installed; needed for `node:fs/promises`, `node:path`, `node:os`, `node:crypto`, and `NodeJS.ErrnoException`
+  - Hash-based concurrency: PUT compares baseHash to current file hash, returns 409 on conflict
+  - Traverse protection: validatePath() rejects paths resolving outside workspace root and `.secrets` paths
 ---
