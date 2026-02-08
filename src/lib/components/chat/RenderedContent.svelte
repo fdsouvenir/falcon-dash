@@ -3,6 +3,7 @@
 	import { renderMarkdown } from '$lib/utils/markdown';
 	import { highlighterManager } from '$lib/utils/markdown/highlighter';
 	import { codeBlockActions } from '$lib/actions/codeBlockActions';
+	import { mermaidAction } from '$lib/actions/mermaidAction';
 
 	export let content: string;
 	export let isStreaming: boolean;
@@ -38,7 +39,7 @@
 	onDestroy(() => clearTimeout(debounceTimer));
 </script>
 
-<div class="rendered-content" use:codeBlockActions>
+<div class="rendered-content" use:codeBlockActions use:mermaidAction>
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html renderedHtml}
 </div>
@@ -249,5 +250,47 @@
 	}
 	.rendered-content :global(> :last-child) {
 		margin-bottom: 0;
+	}
+
+	/* Mermaid diagram styles (US-031) */
+	.rendered-content :global(.mermaid-placeholder) {
+		margin-top: 0.75em;
+		margin-bottom: 0.75em;
+		border: 1px solid rgb(51 65 85); /* slate-700 */
+		border-radius: 0.5rem;
+		overflow: hidden;
+	}
+
+	.rendered-content :global(.mermaid-loading) {
+		padding: 1rem;
+		color: rgb(148 163 184); /* slate-400 */
+		font-size: 0.85rem;
+		text-align: center;
+	}
+
+	.rendered-content :global(.mermaid-diagram) {
+		display: flex;
+		justify-content: center;
+		padding: 1rem;
+		background-color: rgb(15 23 42); /* slate-900 */
+	}
+
+	.rendered-content :global(.mermaid-diagram svg) {
+		max-width: 100%;
+		height: auto;
+	}
+
+	.rendered-content :global(.mermaid-error) {
+		padding: 0.5rem 0.75rem;
+		color: rgb(248 113 113); /* red-400 */
+		background-color: rgba(248, 113, 113, 0.1);
+		font-size: 0.75rem;
+		border-bottom: 1px solid rgb(51 65 85); /* slate-700 */
+	}
+
+	.rendered-content :global(.mermaid-fallback) {
+		margin: 0 !important;
+		border: none !important;
+		border-radius: 0 !important;
 	}
 </style>

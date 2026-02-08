@@ -8,6 +8,7 @@ import rehypeSanitize, { type defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import { sanitizeSchema } from './sanitize-schema';
 import { rehypeShikiPlugin } from './shiki-plugin';
+import { rehypeMermaidPlugin } from './mermaid-plugin';
 
 const processor = unified()
 	.use(remarkParse)
@@ -15,6 +16,7 @@ const processor = unified()
 	.use(remarkMath)
 	.use(remarkRehype)
 	.use(rehypeKatex)
+	.use(rehypeMermaidPlugin)
 	.use(rehypeShikiPlugin)
 	.use(rehypeSanitize, sanitizeSchema as typeof defaultSchema)
 	.use(rehypeStringify);
