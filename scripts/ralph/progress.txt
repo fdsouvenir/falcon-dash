@@ -189,3 +189,32 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run format: pass
 - npm run check: 0 errors, 14 pre-existing warnings
 - **Learnings for future iterations:** LogsViewer uses afterUpdate + isAtBottom pattern from MessageList for auto-scroll. Log timestamps formatted as HH:MM:SS.mmm for precision. The component is self-contained with its own streaming lifecycle (start/stop tailing).
+
+## 2026-02-08 - US-070: A2UI web component integration
+- Created `src/lib/types/canvas.ts` with comprehensive A2UI types:
+  - A2UIMessageBase, A2UISurfaceUpdate, A2UIBeginRendering, A2UIDataModelUpdate, A2UIDeleteSurface
+  - A2UIMessage union type covering all four message protocol types (v0.8)
+  - A2UIComponent, A2UIDataBinding, A2UITemplateChild for component tree types
+  - A2UIUserAction, A2UIActionPayload for action bridge types
+  - A2UIHostElement interface matching <openclaw-a2ui-host> Lit web component API
+  - A2UIBundleState union for loading state tracking
+- Created `src/lib/components/canvas/A2UIHost.svelte`:
+  - Svelte 4 wrapper for <openclaw-a2ui-host> Lit web component
+  - Bundle loading via script element injection with cached promise (avoids double-load)
+  - Uses customElements.whenDefined('openclaw-a2ui-host') to wait for registration
+  - Web-based action bridge: sets up globalThis.openclawCanvasA2UIAction.postMessage
+  - Action bridge dispatches Svelte 'action' event AND forwards to gateway via node.invoke('canvas.a2ui.action')
+  - applyMessages() called reactively when messages prop changes (and bundle is ready)
+  - reset() called on component destroy for cleanup
+  - Props: messages (Array<Record<string,unknown>>), standalone (boolean for panel vs inline mode)
+  - Events: action (A2UIUserAction), ready (void), error (string)
+  - Loading state: spinner with "Loading interactive content..." message
+  - Error state: graceful fallback UI explaining bundle not available, mentions static/a2ui.bundle.js
+  - CSS theme overrides via :global(openclaw-a2ui-host) custom properties
+  - Works both inline in chat messages (min-height 2rem) and as standalone panel (min-height 12rem, 100% height)
+- Created `src/lib/components/canvas/index.ts` barrel export
+- Updated `src/lib/types/index.ts` barrel export with all canvas types
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- npm run build: pass
+- **Learnings for future iterations:** Lit web components must be loaded via script tag (not ES module import) since the bundle self-registers the custom element. Use customElements.whenDefined() to wait for registration. The action bridge must be set up on globalThis BEFORE the bundle loads. Cache the bundle load promise globally to prevent double-loading across multiple A2UIHost instances. The A2UIHostElement interface abstracts the Lit component's public API for TypeScript consumers.

@@ -174,7 +174,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §2.4 and §12. A2UI is a Lit web component — use dynamic import and customElements.whenDefined() pattern. The action bridge routes user clicks/inputs back to the gateway. If bundle isn't available, degrade gracefully."
 		},
 		{

@@ -107,3 +107,18 @@ export type {
 	PmContextDomainParams,
 	PmContextProjectParams
 } from './pm';
+export type {
+	A2UIMessageBase,
+	A2UISurfaceUpdate,
+	A2UIBeginRendering,
+	A2UIDataModelUpdate,
+	A2UIDeleteSurface,
+	A2UIMessage,
+	A2UIDataBinding,
+	A2UITemplateChild,
+	A2UIComponent,
+	A2UIUserAction,
+	A2UIActionPayload,
+	A2UIHostElement,
+	A2UIBundleState
+} from './canvas';
