@@ -10,6 +10,7 @@
 		reorderTasks,
 		createTask
 	} from '$lib/stores';
+	import BulkActions from './BulkActions.svelte';
 
 	// --- Props ---
 
@@ -32,6 +33,32 @@
 		PmStatus.REVIEW,
 		PmStatus.DONE
 	];
+
+	// --- Selection State ---
+
+	let selectedTaskIds = new Set<number>();
+
+	function isSelected(taskId: number): boolean {
+		return selectedTaskIds.has(taskId);
+	}
+
+	function toggleSelection(e: Event, taskId: number): void {
+		e.stopPropagation();
+		if (selectedTaskIds.has(taskId)) {
+			selectedTaskIds.delete(taskId);
+		} else {
+			selectedTaskIds.add(taskId);
+		}
+		selectedTaskIds = selectedTaskIds;
+	}
+
+	function clearSelection(): void {
+		selectedTaskIds = new Set();
+	}
+
+	function selectAllTasks(): void {
+		selectedTaskIds = new Set(visibleTasks.map((t) => t.id));
+	}
 
 	// --- Drag State ---
 
@@ -370,32 +397,62 @@
 						on:dragstart={(e) => handleDragStart(e, task.id)}
 						on:dragend={handleDragEnd}
 						on:click={() => selectTask(task.id)}
-						class="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 p-3 transition-all hover:border-slate-600 hover:bg-slate-750
-							{isDragging(task.id) ? 'opacity-50' : 'opacity-100'}"
+						class="cursor-pointer rounded-lg border bg-slate-800 p-3 transition-all hover:bg-slate-750
+							{isDragging(task.id) ? 'opacity-50' : 'opacity-100'}
+							{isSelected(task.id) ? 'border-blue-500' : 'border-slate-700 hover:border-slate-600'}"
 						role="button"
 						tabindex="0"
 						on:keydown={(e) => {
 							if (e.key === 'Enter') selectTask(task.id);
 						}}
 					>
-						<p class="text-sm font-medium text-slate-200">{task.title}</p>
+						<div class="flex items-start gap-2">
+							<!-- Selection Checkbox -->
+							<button
+								on:click={(e) => toggleSelection(e, task.id)}
+								class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isSelected(
+									task.id
+								)
+									? 'border-blue-500 bg-blue-500/20'
+									: 'border-slate-500 hover:border-slate-400'}"
+							>
+								{#if isSelected(task.id)}
+									<svg
+										class="h-3 w-3 text-blue-400"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								{/if}
+							</button>
+							<div class="min-w-0 flex-1">
+								<p class="text-sm font-medium text-slate-200">{task.title}</p>
 
-						<div class="mt-2 flex items-center gap-2">
-							{#if task.priority && priorityLabel(task.priority)}
-								<span
-									class="inline-block rounded px-1.5 py-0.5 text-xs font-medium {priorityBadgeColor(
-										task.priority
-									)}"
-								>
-									{priorityLabel(task.priority)}
-								</span>
-							{/if}
+								<div class="mt-2 flex items-center gap-2">
+									{#if task.priority && priorityLabel(task.priority)}
+										<span
+											class="inline-block rounded px-1.5 py-0.5 text-xs font-medium {priorityBadgeColor(
+												task.priority
+											)}"
+										>
+											{priorityLabel(task.priority)}
+										</span>
+									{/if}
 
-							{#if task.dueDate}
-								<span class="text-xs {getTaskDueClass(task)}">
-									{getTaskDueText(task)}
-								</span>
-							{/if}
+									{#if task.dueDate}
+										<span class="text-xs {getTaskDueClass(task)}">
+											{getTaskDueText(task)}
+										</span>
+									{/if}
+								</div>
+							</div>
 						</div>
 					</div>
 				{/each}
@@ -410,3 +467,10 @@
 		</div>
 	{/each}
 </div>
+
+<BulkActions
+	selectedIds={selectedTaskIds}
+	totalCount={visibleTasks.length}
+	on:clear={clearSelection}
+	on:selectAll={selectAllTasks}
+/>

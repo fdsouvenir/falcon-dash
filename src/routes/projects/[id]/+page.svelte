@@ -34,12 +34,38 @@
 		destroyPmListeners
 	} from '$lib/stores';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
+	import BulkActions from '$lib/components/pm/BulkActions.svelte';
 
 	// --- State ---
 
 	let loading = true;
 	let errorMessage = '';
 	let projectId: number;
+
+	// Selection state
+	let selectedTaskIds = new Set<number>();
+
+	function isTaskSelected(taskId: number): boolean {
+		return selectedTaskIds.has(taskId);
+	}
+
+	function toggleTaskSelection(e: Event, taskId: number): void {
+		e.stopPropagation();
+		if (selectedTaskIds.has(taskId)) {
+			selectedTaskIds.delete(taskId);
+		} else {
+			selectedTaskIds.add(taskId);
+		}
+		selectedTaskIds = selectedTaskIds;
+	}
+
+	function clearTaskSelection(): void {
+		selectedTaskIds = new Set();
+	}
+
+	function selectAllProjectTasks(): void {
+		selectedTaskIds = new Set(projectTasks.map((t) => t.id));
+	}
 
 	// Editing state
 	let editingTitle = false;
@@ -817,6 +843,32 @@
 									<div>
 										<!-- Task row -->
 										<div class="group flex items-center px-4 py-2.5 hover:bg-slate-700/30">
+											<!-- Selection checkbox -->
+											<button
+												on:click={(e) => toggleTaskSelection(e, task.id)}
+												class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
+													task.id
+												)
+													? 'border-blue-500 bg-blue-500/20'
+													: 'border-slate-500 hover:border-slate-400'}"
+											>
+												{#if isTaskSelected(task.id)}
+													<svg
+														class="h-3 w-3 text-blue-400"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M5 13l4 4L19 7"
+														/>
+													</svg>
+												{/if}
+											</button>
+
 											<!-- Collapse toggle -->
 											<button
 												on:click={() => toggleCollapse(task.id)}
@@ -999,6 +1051,32 @@
 													<div
 														class="group flex items-center py-2.5 pl-12 pr-4 hover:bg-slate-700/30"
 													>
+														<!-- Selection checkbox -->
+														<button
+															on:click={(e) => toggleTaskSelection(e, subtask.id)}
+															class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
+																subtask.id
+															)
+																? 'border-blue-500 bg-blue-500/20'
+																: 'border-slate-500 hover:border-slate-400'}"
+														>
+															{#if isTaskSelected(subtask.id)}
+																<svg
+																	class="h-3 w-3 text-blue-400"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																>
+																	<path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M5 13l4 4L19 7"
+																	/>
+																</svg>
+															{/if}
+														</button>
+
 														<!-- Collapse toggle for nested -->
 														<button
 															on:click={() => toggleCollapse(subtask.id)}
@@ -1175,6 +1253,32 @@
 															<div
 																class="group flex items-center py-2 pl-20 pr-4 hover:bg-slate-700/30"
 															>
+																<!-- Selection checkbox -->
+																<button
+																	on:click={(e) => toggleTaskSelection(e, subsubtask.id)}
+																	class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
+																		subsubtask.id
+																	)
+																		? 'border-blue-500 bg-blue-500/20'
+																		: 'border-slate-500 hover:border-slate-400'}"
+																>
+																	{#if isTaskSelected(subsubtask.id)}
+																		<svg
+																			class="h-3 w-3 text-blue-400"
+																			fill="none"
+																			stroke="currentColor"
+																			viewBox="0 0 24 24"
+																		>
+																			<path
+																				stroke-linecap="round"
+																				stroke-linejoin="round"
+																				stroke-width="2"
+																				d="M5 13l4 4L19 7"
+																			/>
+																		</svg>
+																	{/if}
+																</button>
+
 																<button
 																	on:click={() => toggleTaskDone(subsubtask)}
 																	class="mr-3 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border {subsubtask.status ===
@@ -1535,6 +1639,13 @@
 		</div>
 	{/if}
 </div>
+
+<BulkActions
+	selectedIds={selectedTaskIds}
+	totalCount={projectTasks.length}
+	on:clear={clearTaskSelection}
+	on:selectAll={selectAllProjectTasks}
+/>
 
 <ConfirmDialog
 	open={confirmDeleteTask != null}
