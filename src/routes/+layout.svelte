@@ -3,12 +3,38 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import MobileTabBar from '$lib/components/MobileTabBar.svelte';
 	import MobileMoreMenu from '$lib/components/MobileMoreMenu.svelte';
+	import OfflineIndicator from '$lib/components/OfflineIndicator.svelte';
 	import { sessions } from '$lib/stores';
+	import { initOfflineListeners } from '$lib/stores/offline';
+	import { updateTabTitle, showNotification } from '$lib/services/notifications';
+	import { onMount } from 'svelte';
 
 	let sidebarOpen = false;
 	let moreMenuOpen = false;
 
 	$: totalUnread = [...$sessions.values()].reduce((sum, s) => sum + s.unreadCount, 0);
+
+	// Update tab title with unread count
+	$: updateTabTitle(totalUnread);
+
+	onMount(() => {
+		initOfflineListeners();
+	});
+
+	// Notify on unread count increase (when tab is not focused)
+	let prevUnread = 0;
+	$: {
+		if (totalUnread > prevUnread && prevUnread >= 0) {
+			const diff = totalUnread - prevUnread;
+			if (diff > 0 && prevUnread > 0) {
+				showNotification('Falcon Dash', {
+					body: `${diff} new message${diff > 1 ? 's' : ''}`,
+					tag: 'unread-messages'
+				});
+			}
+		}
+		prevUnread = totalUnread;
+	}
 
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
@@ -26,6 +52,8 @@
 		moreMenuOpen = false;
 	}
 </script>
+
+<OfflineIndicator />
 
 <div class="flex h-screen bg-slate-900 text-slate-100">
 	<!-- Mobile sidebar overlay -->

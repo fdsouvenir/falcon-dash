@@ -36,7 +36,43 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
+				navigateFallback: '/',
+				runtimeCaching: [
+					{
+						urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'images',
+							expiration: {
+								maxEntries: 100,
+								maxAgeSeconds: 60 * 60 * 24 * 30
+							}
+						}
+					},
+					{
+						urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'fonts',
+							expiration: {
+								maxEntries: 30,
+								maxAgeSeconds: 60 * 60 * 24 * 365
+							}
+						}
+					},
+					{
+						urlPattern: /\.(?:js|css)$/,
+						handler: 'StaleWhileRevalidate',
+						options: {
+							cacheName: 'static-resources',
+							expiration: {
+								maxEntries: 100,
+								maxAgeSeconds: 60 * 60 * 24 * 7
+							}
+						}
+					}
+				]
 			}
 		})
 	]

@@ -183,3 +183,13 @@ export {
 	updateAppMessages,
 	getApp
 } from './apps';
+export {
+	isOnline,
+	isOffline,
+	offlineQueue,
+	queueAction,
+	dequeueAction,
+	clearQueue,
+	initOfflineListeners
+} from './offline';
+export type { QueuedAction } from './offline';

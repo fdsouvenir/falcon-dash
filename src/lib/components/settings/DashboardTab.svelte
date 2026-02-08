@@ -1,9 +1,16 @@
 <script lang="ts">
+	import {
+		requestNotificationPermission,
+		getNotificationPermission
+	} from '$lib/services/notifications';
+
 	type Theme = 'dark' | 'light' | 'system';
 
 	let theme: Theme = 'dark';
 	let notificationsEnabled = true;
+	let notificationSound = true;
 	let compactMode = false;
+	let pushPermission: NotificationPermission = 'default';
 
 	function loadPreferences(): void {
 		try {
@@ -13,17 +20,20 @@
 				if (prefs.theme) theme = prefs.theme;
 				if (typeof prefs.notificationsEnabled === 'boolean')
 					notificationsEnabled = prefs.notificationsEnabled;
+				if (typeof prefs.notificationSound === 'boolean')
+					notificationSound = prefs.notificationSound;
 				if (typeof prefs.compactMode === 'boolean') compactMode = prefs.compactMode;
 			}
 		} catch {
 			// Invalid stored prefs — keep defaults
 		}
+		pushPermission = getNotificationPermission();
 	}
 
 	function savePreferences(): void {
 		localStorage.setItem(
 			'falcon-dash:preferences',
-			JSON.stringify({ theme, notificationsEnabled, compactMode })
+			JSON.stringify({ theme, notificationsEnabled, notificationSound, compactMode })
 		);
 	}
 
@@ -55,9 +65,18 @@
 		savePreferences();
 	}
 
+	function toggleNotificationSound(): void {
+		notificationSound = !notificationSound;
+		savePreferences();
+	}
+
 	function toggleCompactMode(): void {
 		compactMode = !compactMode;
 		savePreferences();
+	}
+
+	async function handleEnablePush(): Promise<void> {
+		pushPermission = await requestNotificationPermission();
 	}
 
 	loadPreferences();
@@ -113,12 +132,13 @@
 		<div class="border-b border-slate-700 px-5 py-3">
 			<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Notifications</h2>
 		</div>
-		<div class="p-5">
+		<div class="space-y-4 p-5">
+			<!-- Enable notifications toggle -->
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-sm font-medium text-slate-200">Enable Notifications</p>
 					<p class="mt-0.5 text-xs text-slate-400">
-						Show toast notifications for events and status changes.
+						Show browser notifications for agent responses, mentions, and alerts.
 					</p>
 				</div>
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -136,6 +156,66 @@
 							: 'translate-x-1'}"
 					/>
 				</button>
+			</div>
+
+			<!-- Notification sound toggle -->
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm font-medium text-slate-200">Notification Sound</p>
+					<p class="mt-0.5 text-xs text-slate-400">Play a sound when notifications arrive.</p>
+				</div>
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<button
+					role="switch"
+					aria-checked={notificationSound}
+					on:click={toggleNotificationSound}
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {notificationSound
+						? 'bg-blue-600'
+						: 'bg-slate-600'}"
+				>
+					<span
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {notificationSound
+							? 'translate-x-6'
+							: 'translate-x-1'}"
+					/>
+				</button>
+			</div>
+
+			<!-- Push notification permission -->
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm font-medium text-slate-200">Push Notifications</p>
+					<p class="mt-0.5 text-xs text-slate-400">
+						{#if pushPermission === 'granted'}
+							Push notifications are enabled.
+						{:else if pushPermission === 'denied'}
+							Push notifications are blocked. Update in browser settings.
+						{:else}
+							Allow push notifications for background alerts.
+						{/if}
+					</p>
+				</div>
+				{#if pushPermission === 'granted'}
+					<span
+						class="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-400"
+					>
+						<span class="inline-block h-1.5 w-1.5 rounded-full bg-green-400"></span>
+						Enabled
+					</span>
+				{:else if pushPermission === 'denied'}
+					<span
+						class="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-3 py-1 text-xs font-medium text-red-400"
+					>
+						Blocked
+					</span>
+				{:else}
+					<button
+						on:click={handleEnablePush}
+						class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+					>
+						Enable
+					</button>
+				{/if}
 			</div>
 		</div>
 	</section>
