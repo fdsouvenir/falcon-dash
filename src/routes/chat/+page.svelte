@@ -20,9 +20,14 @@
 		sendMessage,
 		loadHistory,
 		abortRun,
+		updateSession,
+		injectMessage,
 		initChatListeners,
 		destroyChatListeners
 	} from '$lib/stores';
+	import { gateway } from '$lib/gateway';
+	import type { SessionPatchParams } from '$lib/gateway/types';
+	import type { CommandContext } from '$lib/chat/commands';
 
 	let currentMessages: ChatMessage[] = [];
 	let unsubMessages: (() => void) | null = null;
@@ -30,6 +35,19 @@
 	let isAtBottom = true;
 	let now = Date.now();
 	let settingsOpen = false;
+
+	$: commandContext = $activeSessionKey
+		? ({
+				sessionKey: $activeSessionKey,
+				sendMessage,
+				abortRun,
+				updateSession: (key: string, patch: Record<string, unknown>) =>
+					updateSession(key, patch as Omit<SessionPatchParams, 'sessionKey'>),
+				injectMessage: (sessionKey: string, role: string, content: string) =>
+					injectMessage(sessionKey, role as 'user' | 'assistant' | 'system' | 'inject', content),
+				gateway
+			} satisfies CommandContext)
+		: undefined;
 
 	/** Subscribe to messages for the active session */
 	function subscribeToMessages(sessionKey: string) {
@@ -253,6 +271,6 @@
 		</div>
 
 		<!-- Composer -->
-		<MessageComposer {isRunning} on:send={handleSend} on:abort={handleAbort} />
+		<MessageComposer {isRunning} {commandContext} on:send={handleSend} on:abort={handleAbort} />
 	</div>
 {/if}
