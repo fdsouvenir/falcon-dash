@@ -24,6 +24,9 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - For icons in sanitized HTML, use CSS `::before` with `content: url("data:image/svg+xml,...")` data URIs instead of inline SVG nodes
 - SVG elements in Svelte 4 don't accept `title` as a direct attribute — wrap in `<span title="...">` instead
 - `createEventDispatcher()` must have type params: `createEventDispatcher<{ eventName: PayloadType }>()`
+- Slash commands: registry pattern with `registerCommand()` + side-effect imports in barrel `index.ts` for auto-registration
+- CommandPalette exports `handleKeydown()` method for parent to delegate keyboard events via `bind:this`
+- ESLint no-unused-vars: `_` prefix does NOT suppress — use empty param list `execute()` instead of `execute(_args, _context)`
 
 ---
 
@@ -160,4 +163,21 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - `svelte:window on:keydown` is the correct pattern for Escape key handling in Svelte 4
   - Models store uses try/catch on `gateway.call('models.list')` since the method may not be available on all gateway versions
   - Session rename uses blur + Enter key events on the input to trigger updateSession()
+---
+
+## 2026-02-08 - US-036
+- Created slash command framework: registry, CommandPalette, and MessageComposer integration
+- Files created:
+  - `src/lib/chat/commands/registry.ts` — SlashCommand interface, CommandContext interface, commands array, registerCommand(), findCommands()
+  - `src/lib/chat/commands/placeholders.ts` — 3 placeholder commands (help, ping, status) for UI testing
+  - `src/lib/chat/commands/index.ts` — barrel exports, imports placeholders for side-effect registration
+  - `src/lib/components/chat/CommandPalette.svelte` — autocomplete dropdown above textarea, arrow key navigation, Enter select, Escape close
+- Files modified:
+  - `src/lib/components/chat/MessageComposer.svelte` — detects / prefix, shows CommandPalette, intercepts Enter for command selection, falls back to normal send for unrecognized commands
+  - `src/routes/chat/+page.svelte` — constructs CommandContext from stores/gateway, passes to MessageComposer
+- **Learnings for future iterations:**
+  - ESLint `@typescript-eslint/no-unused-vars` doesn't recognize `_` prefix convention by default — use `execute()` with no params instead of `execute(_args, _context)` for placeholder functions
+  - CommandPalette uses `bind:this` and an exported `handleKeydown()` method so the parent (MessageComposer) can delegate keyboard events to it
+  - The `satisfies CommandContext` pattern ensures type safety when constructing the context object in the chat route
+  - `findCommands()` uses simple `includes()` filter on command name — keeps filtering logic in the registry module
 ---

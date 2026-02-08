@@ -222,7 +222,7 @@
 				"npm run test passes"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the framework story — only placeholder commands for UI testing. Real commands come in US-037. The CommandPalette should be a separate component rendered conditionally in MessageComposer when / is detected. CommandContext is constructed in the chat route and passed down."
 		},
 		{
