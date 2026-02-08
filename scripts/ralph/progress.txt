@@ -138,3 +138,19 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - createEventDispatcher generic typing: `createEventDispatcher<{ send: string; abort: void }>()`
   - Component is compact (~71 lines) — no need for stores or complex state management
 ---
+
+## 2026-02-08 - US-025
+- Modified `src/lib/components/Sidebar.svelte` to replace "No channels yet" placeholder with live session list
+- Added imports: `goto` from `$app/navigation`, `sessions`, `activeSessionKey`, `switchSession` from stores
+- Session list iterates `$sessions.values()` with reactive `$: sessionList` declaration
+- Each session shows display name (truncated) + unread badge (blue pill, visible when > 0)
+- Active session highlighted with `bg-slate-700` + `text-slate-100` via `class:` directives
+- Click handler calls `switchSession(key)` then `goto('/chat')` for navigation
+- "New Chat" button (+) added in Channels header row, navigates to `/chat`
+- Empty state preserved: shows "No channels yet" when sessionList is empty
+- Files changed: `src/lib/components/Sidebar.svelte`
+- **Learnings for future iterations:**
+  - Sidebar already uses `class:` conditional directives for active state — same pattern reused for sessions
+  - Converting Map to array for `{#each}`: `$: sessionList = [...$sessions.values()]` with reactive declaration
+  - Prettier reformatted the file (minor whitespace adjustments) — always run format before checking
+---
