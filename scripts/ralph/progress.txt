@@ -13,6 +13,8 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
 - Fetch-based stores: use `fetch('/api/...')` for SvelteKit server routes, `gateway.call()` for WS methods
 - Module-specific types go in `src/lib/types/`, gateway types in `src/lib/gateway/types.ts`
 - Directory listing API returns `{ files: [...] }` — destructure with `data.files`
+- Prettier fails on `class:bg-slate-700/30={expr}` — use inline ternary in `class=` attr instead
+- `onMount` async cannot return cleanup function — use `onDestroy` for cleanup instead
 
 ---
 
@@ -42,4 +44,24 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - Fetch-based stores use standard `fetch()` to SvelteKit API routes, not `gateway.call()`
   - `src/lib/types/` is the new home for module-specific types (vs gateway types in `src/lib/gateway/types.ts`)
   - 409 conflict handling: throw descriptive Error that the UI can catch and display
+---
+
+## 2026-02-08 - US-040
+- Implemented /files route with two-pane file browser UI
+- Files created:
+  - `src/lib/utils/format.ts` — formatFileSize(bytes) returning human-readable B/KB/MB/GB
+  - `src/routes/files/+page.ts` — SSR disabled
+  - `src/routes/files/+page.svelte` — two-pane layout with breadcrumb nav, sortable columns, file/folder icons, loading/error/empty states
+- Features:
+  - Breadcrumb navigation with clickable segments
+  - Sortable columns (name, modified, size) with direction indicators
+  - Directories always sort first
+  - Active file highlighted in list
+  - Responsive: stacked on mobile, side-by-side on desktop
+  - Relative timestamps via formatRelativeTime, auto-refreshing every 30s
+  - Preview pane shows plain text (FilePreview/FileEditor components come in US-041)
+- **Learnings for future iterations:**
+  - Prettier Svelte parser fails on `class:bg-slate-700/30={expr}` — the `/` in the class name confuses the parser. Use inline ternary in `class="... {expr ? 'bg-slate-700/30' : ''}"` instead
+  - `onMount` with async function cannot return a cleanup function (TypeScript error). Use `onDestroy` for cleanup instead, or use `.catch()/.finally()` on the promise
+  - Helper functions like `isFileActive(file)` are cleaner than inline expressions with store values in template attributes
 ---

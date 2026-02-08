@@ -81,7 +81,7 @@
 				"npm run test passes"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Uses stores from US-039. The preview pane (right side) shows placeholder text when no file is selected — actual preview/editor components come in US-041. formatFileSize goes in src/lib/utils/format.ts (new file or extend existing). formatRelativeTime already exists in src/lib/utils/time.ts."
 		},
 		{
