@@ -195,6 +195,114 @@ export type AgentEvent =
 	| AgentEventTextDelta
 	| AgentEventTextEnd;
 
+// --- Chat Types ---
+
+export type MessageRole = 'user' | 'assistant' | 'system' | 'inject';
+
+export interface ThinkingBlock {
+	content: string;
+	startedAt: number;
+	completedAt?: number;
+	durationMs?: number;
+}
+
+export type ToolCallStatus = 'pending' | 'complete' | 'error';
+
+export interface ToolCall {
+	toolName: string;
+	args: Record<string, unknown>;
+	result?: unknown;
+	status: ToolCallStatus;
+}
+
+export interface ChatMessage {
+	id: string;
+	sessionKey: string;
+	role: MessageRole;
+	content: string;
+	timestamp: number;
+	runId?: string;
+	thinking?: ThinkingBlock[];
+	toolCalls?: ToolCall[];
+}
+
+// --- Chat Method Params/Responses ---
+
+export interface ChatSendParams {
+	sessionKey: string;
+	content: string;
+	model?: string;
+	thinkingLevel?: string;
+}
+
+export interface ChatSendAck {
+	runId: string;
+	status: 'started';
+}
+
+export interface ChatHistoryParams {
+	sessionKey: string;
+	afterSeq?: number;
+	limit?: number;
+}
+
+export interface ChatHistoryResponse {
+	messages: ChatMessage[];
+	hasMore: boolean;
+}
+
+export interface ChatAbortParams {
+	sessionKey: string;
+}
+
+export interface ChatInjectParams {
+	sessionKey: string;
+	role: MessageRole;
+	content: string;
+}
+
+// --- Session Types ---
+
+export interface Session {
+	key: string;
+	displayName: string;
+	lastMessage?: string;
+	unreadCount: number;
+	updatedAt: number;
+	model?: string;
+	thinkingLevel?: string;
+}
+
+export interface SessionListParams {
+	kinds?: string[];
+	limit?: number;
+	activeMinutes?: number;
+	messageLimit?: number;
+}
+
+export interface SessionListResponse {
+	sessions: Session[];
+}
+
+export interface SessionPatchParams {
+	sessionKey: string;
+	displayName?: string;
+	model?: string;
+	thinkingLevel?: string;
+}
+
+// --- Agent Run State ---
+
+export type AgentRunStatus = 'running' | 'complete' | 'error';
+
+export interface AgentRunState {
+	runId: string;
+	sessionKey: string;
+	status: AgentRunStatus;
+	startedAt: number;
+	seq: number;
+}
+
 // --- Shutdown Event ---
 
 export interface ShutdownPayload {
