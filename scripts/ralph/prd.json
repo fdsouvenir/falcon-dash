@@ -135,7 +135,7 @@
 				"npm run test passes"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "ConfirmDialog is the first reusable modal component — it will be imported by cron job delete (US-046) and password entry delete (US-050). Keep it generic with slot or message prop. FileActions toolbar sits above the file list. Inline rename uses a text input that replaces the file name span on double-click."
 		},
 		{

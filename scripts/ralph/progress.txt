@@ -86,3 +86,27 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - RenderedContent requires `isStreaming` prop — pass `false` for static file preview
   - createEventDispatcher generic typing: `createEventDispatcher<{ save: { content: string }; cancel: void }>()`
 ---
+
+## 2026-02-08 - US-042
+- Implemented file create, rename, delete with reusable ConfirmDialog modal
+- Files created:
+  - `src/lib/components/files/ConfirmDialog.svelte` — reusable confirmation modal with title, message, confirmLabel, open props; dispatches confirm/cancel events; backdrop click, Escape key, focus trap
+  - `src/lib/components/files/FileActions.svelte` — toolbar with New File and New Folder buttons; inline input with Enter to submit, Escape/blur to cancel
+- Files modified:
+  - `src/routes/api/workspace/files/+server.ts` — added POST handler for creating directories
+  - `src/lib/stores/files.ts` — added createFolder(dir, name) function
+  - `src/lib/stores/index.ts` — added createFolder to barrel exports
+  - `src/routes/files/+page.svelte` — added FileActions toolbar, inline rename (double-click name → input, Enter/blur saves, Escape cancels), delete button per row with ConfirmDialog confirmation, grid column updated to 4-column layout for delete button
+- Features:
+  - ConfirmDialog: backdrop overlay, focus trap, Escape to cancel, reusable by US-046 and US-050
+  - FileActions: New File and New Folder with inline input prompts
+  - Inline rename: double-click file name enters edit mode, selects filename without extension, Enter/blur submits, Escape cancels
+  - Delete: trash icon appears on hover (group-hover:opacity-100), requires ConfirmDialog confirmation, clears active file if deleted
+  - File row changed from button to div with clickable spans (needed for inline rename input and delete button)
+- **Learnings for future iterations:**
+  - ConfirmDialog lives at `src/lib/components/files/ConfirmDialog.svelte` — reuse for cron job delete and password entry delete
+  - Inline rename input needs `on:click|stopPropagation` wrapper to prevent row click handler from firing
+  - `requestAnimationFrame` needed before `focus()` on dynamically rendered inputs in Svelte
+  - File row changed from `<button>` to `<div>` with inner clickable `<span>` elements to support nested interactive elements (rename input, delete button)
+  - `svelte-ignore a11y-click-events-have-key-events` and `a11y-no-static-element-interactions` needed for clickable spans
+---
