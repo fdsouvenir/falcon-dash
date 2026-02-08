@@ -146,7 +146,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §14 Project Management section. Task tree is recursive — tasks can have subtasks which can have subtasks. Use indentation to show depth."
 		},
 		{

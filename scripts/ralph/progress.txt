@@ -41,6 +41,14 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 - TypeScript casts in Svelte templates: NEVER use `as Type` inside `{expressions}` — Prettier fails. Use helper functions to cast in the `<script>` block instead.
 - Reactive derived data: `$:` declarations filter/sort store data for sections
 
+### PM Detail Route Pattern
+- Dynamic route: `src/routes/projects/[id]/+page.ts` (ssr: false) + `+page.svelte`
+- Access `$page.params.id` via `import { page } from '$app/stores'` in `onMount`
+- Parallel load: `Promise.all([loadProjects(), loadTasks(projectId), loadComments(...), ...])`
+- ConfirmDialog: import from `$lib/components/files/ConfirmDialog.svelte`
+- `toStatus(val: string)` helper avoids `as PmStatus` in template expressions
+- Collapsible tree: `Set<number>` with reassignment for reactivity
+
 ### PM Types Pattern
 - Entity types prefixed with `Pm`: `PmDomain`, `PmFocus`, `PmProject`, etc.
 - Method param/response types: `Pm{Group}{Action}Params` / `Pm{Group}{Action}Response`
@@ -118,3 +126,21 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - Helper functions like `isDragging(taskId)` and `isColumnDragOver(status)` avoid `as` casts in templates
   - `projectIdsInScope` derived set enables efficient multi-project filtering for focus/domain scope
   - `tasksForColumn(status)` as a function (not reactive) works fine since it references reactive `visibleTasks`
+
+## 2026-02-08 - US-057
+- Created project detail page at `src/routes/projects/[id]/+page.svelte` with `+page.ts` (ssr: false)
+- Project header: editable title (click to edit), metadata grid with inline dropdowns for status, priority, focus, milestone, and due date
+- Editable description section with save/cancel
+- Task tree: hierarchical list with 3 levels of nesting, collapsible nodes, checkbox toggle for done/todo, status dropdown, add subtask inline, delete with ConfirmDialog
+- Comments section: add/edit/delete comments with author and timestamp
+- Attachments section: add/remove attachments with file name and path
+- Activity feed: filtered to current project, sorted by recency
+- Back button navigates to /projects list
+- Parallel data loading: `Promise.all` for projects, tasks, comments, attachments, activities, focuses, milestones, blocks
+- Files changed: `src/routes/projects/[id]/+page.ts` (new), `src/routes/projects/[id]/+page.svelte` (new), `scripts/ralph/prd.json`
+- **Learnings for future iterations:**
+  - `toStatus(val)` helper function avoids `as PmStatus` cast in Svelte template expressions (Prettier fails on `as` casts inside `{expressions}`)
+  - Collapsible tree state uses a `Set<number>` — reassign after mutation (`collapsedTasks = collapsedTasks`) to trigger Svelte reactivity
+  - ConfirmDialog from Phase 3 is at `src/lib/components/files/ConfirmDialog.svelte` — reusable across modules
+  - Three-level nesting is sufficient for task tree; deeper nesting would need a recursive Svelte component
+  - `goto('/projects')` for back navigation is cleaner than `history.back()` — deterministic destination
