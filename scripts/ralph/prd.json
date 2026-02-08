@@ -156,7 +156,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "logs.tail returns entries with cursor for pagination. Poll periodically (every 2-3s) with cursor to get new entries. Alternatively use gateway events if available."
 		},
 		{

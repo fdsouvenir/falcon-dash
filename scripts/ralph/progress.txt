@@ -168,3 +168,24 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run format: pass
 - npm run check: 0 errors, 14 pre-existing warnings
 - **Learnings for future iterations:** All tabs can manage their own scrolling with overflow-y-auto, simplifying the parent container. localStorage preferences use a namespaced key (falcon-dash:preferences) to avoid conflicts. Theme switching uses classList.add/remove('dark') on document.documentElement.
+
+## 2026-02-08 - US-069: Live logs viewer
+- Created `src/lib/components/settings/LogsViewer.svelte`:
+  - Monospace log entries with timestamp (HH:MM:SS.mmm), level badge, optional source, and message
+  - Color coding by level: error=red, warn=yellow, info=default slate, debug=gray
+  - Level filter dropdown (all, error, warn, info, debug) — client-side filtering
+  - Text search filter for message and source content
+  - Pause/resume toggle for live streaming (green=streaming, gray=paused)
+  - Auto-scroll to bottom when streaming (unless user scrolled up)
+  - "Jump to bottom" button appears when scrolled away from bottom
+  - Clear button to reset visible log entries and cursor
+  - Max 1000 entries enforced by store (FIFO, oldest dropped)
+  - Polling every 3s with cursor-based pagination via tailLogs store
+  - Entry count display with filtered/total ratio
+  - Loading and empty states
+- Updated `src/lib/components/settings/InformationTab.svelte`:
+  - Imported and added LogsViewer component as "Live Logs" section
+  - Fixed height (h-80) container for the logs viewer within the section
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** LogsViewer uses afterUpdate + isAtBottom pattern from MessageList for auto-scroll. Log timestamps formatted as HH:MM:SS.mmm for precision. The component is self-contained with its own streaming lifecycle (start/stop tailing).

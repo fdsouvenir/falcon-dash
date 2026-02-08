@@ -18,6 +18,7 @@
 	import type { NodeEntry, SubAgentRun } from '$lib/types/settings';
 	import { formatRelativeTime } from '$lib/utils/time';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
+	import LogsViewer from './LogsViewer.svelte';
 
 	let loading = true;
 	let showRestartConfirm = false;
@@ -363,6 +364,16 @@
 				{:else if activeRuns.length === 0}
 					<p class="text-sm text-slate-500">No sub-agent runs recorded.</p>
 				{/if}
+			</div>
+		</section>
+
+		<!-- Live Logs Section -->
+		<section class="rounded-lg border border-slate-700 bg-slate-800/50">
+			<div class="border-b border-slate-700 px-4 py-3">
+				<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Live Logs</h2>
+			</div>
+			<div class="h-80">
+				<LogsViewer />
 			</div>
 		</section>
 	{/if}
