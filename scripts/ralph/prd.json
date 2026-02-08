@@ -80,7 +80,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Usage data comes from session status. Nodes from nodes.list. Sub-agents from sessions.list filtered by kind. Gateway status from health() and status() methods."
 		},
 		{

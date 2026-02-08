@@ -67,3 +67,28 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run check: 0 errors, 14 pre-existing warnings
 - npm run build: pass
 - **Learnings for future iterations:** Settings tab panels that have their own layout (split pane) need the outer container to drop `overflow-y-auto p-6` and use `overflow-hidden` instead. Conditional class on tab content div works well for this.
+
+## 2026-02-08 - US-065: Information tab — gateway status, usage, nodes, sub-agents
+- Added types to `src/lib/types/settings.ts`:
+  - GatewayStatusInfo, UsageByProvider, UsageStats, SubAgentRun, SubAgentListResponse
+  - HealthResponse, StatusResponse for gateway method return types
+- Added store functions to `src/lib/stores/settings.ts`:
+  - gatewayStatus, usageStats, subAgentRuns writable stores
+  - loadGatewayStatus() — calls health() + status() in parallel
+  - loadUsageStats() — refreshes usage from health()
+  - loadSubAgentRuns() — calls sessions.list with kinds=['sub-agent']
+  - restartGateway() — calls config.apply with restart flag
+- Created `src/lib/components/settings/InformationTab.svelte`:
+  - Gateway Status section: connection state indicator (green/yellow/red), URL, uptime, model, version, session count, restart button with confirmation dialog
+  - Token Usage section: table with per-provider input/output/cache tokens and estimated cost
+  - Paired Nodes section: cards with status dot, name, capabilities (models, tools), version, last seen
+  - Sub-Agent Runs section: split into Active (blue border) and Recent (last 10), showing task, model, duration/runtime, status
+  - Auto-refresh every 30s for status, usage, and sub-agent data
+  - Loading state while initial data is fetched
+- Updated `src/routes/settings/+page.svelte`:
+  - Imported InformationTab, replaced placeholder
+  - Added `information` to overflow-hidden condition (manages own scrolling)
+- Updated barrel exports in types/index.ts and stores/index.ts
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** Information tab manages its own overflow-y-auto scrolling since it's a tall scrollable page (not split pane). Multiple gateway calls can be Promise.all'd for parallel loading. The tab content container conditional class should list all self-scrolling tabs.
