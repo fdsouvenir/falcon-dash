@@ -13,6 +13,7 @@
         "ESLint with svelte plugin + typescript-eslint configured",
         "Prettier configured: tabs, single quotes, no trailing commas",
         "Folder structure created: src/lib/gateway/, src/lib/stores/, src/lib/components/, src/lib/utils/, src/routes/",
+        "npm run format passes",
         "npm run check passes with 0 errors",
         "npm run lint passes",
         "npm run build succeeds"
@@ -32,6 +33,7 @@
         "ConnectionState enum: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING",
         "Error shape type: { code, message, details?, retryable?, retryAfterMs? }",
         "Agent event types: thinking, tool_start, tool_result, text_delta, text_end",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 2,
@@ -50,6 +52,7 @@
         "connect(url, params) opens WS and sends connect frame",
         "close() cleanly closes the connection",
         "State exposed as Svelte readable store",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 3,
@@ -67,6 +70,7 @@
         "Generates unique request IDs (incrementing counter or UUID)",
         "Generates idempotency keys for mutation methods",
         "Rejects all pending requests on disconnect",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 4,
@@ -83,6 +87,7 @@
         "on() returns unsubscribe function",
         "once(event) returns Promise that resolves on next emission",
         "clear() removes all handlers (called on disconnect)",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 5,
@@ -100,6 +105,7 @@
         "updatePresence(delta) applies incremental presence updates",
         "updateHealth(data) updates health store",
         "stateVersion tracked per domain (presence, health)",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 6,
@@ -117,11 +123,30 @@
         "Generate unique instanceId per tab/session",
         "Build auth params for connect frame",
         "Support dev mode: token-only auth (no device keypair)",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
       "priority": 7,
       "passes": false,
       "notes": "Dev mode: gateway.controlUi.allowInsecureAuth: true skips device identity. Full Ed25519 device identity via WebCrypto is a Phase 6 concern."
+    },
+    {
+      "id": "US-015",
+      "title": "Reconnection with backoff",
+      "description": "Implement exponential backoff reconnection in GatewayConnection. Base delay 800ms, multiplier 1.7x, cap 15s. Handle tick timeout (2x tickIntervalMs). Handle shutdown event with restartExpectedMs delay.",
+      "acceptanceCriteria": [
+        "Exponential backoff: 800ms base, 1.7x multiplier, 15s cap",
+        "Auto-reconnect on unexpected disconnect",
+        "Tick timeout detection: no tick within 2x tickIntervalMs (60s) triggers reconnect",
+        "Handle shutdown event: wait restartExpectedMs before reconnecting",
+        "Reset backoff counter on successful reconnect",
+        "State transitions to RECONNECTING during retry",
+        "npm run format passes",
+        "npm run check passes with 0 errors"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs. Must be done before gateway client (US-008) since the client composes connection with reconnection built in."
     },
     {
       "id": "US-008",
@@ -137,11 +162,12 @@
         "state readable store exposed for connection state",
         "Singleton instance exported",
         "Barrel export from src/lib/gateway/index.ts",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 8,
+      "priority": 9,
       "passes": false,
-      "notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing."
+      "notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing. Reconnection with backoff (US-015) must be done first."
     },
     {
       "id": "US-009",
@@ -152,9 +178,10 @@
         "Derives from GatewayClient.state",
         "Updates reactively when connection state changes",
         "Barrel export from src/lib/stores/index.ts",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 9,
+      "priority": 10,
       "passes": false,
       "notes": "This store bridges the gateway client to Svelte components. Components subscribe to this for connection-aware rendering."
     },
@@ -168,10 +195,11 @@
         "Main content area renders slot for page content",
         "Responsive: sidebar visible on desktop (md+), hidden on mobile",
         "Tailwind CSS styling with dark theme base (slate/zinc palette)",
+        "npm run format passes",
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 10,
+      "priority": 11,
       "passes": false,
       "notes": "Reference architecture doc §11 for navigation model. Sidebar: Channels (chat sessions) at top, Apps (Projects, Files, Agent Jobs) below, Settings + Passwords at bottom."
     },
@@ -185,9 +213,10 @@
         "Settings and Passwords links at bottom of sidebar",
         "Active route highlighting using SvelteKit $page store",
         "Tailwind styling consistent with app shell",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 11,
+      "priority": 12,
       "passes": false,
       "notes": "Reference architecture doc §11 for sidebar layout. Use $app/stores for page store. Links can point to placeholder routes for now."
     },
@@ -200,9 +229,10 @@
         "Text label shows current state",
         "Subscribes to connection store",
         "Placed in app shell (sidebar footer or header)",
+        "npm run format passes",
         "npm run check passes with 0 errors"
       ],
-      "priority": 12,
+      "priority": 13,
       "passes": false,
       "notes": "ConnectionState values: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING."
     },
@@ -217,10 +247,11 @@
         "Persists gateway URL and token in localStorage via auth module",
         "Shows error state if connection fails",
         "On successful connect, transitions to app shell layout",
+        "npm run format passes",
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 13,
+      "priority": 14,
       "passes": false,
       "notes": "This is the entry point before the user is connected. After connect, the app shell with sidebar takes over."
     },
@@ -233,29 +264,13 @@
         "Web app manifest with name 'Falcon Dash', short_name, icons, theme_color, background_color",
         "Basic service worker registered for PWA installability",
         "App is installable in Chrome/Edge",
+        "npm run format passes",
         "npm run check passes with 0 errors",
         "npm run build succeeds"
       ],
-      "priority": 14,
-      "passes": false,
-      "notes": "Keep PWA config minimal for Phase 1. Full offline support and push notifications are Phase 6."
-    },
-    {
-      "id": "US-015",
-      "title": "Reconnection with backoff",
-      "description": "Implement exponential backoff reconnection in GatewayConnection. Base delay 800ms, multiplier 1.7x, cap 15s. Handle tick timeout (2x tickIntervalMs). Handle shutdown event with restartExpectedMs delay.",
-      "acceptanceCriteria": [
-        "Exponential backoff: 800ms base, 1.7x multiplier, 15s cap",
-        "Auto-reconnect on unexpected disconnect",
-        "Tick timeout detection: no tick within 2x tickIntervalMs (60s) triggers reconnect",
-        "Handle shutdown event: wait restartExpectedMs before reconnecting",
-        "Reset backoff counter on successful reconnect",
-        "State transitions to RECONNECTING during retry",
-        "npm run check passes with 0 errors"
-      ],
       "priority": 15,
       "passes": false,
-      "notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs."
+      "notes": "Keep PWA config minimal for Phase 1. Full offline support and push notifications are Phase 6."
     }
   ]
 }
