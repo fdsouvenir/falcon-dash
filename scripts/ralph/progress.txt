@@ -83,3 +83,16 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - `class:hover:bg-slate-700/60` fails Prettier — the `/` in Tailwind opacity modifier breaks Svelte class directive parsing. Use solid colors like `hover:bg-slate-800` instead
   - Tailwind `group/name` nested hover variant works well for focus items inside domain rows
   - Keyboard helpers (Enter/Escape) on inline forms improve UX without adding complexity
+
+## 2026-02-08 - US-055
+- Created `src/lib/components/pm/ProjectList.svelte` — filterable, sortable table of projects
+- Updated `src/lib/components/pm/index.ts` barrel export with ProjectList
+- Features: filter bar (status/priority dropdowns), sortable columns (title, status, priority, due date, created date), click-to-navigate, status badges with color coding, priority indicators, due date with overdue detection, task count per project, empty state, responsive columns (focus hidden on sm, tasks hidden on md)
+- Props accept `selectedDomainId`/`selectedFocusId` from sidebar for domain/focus filtering
+- Dispatches `select` event with `{ projectId }` for navigation
+- Files changed: `src/lib/components/pm/ProjectList.svelte` (new), `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - Sort weight functions (prioritySortWeight, statusSortWeight) keep sort logic clean
+  - Domain filtering requires deriving focus IDs from `$pmFocuses` store, then checking project's `focusId`
+  - `$pmTasks` store can be used for task count per project via `filter(t => t.parentProjectId === projectId).length`
+  - Unicode sort arrows (\u25B2/\u25BC) work well for sort indicators without needing SVG icons

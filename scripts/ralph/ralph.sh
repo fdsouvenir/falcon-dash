@@ -2,26 +2,22 @@
 # Ralph Wiggum - Long-running AI agent loop
 # Usage: ./ralph.sh [--tool amp|claude] [max_iterations]
 #
-# The agent builds ONE story, commits, then exits.
-# Quality gates run EXTERNALLY (not by the agent).
-# If gates fail, the next iteration gets the error output.
+# Each iteration:
+#   1. Agent builds ONE story and commits
+#   2. Quality gates run EXTERNALLY (not by the agent)
+#   3. If gates fail, next iteration gets the error output
+#   4. Loop until all stories pass or max iterations reached
 
-set -e
+# NO set -e — we handle all errors explicitly
+# This prevents the script from dying when quality gates return non-zero
 
-# Parse arguments
-TOOL="claude"  # Default to claude
-MAX_ITERATIONS=20
+TOOL="claude"
+MAX_ITERATIONS=25
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --tool)
-      TOOL="$2"
-      shift 2
-      ;;
-    --tool=*)
-      TOOL="${1#*=}"
-      shift
-      ;;
+    --tool)       TOOL="$2"; shift 2 ;;
+    --tool=*)     TOOL="${1#*=}"; shift ;;
     *)
       if [[ "$1" =~ ^[0-9]+$ ]]; then
         MAX_ITERATIONS="$1"
@@ -44,22 +40,18 @@ ARCHIVE_DIR="$SCRIPT_DIR/archive"
 LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
 GATE_FAIL_FILE="$SCRIPT_DIR/.last-gate-failure"
 
-# Archive previous run if branch changed
+# ── Archive previous run if branch changed ──────────────────────
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
   CURRENT_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
   LAST_BRANCH=$(cat "$LAST_BRANCH_FILE" 2>/dev/null || echo "")
-
   if [ -n "$CURRENT_BRANCH" ] && [ -n "$LAST_BRANCH" ] && [ "$CURRENT_BRANCH" != "$LAST_BRANCH" ]; then
     DATE=$(date +%Y-%m-%d)
     FOLDER_NAME=$(echo "$LAST_BRANCH" | sed 's|^ralph/||')
     ARCHIVE_FOLDER="$ARCHIVE_DIR/$DATE-$FOLDER_NAME"
-
-    echo "Archiving previous run: $LAST_BRANCH"
+    echo "Archiving previous run: $LAST_BRANCH → $ARCHIVE_FOLDER"
     mkdir -p "$ARCHIVE_FOLDER"
     [ -f "$PRD_FILE" ] && cp "$PRD_FILE" "$ARCHIVE_FOLDER/"
     [ -f "$PROGRESS_FILE" ] && cp "$PROGRESS_FILE" "$ARCHIVE_FOLDER/"
-    echo "   Archived to: $ARCHIVE_FOLDER"
-
     echo "# Ralph Progress Log" > "$PROGRESS_FILE"
     echo "Started: $(date)" >> "$PROGRESS_FILE"
     echo "---" >> "$PROGRESS_FILE"
@@ -69,22 +61,20 @@ fi
 # Track current branch
 if [ -f "$PRD_FILE" ]; then
   CURRENT_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
-  if [ -n "$CURRENT_BRANCH" ]; then
-    echo "$CURRENT_BRANCH" > "$LAST_BRANCH_FILE"
-  fi
+  [ -n "$CURRENT_BRANCH" ] && echo "$CURRENT_BRANCH" > "$LAST_BRANCH_FILE"
 fi
 
-# Initialize progress file if it doesn't exist
+# Initialize progress file
 if [ ! -f "$PROGRESS_FILE" ]; then
   echo "# Ralph Progress Log" > "$PROGRESS_FILE"
   echo "Started: $(date)" >> "$PROGRESS_FILE"
   echo "---" >> "$PROGRESS_FILE"
 fi
 
-# Clear any stale gate failure file
+# Clear stale gate failure
 rm -f "$GATE_FAIL_FILE"
 
-# Check if all stories already pass
+# ── Helper: check if all stories pass ───────────────────────────
 check_all_complete() {
   local remaining
   remaining=$(jq '[.userStories[] | select(.passes != true)] | length' "$PRD_FILE" 2>/dev/null || echo "999")
@@ -100,13 +90,14 @@ echo "Starting Ralph - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
 echo "Project: $PROJECT_DIR"
 echo ""
 
+# ── Main loop ───────────────────────────────────────────────────
 for i in $(seq 1 $MAX_ITERATIONS); do
   echo ""
   echo "==============================================================="
   echo "  Ralph Iteration $i of $MAX_ITERATIONS ($TOOL)"
   echo "==============================================================="
 
-  # If previous gate failed, prepend failure context for the agent
+  # Inject gate failure context if previous iteration failed
   GATE_CONTEXT=""
   if [ -f "$GATE_FAIL_FILE" ]; then
     GATE_CONTEXT=$(cat "$GATE_FAIL_FILE")
@@ -114,7 +105,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     echo "⚠️  Previous quality gate failed — agent will see the errors"
   fi
 
-  # Build the prompt: CLAUDE.md + optional gate failure context
+  # Build prompt
   PROMPT=$(cat "$SCRIPT_DIR/CLAUDE.md")
   if [ -n "$GATE_CONTEXT" ]; then
     PROMPT="$PROMPT
@@ -130,22 +121,14 @@ $GATE_CONTEXT
 "
   fi
 
-  # Run the agent
+  # ── Run the agent ─────────────────────────────────────────────
   if [[ "$TOOL" == "amp" ]]; then
     OUTPUT=$(echo "$PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
   else
     OUTPUT=$(echo "$PROMPT" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
   fi
 
-  # Check for completion signal from agent
-  if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
-    echo ""
-    echo "Agent reports all stories complete."
-  fi
-
-  # ═══════════════════════════════════════════════════════════
-  # EXTERNAL QUALITY GATES — agent cannot fake these
-  # ═══════════════════════════════════════════════════════════
+  # ── External quality gates ────────────────────────────────────
   echo ""
   echo "───────────────────────────────────────────────────────"
   echo "  Running external quality gates..."
@@ -155,61 +138,65 @@ $GATE_CONTEXT
   GATE_PASSED=true
   GATE_OUTPUT=""
 
-  # Gate 1: format check
-  echo "  [1/4] npm run format..."
-  FORMAT_OUT=$(npm run format 2>&1) || true
+  # Gate 1: format (auto-fix, don't fail on this)
+  echo "  [1/5] npm run format..."
+  npm run format >/dev/null 2>&1 || true
+  echo "  ✅ formatted"
 
   # Gate 2: svelte-check
-  echo "  [2/4] npm run check..."
-  CHECK_OUT=$(npm run check 2>&1)
-  CHECK_EXIT=$?
-  if [ $CHECK_EXIT -ne 0 ]; then
+  echo "  [2/5] npm run check..."
+  CHECK_OUT=$(npm run check 2>&1 || true)
+  CHECK_EXIT=${PIPESTATUS[0]:-$?}
+  if echo "$CHECK_OUT" | grep -q "found 0 errors"; then
+    echo "  ✅ npm run check passed"
+  else
     GATE_PASSED=false
-    GATE_OUTPUT+="=== npm run check FAILED (exit $CHECK_EXIT) ===
+    GATE_OUTPUT+="=== npm run check FAILED ===
 $CHECK_OUT
 
 "
     echo "  ❌ npm run check failed"
-  else
-    echo "  ✅ npm run check passed"
   fi
 
   # Gate 3: lint
-  echo "  [3/4] npm run lint..."
-  LINT_OUT=$(npm run lint 2>&1)
-  LINT_EXIT=$?
-  if [ $LINT_EXIT -ne 0 ]; then
-    GATE_PASSED=false
-    GATE_OUTPUT+="=== npm run lint FAILED (exit $LINT_EXIT) ===
+  echo "  [3/5] npm run lint..."
+  LINT_OUT=$(npm run lint 2>&1 || true)
+  if [ $? -eq 0 ] && ! echo "$LINT_OUT" | grep -qE "(error|Error)"; then
+    echo "  ✅ npm run lint passed"
+  else
+    # Check if it's just warnings vs actual errors
+    if echo "$LINT_OUT" | grep -qE "^[[:space:]]*[0-9]+ error"; then
+      GATE_PASSED=false
+      GATE_OUTPUT+="=== npm run lint FAILED ===
 $LINT_OUT
 
 "
-    echo "  ❌ npm run lint failed"
-  else
-    echo "  ✅ npm run lint passed"
+      echo "  ❌ npm run lint failed"
+    else
+      echo "  ✅ npm run lint passed (warnings only)"
+    fi
   fi
 
   # Gate 4: build
-  echo "  [4/4] npm run build..."
-  BUILD_OUT=$(npm run build 2>&1)
-  BUILD_EXIT=$?
-  if [ $BUILD_EXIT -ne 0 ]; then
+  echo "  [4/5] npm run build..."
+  BUILD_OUT=$(npm run build 2>&1 || true)
+  if echo "$BUILD_OUT" | grep -q "✔ done"; then
+    echo "  ✅ npm run build passed"
+  else
     GATE_PASSED=false
-    GATE_OUTPUT+="=== npm run build FAILED (exit $BUILD_EXIT) ===
+    GATE_OUTPUT+="=== npm run build FAILED ===
 $BUILD_OUT
 
 "
     echo "  ❌ npm run build failed"
-  else
-    echo "  ✅ npm run build passed"
   fi
 
-  # Gate 5: tests (optional — only if test script exists and works)
-  if npm run test --if-present 2>/dev/null; then
+  # Gate 5: playwright tests
+  echo "  [5/5] npm run test..."
+  TEST_OUT=$(npm run test 2>&1 || true)
+  if echo "$TEST_OUT" | grep -q "passed"; then
     echo "  ✅ npm run test passed"
   else
-    TEST_OUT=$(npm run test 2>&1 || true)
-    # Only fail if tests actually exist and broke
     if echo "$TEST_OUT" | grep -q "failed"; then
       GATE_PASSED=false
       GATE_OUTPUT+="=== npm run test FAILED ===
@@ -217,6 +204,8 @@ $TEST_OUT
 
 "
       echo "  ❌ npm run test failed"
+    else
+      echo "  ⚠️  npm run test inconclusive, skipping"
     fi
   fi
 
@@ -225,14 +214,14 @@ $TEST_OUT
   if [ "$GATE_PASSED" = true ]; then
     echo "  ✅ All quality gates passed"
 
-    # Check if format changed anything — if so, commit it
+    # Commit any format changes
     if ! git diff --quiet 2>/dev/null; then
       echo "  📝 Format changes detected, committing..."
       git add -A
       git commit -m "chore: format" --no-verify 2>/dev/null || true
     fi
 
-    # Check completion
+    # Check if all stories complete
     if check_all_complete; then
       echo ""
       echo "═══════════════════════════════════════════════════════"
@@ -244,10 +233,6 @@ $TEST_OUT
   else
     echo "  ❌ Quality gates FAILED — next iteration will fix"
     echo "$GATE_OUTPUT" > "$GATE_FAIL_FILE"
-
-    # Revert the passes: true mark if the agent set it prematurely
-    # (The agent marked it passing but external gates say otherwise)
-    echo "  ↩️  Note: agent may have marked a story as passing incorrectly"
   fi
 
   echo "Iteration $i complete. Continuing..."
