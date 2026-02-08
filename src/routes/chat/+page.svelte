@@ -6,6 +6,7 @@
 	import ToolCallCard from '$lib/components/chat/ToolCallCard.svelte';
 	import MessageComposer from '$lib/components/chat/MessageComposer.svelte';
 	import RenderedContent from '$lib/components/chat/RenderedContent.svelte';
+	import MessageActionBar from '$lib/components/chat/MessageActionBar.svelte';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
 	import {
 		connectionState,
@@ -151,45 +152,80 @@
 				{:else}
 					<div class="space-y-3">
 						{#each currentMessages as message (message.id)}
-							<div class="rounded-lg px-4 py-3 {roleClass(message.role)}">
-								<div class="mb-1 flex items-center justify-between">
-									<span class="text-xs font-medium text-slate-300">
-										{roleLabel(message.role)}
-									</span>
-									<span
-										class="text-xs text-slate-500"
-										title={formatFullTimestamp(message.timestamp)}
-									>
-										{formatRelativeTime(message.timestamp, now)}
-									</span>
+							{#if message.role === 'assistant'}
+								<div class="group mr-12">
+									<div class="rounded-lg bg-slate-700/50 px-4 py-3">
+										<div class="mb-1 flex items-center justify-between">
+											<span class="text-xs font-medium text-slate-300">
+												{roleLabel(message.role)}
+											</span>
+											<span
+												class="text-xs text-slate-500"
+												title={formatFullTimestamp(message.timestamp)}
+											>
+												{formatRelativeTime(message.timestamp, now)}
+											</span>
+										</div>
+
+										{#if message.thinking && message.thinking.length > 0}
+											{#each message.thinking as block, i (i)}
+												<ThinkingBlock thinking={block} />
+											{/each}
+										{/if}
+
+										{#if message.content}
+											<RenderedContent
+												content={message.content}
+												isStreaming={isRunning &&
+													!!message.runId &&
+													!!$activeRun &&
+													$activeRun.runId === message.runId}
+											/>
+										{/if}
+
+										{#if message.toolCalls && message.toolCalls.length > 0}
+											{#each message.toolCalls as tool, i (i)}
+												<ToolCallCard toolCall={tool} />
+											{/each}
+										{/if}
+									</div>
+									{#if message.content}
+										<div class="mt-1">
+											<MessageActionBar content={message.content} />
+										</div>
+									{/if}
 								</div>
+							{:else}
+								<div class="rounded-lg px-4 py-3 {roleClass(message.role)}">
+									<div class="mb-1 flex items-center justify-between">
+										<span class="text-xs font-medium text-slate-300">
+											{roleLabel(message.role)}
+										</span>
+										<span
+											class="text-xs text-slate-500"
+											title={formatFullTimestamp(message.timestamp)}
+										>
+											{formatRelativeTime(message.timestamp, now)}
+										</span>
+									</div>
 
-								{#if message.thinking && message.thinking.length > 0}
-									{#each message.thinking as block, i (i)}
-										<ThinkingBlock thinking={block} />
-									{/each}
-								{/if}
+									{#if message.thinking && message.thinking.length > 0}
+										{#each message.thinking as block, i (i)}
+											<ThinkingBlock thinking={block} />
+										{/each}
+									{/if}
 
-								{#if message.role === 'assistant' && message.content}
-									<RenderedContent
-										content={message.content}
-										isStreaming={isRunning &&
-											!!message.runId &&
-											!!$activeRun &&
-											$activeRun.runId === message.runId}
-									/>
-								{:else}
 									<div class="whitespace-pre-wrap text-sm text-slate-200">
 										{message.content}
 									</div>
-								{/if}
 
-								{#if message.toolCalls && message.toolCalls.length > 0}
-									{#each message.toolCalls as tool, i (i)}
-										<ToolCallCard toolCall={tool} />
-									{/each}
-								{/if}
-							</div>
+									{#if message.toolCalls && message.toolCalls.length > 0}
+										{#each message.toolCalls as tool, i (i)}
+											<ToolCallCard toolCall={tool} />
+										{/each}
+									{/if}
+								</div>
+							{/if}
 						{/each}
 					</div>
 				{/if}
