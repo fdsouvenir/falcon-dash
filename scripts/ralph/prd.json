@@ -163,7 +163,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §4.4 and ws-protocol.md §6. tickIntervalMs comes from hello-ok policy. Shutdown event includes restartExpectedMs. Must be done before gateway client (US-008) since the client composes connection with reconnection built in."
 		},
 		{

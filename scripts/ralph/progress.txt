@@ -106,3 +106,13 @@ Branch: ralph/phase-1-core-infrastructure
 - buildConnectParams() constructs full connect frame params
 - Dev mode: token-only auth (no device keypair), device param optional
 ---
+
+## 2026-02-08 - US-015
+- Enhanced GatewayConnection with reconnection and backoff
+- Exponential backoff: 800ms base, 1.7x multiplier, 15s cap
+- Auto-reconnect on unexpected disconnect (not on intentional close)
+- Tick timeout detection: no tick within 2x tickIntervalMs triggers reconnect
+- handleShutdown(payload) waits restartExpectedMs before reconnecting
+- setReady() resets backoff counter on successful reconnect
+- Disconnect handler notified with intentional flag
+---
