@@ -243,7 +243,7 @@
 				"npm run test passes"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "Reuses ConfirmDialog from US-042 for delete confirmation. CronJobForm is a modal overlay similar to ChannelSettings pattern. initCronListeners/destroyCronListeners should be called on mount/destroy of the jobs page."
 		},
 		{

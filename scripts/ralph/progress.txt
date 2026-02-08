@@ -15,6 +15,7 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
 - Directory listing API returns `{ files: [...] }` — destructure with `data.files`
 - Prettier fails on `class:bg-slate-700/30={expr}` — use inline ternary in `class=` attr instead
 - `onMount` async cannot return cleanup function — use `onDestroy` for cleanup instead
+- `<tr>` elements with `on:click` do NOT trigger a11y-click-events/a11y-no-static-element-interactions — don't add unused svelte-ignore comments
 
 ---
 
@@ -168,4 +169,24 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - Reactive `$: localVar = $store.prop` overwrites user edits — sync from store only after explicit load, not reactively
   - `onDestroy` for interval cleanup (consistent with files route pattern)
   - Tab state preserved naturally via `{#if activeTab === ...}` blocks — Svelte doesn't destroy/recreate the hidden branch
+---
+
+## 2026-02-08 - US-046
+- Implemented Cron Jobs tab with job list and CRUD operations
+- Files created:
+  - `src/lib/components/jobs/CronJobList.svelte` — table component with columns (name, schedule, next/last run, status badge, actions), row selection, hover-reveal action buttons, empty state
+  - `src/lib/components/jobs/CronJobForm.svelte` — modal form for create/edit with validation, schedule type selector, prompt textarea, enabled checkbox, focus trap, Escape/backdrop close
+- Files modified:
+  - `src/routes/jobs/+page.svelte` — replaced placeholder cron tab with full CronJobList, CronJobForm, and ConfirmDialog integration; lazy-loads cron data on first tab visit; initCronListeners on mount, destroyCronListeners on destroy
+- Features:
+  - CronJobList: name, schedule type badge + value, relative next/last run times, clickable enable/disable badge, edit/run now/delete action buttons (hover reveal), selected row highlighting
+  - CronJobForm: create/edit modes, pre-fill from existing job, inline validation errors on submit, schedule placeholder by type
+  - Delete confirmation via ConfirmDialog (reuse from US-042)
+  - Lazy loading: cron jobs loaded on first tab switch, not on mount
+  - Real-time updates via initCronListeners/destroyCronListeners lifecycle
+  - Row selection for future run history expansion (US-047)
+- **Learnings for future iterations:**
+  - `svelte-ignore a11y-click-events-have-key-events` and `a11y-no-static-element-interactions` are NOT needed for `<tr>` elements with `on:click` — the Svelte ESLint plugin doesn't warn for table row clicks, and unused svelte-ignore comments trigger `svelte/no-unused-svelte-ignore`
+  - CronJobForm modal follows same pattern as ConfirmDialog: fixed overlay, dialog with role="dialog" aria-modal="true", focus trap, Escape/backdrop
+  - Lazy tab loading: use a `cronLoaded` boolean guard so data only loads once on first tab visit
 ---
