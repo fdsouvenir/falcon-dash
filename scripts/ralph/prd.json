@@ -53,7 +53,7 @@
 				"npm run test passes"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Fetch-based stores (unlike gateway stores that use gateway.call()). These stores use standard fetch() to call the SvelteKit API routes. Error handling should throw or return error info the UI can display. The activeFile store holds the currently viewed/edited file content."
 		},
 		{

@@ -10,6 +10,9 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
 - `@types/node` is installed as devDependency for Node.js API types in server routes
 - Error casting pattern: `(err as NodeJS.ErrnoException).code === 'ENOENT'`
 - SvelteKit error objects have a `.status` property for HTTP status codes
+- Fetch-based stores: use `fetch('/api/...')` for SvelteKit server routes, `gateway.call()` for WS methods
+- Module-specific types go in `src/lib/types/`, gateway types in `src/lib/gateway/types.ts`
+- Directory listing API returns `{ files: [...] }` — destructure with `data.files`
 
 ---
 
@@ -24,4 +27,19 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - `@types/node` was not previously installed; needed for `node:fs/promises`, `node:path`, `node:os`, `node:crypto`, and `NodeJS.ErrnoException`
   - Hash-based concurrency: PUT compares baseHash to current file hash, returns 409 on conflict
   - Traverse protection: validatePath() rejects paths resolving outside workspace root and `.secrets` paths
+---
+
+## 2026-02-08 - US-039
+- Implemented file types and fetch-based store for workspace file operations
+- Files created:
+  - `src/lib/types/files.ts` — WorkspaceFile, FileContent, FileWriteRequest, FileWriteResponse interfaces
+  - `src/lib/types/index.ts` — barrel export for types directory
+  - `src/lib/stores/files.ts` — writable stores (files, currentPath, activeFile, activeFileName) + fetch functions (loadFiles, loadFile, saveFile, deleteFile, createFile, renameFile, navigateTo)
+- Files modified:
+  - `src/lib/stores/index.ts` — added barrel exports for file stores
+- **Learnings for future iterations:**
+  - The directory listing API returns `{ files: [...] }` not a bare array — must use `data.files` not `data`
+  - Fetch-based stores use standard `fetch()` to SvelteKit API routes, not `gateway.call()`
+  - `src/lib/types/` is the new home for module-specific types (vs gateway types in `src/lib/gateway/types.ts`)
+  - 409 conflict handling: throw descriptive Error that the UI can catch and display
 ---
