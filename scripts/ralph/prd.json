@@ -122,7 +122,7 @@
 				"npm run test passes"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "Use Svelte 4 syntax: export let messages, on:scroll, createEventDispatcher if needed. Auto-scroll logic: track whether user has manually scrolled up, and only auto-scroll when at the bottom. Use afterUpdate lifecycle for scroll behavior."
 		},
 		{

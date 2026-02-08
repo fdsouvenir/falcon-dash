@@ -15,6 +15,10 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
 - Optimistic inserts use temp IDs (`temp-{timestamp}-{counter}`), replaced after server ack
 - For arrays inside a Map store, spread into new array `[...list]` to trigger Svelte reactivity
 - activeRun derived store uses polling (setInterval 200ms) since stream manager is not a store
+- Chat components live in `src/lib/components/chat/` directory
+- Time utilities live in `src/lib/utils/time.ts`
+- ESLint `svelte/no-reactive-functions` disallows `$: fn = (x) => ...` — use plain `function` declarations instead
+- For reactive timestamps, pass a `now` variable to formatting functions so Svelte detects the dependency
 
 ---
 
@@ -75,4 +79,18 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Optimistic insert pattern: insert temp message → call gateway → replace temp ID with server ID → stream manager handles ack
   - Array reactivity in Map stores requires both `[...list]` spread and `new Map(map)` for Svelte to detect changes
   - destroyChatListeners() resets stream manager to prevent stale state across route navigations
+---
+
+## 2026-02-08 - US-021
+- Created `src/lib/components/chat/MessageList.svelte` — renders chat messages with auto-scroll and relative timestamps
+- Created `src/lib/utils/time.ts` — formatRelativeTime() and formatFullTimestamp() utilities
+- MessageList features: user/assistant/system styling, auto-scroll to bottom on new messages, "Jump to bottom" button when scrolled up, empty state, relative timestamps with full timestamp on hover
+- Auto-scroll uses afterUpdate lifecycle + isAtBottom tracking via scroll event
+- Relative timestamps refresh every 30s via setInterval, passed as `now` param for Svelte reactivity
+- Files changed: `src/lib/components/chat/MessageList.svelte` (new), `src/lib/utils/time.ts` (new)
+- **Learnings for future iterations:**
+  - ESLint `svelte/no-reactive-functions` disallows `$: fn = (x) => ...` syntax — use plain function declarations
+  - ESLint `svelte/no-immutable-reactive-statements` catches `$: void now` — pass reactive vars as function args instead
+  - formatRelativeTime accepts optional `now` parameter so Svelte template picks up the dependency for re-renders
+  - Chat component directory: `src/lib/components/chat/`
 ---
