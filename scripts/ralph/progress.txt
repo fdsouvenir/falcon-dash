@@ -17,6 +17,9 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - KaTeX CSS must be loaded from CDN in app.html, version-matched to npm katex package
 - MathML elements (math, semantics, mrow, etc.) must be allowlisted in sanitize-schema.ts tagNames
 - `math` element needs `xmlns` and `display` attributes; `annotation` needs `encoding`
+- For post-DOM rendering (mermaid, etc.): rehype plugin creates placeholder → Svelte action + dynamic import renders after mount → MutationObserver catches re-renders
+- rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin in pipeline order
+- SVG elements for sanitize-schema need extensive per-element attribute allowlists (viewBox, transform, d, fill, stroke, etc.)
 
 ---
 
@@ -70,4 +73,26 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - rehype-katex internally tries with throwOnError:true first, catches ParseError, then retries with throwOnError:false, and if that also fails, generates a `<span class="katex-error">` with red color
   - KaTeX CSS version in CDN link must match the npm katex package version exactly
   - MathML elements need to be individually allowlisted — there are 19 common ones used by KaTeX
+---
+
+## 2026-02-08 - US-031
+- Added Mermaid diagram rendering via post-pipeline DOM rendering pattern
+- Files created:
+  - `src/lib/utils/markdown/mermaid-plugin.ts` — rehype plugin that replaces ```mermaid code blocks with `<div class="mermaid-placeholder" data-mermaid-source="BASE64">` placeholders
+  - `src/lib/actions/mermaidAction.ts` — Svelte action that finds .mermaid-placeholder divs, dynamically imports mermaid, and renders SVGs
+- Files modified:
+  - `src/lib/utils/markdown/pipeline.ts` — added rehypeMermaidPlugin before rehypeShikiPlugin (so mermaid blocks are replaced before Shiki tries to highlight them)
+  - `src/lib/utils/markdown/sanitize-schema.ts` — added 21 SVG element tag names (svg, g, rect, path, text, circle, line, polyline, polygon, ellipse, foreignObject, tspan, marker, defs, use, style, clipPath, linearGradient, radialGradient, stop, title, desc) with full attribute lists for each
+  - `src/lib/utils/markdown/index.ts` — added barrel export for rehypeMermaidPlugin
+  - `src/lib/components/chat/RenderedContent.svelte` — imported mermaidAction and applied use:mermaidAction on container; added mermaid diagram styles (placeholder, loading, diagram, error, fallback)
+  - `package.json` / `package-lock.json` — added mermaid
+- Pipeline order now: remarkParse → remarkGfm → remarkMath → remarkRehype → rehypeKatex → rehypeMermaidPlugin → rehypeShikiPlugin → rehypeSanitize → rehypeStringify
+- **Learnings for future iterations:**
+  - Mermaid cannot run in the rehype pipeline (needs DOM) — use placeholder div + Svelte action + dynamic import pattern
+  - MutationObserver on the container catches DOM changes from re-renders so new placeholders are rendered
+  - `.mermaid-rendered` class prevents re-rendering already-processed diagrams
+  - Each diagram needs a unique ID for mermaid.render() — use `mermaid-${Date.now()}-${counter++}`
+  - Mermaid errors can leave orphan SVG nodes; clean them up with `document.getElementById(id)?.remove()`
+  - Base64 encoding with `btoa(unescape(encodeURIComponent(source)))` handles Unicode in mermaid source
+  - rehypeMermaidPlugin must run BEFORE rehypeShikiPlugin so mermaid code blocks aren't treated as regular code
 ---

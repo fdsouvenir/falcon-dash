@@ -105,7 +105,7 @@
 				"npm run test passes"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Mermaid requires DOM access — cannot run in the rehype pipeline. The pattern is: rehype plugin creates placeholder divs → Svelte action finds placeholders after DOM update → mermaid.render() returns SVG string → insert SVG into placeholder div. Dynamic import keeps the mermaid bundle out of initial load. The Svelte action fires on mount and whenever the DOM content changes."
 		},
 		{
