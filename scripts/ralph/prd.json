@@ -184,7 +184,7 @@
 				"npm run test passes"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "Use Svelte 4 syntax: export let isRunning = false, on:keydown, createEventDispatcher. Auto-resize: set textarea height to scrollHeight on input. Dispatch events, don't call store functions directly — the parent route wires events to the chat store."
 		},
 		{

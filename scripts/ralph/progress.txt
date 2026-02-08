@@ -122,3 +122,19 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - No `{@html}` needed — `<pre>` blocks handle JSON display without XSS risk
   - Status badge uses ternary chain with `$:` reactive declaration for color/label mapping
 ---
+
+## 2026-02-08 - US-024
+- Created `src/lib/components/chat/MessageComposer.svelte` — textarea with auto-resize, send/abort events
+- Features: ENTER to send, SHIFT+ENTER for newline, auto-resize up to 200px max height
+- Disabled state when `isRunning` is true, with Abort button replacing Send button
+- Uses `createEventDispatcher` for 'send' (with content string) and 'abort' events
+- Auto-focus on mount via `onMount` lifecycle
+- Clears content and resets height after send
+- Styled with Tailwind: dark theme, blue send button, red abort button
+- Files changed: `src/lib/components/chat/MessageComposer.svelte` (new)
+- **Learnings for future iterations:**
+  - Auto-resize pattern: set height to 'auto' first, then to `Math.min(scrollHeight, maxHeight) + 'px'`
+  - Prettier matched on first write — tabs + single quotes + no trailing commas works reliably
+  - createEventDispatcher generic typing: `createEventDispatcher<{ send: string; abort: void }>()`
+  - Component is compact (~71 lines) — no need for stores or complex state management
+---
