@@ -92,3 +92,23 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run format: pass
 - npm run check: 0 errors, 14 pre-existing warnings
 - **Learnings for future iterations:** Information tab manages its own overflow-y-auto scrolling since it's a tall scrollable page (not split pane). Multiple gateway calls can be Promise.all'd for parallel loading. The tab content container conditional class should list all self-scrolling tabs.
+
+## 2026-02-08 - US-066: Skills tab
+- Created `src/lib/components/settings/SkillsTab.svelte`:
+  - Lists all installed skills from skills.status store
+  - Each skill shows: name, version, description, enabled/disabled toggle switch
+  - Toggle calls enableSkill/disableSkill with optimistic update and toast feedback
+  - Chevron expands to show configuration details per skill
+  - Config values displayed with sensitive fields (key/secret/token) masked
+  - Edit Configuration button opens JSON textarea editor
+  - Save calls patchConfig on `skills.entries.<id>.config` then reloads skills
+  - Visual indicator badge ("Config needed") for skills with missing required config
+  - Missing required config keys listed in yellow warning box in expanded view
+  - Toast notifications for enable/disable/save success and errors
+  - Loading, error, and empty states handled
+- Updated `src/routes/settings/+page.svelte`:
+  - Imported SkillsTab, replaced placeholder
+  - Added `skills` to self-scrolling tab condition (manages own overflow-y-auto)
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** Skills tab follows same self-scrolling pattern as Information tab. Skill config editing uses patchConfig on nested config key path. Sensitive config values should be masked in display (check for key/secret/token in field name).

@@ -98,7 +98,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "Skills configuration lives in the gateway config under skills.entries. Use config.get/config.patch for skill-specific settings."
 		},
 		{
