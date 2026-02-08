@@ -43,7 +43,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §17 for the full tab list and purpose of each. Start with placeholder content in each tab — subsequent stories fill them in."
 		},
 		{
