@@ -140,4 +140,24 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - SVG elements in Svelte 4 don't accept `title` as an HTML attribute — wrap SVG in a `<span>` with the title attribute instead
   - ESLint rule `svelte/require-event-dispatcher-types` requires type parameters on `createEventDispatcher()` — use `createEventDispatcher<{ eventName: void }>()` for events with no payload
   - Thinking level uses `session.thinkingLevel` which can be 'off', 'on', 'stream', or undefined (defaults to 'off')
+- Models store uses a simple `loaded` boolean flag for caching — `invalidateModels()` resets it for re-fetch on reconnect
+- ChannelSettings uses `absolute` positioning within the `relative` message area container for overlay behavior
+- `svelte/transition` `fly` works well for slide-out panels: `transition:fly={{ x: 320, duration: 200 }}`
+---
+
+## 2026-02-08 - US-035
+- Created ChannelSettings slide-out panel and models store for session configuration
+- Files created:
+  - `src/lib/components/chat/ChannelSettings.svelte` — slide-out panel with session rename, model dropdown, thinking toggle (off/on/stream), close on Escape/backdrop click
+  - `src/lib/stores/models.ts` — models store with loadModels() cache and invalidateModels() for reconnect
+- Files modified:
+  - `src/lib/gateway/types.ts` — added ModelInfo and ModelsListResponse types
+  - `src/lib/stores/index.ts` — added barrel exports for models, loadModels, invalidateModels
+  - `src/routes/chat/+page.svelte` — wired ChatHeader settings event to toggle ChannelSettings, added settingsOpen state, close on session switch
+- **Learnings for future iterations:**
+  - `transition:fly` from `svelte/transition` provides smooth slide-in/out animations for panels
+  - ChannelSettings positioned absolutely within the relative message container, with a backdrop div for outside click
+  - `svelte:window on:keydown` is the correct pattern for Escape key handling in Svelte 4
+  - Models store uses try/catch on `gateway.call('models.list')` since the method may not be available on all gateway versions
+  - Session rename uses blur + Enter key events on the input to trigger updateSession()
 ---

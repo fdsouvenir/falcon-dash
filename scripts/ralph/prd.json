@@ -195,7 +195,7 @@
 				"npm run test passes"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "The models store calls gateway.call('models.list') once and caches the result. Invalidate on reconnect. The ChannelSettings panel is overlay/slide-out, not a new route. Use Svelte 4 transition:fly for slide animation. Close on Escape via on:keydown handler on window."
 		},
 		{
