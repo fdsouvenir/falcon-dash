@@ -66,3 +66,16 @@ Branch: ralph/phase-1-core-infrastructure
   - Keep connection class low-level — reconnection/backoff will be added in US-015
   - WS onclose always fires after onerror, so no state update needed in onerror
 ---
+
+## 2026-02-08 - US-004
+- Created src/lib/gateway/correlator.ts — RequestCorrelator class
+- send(method, params, timeoutMs?) returns { frame, promise } for correlation
+- Auto-generates unique request IDs (incrementing counter)
+- Auto-generates idempotency keys for mutation methods (chat.send, agent, config.*, cron.*)
+- Configurable per-request timeout (default 30s)
+- handleResponse(frame) resolves/rejects matching promises
+- rejectAll(reason) rejects all pending on disconnect
+- **Learnings for future iterations:**
+  - Returning { frame, promise } lets the connection layer handle the actual sending
+  - MUTATION_METHODS set keeps idempotency key logic centralized
+---

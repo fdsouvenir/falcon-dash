@@ -92,7 +92,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "Side-effecting methods (chat.send, agent) require idempotency keys. Request IDs must be unique per request for response correlation."
 		},
 		{
