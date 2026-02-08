@@ -1,8 +1,14 @@
-<script>
+<script lang="ts">
 	import '../app.css';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import MobileTabBar from '$lib/components/MobileTabBar.svelte';
+	import MobileMoreMenu from '$lib/components/MobileMoreMenu.svelte';
+	import { sessions } from '$lib/stores';
 
 	let sidebarOpen = false;
+	let moreMenuOpen = false;
+
+	$: totalUnread = [...$sessions.values()].reduce((sum, s) => sum + s.unreadCount, 0);
 
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
@@ -10,6 +16,14 @@
 
 	function closeSidebar() {
 		sidebarOpen = false;
+	}
+
+	function handleMore() {
+		moreMenuOpen = true;
+	}
+
+	function closeMoreMenu() {
+		moreMenuOpen = false;
 	}
 </script>
 
@@ -52,8 +66,14 @@
 		</header>
 
 		<!-- Page content -->
-		<main class="flex-1 overflow-y-auto">
+		<main class="flex-1 overflow-y-auto pb-14 md:pb-0">
 			<slot />
 		</main>
 	</div>
+
+	<!-- Mobile bottom tab bar -->
+	<MobileTabBar {totalUnread} on:more={handleMore} />
+
+	<!-- Mobile "More" menu -->
+	<MobileMoreMenu open={moreMenuOpen} on:close={closeMoreMenu} />
 </div>
