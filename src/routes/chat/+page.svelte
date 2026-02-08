@@ -7,6 +7,7 @@
 	import MessageComposer from '$lib/components/chat/MessageComposer.svelte';
 	import RenderedContent from '$lib/components/chat/RenderedContent.svelte';
 	import MessageActionBar from '$lib/components/chat/MessageActionBar.svelte';
+	import ChatHeader from '$lib/components/chat/ChatHeader.svelte';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
 	import {
 		connectionState,
@@ -136,11 +137,7 @@
 {:else}
 	<div class="flex h-full flex-col">
 		<!-- Session header -->
-		<div class="flex items-center border-b border-slate-700 px-4 py-3">
-			<h2 class="text-sm font-semibold text-slate-200">
-				{$activeSession.displayName}
-			</h2>
-		</div>
+		<ChatHeader session={$activeSession} />
 
 		<!-- Message list with inline thinking/tools -->
 		<div class="relative flex-1 overflow-hidden">
