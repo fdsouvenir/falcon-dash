@@ -25,6 +25,15 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 - ConfirmDialog reused from Phase 3 files module
 - Svelte `class:hover:bg-*` directives: do NOT use Tailwind opacity modifiers (`/60`) — Prettier fails. Use solid colors like `bg-slate-800` instead
 
+### PM Kanban / Drag-Drop Pattern
+- HTML5 DnD: `draggable="true"`, `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend`
+- Track drag state with local vars: `draggedTaskId`, `dragOverColumn`
+- Column containers need `role="list"` + `aria-label` for a11y
+- Use helper booleans (`isDragging`, `isColumnDragOver`) to avoid template-level casts
+- Cross-column drop = status change via `updateTask({ id, status })`
+- Same-column drop = reorder via `reorderTasks({ parentProjectId, ids })`
+- Scope filtering: derive `projectIdsInScope` set from props → filter tasks
+
 ### PM Dashboard Route Pattern
 - Route at `/projects` with `ssr: false` in `+page.ts`
 - `onMount`: call `initPmListeners()` + parallel data loads via `Promise.all`
@@ -96,3 +105,16 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - Domain filtering requires deriving focus IDs from `$pmFocuses` store, then checking project's `focusId`
   - `$pmTasks` store can be used for task count per project via `filter(t => t.parentProjectId === projectId).length`
   - Unicode sort arrows (\u25B2/\u25BC) work well for sort indicators without needing SVG icons
+
+## 2026-02-08 - US-056
+- Created `src/lib/components/pm/KanbanBoard.svelte` — kanban board with drag-and-drop
+- Updated `src/lib/components/pm/index.ts` barrel export with KanbanBoard
+- Features: 4 status columns (todo, in_progress, review, done), task cards with title/priority/due date, HTML5 drag-and-drop between columns (status change) and within columns (reorder), add task button per column with inline form, horizontal scroll, column task counts, empty column state, drag-over visual highlight, cancelled/archived tasks hidden
+- Props: `selectedProjectId`, `selectedFocusId`, `selectedDomainId` for scoping tasks
+- Dispatches `select` event with `{ taskId }` for task detail navigation
+- Files changed: `src/lib/components/pm/KanbanBoard.svelte` (new), `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - Drag-drop column containers need `role="list"` and `aria-label` for a11y — svelte-check warns otherwise
+  - Helper functions like `isDragging(taskId)` and `isColumnDragOver(status)` avoid `as` casts in templates
+  - `projectIdsInScope` derived set enables efficient multi-project filtering for focus/domain scope
+  - `tasksForColumn(status)` as a function (not reactive) works fine since it references reactive `visibleTasks`

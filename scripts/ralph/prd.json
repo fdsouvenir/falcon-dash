@@ -124,7 +124,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Use HTML5 drag and drop API (dragstart, dragover, drop events). Optimistic update on drop — move card immediately, call gateway, revert on error. Cancelled and archived tasks are hidden from kanban by default."
 		},
 		{
