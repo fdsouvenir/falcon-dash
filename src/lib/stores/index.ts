@@ -40,6 +40,7 @@ export {
 	saveFile,
 	deleteFile,
 	createFile,
+	createFolder,
 	renameFile,
 	navigateTo
 } from './files';

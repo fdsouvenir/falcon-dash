@@ -9,12 +9,18 @@
 		loadFiles,
 		loadFile,
 		saveFile,
+		deleteFile,
+		createFile,
+		createFolder,
+		renameFile,
 		navigateTo
 	} from '$lib/stores';
 	import { formatRelativeTime } from '$lib/utils/time';
 	import { formatFileSize } from '$lib/utils/format';
 	import FilePreview from '$lib/components/files/FilePreview.svelte';
 	import FileEditor from '$lib/components/files/FileEditor.svelte';
+	import FileActions from '$lib/components/files/FileActions.svelte';
+	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
 	type SortKey = 'name' | 'mtime' | 'size';
 	type SortDir = 'asc' | 'desc';
@@ -32,6 +38,15 @@
 	let now = Date.now();
 	let editing = false;
 	let saveError = '';
+
+	// Inline rename state
+	let renamingFile: string | null = null;
+	let renameValue = '';
+	let renameInputEl: HTMLInputElement;
+
+	// Delete confirmation state
+	let deleteTarget: WorkspaceFile | null = null;
+	let showDeleteConfirm = false;
 
 	$: pathSegments = $currentPath ? $currentPath.split('/').filter(Boolean) : [];
 
@@ -75,6 +90,7 @@
 		errorMessage = '';
 		editing = false;
 		saveError = '';
+		renamingFile = null;
 		activeFile.set(null);
 		activeFileName.set('');
 		try {
@@ -91,6 +107,7 @@
 	}
 
 	async function handleFileClick(file: WorkspaceFile): Promise<void> {
+		if (renamingFile === file.name) return;
 		if (file.isDirectory) {
 			const dir = $currentPath ? `${$currentPath}/${file.name}` : file.name;
 			await handleNavigate(dir);
@@ -144,6 +161,119 @@
 		}
 	}
 
+	// --- New File / New Folder ---
+
+	async function handleNewFile(event: CustomEvent<{ name: string }>): Promise<void> {
+		const name = event.detail.name;
+		const filePath = $currentPath ? `${$currentPath}/${name}` : name;
+		try {
+			await createFile(filePath, '');
+			await loadFiles($currentPath || undefined);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to create file';
+		}
+	}
+
+	async function handleNewFolder(event: CustomEvent<{ name: string }>): Promise<void> {
+		const name = event.detail.name;
+		try {
+			await createFolder($currentPath, name);
+			await loadFiles($currentPath || undefined);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to create folder';
+		}
+	}
+
+	// --- Inline Rename ---
+
+	function startRename(file: WorkspaceFile): void {
+		renamingFile = file.name;
+		renameValue = file.name;
+		requestAnimationFrame(() => {
+			if (renameInputEl) {
+				renameInputEl.focus();
+				const dotIndex = renameValue.lastIndexOf('.');
+				if (dotIndex > 0 && !file.isDirectory) {
+					renameInputEl.setSelectionRange(0, dotIndex);
+				} else {
+					renameInputEl.select();
+				}
+			}
+		});
+	}
+
+	async function submitRename(): Promise<void> {
+		if (!renamingFile) return;
+		const newName = renameValue.trim();
+		if (!newName || newName === renamingFile) {
+			renamingFile = null;
+			return;
+		}
+		const filePath = $currentPath ? `${$currentPath}/${renamingFile}` : renamingFile;
+		try {
+			await renameFile(filePath, newName);
+			// If the renamed file was the active file, update the active file name
+			if ($activeFileName === filePath) {
+				const newPath = $currentPath ? `${$currentPath}/${newName}` : newName;
+				activeFileName.set(newPath);
+			}
+			await loadFiles($currentPath || undefined);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to rename file';
+		}
+		renamingFile = null;
+	}
+
+	function cancelRename(): void {
+		renamingFile = null;
+	}
+
+	function handleRenameKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			submitRename();
+		} else if (event.key === 'Escape') {
+			cancelRename();
+		}
+	}
+
+	function handleNameDblClick(event: MouseEvent, file: WorkspaceFile): void {
+		event.stopPropagation();
+		startRename(file);
+	}
+
+	// --- Delete ---
+
+	function requestDelete(event: MouseEvent, file: WorkspaceFile): void {
+		event.stopPropagation();
+		deleteTarget = file;
+		showDeleteConfirm = true;
+	}
+
+	async function confirmDelete(): Promise<void> {
+		if (!deleteTarget) return;
+		showDeleteConfirm = false;
+		const filePath = $currentPath ? `${$currentPath}/${deleteTarget.name}` : deleteTarget.name;
+		try {
+			await deleteFile(filePath);
+			// If deleted file was the active file, clear the preview
+			if ($activeFileName === filePath) {
+				activeFile.set(null);
+				activeFileName.set('');
+				editing = false;
+			}
+			await loadFiles($currentPath || undefined);
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to delete file';
+		}
+		deleteTarget = null;
+	}
+
+	function cancelDelete(): void {
+		showDeleteConfirm = false;
+		deleteTarget = null;
+	}
+
 	let interval: ReturnType<typeof setInterval>;
 
 	onMount(() => {
@@ -195,6 +325,9 @@
 		<div
 			class="flex flex-1 flex-col overflow-hidden border-b border-slate-700 md:border-b-0 md:border-r"
 		>
+			<!-- File actions toolbar -->
+			<FileActions on:newfile={handleNewFile} on:newfolder={handleNewFolder} />
+
 			{#if loading}
 				<div class="flex flex-1 items-center justify-center">
 					<p class="text-sm text-slate-400">Loading files...</p>
@@ -216,7 +349,7 @@
 			{:else}
 				<!-- Column headers -->
 				<div
-					class="grid grid-cols-[1fr_auto_auto] gap-2 border-b border-slate-700 px-4 py-2 text-xs font-medium uppercase tracking-wider text-slate-400"
+					class="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-slate-700 px-4 py-2 text-xs font-medium uppercase tracking-wider text-slate-400"
 				>
 					<button
 						on:click={() => toggleSort('name')}
@@ -236,20 +369,25 @@
 					>
 						Size{sortIndicator('size')}
 					</button>
+					<span class="w-8"></span>
 				</div>
 
 				<!-- File rows -->
 				<div class="flex-1 overflow-y-auto">
 					{#each sortedFiles as file (file.name)}
-						<button
-							on:click={() => handleFileClick(file)}
-							class="grid w-full grid-cols-[1fr_auto_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 {isFileActive(
+						<div
+							class="group grid w-full grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 {isFileActive(
 								file
 							)
 								? 'bg-slate-700/30'
 								: ''}"
 						>
-							<span class="flex items-center space-x-2 truncate">
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<!-- svelte-ignore a11y-no-static-element-interactions -->
+							<span
+								class="flex cursor-pointer items-center space-x-2 truncate"
+								on:click={() => handleFileClick(file)}
+							>
 								<span class="flex-shrink-0 text-slate-400">
 									{#if file.isDirectory}
 										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -267,24 +405,64 @@
 										</svg>
 									{/if}
 								</span>
-								<span
-									class="truncate"
-									class:text-slate-100={file.isDirectory}
-									class:text-slate-300={!file.isDirectory}
-								>
-									{file.name}
-								</span>
+								{#if renamingFile === file.name}
+									<!-- svelte-ignore a11y-click-events-have-key-events -->
+									<!-- svelte-ignore a11y-no-static-element-interactions -->
+									<span on:click|stopPropagation={() => {}}>
+										<input
+											bind:this={renameInputEl}
+											bind:value={renameValue}
+											on:keydown={handleRenameKeydown}
+											on:blur={submitRename}
+											class="w-full rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+										/>
+									</span>
+								{:else}
+									<!-- svelte-ignore a11y-no-static-element-interactions -->
+									<span
+										class="truncate"
+										class:text-slate-100={file.isDirectory}
+										class:text-slate-300={!file.isDirectory}
+										on:dblclick={(e) => handleNameDblClick(e, file)}
+									>
+										{file.name}
+									</span>
+								{/if}
 							</span>
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<span
-								class="w-24 text-right text-xs text-slate-500"
+								class="w-24 cursor-pointer text-right text-xs text-slate-500"
 								title={new Date(file.mtime).toLocaleString()}
+								on:click={() => handleFileClick(file)}
 							>
 								{formatRelativeTime(new Date(file.mtime).getTime(), now)}
 							</span>
-							<span class="w-20 text-right text-xs text-slate-500">
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<!-- svelte-ignore a11y-no-static-element-interactions -->
+							<span
+								class="w-20 cursor-pointer text-right text-xs text-slate-500"
+								on:click={() => handleFileClick(file)}
+							>
 								{file.isDirectory ? '--' : formatFileSize(file.size)}
 							</span>
-						</button>
+							<span class="flex w-8 items-center justify-center">
+								<button
+									on:click={(e) => requestDelete(e, file)}
+									class="rounded p-1 text-slate-500 opacity-0 transition-all hover:bg-red-900/30 hover:text-red-400 group-hover:opacity-100"
+									title="Delete {file.name}"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
+									</svg>
+								</button>
+							</span>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -327,3 +505,13 @@
 		</div>
 	</div>
 </div>
+
+<ConfirmDialog
+	title="Delete {deleteTarget?.isDirectory ? 'folder' : 'file'}"
+	message="Are you sure you want to delete &quot;{deleteTarget?.name ??
+		''}&quot;? This action cannot be undone."
+	confirmLabel="Delete"
+	open={showDeleteConfirm}
+	on:confirm={confirmDelete}
+	on:cancel={cancelDelete}
+/>

@@ -80,6 +80,20 @@ export async function renameFile(filePath: string, newName: string): Promise<voi
 	}
 }
 
+export async function createFolder(dir: string, name: string): Promise<void> {
+	const res = await fetch('/api/workspace/files', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ dir, name })
+	});
+	if (res.status === 409) {
+		throw new Error('A folder with that name already exists');
+	}
+	if (!res.ok) {
+		throw new Error(res.statusText);
+	}
+}
+
 export async function navigateTo(dir: string): Promise<void> {
 	currentPath.set(dir);
 	await loadFiles(dir);
