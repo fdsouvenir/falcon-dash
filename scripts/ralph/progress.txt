@@ -116,3 +116,17 @@ Branch: ralph/phase-1-core-infrastructure
 - setReady() resets backoff counter on successful reconnect
 - Disconnect handler notified with intentional flag
 ---
+
+## 2026-02-08 - US-008
+- Created src/lib/gateway/client.ts — GatewayClient public API
+- Created src/lib/gateway/index.ts — barrel export
+- connect(config) builds connect params, waits for hello-ok, hydrates snapshot
+- disconnect() rejects pending, clears events, closes connection
+- call(method, params) sends request via correlator and returns typed Promise
+- on(event, handler) and once(event) delegate to EventBus
+- Handles tick, shutdown, presence, health events automatically
+- Singleton `gateway` instance exported
+- **Learnings for future iterations:**
+  - waitForHelloOk() intercepts the connect response (id=1) before normal routing
+  - Unused type imports trigger ESLint errors — clean up imports carefully
+---

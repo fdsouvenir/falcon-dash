@@ -184,7 +184,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the main public API other modules will use. Wires connect frame handling, hello-ok processing, tick monitoring, event routing. Reconnection with backoff (US-015) must be done first."
 		},
 		{
