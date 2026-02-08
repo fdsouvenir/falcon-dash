@@ -97,3 +97,12 @@ Branch: ralph/phase-1-core-infrastructure
 - setStateVersion(domain, version) for event-driven version tracking
 - stateVersion tracked per domain: { presence: N, health: N }
 ---
+
+## 2026-02-08 - US-007
+- Created src/lib/gateway/auth.ts — Auth module
+- Token and gateway URL stored/retrieved from localStorage
+- Stable device ID via crypto.randomUUID() persisted in localStorage
+- Unique instanceId per tab via crypto.randomUUID()
+- buildConnectParams() constructs full connect frame params
+- Dev mode: token-only auth (no device keypair), device param optional
+---

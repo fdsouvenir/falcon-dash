@@ -145,7 +145,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "Dev mode: gateway.controlUi.allowInsecureAuth: true skips device identity. Full Ed25519 device identity via WebCrypto is a Phase 6 concern."
 		},
 		{
