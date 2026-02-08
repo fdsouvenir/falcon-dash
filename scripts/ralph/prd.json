@@ -39,7 +39,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Follow the gateway event listener pattern from src/lib/stores/chat.ts. Optimistic updates: set store value immediately, call gateway, revert on error. stateVersion comes from event frames — if gap detected, refetch affected entities."
 		},
 		{

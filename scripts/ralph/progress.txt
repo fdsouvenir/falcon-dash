@@ -4,6 +4,17 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 
 ## Codebase Patterns
 
+### PM Store Pattern
+- Store file: `src/lib/stores/pm.ts`
+- Writable stores for each entity: `pmDomains`, `pmFocuses`, `pmMilestones`, `pmProjects`, `pmTasks`, `pmComments`, `pmActivities`, `pmStats`, `pmBlocks`, `pmAttachments`
+- Load functions accept optional filter params and use `gateway.call<ResponseType>('pm.entity.method', params)`
+- Optimistic updates: update store immediately, call gateway, revert on error (try/catch pattern)
+- `handleEntityEvent<T>()` generic function handles create/update/delete for all entity types
+- `handlePmEvent()` dispatches by `entityType` using switch/case
+- stateVersion gap detection: if incoming version > current + 1, refetch all entities
+- `initPmListeners()`/`destroyPmListeners()` pattern matches cron store
+- Params cast to `Record<string, unknown>` for gateway.call compatibility
+
 ### PM Types Pattern
 - Entity types prefixed with `Pm`: `PmDomain`, `PmFocus`, `PmProject`, etc.
 - Method param/response types: `Pm{Group}{Action}Params` / `Pm{Group}{Action}Response`
@@ -22,3 +33,13 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - ~45 method types across 13 groups — comprehensive coverage done
   - `PmTargetType` ('project' | 'task') reused across Comment, Block, Attachment params
   - `PmEntity` union type useful for PmEvent payload typing
+
+## 2026-02-08 - US-052
+- Created `src/lib/stores/pm.ts` with full PM store layer: 10 writable stores, CRUD functions for all entities, event listeners, search, bulk operations
+- Updated `src/lib/stores/index.ts` barrel exports with all PM store exports
+- Files changed: `src/lib/stores/pm.ts` (new), `src/lib/stores/index.ts`
+- **Learnings for future iterations:**
+  - Generic `handleEntityEvent<T>()` reduces boilerplate for create/update/delete across all entity types
+  - Block entity has no `id` — uses `blockerId`+`blockedId` compound key for filtering
+  - `loadTasks(projectId)` merges new tasks while preserving tasks from other projects in the store
+  - Optimistic updates pattern: save prev value, update store, try gateway call, revert with prev on error
