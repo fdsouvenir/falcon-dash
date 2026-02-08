@@ -1,6 +1,6 @@
-# Ralph Agent Instructions — falcon-dash Phase 5: Settings + Canvas
+# Ralph Agent Instructions — falcon-dash Phase 6: Mobile & Polish
 
-You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform. Phases 1-4 are complete. You are now implementing **Phase 5: Settings Module + Canvas/A2UI** — the configuration, monitoring, and extensibility layer.
+You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform. Phases 1-5 are complete. You are now implementing **Phase 6: Mobile & Polish** — the final pass for mobile layout, touch interactions, offline support, accessibility, performance, themes, and onboarding.
 
 ## Project Context
 
@@ -8,9 +8,7 @@ Read the root `CLAUDE.md` at the project root for tech stack, conventions, and f
 
 Reference docs live in `builddocs/`:
 
-- `builddocs/falcon-dash-architecture-v02.md` — full architecture (§17 for Settings, §2.4 and §12 for Canvas)
-- `builddocs/ws-protocol.md` — WebSocket protocol reference
-- `builddocs/research/canvas-a2ui.md` — Canvas/A2UI research
+- `builddocs/falcon-dash-architecture-v02.md` — full architecture (§19 for mobile layout, §6 Phase 6 for goals)
 
 ## Your Task
 
@@ -33,47 +31,60 @@ Reference docs live in `builddocs/`:
 - **TypeScript:** strict mode, no `any` unless absolutely necessary
 - **Tailwind CSS 3** for styling
 - **Barrel exports** from `index.ts` in each module directory
-- `{@html}` requires `<!-- eslint-disable svelte/no-at-html-tags -->` comment
 
-## Phase 5 Architecture
+## Phase 6 Architecture
 
-### Settings Module
+### Mobile Layout Strategy
 
-Settings uses a tabbed layout at `/settings`. Each tab maps to a panel component.
+The app has been built responsive-first (Tailwind breakpoints) through Phases 1-5. Phase 6 is the dedicated mobile pass:
 
-**Gateway methods used:**
+- **Desktop (≥768px):** Sidebar + main content (current layout, preserved)
+- **Mobile (<768px):** Bottom tab bar + single-pane navigation
 
-- `config.get()`, `config.patch()`, `config.apply()`, `config.schema()` — configuration
-- `skills.status()` — installed skills
-- `nodes.list()`, `nodes.describe()` — paired nodes
-- `logs.tail({ cursor?, limit? })` — live log streaming
-- `health()` — system health
-- `status()` — gateway status
-- `sessions.list()` — sub-agent runs
+```
+Desktop:                     Mobile:
+┌────────┬──────────┐       ┌──────────────┐
+│Sidebar │ Content  │       │  Content     │
+│        │          │       │              │
+│        │          │       ├──────────────┤
+│        │          │       │ 💬 📋 📁 🤖 ⚙️ │
+└────────┴──────────┘       └──────────────┘
+```
 
-### Canvas / A2UI
+### Touch Targets
 
-Two rendering modes:
+All interactive elements must be ≥44×44px on mobile. Use Tailwind: `min-h-[44px] min-w-[44px]`.
 
-**A2UI (inline, safe):**
+### PWA Enhancement
 
-- Lit web component `<openclaw-a2ui-host>`
-- Load bundle from `static/a2ui.bundle.js`
-- Call `.applyMessages(messages)` to render
-- Wire action bridge for user interactions
+Phase 1 set up basic PWA (manifest + service worker). Phase 6 adds:
 
-**HTML Canvas (sandboxed iframe):**
+- Offline caching of API responses (workbox runtimeCaching)
+- Background sync for queued mutations
+- Push notifications (VAPID keys)
 
-- `<iframe src="http://host:18793/__openclaw__/canvas/..." sandbox="allow-scripts">`
-- No `allow-same-origin` for security
-- Used for pinned custom apps
+### Theme System
+
+Tailwind `darkMode: 'class'` is the approach. Add `dark` class to `<html>`:
+
+- Dark: current colors (slate-900/800, default)
+- Light: white/gray-50 backgrounds, dark text
+- System: `matchMedia('(prefers-color-scheme: dark)')` listener
+
+Load preference in `app.html` `<script>` (before body) to prevent flash.
+
+### Performance
+
+- Virtual scrolling: render only visible items in long lists (chat, tasks, files)
+- Lazy components: `{#await import(...)}` for heavy components (Mermaid, KaTeX)
+- Bundle analysis: verify route-based code splitting works
 
 ### Existing Patterns
 
-- **FilePreview/FileEditor** from Phase 3 — reuse for workspace file editing in Settings
-- **Store pattern** — gateway.call + writable stores
-- **Tab navigation** — similar pattern to Agent Jobs tabs from Phase 3
-- **Event listeners** — initXListeners/destroyXListeners pattern
+- **Responsive breakpoints** already used throughout (md:, lg: prefixes)
+- **LocalStorage** used for auth, theme can follow same pattern
+- **ConfirmDialog** for confirmations
+- **CommandPalette** pattern for overlays
 
 ## Progress Report Format
 
