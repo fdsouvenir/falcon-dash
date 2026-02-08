@@ -116,7 +116,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Device events: device.pair.requested, device.pair.resolved. Channel status comes from health snapshot. WhatsApp may need QR login flow — show placeholder for that."
 		},
 		{

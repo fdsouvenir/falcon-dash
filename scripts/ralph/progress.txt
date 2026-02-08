@@ -112,3 +112,29 @@ Started: Sun Feb  8 04:17:37 PM CST 2026
 - npm run format: pass
 - npm run check: 0 errors, 14 pre-existing warnings
 - **Learnings for future iterations:** Skills tab follows same self-scrolling pattern as Information tab. Skill config editing uses patchConfig on nested config key path. Sensitive config values should be masked in display (check for key/secret/token in field name).
+
+## 2026-02-08 - US-067: Security tab — devices and channels
+- Added types to `src/lib/types/settings.ts`:
+  - ChannelStatusEntry (id, platform, status, label, serverName, workspaceName, inviteLink, error, lastSeen)
+  - ChannelStatusResponse
+- Added store functions to `src/lib/stores/settings.ts`:
+  - channelStatus writable store
+  - loadChannelStatus() — calls channels.status with graceful fallback
+- Created `src/lib/components/settings/SecurityTab.svelte`:
+  - Pending Requests section: yellow-highlighted pending devices with approve/reject buttons, badge count
+  - Paired Devices section: approved devices with name, role badge, last seen, revoke button
+  - Rejected/Revoked section: historical devices with dimmed styling (only shown when non-empty)
+  - Channel Status section: Discord/Slack/WhatsApp with connection state indicators (green/red/yellow)
+  - Discord shows server name + invite link; Slack shows workspace name; WhatsApp shows QR login placeholder
+  - Device event listeners via initSettingsListeners/destroySettingsListeners on mount/destroy
+  - Auto-refresh every 30s for devices and channel status
+  - Revoke uses ConfirmDialog for confirmation
+  - Toast notifications for approve/reject/revoke success and errors
+  - Loading, error states handled
+- Updated `src/routes/settings/+page.svelte`:
+  - Imported SecurityTab, replaced placeholder
+  - Added `security` to self-scrolling tab condition
+- Updated barrel exports in types/index.ts and stores/index.ts
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** Security tab follows self-scrolling pattern. Channel status is a separate gateway call (channels.status), not embedded in health snapshot. Device sections should be split by status for clear UX (pending/approved/rejected+revoked).

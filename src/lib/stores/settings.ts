@@ -13,6 +13,8 @@ import type {
 	NodeDescribeResponse,
 	DeviceEntry,
 	DeviceListResponse,
+	ChannelStatusEntry,
+	ChannelStatusResponse,
 	LogEntry,
 	LogTailParams,
 	LogTailResponse,
@@ -122,6 +124,19 @@ export async function revokeDevice(deviceId: string): Promise<void> {
 	devices.update((list) =>
 		list.map((d) => (d.id === deviceId ? { ...d, status: 'revoked' as const } : d))
 	);
+}
+
+// --- Channel Status Stores ---
+
+export const channelStatus = writable<ChannelStatusEntry[]>([]);
+
+export async function loadChannelStatus(): Promise<void> {
+	try {
+		const response = await gateway.call<ChannelStatusResponse>('channels.status');
+		channelStatus.set(response.channels);
+	} catch {
+		// Channel status may not be available — keep empty
+	}
 }
 
 // --- Logs Stores ---

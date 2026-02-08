@@ -94,6 +94,24 @@ export interface DeviceListResponse {
 	devices: DeviceEntry[];
 }
 
+// --- Channel Types ---
+
+export interface ChannelStatusEntry {
+	id: string;
+	platform: 'discord' | 'slack' | 'whatsapp' | string;
+	status: 'connected' | 'disconnected' | 'connecting' | 'error';
+	label?: string;
+	serverName?: string;
+	workspaceName?: string;
+	inviteLink?: string;
+	error?: string;
+	lastSeen?: number;
+}
+
+export interface ChannelStatusResponse {
+	channels: ChannelStatusEntry[];
+}
+
 // --- Exec Approval Types ---
 
 export interface ExecApproval {

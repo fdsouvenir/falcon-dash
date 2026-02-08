@@ -153,6 +153,8 @@ export {
 	approveDevice,
 	rejectDevice,
 	revokeDevice,
+	channelStatus,
+	loadChannelStatus,
 	logEntries,
 	logCursor,
 	tailLogs,

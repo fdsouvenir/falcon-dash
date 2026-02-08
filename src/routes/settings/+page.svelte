@@ -5,6 +5,7 @@
 	import WorkspaceTab from '$lib/components/settings/WorkspaceTab.svelte';
 	import InformationTab from '$lib/components/settings/InformationTab.svelte';
 	import SkillsTab from '$lib/components/settings/SkillsTab.svelte';
+	import SecurityTab from '$lib/components/settings/SecurityTab.svelte';
 
 	type SettingsTab =
 		| 'workspace'
@@ -86,7 +87,8 @@
 	<div
 		class="flex-1 overflow-hidden {activeTab === 'workspace' ||
 		activeTab === 'information' ||
-		activeTab === 'skills'
+		activeTab === 'skills' ||
+		activeTab === 'security'
 			? ''
 			: 'overflow-y-auto p-6'}"
 	>
@@ -97,12 +99,7 @@
 		{:else if activeTab === 'skills'}
 			<SkillsTab />
 		{:else if activeTab === 'security'}
-			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">Security</h2>
-				<p class="text-sm text-slate-400">
-					Device pairing management and channel connection status.
-				</p>
-			</div>
+			<SecurityTab />
 		{:else if activeTab === 'dashboard'}
 			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
 				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-300">

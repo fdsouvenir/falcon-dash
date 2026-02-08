@@ -14,6 +14,8 @@ export type {
 	DeviceEntry,
 	DevicePairRequest,
 	DeviceListResponse,
+	ChannelStatusEntry,
+	ChannelStatusResponse,
 	ExecApproval,
 	ExecAllowlistEntry,
 	LogLevel,
