@@ -1,199 +1,24 @@
-# Ralph Progress Log — falcon-dash Phase 1: Core Infrastructure
-Started: 2026-02-08
-Branch: ralph/phase-1-core-infrastructure
+# Ralph Progress Log
+Started: Sun Feb  8 10:00:52 AM CST 2026
+---
 
 ## Codebase Patterns
-- SvelteKit 2 with Svelte 4 (NOT Svelte 5) — use `on:event`, `export let`, `$:` syntax
-- `@sveltejs/vite-plugin-svelte@^3` is required for Svelte 4 compat (v4+ needs Svelte 5)
-- `vite@^5` is required (not v6+) for vite-plugin-svelte v3 compat
-- `eslint@^9` is required (not v10) for eslint-plugin-svelte compat
-- ESLint uses flat config (eslint.config.js), NOT legacy .eslintrc
-- Prettier config: tabs, singleQuote, trailingComma: "none"
-- Folder structure: src/lib/gateway/, stores/, components/, utils/
-- Tailwind CSS 3 via postcss.config.js + tailwind.config.js
-- Build warnings about `untrack`/`fork`/`settled` are harmless (SvelteKit 2.50+ has Svelte 5 imports but works fine with Svelte 4)
+- Chat/session types live in `src/lib/gateway/types.ts` (single file, no separate types file)
+- Type unions use string literal types (e.g., `'user' | 'assistant' | 'system' | 'inject'`)
+- Params types for gateway methods named as `{Method}Params` (e.g., `ChatSendParams`)
+- Response types named as `{Method}Response` or `{Method}Ack` for ack patterns
+- AgentEvent types use `kind` discriminator field with `sessionKey` and `runId` for routing
+- All types re-exported via `src/lib/gateway/index.ts` barrel (`export * from './types'`)
 
 ---
 
-## 2026-02-08 - US-001
-- Scaffolded SvelteKit 2 + Svelte 4 + TypeScript project
-- Configured Tailwind CSS 3 with PostCSS + autoprefixer
-- Configured ESLint 9 with svelte plugin + typescript-eslint (flat config)
-- Configured Prettier: tabs, single quotes, no trailing commas
-- Created folder structure: src/lib/gateway/, stores/, components/, utils/
-- Files created: package.json, svelte.config.js, vite.config.ts, tsconfig.json, eslint.config.js, .prettierrc, .prettierignore, postcss.config.js, tailwind.config.js, src/app.html, src/app.css, src/app.d.ts, src/routes/+layout.svelte, src/routes/+page.svelte
+## 2026-02-08 - US-017
+- Extended `src/lib/gateway/types.ts` with all Phase 2a chat and session types
+- Added: MessageRole, ThinkingBlock, ToolCall, ChatMessage, ChatSendParams, ChatSendAck, ChatHistoryParams, ChatHistoryResponse, ChatAbortParams, ChatInjectParams, Session, SessionListParams, SessionListResponse, SessionPatchParams, AgentRunState, AgentRunStatus, ToolCallStatus
+- Files changed: `src/lib/gateway/types.ts`
 - **Learnings for future iterations:**
-  - Must pin @sveltejs/vite-plugin-svelte@^3 for Svelte 4 (v4+ requires Svelte 5)
-  - Must pin vite@^5 for vite-plugin-svelte v3
-  - Must pin eslint@^9 (v10 conflicts with eslint-plugin-svelte)
-  - `npm create svelte@latest` (sv create) is interactive, not scriptable — scaffold manually
-- Playwright E2E: tests/ dir at project root, playwright.config.ts at root
-- Smoke test: listen for console errors, assert 200 + body exists
-
+  - Existing AgentEvent types already have sessionKey/runId — no need to duplicate in chat types
+  - SessionListParams mirrors ws-protocol.md: kinds, limit, activeMinutes, messageLimit
+  - Idempotency keys are NOT in param types — correlator auto-generates them
+  - All types auto-exported through existing barrel export in index.ts
 ---
-
-## 2026-02-08 - US-016
-- Installed @playwright/test, chromium only
-- Created playwright.config.ts: webServer on port 5173, chromium only, headless
-- Created tests/smoke.test.ts: navigates to /, listens for console errors, asserts 200 + body
-- Added "test": "playwright test" to package.json scripts
-- All quality gates pass: check, lint, build, format, test
-- **Learnings for future iterations:**
-  - Playwright chromium was already cached, `npx playwright install chromium` is idempotent
-  - Test runs in ~6s with cold server start
----
-
-## 2026-02-08 - US-002
-- Created src/lib/gateway/types.ts with full protocol type definitions
-- Types: ConnectionState enum, Frame types (req/res/event), GatewayError, ConnectParams, ClientInfo, AuthParams, DeviceParams
-- Types: HelloOkPayload with server, features, policy, snapshot, auth
-- Types: AgentEvent union (thinking, tool_start, tool_result, text_delta, text_end)
-- Types: ShutdownPayload, GatewayConfig
-- Added test-results/ to .gitignore and .prettierignore
-- **Learnings for future iterations:**
-  - Keep types close to ws-protocol.md shapes
-  - ClientInfo.id is literal type 'openclaw-control-ui' (gateway validates)
----
-
-## 2026-02-08 - US-003
-- Created src/lib/gateway/connection.ts — GatewayConnection class
-- State machine: DISCONNECTED → CONNECTING → AUTHENTICATING (sends connect frame) → CONNECTED/READY/etc.
-- send(frame) serializes JSON, connect(url, params) opens WS, close() cleans up
-- State exposed as Svelte readable store via getter
-- Response and event handlers registered via setResponseHandler/setEventHandler
-- setState() method for higher-level modules to drive transitions
-- **Learnings for future iterations:**
-  - Keep connection class low-level — reconnection/backoff will be added in US-015
-  - WS onclose always fires after onerror, so no state update needed in onerror
----
-
-## 2026-02-08 - US-004
-- Created src/lib/gateway/correlator.ts — RequestCorrelator class
-- send(method, params, timeoutMs?) returns { frame, promise } for correlation
-- Auto-generates unique request IDs (incrementing counter)
-- Auto-generates idempotency keys for mutation methods (chat.send, agent, config.*, cron.*)
-- Configurable per-request timeout (default 30s)
-- handleResponse(frame) resolves/rejects matching promises
-- rejectAll(reason) rejects all pending on disconnect
-- **Learnings for future iterations:**
-  - Returning { frame, promise } lets the connection layer handle the actual sending
-  - MUTATION_METHODS set keeps idempotency key logic centralized
----
-
-## 2026-02-08 - US-005
-- Created src/lib/gateway/events.ts — EventBus class
-- on(event, handler) returns unsubscribe function
-- Wildcard support: 'pm.*' matches 'pm.task.created', etc.
-- once(event) returns Promise that resolves on next emission
-- clear() removes all handlers (for disconnect cleanup)
-- off(event, handler) for explicit unsubscription
----
-
-## 2026-02-08 - US-006
-- Created src/lib/gateway/snapshot.ts — SnapshotStore class
-- Svelte readable stores: presence, health, stateVersion
-- hydrate(snapshot) populates all stores from hello-ok data
-- updatePresence(delta) and updateHealth(data) for incremental updates
-- setStateVersion(domain, version) for event-driven version tracking
-- stateVersion tracked per domain: { presence: N, health: N }
----
-
-## 2026-02-08 - US-007
-- Created src/lib/gateway/auth.ts — Auth module
-- Token and gateway URL stored/retrieved from localStorage
-- Stable device ID via crypto.randomUUID() persisted in localStorage
-- Unique instanceId per tab via crypto.randomUUID()
-- buildConnectParams() constructs full connect frame params
-- Dev mode: token-only auth (no device keypair), device param optional
----
-
-## 2026-02-08 - US-015
-- Enhanced GatewayConnection with reconnection and backoff
-- Exponential backoff: 800ms base, 1.7x multiplier, 15s cap
-- Auto-reconnect on unexpected disconnect (not on intentional close)
-- Tick timeout detection: no tick within 2x tickIntervalMs triggers reconnect
-- handleShutdown(payload) waits restartExpectedMs before reconnecting
-- setReady() resets backoff counter on successful reconnect
-- Disconnect handler notified with intentional flag
----
-
-## 2026-02-08 - US-008
-- Created src/lib/gateway/client.ts — GatewayClient public API
-- Created src/lib/gateway/index.ts — barrel export
-- connect(config) builds connect params, waits for hello-ok, hydrates snapshot
-- disconnect() rejects pending, clears events, closes connection
-- call(method, params) sends request via correlator and returns typed Promise
-- on(event, handler) and once(event) delegate to EventBus
-- Handles tick, shutdown, presence, health events automatically
-- Singleton `gateway` instance exported
-- **Learnings for future iterations:**
-  - waitForHelloOk() intercepts the connect response (id=1) before normal routing
-  - Unused type imports trigger ESLint errors — clean up imports carefully
----
-
-## 2026-02-08 - US-009
-- Created src/lib/stores/connection.ts — connection store
-- connectionState derived from gateway.state, isReconnecting derived from connectionState
-- gatewayUrl, connId, serverVersion as writable stores
-- Created src/lib/stores/index.ts — barrel export
----
-
-## 2026-02-08 - US-010
-- Updated src/routes/+layout.svelte with sidebar + main content area
-- Sidebar: Channels section (placeholder), Apps section (Projects, Files, Agent Jobs)
-- Sidebar footer: Settings, Passwords links
-- Responsive: sidebar visible on md+, toggle button on mobile
-- Dark theme: slate-900/slate-800 palette with Tailwind CSS
-- Disabled `svelte/no-navigation-without-resolve` ESLint rule (Svelte 5 feature)
-- **Learnings for future iterations:**
-  - eslint-plugin-svelte enforces `resolve()` for href — disable for Svelte 4 static routes
----
-
-## 2026-02-08 - US-011
-- Created src/lib/components/Sidebar.svelte — extracted from layout
-- Active route highlighting using $page store from $app/stores
-- Channels section (placeholder), Apps section (Projects, Files, Agent Jobs)
-- Settings + Passwords links at bottom
-- Keyed each blocks to satisfy `svelte/require-each-key` ESLint rule
-- Layout now imports and renders Sidebar component
-- **Learnings for future iterations:**
-  - eslint-plugin-svelte requires keys on each blocks (`{#each items as item (item.key)}`)
-  - Use `$page.url.pathname` for active route detection
----
-
-## 2026-02-08 - US-012
-- Created src/lib/components/ConnectionStatus.svelte
-- Colored dot: green=connected/ready, yellow=connecting/reconnecting, red=disconnected/error
-- Text label showing current state name
-- Subscribes to connectionState store
-- Placed in sidebar footer (above Settings/Passwords links)
----
-
-## 2026-02-08 - US-013
-- Updated src/routes/+page.svelte with gateway connection form
-- Connection form: gateway URL input (default ws://127.0.0.1:18789), token input (password), connect button
-- Persists URL and token in localStorage via auth module
-- Connected state: shows server details (URL, connection ID, version) + disconnect button
-- Conditional rendering: form when disconnected, dashboard info when connected
-- Created src/routes/+page.ts with `export const ssr = false` to avoid SSR localStorage error
-- **Learnings for future iterations:**
-  - SvelteKit SSR tries to render pages server-side; localStorage is not available in SSR
-  - Use `export const ssr = false` in +page.ts to disable SSR for pages that need browser APIs
----
-
-## 2026-02-08 - US-014
-- Installed @vite-pwa/sveltekit as devDependency
-- Updated vite.config.ts with SvelteKitPWA plugin configuration
-- Manifest: name 'Falcon Dash', theme_color #0f172a, standalone display
-- Icons: 192x192 and 512x512 placeholder PNGs (slate-900 background)
-- Workbox: globPatterns for client assets (js, css, ico, png, svg, etc.)
-- Service worker registered with autoUpdate strategy
-- All quality gates pass: format, check, lint, build, test
-- **Learnings for future iterations:**
-  - Use `@vite-pwa/sveltekit` (SvelteKit-specific package), not plain `vite-plugin-pwa`
-  - `SvelteKitPWA` handles SvelteKit's SSR + client split automatically
----
-
-## PHASE 1 COMPLETE
-All 15 user stories (US-001 through US-016, US-013, US-014) pass all quality gates.
-Branch: ralph/phase-1-core-infrastructure
