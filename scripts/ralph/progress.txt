@@ -147,3 +147,25 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - GatewayConfigResponse.payload is Record<string, unknown> and needs `as unknown as HeartbeatConfig` cast
   - 404 handling for optional files: set empty defaults rather than throwing
 ---
+
+## 2026-02-08 - US-045
+- Implemented /jobs route with two-tab layout (Heartbeat + Cron Jobs)
+- Files created:
+  - `src/routes/jobs/+page.ts` — SSR disabled
+  - `src/routes/jobs/+page.svelte` — tab layout with heartbeat config card, HEARTBEAT.md preview/edit, cron placeholder
+- Features:
+  - Two tabs: Heartbeat (default active), Cron Jobs
+  - Tab switching preserves state (simple state variable, not router)
+  - Status card: enabled/paused toggle, interval input with dirty-state save button, last run time, run status
+  - HEARTBEAT.md rendered via FilePreview (cross-module reuse from files module)
+  - Edit mode via FileEditor with hash-based concurrency (saveHeartbeatFile with baseHash)
+  - Save error display for 409 conflicts
+  - Loading, error (with retry), and empty states
+  - Interval value synced from store after initial load, not reactively (avoids overwriting user edits)
+  - Cron Jobs tab shows placeholder text (implemented in US-046)
+- **Learnings for future iterations:**
+  - Cross-module component reuse works cleanly — FilePreview/FileEditor imported from `$lib/components/files/` into /jobs route
+  - Reactive `$: localVar = $store.prop` overwrites user edits — sync from store only after explicit load, not reactively
+  - `onDestroy` for interval cleanup (consistent with files route pattern)
+  - Tab state preserved naturally via `{#if activeTab === ...}` blocks — Svelte doesn't destroy/recreate the hidden branch
+---
