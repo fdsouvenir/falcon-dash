@@ -310,6 +310,18 @@ export interface ShutdownPayload {
 	restartExpectedMs?: number;
 }
 
+// --- Models Types ---
+
+export interface ModelInfo {
+	id: string;
+	name: string;
+	provider: string;
+}
+
+export interface ModelsListResponse {
+	models: ModelInfo[];
+}
+
 // --- Gateway Config ---
 
 export interface GatewayConfig {

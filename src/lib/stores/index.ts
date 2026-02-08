@@ -21,3 +21,4 @@ export {
 	initChatListeners,
 	destroyChatListeners
 } from './chat';
+export { models, loadModels, invalidateModels } from './models';

@@ -8,6 +8,7 @@
 	import RenderedContent from '$lib/components/chat/RenderedContent.svelte';
 	import MessageActionBar from '$lib/components/chat/MessageActionBar.svelte';
 	import ChatHeader from '$lib/components/chat/ChatHeader.svelte';
+	import ChannelSettings from '$lib/components/chat/ChannelSettings.svelte';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
 	import {
 		connectionState,
@@ -28,6 +29,7 @@
 	let container: HTMLDivElement;
 	let isAtBottom = true;
 	let now = Date.now();
+	let settingsOpen = false;
 
 	/** Subscribe to messages for the active session */
 	function subscribeToMessages(sessionKey: string) {
@@ -35,6 +37,7 @@
 			unsubMessages();
 			unsubMessages = null;
 		}
+		settingsOpen = false;
 		if (!sessionKey) {
 			currentMessages = [];
 			return;
@@ -43,6 +46,14 @@
 		unsubMessages = store.subscribe((msgs) => {
 			currentMessages = msgs;
 		});
+	}
+
+	function toggleSettings() {
+		settingsOpen = !settingsOpen;
+	}
+
+	function closeSettings() {
+		settingsOpen = false;
 	}
 
 	$: subscribeToMessages($activeSessionKey);
@@ -137,7 +148,7 @@
 {:else}
 	<div class="flex h-full flex-col">
 		<!-- Session header -->
-		<ChatHeader session={$activeSession} />
+		<ChatHeader session={$activeSession} on:settings={toggleSettings} />
 
 		<!-- Message list with inline thinking/tools -->
 		<div class="relative flex-1 overflow-hidden">
@@ -236,6 +247,9 @@
 					Jump to bottom
 				</button>
 			{/if}
+
+			<!-- Channel settings panel -->
+			<ChannelSettings session={$activeSession} open={settingsOpen} on:close={closeSettings} />
 		</div>
 
 		<!-- Composer -->
