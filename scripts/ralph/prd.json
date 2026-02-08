@@ -83,7 +83,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "This sidebar appears within the /projects route, not the main app sidebar. It's a secondary navigation panel for the PM module."
 		},
 		{

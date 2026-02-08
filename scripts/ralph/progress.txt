@@ -15,6 +15,16 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 - `initPmListeners()`/`destroyPmListeners()` pattern matches cron store
 - Params cast to `Record<string, unknown>` for gateway.call compatibility
 
+### PM Component Pattern
+- Components live in `src/lib/components/pm/` with barrel export from `index.ts`
+- PmSidebar: secondary navigation within `/projects` route (not main app sidebar)
+- Props for selection state: `selectedDomainId`, `selectedFocusId` — dispatches `select` event
+- Inline forms for create/edit with Enter to submit, Escape to cancel
+- Hover-reveal action buttons using Tailwind `group`/`group-hover` + `opacity-0`/`group-hover:opacity-100`
+- Nested group hover: use `group/name` syntax for focus items inside domain group
+- ConfirmDialog reused from Phase 3 files module
+- Svelte `class:hover:bg-*` directives: do NOT use Tailwind opacity modifiers (`/60`) — Prettier fails. Use solid colors like `bg-slate-800` instead
+
 ### PM Dashboard Route Pattern
 - Route at `/projects` with `ssr: false` in `+page.ts`
 - `onMount`: call `initPmListeners()` + parallel data loads via `Promise.all`
@@ -62,3 +72,14 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - `PmBlock` entities track blocking via `blockerId`/`blockedId` — blocked tasks derived from `$pmBlocks` set
   - `statusEntries()` helper converts `Record<string, number>` to typed array to avoid template-level casts
   - Sidebar already has `/projects` link from Phase 3, no sidebar changes needed
+
+## 2026-02-08 - US-054
+- Created `src/lib/components/pm/PmSidebar.svelte` — collapsible tree showing Domain → Focus hierarchy
+- Created `src/lib/components/pm/index.ts` barrel export
+- Features: expand/collapse domains, click to select domain/focus/all, inline create/edit forms, delete with confirmation, reorder via up/down buttons, hover-reveal action buttons
+- Uses ConfirmDialog from Phase 3, dispatches `select` event with `{ domainId, focusId }` payload
+- Files changed: `src/lib/components/pm/PmSidebar.svelte` (new), `src/lib/components/pm/index.ts` (new)
+- **Learnings for future iterations:**
+  - `class:hover:bg-slate-700/60` fails Prettier — the `/` in Tailwind opacity modifier breaks Svelte class directive parsing. Use solid colors like `hover:bg-slate-800` instead
+  - Tailwind `group/name` nested hover variant works well for focus items inside domain rows
+  - Keyboard helpers (Enter/Escape) on inline forms improve UX without adding complexity
