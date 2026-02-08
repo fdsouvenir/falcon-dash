@@ -266,7 +266,7 @@
 				"npm run test passes"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "Duration is computed as completedAt - startedAt in seconds/minutes. Running jobs show elapsed time since startedAt. Poll interval should only be active when at least one run has status 'running'. Use setInterval/clearInterval pattern with onDestroy cleanup."
 		},
 		{

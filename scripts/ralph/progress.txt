@@ -190,3 +190,23 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - CronJobForm modal follows same pattern as ConfirmDialog: fixed overlay, dialog with role="dialog" aria-modal="true", focus trap, Escape/backdrop
   - Lazy tab loading: use a `cronLoaded` boolean guard so data only loads once on first tab visit
 ---
+
+## 2026-02-08 - US-047
+- Implemented cron job run history component with expandable output and auto-polling
+- Files created:
+  - `src/lib/components/jobs/CronRunHistory.svelte` — table with started at, duration, status badge, expandable output via details/summary, 30s polling for running jobs
+- Files modified:
+  - `src/routes/jobs/+page.svelte` — added CronRunHistory import, conditional render below CronJobList when selectedJobId is set
+- Features:
+  - Duration formatting: ms, seconds (1 decimal), minutes+seconds
+  - Status badges: success (green), error (red), running (blue with animated pulse dot)
+  - Output expandable via HTML `<details><summary>` element with scrollable pre block
+  - Reactive jobId change: reloads run history when selectedJobId changes via `$:` reactive statement
+  - Poll interval: 30s polling active only when at least one run has status 'running', auto-clears when all complete
+  - Loading, error, and empty states
+  - `onDestroy` cleanup for poll interval
+- **Learnings for future iterations:**
+  - Reactive `$: if (prop)` pattern works well for reloading data when a prop changes
+  - Reactive `$: updatePolling($store)` cleanly manages conditional setInterval/clearInterval based on store state
+  - `<details><summary>` is a clean no-JS-needed pattern for expandable content in tables
+---
