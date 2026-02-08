@@ -303,7 +303,7 @@
 				"npm run test passes"
 			],
 			"priority": 11,
-			"passes": false,
+			"passes": true,
 			"notes": "execFile is used instead of exec to avoid shell injection. Master password is piped via stdin using the child process stdin.write() + stdin.end() pattern — NEVER passed as a CLI argument where it would appear in process listings. The session token is an in-memory UUID that the client must send via X-Vault-Token header. The 15-minute idle timeout auto-locks the vault. Graceful degradation is key: the UI should work even without keepassxc-cli installed, just showing an unavailable state with install instructions."
 		},
 		{

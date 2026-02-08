@@ -16,6 +16,8 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
 - Prettier fails on `class:bg-slate-700/30={expr}` — use inline ternary in `class=` attr instead
 - `onMount` async cannot return cleanup function — use `onDestroy` for cleanup instead
 - `<tr>` elements with `on:click` do NOT trigger a11y-click-events/a11y-no-static-element-interactions — don't add unused svelte-ignore comments
+- `execFile` callback form needed for stdin piping (promisify doesn't expose child.stdin) — wrap in Promise manually
+- Session token pattern: server stores token in memory, client sends via `X-Vault-Token` header, validate with `validateSession(token)`
 
 ---
 
@@ -209,4 +211,27 @@ Started: Sun Feb  8 01:33:42 PM CST 2026
   - Reactive `$: if (prop)` pattern works well for reloading data when a prop changes
   - Reactive `$: updatePolling($store)` cleanly manages conditional setInterval/clearInterval based on store state
   - `<details><summary>` is a clean no-JS-needed pattern for expandable content in tables
+---
+
+## 2026-02-08 - US-048
+- Implemented password vault server routes wrapping keepassxc-cli
+- Files created:
+  - `src/lib/server/passwords.ts` — PasswordVault singleton class with session management, idle timeout, keepassxc-cli wrapping
+  - `src/routes/api/passwords/+server.ts` — GET (availability + list entries), POST (unlock/lock/init actions)
+  - `src/routes/api/passwords/[...path]/+server.ts` — GET (read entry), PUT (create/edit entry), DELETE (remove entry)
+- Features:
+  - PasswordVault singleton with `getInstance()`, cached availability check
+  - Master password always piped via stdin (never as CLI argument) using `execWithStdin()` helper
+  - Session token (UUID) returned on unlock, validated via `X-Vault-Token` header
+  - 15-minute idle timeout auto-locks vault (clears token + cached master password)
+  - keepassxc-cli commands: ls (list), show (get entry), add (create), edit (update), rm (delete), db-create (init)
+  - Graceful degradation: GET returns `{ available: false }` when keepassxc-cli not installed, mutations return 503
+  - Route structure follows existing workspace files pattern (root + catch-all `[...path]`)
+- **Learnings for future iterations:**
+  - `execFile` callback form is needed for stdin piping — `promisify(execFile)` doesn't expose child.stdin
+  - keepassxc-cli `add` command needs both master password and entry password on separate stdin lines: `masterPassword\nentryPassword\n`
+  - keepassxc-cli `edit -p` flag enables password update, also needs two stdin lines
+  - keepassxc-cli `db-create -p` flag means "use password" (vs key file)
+  - Session token pattern: server stores token + master password in memory, client sends token in `X-Vault-Token` header
+  - Vault path configurable via `OPENCLAW_VAULT_PATH` env var, defaults to `~/.openclaw/passwords.kdbx`
 ---
