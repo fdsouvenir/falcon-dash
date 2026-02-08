@@ -61,7 +61,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "This is the default view when clicking Projects in the sidebar. Reference architecture doc §14 for PM dashboard layout."
 		},
 		{

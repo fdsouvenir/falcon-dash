@@ -15,6 +15,13 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
 - `initPmListeners()`/`destroyPmListeners()` pattern matches cron store
 - Params cast to `Record<string, unknown>` for gateway.call compatibility
 
+### PM Dashboard Route Pattern
+- Route at `/projects` with `ssr: false` in `+page.ts`
+- `onMount`: call `initPmListeners()` + parallel data loads via `Promise.all`
+- `onDestroy`: call `destroyPmListeners()`
+- TypeScript casts in Svelte templates: NEVER use `as Type` inside `{expressions}` — Prettier fails. Use helper functions to cast in the `<script>` block instead.
+- Reactive derived data: `$:` declarations filter/sort store data for sections
+
 ### PM Types Pattern
 - Entity types prefixed with `Pm`: `PmDomain`, `PmFocus`, `PmProject`, etc.
 - Method param/response types: `Pm{Group}{Action}Params` / `Pm{Group}{Action}Response`
@@ -43,3 +50,15 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - Block entity has no `id` — uses `blockerId`+`blockedId` compound key for filtering
   - `loadTasks(projectId)` merges new tasks while preserving tasks from other projects in the store
   - Optimistic updates pattern: save prev value, update store, try gateway call, revert with prev on error
+
+## 2026-02-08 - US-053
+- Created PM dashboard view at `src/routes/projects/+page.svelte` with `+page.ts` (ssr: false)
+- Dashboard sections: stats header (projects, tasks, overdue, blocked counts), tasks by status breakdown, due soon (7 days), blocked tasks, in-progress tasks, recent activity feed
+- Used parallel loading: `Promise.all([loadStats, loadActivities, loadProjects, loadBlocks])`
+- Derived reactive data: `dueSoonTasks`, `blockedTasks`, `inProgressTasks`, `recentActivities`
+- Files changed: `src/routes/projects/+page.ts` (new), `src/routes/projects/+page.svelte` (new)
+- **Learnings for future iterations:**
+  - `as TypeName` casts inside Svelte template expressions cause Prettier parse errors — use helper functions to cast in script block instead
+  - `PmBlock` entities track blocking via `blockerId`/`blockedId` — blocked tasks derived from `$pmBlocks` set
+  - `statusEntries()` helper converts `Record<string, number>` to typed array to avoid template-level casts
+  - Sidebar already has `/projects` link from Phase 3, no sidebar changes needed
