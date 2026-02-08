@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import ConnectionStatus from './ConnectionStatus.svelte';
 
 	$: currentPath = $page.url.pathname;
 
@@ -55,7 +56,8 @@
 
 <!-- Sidebar footer -->
 <div class="border-t border-slate-700 px-3 py-3">
-	<ul class="space-y-1">
+	<ConnectionStatus />
+	<ul class="mt-2 space-y-1">
 		{#each bottomLinks as link (link.href)}
 			<li>
 				<a
