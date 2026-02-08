@@ -252,7 +252,7 @@
 				"npm run test passes"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "Local commands (/stop, /status, /usage) execute client-side and insert local-only messages. Remote commands (/compact, /context, /subagents, /send) call gateway methods. Hybrid commands (/new, /reasoning, /verbose) modify session state and give local feedback. Gateway method names may need chat.inject fallback if dedicated methods don't exist. The localOnly flag on ChatMessage prevents these messages from being included in history requests or gap-fill on reconnect."
 		}
 	]

@@ -27,6 +27,8 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
 - Slash commands: registry pattern with `registerCommand()` + side-effect imports in barrel `index.ts` for auto-registration
 - CommandPalette exports `handleKeydown()` method for parent to delegate keyboard events via `bind:this`
 - ESLint no-unused-vars: `_` prefix does NOT suppress — use empty param list `execute()` instead of `execute(_args, _context)`
+- `ChatMessage.localOnly` flag marks client-side-only messages excluded from history/gap-fill; `insertLocalMessage()` in chat store creates them
+- Usage/verbose stores use localStorage for persistence; writable + subscribe pattern auto-persists on change
 
 ---
 
@@ -180,4 +182,34 @@ Started: Sun Feb  8 11:50:41 AM CST 2026
   - CommandPalette uses `bind:this` and an exported `handleKeydown()` method so the parent (MessageComposer) can delegate keyboard events to it
   - The `satisfies CommandContext` pattern ensures type safety when constructing the context object in the chat route
   - `findCommands()` uses simple `includes()` filter on command name — keeps filtering logic in the registry module
+---
+
+## 2026-02-08 - US-037
+- Implemented 10 core slash commands plus updated /help command
+- Files created:
+  - `src/lib/chat/commands/new.ts` — /new: creates new session via gateway
+  - `src/lib/chat/commands/stop.ts` — /stop: aborts active agent run
+  - `src/lib/chat/commands/status.ts` — /status: shows session metadata (model, thinking, message count)
+  - `src/lib/chat/commands/reasoning.ts` — /reasoning [off|on|stream]: sets thinking level
+  - `src/lib/chat/commands/compact.ts` — /compact: sends context compaction request via chat.inject
+  - `src/lib/chat/commands/usage.ts` — /usage: shows usage stats from localStorage
+  - `src/lib/chat/commands/verbose.ts` — /verbose [on|off]: toggles verbose mode in localStorage
+  - `src/lib/chat/commands/context.ts` — /context: calls gateway chat.context for token info
+  - `src/lib/chat/commands/subagents.ts` — /subagents: calls gateway agents.list
+  - `src/lib/chat/commands/send.ts` — /send [message]: sends message (for messages starting with /)
+  - `src/lib/stores/usage.ts` — usage stats store with localStorage persistence
+- Files modified:
+  - `src/lib/gateway/types.ts` — added `localOnly?: boolean` to ChatMessage
+  - `src/lib/stores/chat.ts` — added `insertLocalMessage()` function, preserved localOnly messages during history reload
+  - `src/lib/stores/index.ts` — exported insertLocalMessage and usage store functions
+  - `src/lib/chat/commands/registry.ts` — added `insertLocalMessage` to CommandContext interface
+  - `src/lib/chat/commands/placeholders.ts` — replaced placeholder /help with real implementation listing all commands
+  - `src/lib/chat/commands/index.ts` — added side-effect imports for all 10 new command files
+  - `src/routes/chat/+page.svelte` — imported insertLocalMessage, wired into CommandContext
+- **Learnings for future iterations:**
+  - `localOnly` flag on ChatMessage is the clean pattern for client-side-only messages that shouldn't persist across reconnects or be sent to gateway
+  - When replacing history (loadHistory without afterSeq), preserve localOnly messages by filtering and appending them
+  - Commands that call gateway methods should always try/catch and show error as local system message
+  - Usage store pattern: writable + subscribe for auto-persist to localStorage on every change
+  - Help command references the `commands` array directly to auto-include newly registered commands
 ---
