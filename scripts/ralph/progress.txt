@@ -1,215 +1,33 @@
 # Ralph Progress Log
-Started: Sun Feb  8 02:55:07 PM CST 2026
+Started: Sun Feb  8 04:17:37 PM CST 2026
 ---
 
 ## Codebase Patterns
-
-### PM Store Pattern
-- Store file: `src/lib/stores/pm.ts`
-- Writable stores for each entity: `pmDomains`, `pmFocuses`, `pmMilestones`, `pmProjects`, `pmTasks`, `pmComments`, `pmActivities`, `pmStats`, `pmBlocks`, `pmAttachments`
-- Load functions accept optional filter params and use `gateway.call<ResponseType>('pm.entity.method', params)`
-- Optimistic updates: update store immediately, call gateway, revert on error (try/catch pattern)
-- `handleEntityEvent<T>()` generic function handles create/update/delete for all entity types
-- `handlePmEvent()` dispatches by `entityType` using switch/case
-- stateVersion gap detection: if incoming version > current + 1, refetch all entities
-- `initPmListeners()`/`destroyPmListeners()` pattern matches cron store
+- Settings types follow same pattern as pm.ts: enums, entity interfaces, method params/responses
+- Settings store follows heartbeat.ts/cron.ts pattern: writable stores + async gateway.call functions
+- Optimistic updates with rollback on error (enable/disable skills, approve/reject devices)
+- Event listeners pattern: initSettingsListeners/destroySettingsListeners with unsubscribe array
+- Config reads use GatewayConfigResponse type from gateway/types.ts
 - Params cast to `Record<string, unknown>` for gateway.call compatibility
+- Exec allowlist managed via config.get/config.patch on key 'security.exec.allowlist'
 
-### PM Component Pattern
-- Components live in `src/lib/components/pm/` with barrel export from `index.ts`
-- PmSidebar: secondary navigation within `/projects` route (not main app sidebar)
-- Props for selection state: `selectedDomainId`, `selectedFocusId` — dispatches `select` event
-- Inline forms for create/edit with Enter to submit, Escape to cancel
-- Hover-reveal action buttons using Tailwind `group`/`group-hover` + `opacity-0`/`group-hover:opacity-100`
-- Nested group hover: use `group/name` syntax for focus items inside domain group
-- ConfirmDialog reused from Phase 3 files module
-- Svelte `class:hover:bg-*` directives: do NOT use Tailwind opacity modifiers (`/60`) — Prettier fails. Use solid colors like `bg-slate-800` instead
-
-### PM Kanban / Drag-Drop Pattern
-- HTML5 DnD: `draggable="true"`, `on:dragstart`, `on:dragover`, `on:drop`, `on:dragend`
-- Track drag state with local vars: `draggedTaskId`, `dragOverColumn`
-- Column containers need `role="list"` + `aria-label` for a11y
-- Use helper booleans (`isDragging`, `isColumnDragOver`) to avoid template-level casts
-- Cross-column drop = status change via `updateTask({ id, status })`
-- Same-column drop = reorder via `reorderTasks({ parentProjectId, ids })`
-- Scope filtering: derive `projectIdsInScope` set from props → filter tasks
-
-### PM Dashboard Route Pattern
-- Route at `/projects` with `ssr: false` in `+page.ts`
-- `onMount`: call `initPmListeners()` + parallel data loads via `Promise.all`
-- `onDestroy`: call `destroyPmListeners()`
-- TypeScript casts in Svelte templates: NEVER use `as Type` inside `{expressions}` — Prettier fails. Use helper functions to cast in the `<script>` block instead.
-- Reactive derived data: `$:` declarations filter/sort store data for sections
-
-### PM Detail Route Pattern
-- Dynamic route: `src/routes/projects/[id]/+page.ts` (ssr: false) + `+page.svelte`
-- Access `$page.params.id` via `import { page } from '$app/stores'` in `onMount`
-- Parallel load: `Promise.all([loadProjects(), loadTasks(projectId), loadComments(...), ...])`
-- ConfirmDialog: import from `$lib/components/files/ConfirmDialog.svelte`
-- `toStatus(val: string)` helper avoids `as PmStatus` in template expressions
-- Collapsible tree: `Set<number>` with reassignment for reactivity
-
-### PM View Switcher Pattern
-- `/projects` route serves as the integrated PM module entry point
-- View state synced with URL via `?view=dashboard|list|kanban` query param
-- `goto(url, { replaceState: true, noScroll: true })` for view param updates
-- Filter state (selectedDomainId, selectedFocusId) preserved across view switches via shared parent state
-- PmDashboard extracted into component for clean view switching
-- PM sidebar uses fixed positioning on mobile with overlay backdrop (z-30 overlay, z-40 sidebar)
-- TaskDetail panel opens from kanban task select and search result select
-- `isActiveView(view)` helper avoids `as` casts in template class bindings
-
-### PM Types Pattern
-- Entity types prefixed with `Pm`: `PmDomain`, `PmFocus`, `PmProject`, etc.
-- Method param/response types: `Pm{Group}{Action}Params` / `Pm{Group}{Action}Response`
-- Single-entity returns use the entity type directly (no wrapper response)
-- Enums: `PmStatus` (6 values), `PmPriority` (4 values)
-- Barrel exports from `src/lib/types/index.ts` — enums use value export, interfaces use `export type`
-- PmEvent carries `stateVersion: { pm: number }` for gap detection
-
----
-
-## 2026-02-08 - US-051
-- Created `src/lib/types/pm.ts` with all PM entity interfaces, enums, event types, and method param/response types
-- Updated `src/lib/types/index.ts` barrel export with all PM type exports
-- Files changed: `src/lib/types/pm.ts` (new), `src/lib/types/index.ts`
-- **Learnings for future iterations:**
-  - ~45 method types across 13 groups — comprehensive coverage done
-  - `PmTargetType` ('project' | 'task') reused across Comment, Block, Attachment params
-  - `PmEntity` union type useful for PmEvent payload typing
-
-## 2026-02-08 - US-052
-- Created `src/lib/stores/pm.ts` with full PM store layer: 10 writable stores, CRUD functions for all entities, event listeners, search, bulk operations
-- Updated `src/lib/stores/index.ts` barrel exports with all PM store exports
-- Files changed: `src/lib/stores/pm.ts` (new), `src/lib/stores/index.ts`
-- **Learnings for future iterations:**
-  - Generic `handleEntityEvent<T>()` reduces boilerplate for create/update/delete across all entity types
-  - Block entity has no `id` — uses `blockerId`+`blockedId` compound key for filtering
-  - `loadTasks(projectId)` merges new tasks while preserving tasks from other projects in the store
-  - Optimistic updates pattern: save prev value, update store, try gateway call, revert with prev on error
-
-## 2026-02-08 - US-053
-- Created PM dashboard view at `src/routes/projects/+page.svelte` with `+page.ts` (ssr: false)
-- Dashboard sections: stats header (projects, tasks, overdue, blocked counts), tasks by status breakdown, due soon (7 days), blocked tasks, in-progress tasks, recent activity feed
-- Used parallel loading: `Promise.all([loadStats, loadActivities, loadProjects, loadBlocks])`
-- Derived reactive data: `dueSoonTasks`, `blockedTasks`, `inProgressTasks`, `recentActivities`
-- Files changed: `src/routes/projects/+page.ts` (new), `src/routes/projects/+page.svelte` (new)
-- **Learnings for future iterations:**
-  - `as TypeName` casts inside Svelte template expressions cause Prettier parse errors — use helper functions to cast in script block instead
-  - `PmBlock` entities track blocking via `blockerId`/`blockedId` — blocked tasks derived from `$pmBlocks` set
-  - `statusEntries()` helper converts `Record<string, number>` to typed array to avoid template-level casts
-  - Sidebar already has `/projects` link from Phase 3, no sidebar changes needed
-
-## 2026-02-08 - US-054
-- Created `src/lib/components/pm/PmSidebar.svelte` — collapsible tree showing Domain → Focus hierarchy
-- Created `src/lib/components/pm/index.ts` barrel export
-- Features: expand/collapse domains, click to select domain/focus/all, inline create/edit forms, delete with confirmation, reorder via up/down buttons, hover-reveal action buttons
-- Uses ConfirmDialog from Phase 3, dispatches `select` event with `{ domainId, focusId }` payload
-- Files changed: `src/lib/components/pm/PmSidebar.svelte` (new), `src/lib/components/pm/index.ts` (new)
-- **Learnings for future iterations:**
-  - `class:hover:bg-slate-700/60` fails Prettier — the `/` in Tailwind opacity modifier breaks Svelte class directive parsing. Use solid colors like `hover:bg-slate-800` instead
-  - Tailwind `group/name` nested hover variant works well for focus items inside domain rows
-  - Keyboard helpers (Enter/Escape) on inline forms improve UX without adding complexity
-
-## 2026-02-08 - US-055
-- Created `src/lib/components/pm/ProjectList.svelte` — filterable, sortable table of projects
-- Updated `src/lib/components/pm/index.ts` barrel export with ProjectList
-- Features: filter bar (status/priority dropdowns), sortable columns (title, status, priority, due date, created date), click-to-navigate, status badges with color coding, priority indicators, due date with overdue detection, task count per project, empty state, responsive columns (focus hidden on sm, tasks hidden on md)
-- Props accept `selectedDomainId`/`selectedFocusId` from sidebar for domain/focus filtering
-- Dispatches `select` event with `{ projectId }` for navigation
-- Files changed: `src/lib/components/pm/ProjectList.svelte` (new), `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - Sort weight functions (prioritySortWeight, statusSortWeight) keep sort logic clean
-  - Domain filtering requires deriving focus IDs from `$pmFocuses` store, then checking project's `focusId`
-  - `$pmTasks` store can be used for task count per project via `filter(t => t.parentProjectId === projectId).length`
-  - Unicode sort arrows (\u25B2/\u25BC) work well for sort indicators without needing SVG icons
-
-## 2026-02-08 - US-056
-- Created `src/lib/components/pm/KanbanBoard.svelte` — kanban board with drag-and-drop
-- Updated `src/lib/components/pm/index.ts` barrel export with KanbanBoard
-- Features: 4 status columns (todo, in_progress, review, done), task cards with title/priority/due date, HTML5 drag-and-drop between columns (status change) and within columns (reorder), add task button per column with inline form, horizontal scroll, column task counts, empty column state, drag-over visual highlight, cancelled/archived tasks hidden
-- Props: `selectedProjectId`, `selectedFocusId`, `selectedDomainId` for scoping tasks
-- Dispatches `select` event with `{ taskId }` for task detail navigation
-- Files changed: `src/lib/components/pm/KanbanBoard.svelte` (new), `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - Drag-drop column containers need `role="list"` and `aria-label` for a11y — svelte-check warns otherwise
-  - Helper functions like `isDragging(taskId)` and `isColumnDragOver(status)` avoid `as` casts in templates
-  - `projectIdsInScope` derived set enables efficient multi-project filtering for focus/domain scope
-  - `tasksForColumn(status)` as a function (not reactive) works fine since it references reactive `visibleTasks`
-
-## 2026-02-08 - US-057
-- Created project detail page at `src/routes/projects/[id]/+page.svelte` with `+page.ts` (ssr: false)
-- Project header: editable title (click to edit), metadata grid with inline dropdowns for status, priority, focus, milestone, and due date
-- Editable description section with save/cancel
-- Task tree: hierarchical list with 3 levels of nesting, collapsible nodes, checkbox toggle for done/todo, status dropdown, add subtask inline, delete with ConfirmDialog
-- Comments section: add/edit/delete comments with author and timestamp
-- Attachments section: add/remove attachments with file name and path
-- Activity feed: filtered to current project, sorted by recency
-- Back button navigates to /projects list
-- Parallel data loading: `Promise.all` for projects, tasks, comments, attachments, activities, focuses, milestones, blocks
-- Files changed: `src/routes/projects/[id]/+page.ts` (new), `src/routes/projects/[id]/+page.svelte` (new), `scripts/ralph/prd.json`
-- **Learnings for future iterations:**
-  - `toStatus(val)` helper function avoids `as PmStatus` cast in Svelte template expressions (Prettier fails on `as` casts inside `{expressions}`)
-  - Collapsible tree state uses a `Set<number>` — reassign after mutation (`collapsedTasks = collapsedTasks`) to trigger Svelte reactivity
-  - ConfirmDialog from Phase 3 is at `src/lib/components/files/ConfirmDialog.svelte` — reusable across modules
-  - Three-level nesting is sufficient for task tree; deeper nesting would need a recursive Svelte component
-  - `goto('/projects')` for back navigation is cleaner than `history.back()` — deterministic destination
-
-## 2026-02-08 - US-058
-- Created `src/lib/components/pm/TaskDetail.svelte` — slide-out panel for viewing and editing a single task
-- Updated `src/lib/components/pm/index.ts` barrel export with TaskDetail
-- Features: editable title (click to edit), metadata grid (status, priority, due date, milestone, project, created), editable description, subtask list with add/remove/toggle done/navigate, blocking section (blocked by + blocks with add/remove/navigate), comments with add/edit/delete, attachments with add/remove, activity feed, move task to different project, delete task with ConfirmDialog
-- Slide-over panel on desktop (36rem width), full-width on mobile, backdrop click/Escape to close
-- Dispatches `close` and `navigate` events for parent component integration
-- Reactive data loading: reloads comments, attachments, blocks, activities when taskId changes
-- Files changed: `src/lib/components/pm/TaskDetail.svelte` (new), `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - Slide-over panel pattern: `fixed inset-0 z-40` backdrop + `absolute right-0 top-0 bottom-0` panel with `max-w-2xl` and `sm:w-[36rem]`
-  - Blocking relationships are bidirectional: `blockerIds` (tasks that block this) vs `blockedByThisIds` (tasks this blocks) derived from `$pmBlocks` store
-  - `loadBlocks(taskId)` must be re-called after add/remove block operations since the store is global
-  - The `navigate` event enables parent to switch which task the panel shows (e.g., clicking a subtask or blocker)
-  - ConfirmDialog z-index (z-50) is above the slide panel (z-40), ensuring it renders on top
-
-## 2026-02-08 - US-059
-- Created `src/lib/components/pm/PmSearch.svelte` — full-text search across PM entities with grouped results and keyboard navigation
-- Updated `src/lib/components/pm/index.ts` barrel export with PmSearch
-- Features: debounced search input (300ms), results grouped by entity type (projects, tasks, comments, etc.), keyboard navigation (arrow keys + Enter to select, Escape to clear), loading indicator, empty state for no results, context info per result (focus name for projects, snippet for tasks/comments), clear button, result count display
-- Dispatches `select` event with `{ entityType, id }` for parent navigation
-- Uses `searchPm()` from PM store which calls `pm.search` gateway method
-- Files changed: `src/lib/components/pm/PmSearch.svelte` (new), `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - `{@const}` must be a direct child of `{#each}`, NOT nested inside HTML elements — move all `{@const}` declarations to immediately after the `{#each}` opening
-  - `getFlatIndex()` helper maps group-relative index to flat array index for keyboard navigation across grouped results
-  - Sticky group headers (`sticky top-0 bg-slate-900/95`) work well for scrollable grouped result lists
-  - `data-search-active` attribute + `scrollIntoView({ block: 'nearest' })` via `requestAnimationFrame` provides smooth keyboard scrolling
-
-## 2026-02-08 - US-060
-- Created `src/lib/components/pm/BulkActions.svelte` — floating toolbar for bulk task operations
-- Updated `src/lib/components/pm/KanbanBoard.svelte` — added selection checkboxes on task cards
-- Updated `src/routes/projects/[id]/+page.svelte` — added selection checkboxes on task tree rows (all 3 nesting levels)
-- Updated `src/lib/components/pm/index.ts` barrel export with BulkActions
-- Features: checkbox selection on task cards and task rows, select all/deselect all toggle, selection count indicator, bulk status change (all 6 statuses), bulk move to different project, bulk milestone assignment, confirmation dialog before all bulk actions, selection cleared after successful action, selected card border highlighting in kanban
-- BulkActions component dispatches `clear` and `selectAll` events for parent coordination
-- Uses `bulkUpdateTasks()` and `bulkMoveTasks()` from PM store (already implemented in US-052)
-- Reuses ConfirmDialog from Phase 3 for confirmation before destructive bulk actions
-- Files changed: `src/lib/components/pm/BulkActions.svelte` (new), `src/lib/components/pm/KanbanBoard.svelte`, `src/routes/projects/[id]/+page.svelte`, `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - BulkActions toolbar is best positioned as a floating bar at bottom center (`fixed bottom-6 left-1/2 -translate-x-1/2`) — always visible regardless of scroll position
-  - Dropdown menus in a fixed-position toolbar should open UPWARD (`bottom-full mb-2`) to avoid going off-screen
-  - Selection state as `Set<number>` with reassignment pattern works well for Svelte reactivity: `selectedTaskIds = selectedTaskIds`
-  - `e.stopPropagation()` on checkbox click prevents triggering the parent row's navigation click handler
-  - Bulk action confirmation delegates the actual async work to a stored callback function (`confirmAction.fn`), keeping the dialog generic
-
-## 2026-02-08 - US-061
-- Rewrote `src/routes/projects/+page.svelte` as integrated PM module entry point with view switcher, PM sidebar, search, and task detail panel
-- Created `src/lib/components/pm/PmDashboard.svelte` — extracted dashboard view into standalone component for view switching
-- Updated `src/lib/components/pm/index.ts` barrel export with PmDashboard
-- Features: view switcher tabs (Dashboard, List, Kanban) in header with URL sync (?view=kanban, ?view=list), PM sidebar with domain/focus tree on the left, main content area renders selected view, filter state (domain/focus) preserved across view switches, default view is Dashboard, search panel toggle in header, task detail slide-over panel from kanban/search, mobile sidebar collapse with overlay, mobile view switcher as bottom tabs
-- Data loading: parallel fetch of stats, activities, projects, blocks, domains, focuses on mount
-- Files changed: `src/routes/projects/+page.svelte` (rewritten), `src/lib/components/pm/PmDashboard.svelte` (new), `src/lib/components/pm/index.ts`
-- **Learnings for future iterations:**
-  - Extracting dashboard into a component keeps the route file clean when adding view switching logic
-  - `goto(url, { replaceState: true, noScroll: true })` is ideal for view parameter updates — avoids polluting browser history
-  - `loadTasks(projectId)` requires a projectId — can't bulk-load all tasks at once; let individual views handle their own task loading
-  - PM sidebar uses fixed positioning on mobile with z-index layering — same pattern as the app's main sidebar in +layout.svelte
-  - `isActiveView()` helper function avoids `as` casts in Svelte template class expressions
+## 2026-02-08 - US-062: Settings types and store
+- Created `src/lib/types/settings.ts` with all settings domain types:
+  - ConfigSchema, ConfigSchemaProperty, ConfigSnapshot, ConfigPatchParams, ConfigApplyParams
+  - SkillEntry, SkillStatusResponse
+  - NodeEntry, NodeCapabilities, NodeListResponse, NodeDescribeResponse
+  - DeviceEntry, DevicePairRequest, DeviceListResponse
+  - ExecApproval, ExecAllowlistEntry
+  - LogEntry, LogLevel, LogTailParams, LogTailResponse
+- Created `src/lib/stores/settings.ts` with stores and functions:
+  - Config: configSnapshot, configSchema, loadConfig, patchConfig, applyConfig, loadSchema
+  - Skills: skills, loadSkills, enableSkill, disableSkill (with optimistic updates)
+  - Nodes: nodes, loadNodes, describeNode
+  - Devices: devices, loadDevices, approveDevice, rejectDevice, revokeDevice
+  - Logs: logEntries, logCursor, tailLogs (cursor-based FIFO capped at 1000), clearLogs
+  - Exec: execAllowlist, loadExecAllowlist, addExecAllowlistEntry, removeExecAllowlistEntry
+  - Events: initSettingsListeners, destroySettingsListeners (device + config events)
+- Updated barrel exports in `src/lib/types/index.ts` and `src/lib/stores/index.ts`
+- npm run format: pass
+- npm run check: 0 errors, 14 pre-existing warnings
+- **Learnings for future iterations:** Settings store needed both device and config event listeners. ExecAllowlist uses config.patch with action field for add/remove operations.

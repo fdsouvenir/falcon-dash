@@ -134,3 +134,33 @@ export {
 	initPmListeners,
 	destroyPmListeners
 } from './pm';
+export {
+	configSnapshot,
+	configSchema,
+	loadConfig,
+	patchConfig,
+	applyConfig,
+	loadSchema,
+	skills,
+	loadSkills,
+	enableSkill,
+	disableSkill,
+	nodes,
+	loadNodes,
+	describeNode,
+	devices,
+	loadDevices,
+	approveDevice,
+	rejectDevice,
+	revokeDevice,
+	logEntries,
+	logCursor,
+	tailLogs,
+	clearLogs,
+	execAllowlist,
+	loadExecAllowlist,
+	addExecAllowlistEntry,
+	removeExecAllowlistEntry,
+	initSettingsListeners,
+	destroySettingsListeners
+} from './settings';

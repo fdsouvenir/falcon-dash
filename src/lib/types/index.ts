@@ -1,4 +1,26 @@
 export type { WorkspaceFile, FileContent, FileWriteRequest, FileWriteResponse } from './files';
+export type {
+	ConfigSchema,
+	ConfigSchemaProperty,
+	ConfigSnapshot,
+	ConfigPatchParams,
+	ConfigApplyParams,
+	SkillEntry,
+	SkillStatusResponse,
+	NodeCapabilities,
+	NodeEntry,
+	NodeListResponse,
+	NodeDescribeResponse,
+	DeviceEntry,
+	DevicePairRequest,
+	DeviceListResponse,
+	ExecApproval,
+	ExecAllowlistEntry,
+	LogLevel,
+	LogEntry,
+	LogTailParams,
+	LogTailResponse
+} from './settings';
 export type { PasswordEntry, PasswordEntryFull, VaultStatus, VaultState } from './passwords';
 export { PmStatus, PmPriority } from './pm';
 export type {
