@@ -21,6 +21,7 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
 - For reactive timestamps, pass a `now` variable to formatting functions so Svelte detects the dependency
 - ESLint `svelte/require-each-key` enforces keyed `{#each}` blocks — use index `(i)` when items lack unique IDs
 - Chat route: `src/routes/chat/+page.svelte` with `+page.ts` (ssr: false)
+- Reconnection gap fill: track lastKnownSeq from agent events, detect RECONNECTING→READY via connectionState subscription, reload sessions + fill history gap
 
 ---
 
@@ -174,4 +175,20 @@ Started: Sun Feb  8 10:00:52 AM CST 2026
   - Chat page renders messages directly (not via MessageList) to support inline thinking/tools within message bubbles
   - Manual store subscription pattern: `store.subscribe()` in a function + cleanup in `onDestroy` for dynamic derived stores
   - Reactive statements with side effects (`$: if (...)`) work for triggering loads on store changes
+---
+
+## 2026-02-08 - US-027
+- Extended `src/lib/stores/chat.ts` with reconnection gap fill logic
+- Added `lastKnownSeq` module-level tracker, updated from agent events in gateway.on('agent') handler
+- Added `previousConnectionState` tracker to detect RECONNECTING → READY transitions
+- Added `initReconnectWatcher()` — subscribes to connectionState store, calls handleReconnect on transition
+- Added `handleReconnect()` — resets stream manager, reloads sessions, fills message gap via loadHistory(key, lastKnownSeq)
+- Wired into initChatListeners()/destroyChatListeners() lifecycle with unsubReconnect cleanup
+- Deduplication handled by existing loadHistory(afterSeq) merge logic
+- Files changed: `src/lib/stores/chat.ts`
+- **Learnings for future iterations:**
+  - connectionState.subscribe() returns an unsubscribe function — store in module var for cleanup
+  - Track previous state in a module variable to detect specific state transitions (not just current state)
+  - loadHistory already handles deduplication when afterSeq is provided — no extra work needed
+  - try/catch around reconnect operations prevents one failure from blocking the rest
 ---

@@ -8,7 +8,9 @@ import type {
 	ChatSendAck,
 	MessageRole
 } from '$lib/gateway/types';
-import { activeSessionKey } from './sessions';
+import { ConnectionState } from '$lib/gateway/types';
+import { activeSessionKey, loadSessions } from './sessions';
+import { connectionState } from './connection';
 
 /** Singleton stream manager instance */
 const streamManager = new AgentStreamManager();
@@ -33,7 +35,10 @@ export const activeRun: Readable<AgentRunState | undefined> = derived(
 );
 
 let unsubAgent: (() => void) | null = null;
+let unsubReconnect: (() => void) | null = null;
 let tempIdCounter = 0;
+let lastKnownSeq = 0;
+let previousConnectionState: ConnectionState = ConnectionState.DISCONNECTED;
 
 /** Wire gateway agent events to the stream manager */
 export function initChatListeners(): void {
@@ -62,8 +67,17 @@ export function initChatListeners(): void {
 	};
 
 	unsubAgent = gateway.on('agent', (payload: unknown) => {
-		streamManager.handleEvent(payload as AgentEvent);
+		const event = payload as AgentEvent;
+		if ('seq' in event && typeof (event as Record<string, unknown>).seq === 'number') {
+			const seq = (event as Record<string, unknown>).seq as number;
+			if (seq > lastKnownSeq) {
+				lastKnownSeq = seq;
+			}
+		}
+		streamManager.handleEvent(event);
 	});
+
+	unsubReconnect = initReconnectWatcher();
 }
 
 /** Clean up event listeners */
@@ -72,10 +86,47 @@ export function destroyChatListeners(): void {
 		unsubAgent();
 		unsubAgent = null;
 	}
+	if (unsubReconnect) {
+		unsubReconnect();
+		unsubReconnect = null;
+	}
 	streamManager.onMessage = null;
 	streamManager.onRunComplete = null;
 	streamManager.onRunError = null;
 	streamManager.reset();
+}
+
+/** Handle reconnection: reload sessions, fill message gap, clear stale runs */
+async function handleReconnect(): Promise<void> {
+	streamManager.reset();
+
+	try {
+		await loadSessions();
+	} catch {
+		// Session reload failed — will retry on next reconnect
+	}
+
+	const sessionKey = get(activeSessionKey);
+	if (sessionKey && lastKnownSeq > 0) {
+		try {
+			await loadHistory(sessionKey, lastKnownSeq);
+		} catch {
+			// Gap fill failed — will retry on next reconnect
+		}
+	}
+}
+
+/** Watch for RECONNECTING → READY transitions */
+function initReconnectWatcher(): () => void {
+	return connectionState.subscribe(($state) => {
+		if (
+			previousConnectionState === ConnectionState.RECONNECTING &&
+			$state === ConnectionState.READY
+		) {
+			handleReconnect();
+		}
+		previousConnectionState = $state;
+	});
 }
 
 /** Send a message in the active session with optimistic insert */

@@ -1,6 +1,6 @@
-# Ralph Agent Instructions — falcon-dash
+# Ralph Agent Instructions — falcon-dash Phase 2a: Chat Core
 
-You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform.
+You are an autonomous coding agent building **falcon-dash**, a SvelteKit web dashboard for the OpenClaw AI platform. Phase 1 (Core Infrastructure) is complete. You are now implementing **Phase 2a: Chat Core** — the minimum working chat module.
 
 ## Project Context
 
@@ -12,11 +12,28 @@ Reference docs live in `builddocs/`:
 - `builddocs/ws-protocol.md` — WebSocket protocol reference (frames, methods, events)
 - `builddocs/pm-spec.md` — project management specification
 
+## What Phase 1 Built
+
+Phase 1 created the core infrastructure you build on:
+
+- **Gateway client layer:** `src/lib/gateway/` — connection, correlator, events, snapshot, auth, client, types
+- **Stores:** `src/lib/stores/connection.ts` — connection state bridged to Svelte
+- **Components:** `src/lib/components/Sidebar.svelte`, `ConnectionStatus.svelte`
+- **Routes:** `/` (connection page), app shell layout
+- **Tests:** Playwright smoke test, PWA config
+
+Key files you'll extend:
+
+- `src/lib/gateway/types.ts` — add chat/session types here
+- `src/lib/gateway/index.ts` — update barrel exports
+- `src/lib/stores/index.ts` — update barrel exports
+- `src/lib/components/Sidebar.svelte` — add session list (US-025)
+
 ## Your Task
 
 1. Read the PRD at `scripts/ralph/prd.json`
 2. Read the progress log at `scripts/ralph/progress.txt` (check Codebase Patterns section first)
-3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
+3. Check you're on the correct branch from PRD `branchName`. If not, create it from the current branch.
 4. Pick the **highest priority** user story where `passes: false`
 5. Implement that single user story
 6. Run quality checks: `npm run check`, `npm run lint`, `npm run build`, `npm run test`
@@ -28,6 +45,10 @@ Reference docs live in `builddocs/`:
 ## Key Conventions (from root CLAUDE.md)
 
 - **Svelte 4** syntax: use `on:event`, NOT Svelte 5 `onevent` syntax
+- **Props:** use `export let propName`, NOT `$props()`
+- **Reactivity:** use `$:` declarations, NOT `$derived()` or `$effect()`
+- **Events:** use `createEventDispatcher`, NOT callback props
+- **Blocks:** use `{#if}`, `{#each}`, `{#await}` template blocks
 - **Formatting:** Prettier with tabs, single quotes, no trailing commas
 - **TypeScript:** strict mode, no `any` unless absolutely necessary
 - **Tailwind CSS 3** for styling
@@ -35,17 +56,49 @@ Reference docs live in `builddocs/`:
 - `{@html}` requires `<!-- eslint-disable svelte/no-at-html-tags -->` comment
 - `EventListener` global type triggers ESLint `no-undef` — use wrapper functions instead of `as EventListener`
 
-## Gateway WS Protocol Quick Reference
+## Gateway WS Protocol — Chat Methods
 
-- Port: `18789` (default `ws://127.0.0.1:18789`)
-- `client.id` must be `"openclaw-control-ui"` (gateway validates against enum)
-- `client.mode` must be `"webchat"`
-- Protocol version: `3`
-- Frame types: `req`, `res`, `event`
-- First frame must be `connect` request
-- `policy.tickIntervalMs`: 30000 (30s), timeout at 2x = 60s
-- Reconnection: exponential backoff, 800ms base, 1.7x multiplier, 15s cap
-- Dev auth: set `gateway.controlUi.allowInsecureAuth: true` for token-only
+### Existing (Phase 1)
+
+- `connect` — initial handshake, returns hello-ok
+- Gateway events: `agent`, `presence`, `health`, `tick`, `shutdown`
+
+### New for Phase 2a
+
+**Request methods (via gateway.call()):**
+
+- `chat.send` — Send a user message. Params: `{ sessionKey, content, model?, thinkingLevel? }`. Returns ack: `{ runId, status: 'started' }`.
+- `chat.history` — Fetch message history. Params: `{ sessionKey, afterSeq?, limit? }`. Returns: `{ messages[], hasMore }`.
+- `chat.abort` — Abort an active agent run. Params: `{ sessionKey }`.
+- `chat.inject` — Inject a system/context message. Params: `{ sessionKey, role, content }`.
+- `sessions.list` — List all sessions. Returns: `{ sessions[] }`.
+- `sessions.patch` — Update session metadata. Params: `{ sessionKey, displayName?, model?, thinkingLevel? }`.
+
+**Two-stage response pattern for chat.send:**
+
+1. **Ack response** (immediate): `{ runId, status: 'started' }` — confirms the run began
+2. **Agent events** (streaming): `agent` EventFrames with `kind` discriminator
+3. **Final response** (completion): `{ runId, status: 'ok', summary }` — run finished
+
+**CRITICAL: text_delta contains FULL accumulated text, NOT incremental diffs.**
+When you receive a `text_delta` agent event, the `content` field contains the complete text so far. REPLACE the assistant message content — do NOT append/concatenate.
+
+**Agent event routing:**
+
+- Events arrive as EventFrames with `event: 'agent'`
+- The payload is an AgentEvent union, discriminated by `kind` field
+- Kinds: `thinking`, `tool_start`, `tool_result`, `text_delta`, `text_end`
+- Each event includes `sessionKey` and `runId` for routing to the correct stream
+
+**Idempotency keys:**
+
+- Auto-generated by RequestCorrelator for chat.send, chat.inject, chat.abort
+- Do NOT include idempotency keys in your param types — the correlator handles this
+
+**EventFrame.seq:**
+
+- Each EventFrame has an optional `seq` number for ordering
+- Track the latest seq for reconnection gap detection (US-027)
 
 ## Progress Report Format
 
@@ -84,12 +137,15 @@ Only add patterns that are **general and reusable**, not story-specific details.
 
 ## Stop Condition
 
-After completing a user story, check if ALL stories have `passes: true`.
+After completing ONE user story, STOP IMMEDIATELY. Do NOT proceed to the next story.
 
-If ALL stories are complete and passing, reply with:
+Check if ALL stories have `passes: true`. If so, reply with:
 <promise>COMPLETE</promise>
 
-If there are still stories with `passes: false`, end your response normally (another iteration will pick up the next story).
+Otherwise, end your response. The next iteration will pick up the next story.
+
+IMPORTANT: You must complete exactly ONE story per iteration. After committing and marking
+the story as passing, your work for this iteration is done. Stop.
 
 ## Important
 

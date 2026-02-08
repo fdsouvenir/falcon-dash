@@ -246,7 +246,7 @@
 				"npm run test passes"
 			],
 			"priority": 11,
-			"passes": false,
+			"passes": true,
 			"notes": "Subscribe to connectionState store. Track lastKnownSeq from the most recent EventFrame.seq seen before disconnect. On READY after RECONNECTING, fetch history with afterSeq to get only new messages. Deduplicate by message ID before merging into the messages store."
 		}
 	]
