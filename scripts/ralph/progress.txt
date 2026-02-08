@@ -144,3 +144,18 @@ Started: Sun Feb  8 02:55:07 PM CST 2026
   - ConfirmDialog from Phase 3 is at `src/lib/components/files/ConfirmDialog.svelte` — reusable across modules
   - Three-level nesting is sufficient for task tree; deeper nesting would need a recursive Svelte component
   - `goto('/projects')` for back navigation is cleaner than `history.back()` — deterministic destination
+
+## 2026-02-08 - US-058
+- Created `src/lib/components/pm/TaskDetail.svelte` — slide-out panel for viewing and editing a single task
+- Updated `src/lib/components/pm/index.ts` barrel export with TaskDetail
+- Features: editable title (click to edit), metadata grid (status, priority, due date, milestone, project, created), editable description, subtask list with add/remove/toggle done/navigate, blocking section (blocked by + blocks with add/remove/navigate), comments with add/edit/delete, attachments with add/remove, activity feed, move task to different project, delete task with ConfirmDialog
+- Slide-over panel on desktop (36rem width), full-width on mobile, backdrop click/Escape to close
+- Dispatches `close` and `navigate` events for parent component integration
+- Reactive data loading: reloads comments, attachments, blocks, activities when taskId changes
+- Files changed: `src/lib/components/pm/TaskDetail.svelte` (new), `src/lib/components/pm/index.ts`
+- **Learnings for future iterations:**
+  - Slide-over panel pattern: `fixed inset-0 z-40` backdrop + `absolute right-0 top-0 bottom-0` panel with `max-w-2xl` and `sm:w-[36rem]`
+  - Blocking relationships are bidirectional: `blockerIds` (tasks that block this) vs `blockedByThisIds` (tasks this blocks) derived from `$pmBlocks` store
+  - `loadBlocks(taskId)` must be re-called after add/remove block operations since the store is global
+  - The `navigate` event enables parent to switch which task the panel shows (e.g., clicking a subtask or blocker)
+  - ConfirmDialog z-index (z-50) is above the slide panel (z-40), ensuring it renders on top

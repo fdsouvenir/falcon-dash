@@ -168,7 +168,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "This panel is opened from kanban cards, project detail task tree, or any task link. It should work as a slide-over panel on desktop, full-screen on mobile."
 		},
 		{
