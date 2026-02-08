@@ -1,0 +1,239 @@
+{
+	"project": "falcon-dash",
+	"branchName": "ralph/phase-4-pm-module",
+	"description": "Phase 4: Project Management Module — PM entity stores, dashboard, kanban, project/task detail, search, bulk operations. Frontend-only with gateway pm.* methods (pm-skill backend assumed available or stubbed).",
+	"userStories": [
+		{
+			"id": "US-051",
+			"title": "PM types and entity interfaces",
+			"description": "Create src/lib/types/pm.ts with all PM entity types: Domain, Focus, Milestone, Project, Task, Comment, Block, Attachment, Activity. Include status/priority enums, method param/response types for all pm.* methods, and pm event payload types.",
+			"acceptanceCriteria": [
+				"Domain, Focus, Milestone, Project, Task, Comment, Block, Attachment, Activity interfaces defined",
+				"PmStatus enum: todo, in_progress, review, done, cancelled, archived",
+				"PmPriority enum: low, normal, high, urgent",
+				"Request/response types for pm.domain.*, pm.focus.*, pm.milestone.*, pm.project.*, pm.task.*, pm.comment.*, pm.block.*, pm.attachment.*, pm.activity.*, pm.context.*, pm.search, pm.bulk.*, pm.stats",
+				"PmEvent payload type with action, entityType, entity fields",
+				"PmStats response type with aggregate counts",
+				"Barrel export from src/lib/types/index.ts updated",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 1,
+			"passes": false,
+			"notes": "Reference builddocs/falcon-dash-architecture-v02.md §2.2 for the full method surface (~45 methods across 13 groups). Reference builddocs/pm-spec.md for entity schema details."
+		},
+		{
+			"id": "US-052",
+			"title": "PM store layer with entity caches",
+			"description": "Create src/lib/stores/pm.ts with cached entity stores for domains, focuses, milestones, projects, tasks. Implement load functions via gateway.call('pm.*'), optimistic mutation helpers, and pm event listeners for real-time updates. Track stateVersion for gap detection.",
+			"acceptanceCriteria": [
+				"Writable stores: domains, focuses, milestones, projects, tasks, comments, activities",
+				"Load functions: loadDomains(), loadFocuses(domainId?), loadMilestones(), loadProjects(filters?), loadTasks(projectId), loadComments(entityType, entityId), loadActivities(entityType?, entityId?)",
+				"Mutation functions: createProject(), updateProject(), deleteProject(), createTask(), updateTask(), moveTask(), deleteTask(), createComment(), etc.",
+				"Optimistic updates: mutations update local store immediately, revert on error",
+				"PM event listeners: initPmListeners()/destroyPmListeners() pattern matching chat store",
+				"stateVersion tracking: compare event stateVersion, refetch on gap",
+				"Stats store: loadStats() via pm.stats",
+				"Barrel export from src/lib/stores/index.ts updated",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 2,
+			"passes": false,
+			"notes": "Follow the gateway event listener pattern from src/lib/stores/chat.ts. Optimistic updates: set store value immediately, call gateway, revert on error. stateVersion comes from event frames — if gap detected, refetch affected entities."
+		},
+		{
+			"id": "US-053",
+			"title": "PM dashboard view",
+			"description": "Create src/routes/projects/+page.svelte as the PM landing page. Shows stats header (total projects, tasks by status, overdue count), due soon items, blocked items, in-progress items, and recent activity feed.",
+			"acceptanceCriteria": [
+				"Route at /projects with ssr: false",
+				"Stats header showing project/task counts from pm.stats",
+				"Due soon section: tasks due within 7 days, sorted by due date",
+				"Blocked section: tasks that are blocked by other tasks",
+				"In progress section: tasks with in_progress status",
+				"Recent activity feed from pm.activity.list",
+				"Loading states while data fetches",
+				"Empty states when no data",
+				"Tailwind dark theme consistent with existing routes",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 3,
+			"passes": false,
+			"notes": "This is the default view when clicking Projects in the sidebar. Reference architecture doc §14 for PM dashboard layout."
+		},
+		{
+			"id": "US-054",
+			"title": "Domain and focus sidebar navigation",
+			"description": "Create src/lib/components/pm/PmSidebar.svelte — a collapsible tree showing Domain → Focus hierarchy. Clicking a focus filters the project list. Include create/edit actions on domains and focuses.",
+			"acceptanceCriteria": [
+				"Tree view: domains as top-level, focuses nested underneath",
+				"Collapsible domain nodes (click to expand/collapse)",
+				"Click a focus to filter projects by that focus",
+				"Click a domain to filter projects by all focuses in that domain",
+				"'All Projects' link at top to clear filter",
+				"Create domain button with inline form",
+				"Create focus button (under each domain) with inline form",
+				"Edit/delete actions on domains and focuses (context menu or icon buttons)",
+				"Reorder domains and focuses via drag handle or up/down buttons",
+				"Active selection highlighting",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 4,
+			"passes": false,
+			"notes": "This sidebar appears within the /projects route, not the main app sidebar. It's a secondary navigation panel for the PM module."
+		},
+		{
+			"id": "US-055",
+			"title": "Project list view",
+			"description": "Create src/lib/components/pm/ProjectList.svelte — a filterable, sortable table of projects. Supports filtering by status, priority, domain, focus, milestone, and due date. Clicking a project navigates to its detail page.",
+			"acceptanceCriteria": [
+				"Table with columns: title, status, priority, focus, due date, task count",
+				"Filter bar: status dropdown, priority dropdown, domain/focus from sidebar selection",
+				"Sort by: title, status, priority, due date, created date",
+				"Click row to navigate to /projects/[id] detail page",
+				"Status badges with color coding (green=done, yellow=in_progress, red=overdue, etc.)",
+				"Priority indicators (urgent=red, high=orange, normal=default, low=gray)",
+				"Empty state when no projects match filters",
+				"Loading skeleton while fetching",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 5,
+			"passes": false,
+			"notes": "Projects are loaded via the PM store. Filters are applied client-side on the cached data. Sort is also client-side."
+		},
+		{
+			"id": "US-056",
+			"title": "Kanban board view",
+			"description": "Create src/lib/components/pm/KanbanBoard.svelte — a kanban board with columns for each task status. Tasks can be dragged between columns to change status. Scoped to the currently selected project or focus.",
+			"acceptanceCriteria": [
+				"Columns for statuses: todo, in_progress, review, done",
+				"Task cards showing: title, priority badge, assignee, due date",
+				"Drag and drop between columns updates task status via pm.task.update",
+				"Drag within column reorders via pm.task.reorder",
+				"Column task counts in header",
+				"Horizontal scroll when columns overflow viewport",
+				"Add task button in each column header",
+				"Click task card to open task detail",
+				"Scoped to selected project or focus from sidebar",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 6,
+			"passes": false,
+			"notes": "Use HTML5 drag and drop API (dragstart, dragover, drop events). Optimistic update on drop — move card immediately, call gateway, revert on error. Cancelled and archived tasks are hidden from kanban by default."
+		},
+		{
+			"id": "US-057",
+			"title": "Project detail page",
+			"description": "Create src/routes/projects/[id]/+page.svelte — single project view with task tree, comments, attachments, activity feed, and metadata editing. Includes subtask nesting and inline task creation.",
+			"acceptanceCriteria": [
+				"Route at /projects/[id] with ssr: false",
+				"Project header: title (editable), status, priority, focus, milestone, due date, description",
+				"Task tree: hierarchical list with subtask nesting (recursive)",
+				"Inline task creation: add task at project level or as subtask",
+				"Task status toggle (checkbox for done/todo, dropdown for other statuses)",
+				"Comments section with add/edit/delete",
+				"Attachments section with add/remove",
+				"Activity feed for this project",
+				"Back button to return to project list",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 7,
+			"passes": false,
+			"notes": "Reference architecture doc §14 Project Management section. Task tree is recursive — tasks can have subtasks which can have subtasks. Use indentation to show depth."
+		},
+		{
+			"id": "US-058",
+			"title": "Task detail panel",
+			"description": "Create src/lib/components/pm/TaskDetail.svelte — a slide-out or modal panel for viewing and editing a single task. Shows all fields, subtasks, comments, attachments, blocking/blocked-by relationships.",
+			"acceptanceCriteria": [
+				"Panel/modal showing full task details",
+				"Editable fields: title, description, status, priority, due date, milestone",
+				"Subtask list with add/remove",
+				"Comments with add/edit/delete",
+				"Attachments with add/remove",
+				"Blocking section: tasks this blocks, tasks that block this",
+				"Add/remove blocking relationships",
+				"Move task to different project",
+				"Delete task with confirmation",
+				"Close panel returns to previous view",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 8,
+			"passes": false,
+			"notes": "This panel is opened from kanban cards, project detail task tree, or any task link. It should work as a slide-over panel on desktop, full-screen on mobile."
+		},
+		{
+			"id": "US-059",
+			"title": "PM search",
+			"description": "Create src/lib/components/pm/PmSearch.svelte — full-text search across all PM entities using pm.search. Results grouped by type (projects, tasks, comments) with click-to-navigate.",
+			"acceptanceCriteria": [
+				"Search input with debounced query (300ms)",
+				"Results from pm.search grouped by entity type",
+				"Project results: title, status, focus",
+				"Task results: title, status, parent project",
+				"Comment results: snippet, parent entity",
+				"Click result navigates to entity detail",
+				"Empty state for no results",
+				"Loading indicator while searching",
+				"Keyboard navigation (arrow keys, enter to select)",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 9,
+			"passes": false,
+			"notes": "pm.search uses FTS5 full-text search on the backend. Results include entity type, id, title, and a relevance score."
+		},
+		{
+			"id": "US-060",
+			"title": "Bulk operations",
+			"description": "Add multi-select to task lists and kanban. Support bulk status change, bulk move, and bulk milestone assignment via pm.bulk.* methods.",
+			"acceptanceCriteria": [
+				"Checkbox selection on task rows and kanban cards",
+				"Select all / deselect all toggle",
+				"Selection count indicator",
+				"Bulk actions toolbar appears when items selected: Change Status, Move, Set Milestone",
+				"Bulk status change via pm.bulk.update",
+				"Bulk move to different project via pm.bulk.move",
+				"Bulk milestone assignment via pm.bulk.update",
+				"Confirmation dialog before bulk actions",
+				"Selection cleared after successful bulk action",
+				"npm run format passes",
+				"npm run check passes with 0 errors"
+			],
+			"priority": 10,
+			"passes": false,
+			"notes": "Bulk operations should work in both list view and kanban view. Use the existing ConfirmDialog component from Phase 3."
+		},
+		{
+			"id": "US-061",
+			"title": "PM view switcher and route integration",
+			"description": "Wire all PM components into the /projects route with a view switcher (Dashboard, List, Kanban, Tree). Add the PM sidebar alongside the main content area. Ensure navigation between views preserves filter state.",
+			"acceptanceCriteria": [
+				"View switcher tabs/buttons: Dashboard, List, Kanban",
+				"PM sidebar with domain/focus tree on the left",
+				"Main content area renders the selected view",
+				"Filter state (selected domain/focus, status filter, sort) preserved across view switches",
+				"URL reflects current view (?view=kanban, ?view=list, etc.)",
+				"Default view is Dashboard",
+				"Project detail route (/projects/[id]) works with back navigation",
+				"Sidebar collapses on mobile",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds",
+				"npm run test passes"
+			],
+			"priority": 11,
+			"passes": false,
+			"notes": "This is the integration story — wiring all PM components into a cohesive module. The /projects route becomes the entry point with the view switcher and sidebar."
+		}
+	]
+}
