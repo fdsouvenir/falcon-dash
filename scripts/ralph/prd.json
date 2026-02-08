@@ -55,7 +55,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference builddocs/ws-protocol.md for exact protocol shapes. client.id must be 'openclaw-control-ui', client.mode must be 'webchat', protocol version 3."
 		},
 		{

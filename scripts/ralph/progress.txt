@@ -42,3 +42,15 @@ Branch: ralph/phase-1-core-infrastructure
   - Playwright chromium was already cached, `npx playwright install chromium` is idempotent
   - Test runs in ~6s with cold server start
 ---
+
+## 2026-02-08 - US-002
+- Created src/lib/gateway/types.ts with full protocol type definitions
+- Types: ConnectionState enum, Frame types (req/res/event), GatewayError, ConnectParams, ClientInfo, AuthParams, DeviceParams
+- Types: HelloOkPayload with server, features, policy, snapshot, auth
+- Types: AgentEvent union (thinking, tool_start, tool_result, text_delta, text_end)
+- Types: ShutdownPayload, GatewayConfig
+- Added test-results/ to .gitignore and .prettierignore
+- **Learnings for future iterations:**
+  - Keep types close to ws-protocol.md shapes
+  - ClientInfo.id is literal type 'openclaw-control-ui' (gateway validates)
+---

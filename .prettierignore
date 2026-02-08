@@ -10,3 +10,6 @@ node_modules
 
 # OMC state
 .omc
+
+# Playwright
+test-results
