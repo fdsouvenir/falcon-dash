@@ -100,3 +100,25 @@ Started: 2026-02-09
 ### Touch Action Files to Verify
 - `src/lib/utils/gestures.ts` — swipe, longpress, pullToRefresh actions
 - Check for `preventDefault()` on touch events (passive by default in Svelte 5)
+
+## 2026-02-09 - US-S5-003
+- Migrated 7 components from createEventDispatcher to callback props:
+  - BottomSheet (`onclose`)
+  - MobileMoreMenu (`onclose`)
+  - MobileTabBar (`onmore`)
+  - MessageComposer (`onsend`, `onabort`)
+  - CommandPalette (`onselect` with typed `SlashCommand | undefined` param)
+  - ChatHeader (`onsettings`)
+  - ChannelSettings (`onclose`)
+- Updated all parent call sites:
+  - `src/routes/chat/+page.svelte` — 5 call sites updated (ChatHeader, ChannelSettings, MessageComposer, BottomSheet)
+  - `src/routes/+layout.svelte` — 2 call sites updated (MobileTabBar, MobileMoreMenu)
+  - `src/lib/components/pm/KanbanBoard.svelte` — 1 call site updated (BottomSheet)
+- Removed `CustomEvent<T>` wrapper from `handleSend` in chat/+page.svelte (was `CustomEvent<string>` → now `string` directly)
+- Removed `CustomEvent<SlashCommand>` wrapper from `handleCommandSelect` in MessageComposer
+- Zero createEventDispatcher imports in these 7 files (confirmed via grep)
+- Files changed: 10 (7 components + 3 parent call sites)
+- **Learnings for future iterations:**
+  - When migrating a component's dispatcher, always check ALL parents (not just the obvious ones) — BottomSheet was used by KanbanBoard (a US-S5-005 component) which also needed its call site updated
+  - CommandPalette's `onselect` accepts `SlashCommand | undefined` (not just `SlashCommand`) because Escape sends `undefined` — parent's handler signature changed accordingly
+  - Components that still use `createEventDispatcher` from later stories (OnboardingWizard in +layout.svelte) must keep their `on:event` syntax until their own story migrates them

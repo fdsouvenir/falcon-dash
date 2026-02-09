@@ -58,7 +58,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "Pattern: const dispatch = createEventDispatcher() + dispatch('name', data) → interface Props { onname?: (data) => void } + onname?.(data). Call sites: on:name={handler} → onname={handler}. Parent handlers: (e: CustomEvent<T>) => e.detail → (data: T) => data directly."
 		},
 		{
