@@ -4,14 +4,17 @@
 	import MobileTabBar from '$lib/components/MobileTabBar.svelte';
 	import MobileMoreMenu from '$lib/components/MobileMoreMenu.svelte';
 	import OfflineIndicator from '$lib/components/OfflineIndicator.svelte';
+	import { OnboardingWizard } from '$lib/components/onboarding';
 	import { sessions } from '$lib/stores';
 	import { initOfflineListeners } from '$lib/stores/offline';
 	import { initTheme, destroyTheme } from '$lib/stores/theme';
 	import { updateTabTitle, showNotification } from '$lib/services/notifications';
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	let sidebarOpen = false;
 	let moreMenuOpen = false;
+	let showOnboarding = false;
 
 	$: totalUnread = [...$sessions.values()].reduce((sum, s) => sum + s.unreadCount, 0);
 
@@ -21,11 +24,31 @@
 	onMount(() => {
 		initOfflineListeners();
 		initTheme();
+
+		// Show onboarding wizard on first visit
+		try {
+			const completed = localStorage.getItem('falcon-dash:onboarding-completed');
+			const hasUrl = localStorage.getItem('falcon-dash:gateway-url');
+			if (completed !== 'true' && !hasUrl) {
+				showOnboarding = true;
+			}
+		} catch {
+			// localStorage unavailable
+		}
 	});
 
 	onDestroy(() => {
 		destroyTheme();
 	});
+
+	function handleOnboardingComplete() {
+		showOnboarding = false;
+		goto('/chat');
+	}
+
+	function handleOnboardingSkip() {
+		showOnboarding = false;
+	}
 
 	// Notify on unread count increase (when tab is not focused)
 	let prevUnread = 0;
@@ -124,3 +147,7 @@
 	<!-- Mobile "More" menu -->
 	<MobileMoreMenu open={moreMenuOpen} on:close={closeMoreMenu} />
 </div>
+
+{#if showOnboarding}
+	<OnboardingWizard on:complete={handleOnboardingComplete} on:skip={handleOnboardingSkip} />
+{/if}

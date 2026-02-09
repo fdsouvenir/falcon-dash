@@ -3,8 +3,28 @@
 	import { gatewayStatus, loadGatewayStatus, serverVersion } from '$lib/stores';
 
 	let loading = true;
+	let resetConfirm = false;
+	let resetDone = false;
 
 	const dashboardVersion = '0.1.0';
+
+	function startResetWizard() {
+		resetConfirm = true;
+	}
+
+	function cancelResetWizard() {
+		resetConfirm = false;
+	}
+
+	function confirmResetWizard() {
+		try {
+			localStorage.removeItem('falcon-dash:onboarding-completed');
+		} catch {
+			// localStorage unavailable
+		}
+		resetConfirm = false;
+		resetDone = true;
+	}
 
 	function formatUptime(ms: number): string {
 		if (ms <= 0) return '\u2014';
@@ -152,6 +172,45 @@
 				<p class="mt-1 text-center text-xs text-slate-500">
 					Built with SvelteKit, Tailwind CSS, and WebSocket
 				</p>
+			</div>
+		</section>
+
+		<!-- Reset Onboarding -->
+		<section class="rounded-lg border border-slate-700 bg-slate-800/50">
+			<div class="border-b border-slate-700 px-5 py-3">
+				<h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Onboarding</h2>
+			</div>
+			<div class="p-5">
+				<p class="mb-3 text-sm text-slate-400">
+					Reset the onboarding wizard to show it again on next visit.
+				</p>
+				{#if resetConfirm}
+					<div class="flex items-center gap-3">
+						<span class="text-sm text-amber-400">Are you sure?</span>
+						<button
+							on:click={confirmResetWizard}
+							class="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+						>
+							Yes, reset
+						</button>
+						<button
+							on:click={cancelResetWizard}
+							class="text-sm text-slate-400 hover:text-slate-200"
+						>
+							Cancel
+						</button>
+					</div>
+				{:else if resetDone}
+					<p class="text-sm text-green-400">Wizard reset. It will show on next page load.</p>
+				{:else}
+					<button
+						on:click={startResetWizard}
+						class="rounded border border-slate-600 bg-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-600"
+						aria-label="Reset onboarding wizard"
+					>
+						Reset Onboarding Wizard
+					</button>
+				{/if}
 			</div>
 		</section>
 	{/if}
