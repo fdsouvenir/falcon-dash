@@ -80,7 +80,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Same transformation pattern as US-S5-003. These are files, jobs, and canvas module components."
 		},
 		{

@@ -122,3 +122,35 @@ Started: 2026-02-09
   - When migrating a component's dispatcher, always check ALL parents (not just the obvious ones) — BottomSheet was used by KanbanBoard (a US-S5-005 component) which also needed its call site updated
   - CommandPalette's `onselect` accepts `SlashCommand | undefined` (not just `SlashCommand`) because Escape sends `undefined` — parent's handler signature changed accordingly
   - Components that still use `createEventDispatcher` from later stories (OnboardingWizard in +layout.svelte) must keep their `on:event` syntax until their own story migrates them
+
+## 2026-02-09 - US-S5-004
+- Migrated 7 components from createEventDispatcher to callback props:
+  - FileEditor (`onsave`, `oncancel`)
+  - FileActions (`onnewfile`, `onnewfolder`) — created new Props interface (was the only component without one)
+  - ConfirmDialog (`onconfirm`, `oncancel`) — 11 call sites across the codebase
+  - CronJobForm (`onsave`, `oncancel`)
+  - CronJobList (`onedit`, `ondelete`, `onrun`, `ontoggle`, `onselect`) — 5 event types
+  - CanvasFrame (`onload`, `onerror`)
+  - A2UIHost (`onaction`, `onready`, `onerror`)
+- Updated 11 parent call sites:
+  - `src/routes/files/+page.svelte` — FileEditor, FileActions, ConfirmDialog
+  - `src/routes/jobs/+page.svelte` — FileEditor, CronJobList, CronJobForm, ConfirmDialog (7 CustomEvent<T> wrappers removed)
+  - `src/lib/components/settings/WorkspaceTab.svelte` — FileEditor, ConfirmDialog
+  - `src/lib/components/settings/AdvancedTab.svelte` — 2 ConfirmDialog instances
+  - `src/lib/components/settings/InformationTab.svelte` — ConfirmDialog
+  - `src/lib/components/settings/SecurityTab.svelte` — ConfirmDialog
+  - `src/routes/passwords/+page.svelte` — ConfirmDialog
+  - `src/lib/components/pm/PmSidebar.svelte` — ConfirmDialog only (own dispatcher kept for US-S5-005)
+  - `src/lib/components/pm/BulkActions.svelte` — ConfirmDialog only (own dispatcher kept for US-S5-005)
+  - `src/lib/components/pm/TaskDetail.svelte` — ConfirmDialog only (own dispatcher kept for US-S5-005)
+  - `src/routes/projects/[id]/+page.svelte` — ConfirmDialog only (BulkActions on:clear/on:selectAll kept for US-S5-005)
+- Removed CustomEvent<T> wrappers from handlers in files/+page, jobs/+page, WorkspaceTab (changed `event.detail.x` to `data.x`)
+- Zero createEventDispatcher imports in these 7 component files (confirmed via grep)
+- Files changed: 18 (7 components + 11 parent call sites)
+- npm run check: 0 errors (42 warnings — pre-existing a11y)
+- npm run build: succeeds
+- **Learnings for future iterations:**
+  - ConfirmDialog has the most call sites (11) — migrating it in a single batch ensures consistency
+  - PM components (PmSidebar, BulkActions, TaskDetail) use ConfirmDialog but also have their own dispatchers — only migrate the ConfirmDialog call sites, leave their own dispatchers for US-S5-005
+  - projects/[id]/+page.svelte uses BulkActions with on:clear/on:selectAll — must keep on: syntax since BulkActions' own dispatcher isn't migrated yet
+  - apps/[id]/+page.svelte uses CanvasFrame and A2UIHost without any event listeners — no changes needed there
