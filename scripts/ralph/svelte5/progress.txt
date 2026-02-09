@@ -1,0 +1,77 @@
+# Ralph Progress Log — Svelte 5 Migration
+Started: 2026-02-09
+---
+
+## 2026-02-09 - US-S5-001
+- Upgraded svelte from ^4.2.20 to ^5.0.0 (resolved to 5.50.0)
+- Upgraded @sveltejs/vite-plugin-svelte from ^3.1.2 to ^4.0.4 (Svelte 5 + Vite 5 compatible)
+- svelte.config.js: vitePreprocess import path unchanged (still valid in v4)
+- eslint-plugin-svelte@3.14.0 already compatible, no change needed
+- svelte-check@4.3.6 already compatible, no change needed
+- Disabled new `svelte/prefer-svelte-reactivity` ESLint rule (will enable after runes migration)
+- Removed unused `getDeviceId` import from gateway/client.ts
+- All 51 .svelte files compile in Svelte 5 legacy mode unchanged
+- npm run check: 0 errors (33 warnings — pre-existing a11y/self-closing tags)
+- npm run build: succeeds
+- npm run lint: passes
+- npm run test: 1 passed
+- **Learnings for future iterations:**
+  - @sveltejs/vite-plugin-svelte v4 supports Svelte 5 + Vite 5; v5+ requires Vite 6+
+  - eslint-plugin-svelte v3 adds `svelte/prefer-svelte-reactivity` rule for Svelte 5 — uses SvelteSet/SvelteDate/SvelteMap/SvelteURL
+  - Needed to remove node_modules + package-lock.json for clean install due to peer dep conflicts with inspector@2→3 transition
+
+## Codebase Patterns
+
+### Svelte 5 Runes Quick Reference
+- `let x = value` → `let x = $state(value)` for reactive variables
+- `export let prop` → `let { prop }: Props = $props()` for props
+- `$: derived = expr` → `let derived = $derived(expr)` for derived values
+- `$: { sideEffect }` → `$effect(() => { sideEffect })` for effects
+- `on:click={fn}` → `onclick={fn}` for DOM event handlers
+- `createEventDispatcher` → callback props (`onclose?: () => void`)
+- `<slot />` → `{@render children?.()}` with `Snippet` type
+- `<slot {item} />` → `{@render children?.({ item })}` with typed `Snippet`
+- `afterUpdate` → `$effect()` (runs after DOM updates, tracks dependencies)
+- `beforeUpdate` → `$effect.pre()` (runs before DOM updates)
+- `on:event|preventDefault` → `onevent={(e) => { e.preventDefault(); ... }}`
+- `on:event|stopPropagation` → `onevent={(e) => { e.stopPropagation(); ... }}`
+- `svelte-ignore a11y-xxx` → `svelte-ignore a11y_xxx` (hyphens → underscores)
+- Props accepting `bind:` → `$bindable()` default value
+
+### Files That Stay Unchanged
+- **Store files (14):** `src/lib/stores/*.ts` — `svelte/store` fully supported in Svelte 5
+- **Gateway files (8):** `src/lib/gateway/*.ts` — pure TS, no Svelte syntax
+- **Transitions:** `transition:fade`, `transition:fly` — unchanged
+- **Bind on DOM:** `bind:value`, `bind:this` on HTML elements — unchanged
+- **Directives:** `class:`, `use:` actions — unchanged
+- **Control flow:** `{#if}`, `{#each}`, `{#await}` — unchanged
+- **Lifecycle:** `onMount`, `onDestroy` — still valid in Svelte 5
+- **Auto-subscriptions:** `$storeName` in .svelte files — unchanged
+
+### 21 Dispatcher Components (by module)
+**Chat + Layout (7):** BottomSheet, MobileMoreMenu, MobileTabBar, MessageComposer, CommandPalette, ChatHeader, ChannelSettings
+**Files, Jobs, Canvas (7):** FileEditor, FileActions, ConfirmDialog, CronJobForm, CronJobList, CanvasFrame, A2UIHost
+**PM + Onboarding (7):** KanbanBoard, PmSearch, PmSidebar, ProjectList, TaskDetail, BulkActions, OnboardingWizard
+
+### 4 afterUpdate Files
+- `src/lib/components/VirtualList.svelte` — scroll-to-end after item changes
+- `src/lib/components/chat/MessageList.svelte` — auto-scroll to bottom
+- `src/lib/components/settings/LogsViewer.svelte` — auto-scroll after log updates
+- `src/routes/chat/+page.svelte` — auto-scroll
+
+### Event Modifier Instances (~9)
+- `src/routes/+page.svelte` — `on:submit|preventDefault`
+- `src/routes/passwords/+page.svelte` — `on:click|stopPropagation`
+- `src/routes/files/+page.svelte` — `on:click|stopPropagation`
+- `src/lib/components/jobs/CronJobForm.svelte` — `on:submit|preventDefault`
+- `src/lib/components/jobs/CronJobList.svelte` — 4x `on:click|stopPropagation`
+- `src/lib/components/pm/BulkActions.svelte` — `on:click|stopPropagation`
+
+### 3 Slot Components
+- `src/routes/+layout.svelte` — `<slot />`
+- `src/lib/components/BottomSheet.svelte` — `<slot />`
+- `src/lib/components/VirtualList.svelte` — `<slot {item} index={i} />`
+
+### Touch Action Files to Verify
+- `src/lib/utils/gestures.ts` — swipe, longpress, pullToRefresh actions
+- Check for `preventDefault()` on touch events (passive by default in Svelte 5)

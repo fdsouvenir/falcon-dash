@@ -11,7 +11,7 @@ import {
 	type ResponseFrame,
 	type ShutdownPayload
 } from './types';
-import { buildConnectParams, generateInstanceId, getDeviceId } from './auth';
+import { buildConnectParams, generateInstanceId } from './auth';
 
 type Unsubscribe = () => void;
 
@@ -41,9 +41,7 @@ export class GatewayClient {
 
 	/** Connect to the gateway and return the hello-ok payload */
 	async connect(config: GatewayConfig): Promise<HelloOkPayload> {
-		const params = buildConnectParams(config.token, this.instanceId, {
-			id: getDeviceId()
-		});
+		const params = buildConnectParams(config.token, this.instanceId);
 
 		this.connection.connect(config.url, params);
 

@@ -23,7 +23,8 @@ export default ts.config(
 			}
 		},
 		rules: {
-			'svelte/no-navigation-without-resolve': 'off'
+			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/prefer-svelte-reactivity': 'off'
 		}
 	},
 	{

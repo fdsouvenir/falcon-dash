@@ -1,0 +1,174 @@
+{
+	"project": "falcon-dash",
+	"branchName": "ralph/svelte-5-migration",
+	"description": "Svelte 4 → 5 migration: upgrade dependencies, run sv migrate, manually fix createEventDispatcher (21 components), afterUpdate, event modifiers, and documentation.",
+	"userStories": [
+		{
+			"id": "US-S5-001",
+			"title": "Upgrade dependencies to Svelte 5 (legacy mode)",
+			"description": "Upgrade svelte, @sveltejs/vite-plugin-svelte, and related packages to Svelte 5-compatible versions. Verify the entire codebase compiles and runs in Svelte 5 legacy/compatibility mode without any syntax changes.",
+			"acceptanceCriteria": [
+				"svelte upgraded to ^5",
+				"@sveltejs/vite-plugin-svelte upgraded to ^5",
+				"eslint-plugin-svelte updated to latest v3.x",
+				"svelte-check updated if needed",
+				"svelte.config.js import path verified/fixed",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds",
+				"npm run lint passes",
+				"npm run test passes",
+				"All 51 .svelte files compile unchanged in legacy mode"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": "Phase A of migration plan. Legacy mode means all Svelte 4 syntax continues to work. The vitePreprocess import path may change in @sveltejs/vite-plugin-svelte v5 — check and fix if needed. prettier-plugin-svelte 3 already supports Svelte 5."
+		},
+		{
+			"id": "US-S5-002",
+			"title": "Run automated migration tool + fix generated code",
+			"description": "Run npx sv migrate svelte-5 to auto-transform Svelte 4 syntax to Svelte 5 runes. Fix compile errors from the tool, replace any run() from svelte/legacy with proper $derived()/$effect(), and batch-replace svelte-ignore hyphens with underscores.",
+			"acceptanceCriteria": [
+				"npx sv migrate svelte-5 has been run",
+				"All compile errors from the migration tool are fixed",
+				"Zero run() imports from svelte/legacy remain",
+				"All svelte-ignore comments use underscores (not hyphens)",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 2,
+			"passes": false,
+			"notes": "Phase B1 of migration plan. The tool auto-transforms: export let → $props(), reactive let → $state(), $: → $derived()/$effect(), on:click → onclick, <slot/> → {@render children()}. It may produce run() from svelte/legacy for ambiguous reactive blocks — convert these to proper $derived()/$effect(). Batch-replace svelte-ignore hyphens: find src -name '*.svelte' -exec sed -i 's/svelte-ignore a11y-/svelte-ignore a11y_/g' {} +"
+		},
+		{
+			"id": "US-S5-003",
+			"title": "Migrate createEventDispatcher — chat + layout components",
+			"description": "Convert createEventDispatcher to callback props in BottomSheet, MobileMoreMenu, MobileTabBar, MessageComposer, CommandPalette, ChatHeader, and ChannelSettings. Update all call sites. Remove CustomEvent<T> wrappers in parent handlers.",
+			"acceptanceCriteria": [
+				"BottomSheet uses callback props (onclose)",
+				"MobileMoreMenu uses callback props (onclose)",
+				"MobileTabBar uses callback props (onmore)",
+				"MessageComposer uses callback props (onsend, onabort)",
+				"CommandPalette uses callback props (onselect)",
+				"ChatHeader uses callback props",
+				"ChannelSettings uses callback props (onclose)",
+				"All parent call sites updated to pass callbacks instead of on:event",
+				"No CustomEvent<T> wrappers remain in parent handlers for these components",
+				"Zero createEventDispatcher imports in these 7 files",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 3,
+			"passes": false,
+			"notes": "Pattern: const dispatch = createEventDispatcher() + dispatch('name', data) → interface Props { onname?: (data) => void } + onname?.(data). Call sites: on:name={handler} → onname={handler}. Parent handlers: (e: CustomEvent<T>) => e.detail → (data: T) => data directly."
+		},
+		{
+			"id": "US-S5-004",
+			"title": "Migrate createEventDispatcher — files, jobs, canvas",
+			"description": "Convert createEventDispatcher to callback props in FileEditor, FileActions, ConfirmDialog, CronJobForm, CronJobList, CanvasFrame, and A2UIHost. Update all call sites.",
+			"acceptanceCriteria": [
+				"FileEditor uses callback props (onsave, oncancel)",
+				"FileActions uses callback props (onnewfile, onnewfolder)",
+				"ConfirmDialog uses callback props (onconfirm, oncancel)",
+				"CronJobForm uses callback props",
+				"CronJobList uses callback props (ontoggle, onedit, onrun, ondelete)",
+				"CanvasFrame uses callback props (onload, onerror)",
+				"A2UIHost uses callback props",
+				"All parent call sites updated",
+				"No CustomEvent<T> wrappers remain in parent handlers for these components",
+				"Zero createEventDispatcher imports in these 7 files",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 4,
+			"passes": false,
+			"notes": "Same transformation pattern as US-S5-003. These are files, jobs, and canvas module components."
+		},
+		{
+			"id": "US-S5-005",
+			"title": "Migrate createEventDispatcher — PM module + OnboardingWizard",
+			"description": "Convert createEventDispatcher to callback props in KanbanBoard, PmSearch, PmSidebar, ProjectList, TaskDetail, BulkActions, and OnboardingWizard. Update all call sites. This is the final dispatcher migration — zero createEventDispatcher imports should remain in the entire codebase.",
+			"acceptanceCriteria": [
+				"KanbanBoard uses callback props",
+				"PmSearch uses callback props",
+				"PmSidebar uses callback props",
+				"ProjectList uses callback props",
+				"TaskDetail uses callback props",
+				"BulkActions uses callback props",
+				"OnboardingWizard uses callback props (oncomplete, onskip)",
+				"All parent call sites updated",
+				"No CustomEvent<T> wrappers remain in parent handlers for these components",
+				"Zero createEventDispatcher imports in ENTIRE codebase (grep confirms 0 matches)",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 5,
+			"passes": false,
+			"notes": "Same transformation pattern as US-S5-003. Final batch — after this, the entire codebase should be free of createEventDispatcher. Verify with: grep -r 'createEventDispatcher' src/ — should return 0 matches."
+		},
+		{
+			"id": "US-S5-006",
+			"title": "Fix afterUpdate, event modifiers, event forwarding, $bindable",
+			"description": "Replace afterUpdate with $effect in VirtualList, MessageList, LogsViewer, and chat/+page. Convert event modifiers (|preventDefault, |stopPropagation) to manual handlers. Fix component event forwarding. Add $bindable() for props that accept bind:. Combine multiple event handlers on same element.",
+			"acceptanceCriteria": [
+				"afterUpdate replaced with $effect in VirtualList.svelte",
+				"afterUpdate replaced with $effect in MessageList.svelte",
+				"afterUpdate replaced with $effect in LogsViewer.svelte",
+				"afterUpdate replaced with $effect in chat/+page.svelte",
+				"Zero afterUpdate/beforeUpdate imports in codebase",
+				"on:submit|preventDefault converted to manual handler in +page.svelte (root)",
+				"on:submit|preventDefault converted in CronJobForm.svelte",
+				"on:click|stopPropagation converted in CronJobList.svelte (4 instances)",
+				"on:click|stopPropagation converted in BulkActions.svelte",
+				"on:click|stopPropagation converted in files/+page.svelte",
+				"on:click|stopPropagation converted in passwords/+page.svelte",
+				"Zero on:event|modifier patterns in codebase",
+				"Component event forwarding uses explicit callbacks or rest-prop spreading",
+				"$bindable() added for any props that accept bind:",
+				"No duplicate event handlers on same element",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 6,
+			"passes": false,
+			"notes": "afterUpdate → $effect: explicitly reference tracked dependencies, use tick() for DOM timing. Event modifiers: on:submit|preventDefault={fn} → onsubmit={(e) => { e.preventDefault(); fn(); }}. Search for bind: usage on child components to find $bindable() candidates."
+		},
+		{
+			"id": "US-S5-007",
+			"title": "Touch events, CSS scoping, edge cases",
+			"description": "Verify passive touch event compatibility in gesture actions. Fix any gesture actions that call preventDefault() on touch events. Verify CSS scoping (:where()) doesn't break Tailwind styles. Fix HTML structure enforcement errors. Review stopPropagation for event delegation compatibility.",
+			"acceptanceCriteria": [
+				"Touch gesture actions (swipe, longpress, pullToRefresh) work with passive defaults",
+				"Any preventDefault() on touch events uses svelte/events 'on' for non-passive listeners",
+				"CSS scoping with :where() verified — no visual regressions with Tailwind",
+				"No HTML structure enforcement errors from Svelte 5 strictness",
+				"stopPropagation usage reviewed for event delegation compatibility",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds"
+			],
+			"priority": 7,
+			"passes": false,
+			"notes": "Touch events: ontouchstart/ontouchmove are passive by default in Svelte 5. If gesture actions call e.preventDefault(), use: import { on } from 'svelte/events'; on(node, 'touchstart', handler, { passive: false }). CSS: Svelte 5 uses :where(.svelte-xyz) for zero specificity — verify Tailwind styles still apply. HTML: Svelte 5 enforces valid nesting (e.g. <tr> must be in <tbody>). Event delegation: Svelte 5 delegates onclick at document root — stopPropagation may prevent sibling handlers."
+		},
+		{
+			"id": "US-S5-008",
+			"title": "Update documentation + final verification",
+			"description": "Update root CLAUDE.md to replace Svelte 4 syntax documentation with Svelte 5 patterns. Run full quality gate suite. Clean up remaining warnings.",
+			"acceptanceCriteria": [
+				"CLAUDE.md 'Critical: Svelte 4 Syntax' section replaced with Svelte 5 patterns",
+				"CLAUDE.md documents: $state(), $props(), $derived(), $effect(), onclick, callback props, {@render children()}, $bindable()",
+				"npm run format passes",
+				"npm run check passes with 0 errors",
+				"npm run build succeeds",
+				"npm run lint passes",
+				"npm run test passes",
+				"No remaining svelte/legacy imports",
+				"No remaining createEventDispatcher imports",
+				"No remaining afterUpdate/beforeUpdate imports",
+				"No remaining on:event|modifier patterns"
+			],
+			"priority": 8,
+			"passes": false,
+			"notes": "Final story. Update CLAUDE.md syntax section to reflect Svelte 5 runes: $state() for reactive variables, $props() for props (not export let), $derived()/$effect() (not $:), onclick (not on:click), callback props (not createEventDispatcher), {@render children()} (not <slot/>), $bindable() for bound props."
+		}
+	]
+}
