@@ -146,7 +146,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "Touch events: ontouchstart/ontouchmove are passive by default in Svelte 5. If gesture actions call e.preventDefault(), use: import { on } from 'svelte/events'; on(node, 'touchstart', handler, { passive: false }). CSS: Svelte 5 uses :where(.svelte-xyz) for zero specificity — verify Tailwind styles still apply. HTML: Svelte 5 enforces valid nesting (e.g. <tr> must be in <tbody>). Event delegation: Svelte 5 delegates onclick at document root — stopPropagation may prevent sibling handlers."
 		},
 		{

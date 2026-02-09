@@ -191,3 +191,18 @@ Started: 2026-02-09
   - When the automated migration tool (US-S5-002) handles afterUpdate and event modifiers early, later verification stories become no-ops
   - `$bindable()` is only needed for `bind:propName` on custom Svelte components, NOT for DOM element bindings (`bind:value`, `bind:this`, etc.)
   - Always check acceptance criteria against current codebase state before writing code — the work may already be done
+
+## 2026-02-09 - US-S5-007
+- Verification-only story — no code changes needed
+- **Touch gestures:** All 3 gesture actions (swipe, longpress, pullToRefresh) in `src/lib/utils/gestures.ts` already use `{ passive: true }` explicitly and never call `preventDefault()` on touch events — fully compatible with Svelte 5 passive defaults
+- **No `ontouchstart`/`ontouchmove` in .svelte templates** — all touch handling is via `use:` actions which use `addEventListener` directly
+- **CSS scoping:** 3 files have `<style>` blocks (A2UIHost, FilePreview, RenderedContent) — all use `:global()` selectors for rendered HTML styling, unaffected by Svelte 5's `:where()` zero-specificity scoping. Tailwind utility classes applied via `class=` are also unaffected
+- **HTML structure:** All 4 tables (InformationTab, ProjectList, CronRunHistory, CronJobList) use proper `<thead>`/`<tbody>`/`<tfoot>` wrappers — no invalid nesting. No `<p>` inside `<p>` or `<a>` inside `<a>` violations
+- **stopPropagation:** 12 instances across 8 files — all are standard parent-child click prevention (e.g., button inside clickable row). Compatible with Svelte 5 event delegation since both parent and child handlers are delegated `onclick`
+- npm run check: 0 errors (42 warnings — pre-existing a11y/self-closing tags)
+- npm run build: succeeds
+- No files changed (all verified as-is)
+- **Learnings for future iterations:**
+  - Svelte 5 passive touch events only matter for `ontouchstart`/`ontouchmove` in templates — `use:` actions with `addEventListener` already control their own passive options
+  - `:global()` selectors in `<style>` blocks are unaffected by `:where()` scoping — only the scoped parent selector changes specificity
+  - `stopPropagation` works correctly with Svelte 5 event delegation for parent-child patterns because the delegation handler respects propagation state before firing parent handlers
