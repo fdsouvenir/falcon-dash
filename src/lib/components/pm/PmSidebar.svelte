@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { PmDomain, PmFocus } from '$lib/types';
 	import {
 		pmDomains,
@@ -24,13 +23,11 @@
 		selectedDomainId?: string | null;
 		/** Currently selected focus id (null = no focus filter) */
 		selectedFocusId?: string | null;
+		/** Called when the user selects a domain or focus */
+		onselect?: (data: { domainId: string | null; focusId: string | null }) => void;
 	}
 
-	let { selectedDomainId = null, selectedFocusId = null }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		select: { domainId: string | null; focusId: string | null };
-	}>();
+	let { selectedDomainId = null, selectedFocusId = null, onselect }: Props = $props();
 
 	// --- State ---
 
@@ -66,18 +63,18 @@
 	// --- Selection ---
 
 	function selectAll(): void {
-		dispatch('select', { domainId: null, focusId: null });
+		onselect?.({ domainId: null, focusId: null });
 	}
 
 	function selectDomain(domainId: string): void {
 		// Expand if collapsed
 		expandedDomains.add(domainId);
 		expandedDomains = expandedDomains;
-		dispatch('select', { domainId, focusId: null });
+		onselect?.({ domainId, focusId: null });
 	}
 
 	function selectFocus(domainId: string, focusId: string): void {
-		dispatch('select', { domainId, focusId });
+		onselect?.({ domainId, focusId });
 	}
 
 	// --- Expand/Collapse ---

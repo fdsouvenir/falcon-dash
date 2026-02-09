@@ -1645,8 +1645,8 @@
 <BulkActions
 	selectedIds={selectedTaskIds}
 	totalCount={projectTasks.length}
-	on:clear={clearTaskSelection}
-	on:selectAll={selectAllProjectTasks}
+	onclear={clearTaskSelection}
+	onselectall={selectAllProjectTasks}
 />
 
 <ConfirmDialog

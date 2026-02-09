@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { PmStatus, PmPriority } from '$lib/types';
 	import type { PmComment, PmActivity } from '$lib/types';
 	import {
@@ -31,14 +30,11 @@
 	interface Props {
 		taskId: number;
 		open: boolean;
+		onclose?: () => void;
+		onnavigate?: (data: { taskId: number }) => void;
 	}
 
-	let { taskId, open }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		close: void;
-		navigate: { taskId: number };
-	}>();
+	let { taskId, open, onclose, onnavigate }: Props = $props();
 
 	// --- State ---
 
@@ -394,7 +390,7 @@
 	}
 
 	function navigateToTask(id: number): void {
-		dispatch('navigate', { taskId: id });
+		onnavigate?.({ taskId: id });
 	}
 
 	// --- Comment Actions ---
@@ -521,7 +517,7 @@
 		if (!task) return;
 		confirmingDelete = false;
 		await deleteTask(task.id);
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleCancelDelete(): void {
@@ -531,7 +527,7 @@
 	// --- Close ---
 
 	function handleClose(): void {
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleBackdropClick(event: MouseEvent): void {

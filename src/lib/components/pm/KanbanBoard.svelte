@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { PmStatus, PmPriority } from '$lib/types';
 	import type { PmTask } from '$lib/types';
 	import {
@@ -45,17 +44,16 @@
 		selectedFocusId?: string | null;
 		/** Filter tasks by domain */
 		selectedDomainId?: string | null;
+		/** Called when a task card is clicked */
+		onselect?: (data: { taskId: number }) => void;
 	}
 
 	let {
 		selectedProjectId = null,
 		selectedFocusId = null,
-		selectedDomainId = null
+		selectedDomainId = null,
+		onselect
 	}: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		select: { taskId: number };
-	}>();
 
 	// --- Kanban Columns ---
 
@@ -301,7 +299,7 @@
 	// --- Task Card Click ---
 
 	function selectTask(taskId: number): void {
-		dispatch('select', { taskId });
+		onselect?.({ taskId });
 	}
 
 	// --- Add Task ---
@@ -519,8 +517,8 @@
 <BulkActions
 	selectedIds={selectedTaskIds}
 	totalCount={visibleTasks.length}
-	on:clear={clearSelection}
-	on:selectAll={selectAllTasks}
+	onclear={clearSelection}
+	onselectall={selectAllTasks}
 />
 
 <!-- Long-press task actions (bottom sheet on mobile) -->

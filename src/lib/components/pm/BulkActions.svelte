@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { PmStatus } from '$lib/types';
 	import { pmProjects, pmMilestones, bulkUpdateTasks, bulkMoveTasks } from '$lib/stores';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
@@ -9,14 +8,13 @@
 		selectedIds: Set<number>;
 		/** Total number of selectable tasks (for select all toggle) */
 		totalCount?: number;
+		/** Called when selection is cleared */
+		onclear?: () => void;
+		/** Called when select all is toggled */
+		onselectall?: () => void;
 	}
 
-	let { selectedIds, totalCount = 0 }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		clear: void;
-		selectAll: void;
-	}>();
+	let { selectedIds, totalCount = 0, onclear, onselectall }: Props = $props();
 
 	// --- Action Dropdown State ---
 
@@ -59,7 +57,7 @@
 			label: `Change ${count} task${count === 1 ? '' : 's'} to "${statusLabel(status)}"?`,
 			fn: async () => {
 				await bulkUpdateTasks({ ids, status });
-				dispatch('clear');
+				onclear?.();
 			}
 		};
 	}
@@ -73,7 +71,7 @@
 			label: `Move ${count} task${count === 1 ? '' : 's'} to "${name}"?`,
 			fn: async () => {
 				await bulkMoveTasks({ ids, parentProjectId: projectId });
-				dispatch('clear');
+				onclear?.();
 			}
 		};
 	}
@@ -87,7 +85,7 @@
 			label: `Set milestone to "${name}" for ${count} task${count === 1 ? '' : 's'}?`,
 			fn: async () => {
 				await bulkUpdateTasks({ ids, milestoneId });
-				dispatch('clear');
+				onclear?.();
 			}
 		};
 	}
@@ -105,14 +103,14 @@
 
 	function toggleSelectAll(): void {
 		if (allSelected) {
-			dispatch('clear');
+			onclear?.();
 		} else {
-			dispatch('selectAll');
+			onselectall?.();
 		}
 	}
 
 	function clearSelection(): void {
-		dispatch('clear');
+		onclear?.();
 	}
 
 	function closeMenus(): void {

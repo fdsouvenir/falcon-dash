@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { PmSearchResultItem } from '$lib/types';
 	import { searchPm, pmProjects, pmFocuses } from '$lib/stores';
 
-	const dispatch = createEventDispatcher<{
-		select: { entityType: string; id: number | string };
-	}>();
+	interface Props {
+		onselect?: (data: { entityType: string; id: number | string }) => void;
+	}
+
+	let { onselect }: Props = $props();
 
 	// --- State ---
 
@@ -157,7 +158,7 @@
 	}
 
 	function selectResult(item: PmSearchResultItem): void {
-		dispatch('select', { entityType: item.entityType, id: item.id });
+		onselect?.({ entityType: item.entityType, id: item.id });
 	}
 
 	// --- Keyboard Navigation ---

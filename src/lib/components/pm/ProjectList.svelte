@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { PmStatus, PmPriority } from '$lib/types';
 	import { pmProjects, pmFocuses, pmTasks } from '$lib/stores';
 
@@ -10,13 +9,11 @@
 		selectedDomainId?: string | null;
 		/** Filter by focus id (null = no focus filter) */
 		selectedFocusId?: string | null;
+		/** Called when a project row is clicked */
+		onselect?: (data: { projectId: number }) => void;
 	}
 
-	let { selectedDomainId = null, selectedFocusId = null }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		select: { projectId: number };
-	}>();
+	let { selectedDomainId = null, selectedFocusId = null, onselect }: Props = $props();
 
 	// --- Filter / Sort State ---
 
@@ -228,7 +225,7 @@
 	// --- Navigation ---
 
 	function selectProject(projectId: number): void {
-		dispatch('select', { projectId });
+		onselect?.({ projectId });
 	}
 
 	// --- Status enum values for filter dropdown ---

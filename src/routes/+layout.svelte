@@ -158,5 +158,5 @@
 </div>
 
 {#if showOnboarding}
-	<OnboardingWizard on:complete={handleOnboardingComplete} on:skip={handleOnboardingSkip} />
+	<OnboardingWizard oncomplete={handleOnboardingComplete} onskip={handleOnboardingSkip} />
 {/if}

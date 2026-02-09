@@ -1,12 +1,16 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { gateway } from '$lib/gateway';
 	import { ConnectionState } from '$lib/gateway/types';
 	import { getGatewayUrl, getToken, setGatewayUrl, setToken } from '$lib/gateway/auth';
 	import { connectionState, connId, gatewayUrl, serverVersion } from '$lib/stores';
 
-	const dispatch = createEventDispatcher<{ complete: void; skip: void }>();
+	interface Props {
+		oncomplete?: () => void;
+		onskip?: () => void;
+	}
+
+	let { oncomplete, onskip }: Props = $props();
 
 	let step = $state(0);
 	let url = $state(getGatewayUrl());
@@ -56,12 +60,12 @@
 
 	function skip() {
 		markComplete();
-		dispatch('skip');
+		onskip?.();
 	}
 
 	function finish() {
 		markComplete();
-		dispatch('complete');
+		oncomplete?.();
 	}
 
 	function markComplete() {

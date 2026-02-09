@@ -73,19 +73,17 @@
 
 	// --- Event handlers ---
 
-	function handleSidebarSelect(
-		e: CustomEvent<{ domainId: string | null; focusId: string | null }>
-	): void {
-		selectedDomainId = e.detail.domainId;
-		selectedFocusId = e.detail.focusId;
+	function handleSidebarSelect(data: { domainId: string | null; focusId: string | null }): void {
+		selectedDomainId = data.domainId;
+		selectedFocusId = data.focusId;
 	}
 
-	function handleProjectSelect(e: CustomEvent<{ projectId: number }>): void {
-		goto(`/projects/${e.detail.projectId}`);
+	function handleProjectSelect(data: { projectId: number }): void {
+		goto(`/projects/${data.projectId}`);
 	}
 
-	function handleTaskSelect(e: CustomEvent<{ taskId: number }>): void {
-		selectedTaskId = e.detail.taskId;
+	function handleTaskSelect(data: { taskId: number }): void {
+		selectedTaskId = data.taskId;
 		taskDetailOpen = true;
 	}
 
@@ -94,16 +92,16 @@
 		selectedTaskId = null;
 	}
 
-	function handleTaskDetailNavigate(e: CustomEvent<{ taskId: number }>): void {
-		selectedTaskId = e.detail.taskId;
+	function handleTaskDetailNavigate(data: { taskId: number }): void {
+		selectedTaskId = data.taskId;
 	}
 
-	function handleSearchSelect(e: CustomEvent<{ entityType: string; id: number | string }>): void {
+	function handleSearchSelect(data: { entityType: string; id: number | string }): void {
 		showSearch = false;
-		if (e.detail.entityType === 'project') {
-			goto(`/projects/${e.detail.id}`);
-		} else if (e.detail.entityType === 'task') {
-			selectedTaskId = Number(e.detail.id);
+		if (data.entityType === 'project') {
+			goto(`/projects/${data.id}`);
+		} else if (data.entityType === 'task') {
+			selectedTaskId = Number(data.id);
 			taskDetailOpen = true;
 		}
 	}
@@ -300,7 +298,7 @@
 		<!-- Search panel (collapsible) -->
 		{#if showSearch}
 			<div class="border-b border-slate-700 bg-slate-800/50 px-4 py-3 sm:px-6">
-				<PmSearch on:select={handleSearchSelect} />
+				<PmSearch onselect={handleSearchSelect} />
 			</div>
 		{/if}
 
@@ -322,7 +320,7 @@
 				class:translate-x-0={pmSidebarOpen}
 				class:-translate-x-full={!pmSidebarOpen}
 			>
-				<PmSidebar {selectedDomainId} {selectedFocusId} on:select={handleSidebarSelect} />
+				<PmSidebar {selectedDomainId} {selectedFocusId} onselect={handleSidebarSelect} />
 			</div>
 
 			<!-- View content -->
@@ -333,7 +331,7 @@
 					</div>
 				{:else if currentView === 'list'}
 					<div class="p-6">
-						<ProjectList {selectedDomainId} {selectedFocusId} on:select={handleProjectSelect} />
+						<ProjectList {selectedDomainId} {selectedFocusId} onselect={handleProjectSelect} />
 					</div>
 				{:else if currentView === 'kanban'}
 					<div class="h-full">
@@ -341,7 +339,7 @@
 							selectedProjectId={null}
 							{selectedFocusId}
 							{selectedDomainId}
-							on:select={handleTaskSelect}
+							onselect={handleTaskSelect}
 						/>
 					</div>
 				{/if}
@@ -355,7 +353,7 @@
 	<TaskDetail
 		taskId={selectedTaskId}
 		open={taskDetailOpen}
-		on:close={handleTaskDetailClose}
-		on:navigate={handleTaskDetailNavigate}
+		onclose={handleTaskDetailClose}
+		onnavigate={handleTaskDetailNavigate}
 	/>
 {/if}
