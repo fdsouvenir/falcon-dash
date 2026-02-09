@@ -238,6 +238,7 @@
 							{#if message.role === 'assistant'}
 								<div
 									class="group mr-4 md:mr-12"
+									style="content-visibility: auto; contain-intrinsic-size: auto 100px;"
 									use:longpress={{ onLongPress: handleMessageLongPress(message) }}
 								>
 									<div class="rounded-lg bg-slate-700/50 px-4 py-3">
@@ -284,6 +285,7 @@
 							{:else}
 								<div
 									class="rounded-lg px-4 py-3 {roleClass(message.role)}"
+									style="content-visibility: auto; contain-intrinsic-size: auto 60px;"
 									use:longpress={{ onLongPress: handleMessageLongPress(message) }}
 								>
 									<div class="mb-1 flex items-center justify-between">

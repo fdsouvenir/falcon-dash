@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { renderMarkdown } from '$lib/utils/markdown';
+	import { renderMarkdown, renderMarkdownAsync } from '$lib/utils/markdown';
 	import { highlighterManager } from '$lib/utils/markdown/highlighter';
 	import { codeBlockActions } from '$lib/actions/codeBlockActions';
 	import { mermaidAction } from '$lib/actions/mermaidAction';
@@ -12,8 +12,17 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let highlighterReady = highlighterManager.isReady();
 
+	/** Regex to detect math content */
+	const MATH_RE = /\$\$[\s\S]+?\$\$|\$[^\n$]+?\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
+
 	function doRender(text: string) {
 		renderedHtml = renderMarkdown(text);
+		// If content has math and KaTeX isn't loaded yet, trigger async render
+		if (MATH_RE.test(text)) {
+			renderMarkdownAsync(text).then((html) => {
+				renderedHtml = html;
+			});
+		}
 	}
 
 	$: if (content || highlighterReady) {
@@ -238,6 +247,7 @@
 	.rendered-content :global(img) {
 		max-width: 100%;
 		border-radius: 0.375rem;
+		content-visibility: auto;
 	}
 
 	.rendered-content :global(input[type='checkbox']) {

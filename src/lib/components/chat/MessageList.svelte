@@ -67,7 +67,10 @@
 		{:else}
 			<div class="space-y-3" role="log" aria-live="polite" aria-label="Chat messages">
 				{#each messages as message (message.id)}
-					<div class="rounded-lg px-4 py-3 {roleClass(message.role)}">
+					<div
+						class="rounded-lg px-4 py-3 {roleClass(message.role)}"
+						style="content-visibility: auto; contain-intrinsic-size: auto 60px;"
+					>
 						<div class="mb-1 flex items-center justify-between">
 							<span class="text-xs font-medium text-slate-300">
 								{roleLabel(message.role)}

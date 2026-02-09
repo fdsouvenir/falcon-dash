@@ -61,6 +61,8 @@ export const sanitizeSchema = {
 		pre: [...(defaultSchema.attributes?.pre ?? []), 'className', 'style', 'tabIndex'],
 		div: [...(defaultSchema.attributes?.div ?? []), 'className', 'style', /^data-/],
 		span: [...(defaultSchema.attributes?.span ?? []), 'className', 'style'],
+		// US-076: lazy loading for images
+		img: [...(defaultSchema.attributes?.img ?? []), 'loading'],
 		// US-029: copy button in code blocks
 		button: ['className', 'type', 'ariaLabel'],
 		// US-030: MathML attributes for KaTeX

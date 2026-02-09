@@ -53,9 +53,40 @@
 	let deleteTarget: WorkspaceFile | null = null;
 	let showDeleteConfirm = false;
 
+	// Virtual scrolling for file list
+	const FILE_ROW_HEIGHT = 44;
+	const VIRTUAL_BUFFER = 10;
+	let fileListEl: HTMLDivElement;
+	let visibleStart = 0;
+	let visibleEnd = 0;
+	let topPad = 0;
+	let bottomPad = 0;
+
+	function updateVirtualScroll() {
+		if (!fileListEl) return;
+		const scrollTop = fileListEl.scrollTop;
+		const viewHeight = fileListEl.clientHeight;
+		const totalItems = sortedFiles.length;
+		const rawStart = Math.floor(scrollTop / FILE_ROW_HEIGHT);
+		const rawEnd = Math.ceil((scrollTop + viewHeight) / FILE_ROW_HEIGHT);
+		visibleStart = Math.max(0, rawStart - VIRTUAL_BUFFER);
+		visibleEnd = Math.min(totalItems, rawEnd + VIRTUAL_BUFFER);
+		topPad = visibleStart * FILE_ROW_HEIGHT;
+		bottomPad = Math.max(0, (totalItems - visibleEnd) * FILE_ROW_HEIGHT);
+	}
+
+	function handleFileListScroll() {
+		updateVirtualScroll();
+	}
+
 	$: pathSegments = $currentPath ? $currentPath.split('/').filter(Boolean) : [];
 
 	$: sortedFiles = sortFiles($files, sortKey, sortDir);
+	$: visibleFiles = sortedFiles.slice(visibleStart, visibleEnd);
+	$: if (sortedFiles) {
+		// Recalculate virtual scroll when file list changes
+		requestAnimationFrame(updateVirtualScroll);
+	}
 
 	function sortFiles(list: WorkspaceFile[], key: SortKey, dir: SortDir): WorkspaceFile[] {
 		const sorted = [...list].sort((a, b) => {
@@ -384,105 +415,123 @@
 					<span class="w-10"></span>
 				</div>
 
-				<!-- File rows -->
-				<div class="flex-1 overflow-y-auto" use:pullToRefresh={{ onRefresh: refreshFileList }}>
-					{#each sortedFiles as file (file.name)}
-						<div
-							class="group grid w-full grid-cols-[1fr_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 md:grid-cols-[1fr_auto_auto_auto] {isFileActive(
-								file
-							)
-								? 'bg-slate-700/30'
-								: ''}"
-						>
-							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<!-- svelte-ignore a11y-no-static-element-interactions -->
-							<span
-								class="flex cursor-pointer items-center space-x-2 truncate"
-								on:click={() => handleFileClick(file)}
+				<!-- File rows (virtual scrolling for large directories) -->
+				<div
+					class="flex-1 overflow-y-auto"
+					bind:this={fileListEl}
+					on:scroll={handleFileListScroll}
+					use:pullToRefresh={{ onRefresh: refreshFileList }}
+				>
+					<div style="padding-top: {topPad}px; padding-bottom: {bottomPad}px;">
+						{#each visibleFiles as file (file.name)}
+							<div
+								class="group grid w-full grid-cols-[1fr_auto] gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-slate-700/50 md:grid-cols-[1fr_auto_auto_auto] {isFileActive(
+									file
+								)
+									? 'bg-slate-700/30'
+									: ''}"
+								style="height: {FILE_ROW_HEIGHT}px;"
 							>
-								<span class="flex-shrink-0 text-slate-400">
-									{#if file.isDirectory}
-										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-											<path
-												d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+								<!-- svelte-ignore a11y-click-events-have-key-events -->
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<span
+									class="flex cursor-pointer items-center space-x-2 truncate"
+									on:click={() => handleFileClick(file)}
+								>
+									<span class="flex-shrink-0 text-slate-400">
+										{#if file.isDirectory}
+											<svg
+												class="h-4 w-4"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+												aria-hidden="true"
+											>
+												<path
+													d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+												/>
+											</svg>
+										{:else}
+											<svg
+												class="h-4 w-4"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+												aria-hidden="true"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										{/if}
+									</span>
+									{#if renamingFile === file.name}
+										<!-- svelte-ignore a11y-click-events-have-key-events -->
+										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<span on:click|stopPropagation={() => {}}>
+											<input
+												bind:this={renameInputEl}
+												bind:value={renameValue}
+												on:keydown={handleRenameKeydown}
+												on:blur={submitRename}
+												class="w-full rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+												aria-label="Rename file"
 											/>
-										</svg>
+										</span>
 									{:else}
-										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-											<path
-												fill-rule="evenodd"
-												d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-												clip-rule="evenodd"
-											/>
-										</svg>
+										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<span
+											class="truncate"
+											class:text-slate-100={file.isDirectory}
+											class:text-slate-300={!file.isDirectory}
+											on:dblclick={(e) => handleNameDblClick(e, file)}
+										>
+											{file.name}
+										</span>
 									{/if}
 								</span>
-								{#if renamingFile === file.name}
-									<!-- svelte-ignore a11y-click-events-have-key-events -->
-									<!-- svelte-ignore a11y-no-static-element-interactions -->
-									<span on:click|stopPropagation={() => {}}>
-										<input
-											bind:this={renameInputEl}
-											bind:value={renameValue}
-											on:keydown={handleRenameKeydown}
-											on:blur={submitRename}
-											class="w-full rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-											aria-label="Rename file"
-										/>
-									</span>
-								{:else}
-									<!-- svelte-ignore a11y-no-static-element-interactions -->
-									<span
-										class="truncate"
-										class:text-slate-100={file.isDirectory}
-										class:text-slate-300={!file.isDirectory}
-										on:dblclick={(e) => handleNameDblClick(e, file)}
-									>
-										{file.name}
-									</span>
-								{/if}
-							</span>
-							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<!-- svelte-ignore a11y-no-static-element-interactions -->
-							<span
-								class="hidden w-24 cursor-pointer text-right text-xs text-slate-500 md:block"
-								title={new Date(file.mtime).toLocaleString()}
-								on:click={() => handleFileClick(file)}
-							>
-								{formatRelativeTime(new Date(file.mtime).getTime(), now)}
-							</span>
-							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<!-- svelte-ignore a11y-no-static-element-interactions -->
-							<span
-								class="hidden w-20 cursor-pointer text-right text-xs text-slate-500 md:block"
-								on:click={() => handleFileClick(file)}
-							>
-								{file.isDirectory ? '--' : formatFileSize(file.size)}
-							</span>
-							<span class="flex w-10 items-center justify-center">
-								<button
-									on:click={(e) => requestDelete(e, file)}
-									class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-500 opacity-100 transition-all hover:bg-red-900/30 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100"
-									aria-label="Delete {file.name}"
+								<!-- svelte-ignore a11y-click-events-have-key-events -->
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<span
+									class="hidden w-24 cursor-pointer text-right text-xs text-slate-500 md:block"
+									title={new Date(file.mtime).toLocaleString()}
+									on:click={() => handleFileClick(file)}
 								>
-									<svg
-										class="h-4 w-4"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
+									{formatRelativeTime(new Date(file.mtime).getTime(), now)}
+								</span>
+								<!-- svelte-ignore a11y-click-events-have-key-events -->
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<span
+									class="hidden w-20 cursor-pointer text-right text-xs text-slate-500 md:block"
+									on:click={() => handleFileClick(file)}
+								>
+									{file.isDirectory ? '--' : formatFileSize(file.size)}
+								</span>
+								<span class="flex w-10 items-center justify-center">
+									<button
+										on:click={(e) => requestDelete(e, file)}
+										class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-500 opacity-100 transition-all hover:bg-red-900/30 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100"
+										aria-label="Delete {file.name}"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-										/>
-									</svg>
-								</button>
-							</span>
-						</div>
-					{/each}
+										<svg
+											class="h-4 w-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											aria-hidden="true"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+											/>
+										</svg>
+									</button>
+								</span>
+							</div>
+						{/each}
+					</div>
 				</div>
 			{/if}
 		</div>

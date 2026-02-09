@@ -3,6 +3,18 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					// Split heavy libraries into separate chunks for better caching
+					if (id.includes('node_modules/shiki')) return 'shiki';
+					if (id.includes('node_modules/mermaid')) return 'mermaid';
+					if (id.includes('node_modules/katex')) return 'katex';
+				}
+			}
+		}
+	},
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({
@@ -36,6 +48,7 @@ export default defineConfig({
 				]
 			},
 			workbox: {
+				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
 				navigateFallback: '/',
 				runtimeCaching: [
