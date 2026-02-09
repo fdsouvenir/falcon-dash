@@ -3,21 +3,21 @@
 		requestNotificationPermission,
 		getNotificationPermission
 	} from '$lib/services/notifications';
+	import { theme as themeStore, setTheme as setThemeStore } from '$lib/stores/theme';
+	import type { Theme } from '$lib/stores/theme';
 
-	type Theme = 'dark' | 'light' | 'system';
-
-	let theme: Theme = 'dark';
 	let notificationsEnabled = true;
 	let notificationSound = true;
 	let compactMode = false;
 	let pushPermission: 'default' | 'denied' | 'granted' = 'default';
+
+	$: currentTheme = $themeStore;
 
 	function loadPreferences(): void {
 		try {
 			const stored = localStorage.getItem('falcon-dash:preferences');
 			if (stored) {
 				const prefs = JSON.parse(stored);
-				if (prefs.theme) theme = prefs.theme;
 				if (typeof prefs.notificationsEnabled === 'boolean')
 					notificationsEnabled = prefs.notificationsEnabled;
 				if (typeof prefs.notificationSound === 'boolean')
@@ -33,31 +33,17 @@
 	function savePreferences(): void {
 		localStorage.setItem(
 			'falcon-dash:preferences',
-			JSON.stringify({ theme, notificationsEnabled, notificationSound, compactMode })
+			JSON.stringify({
+				theme: $themeStore,
+				notificationsEnabled,
+				notificationSound,
+				compactMode
+			})
 		);
 	}
 
-	function setTheme(value: Theme): void {
-		theme = value;
-		applyTheme(value);
-		savePreferences();
-	}
-
-	function applyTheme(value: Theme): void {
-		const root = document.documentElement;
-		if (value === 'light') {
-			root.classList.remove('dark');
-		} else if (value === 'dark') {
-			root.classList.add('dark');
-		} else {
-			// system
-			const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-			if (prefersDark) {
-				root.classList.add('dark');
-			} else {
-				root.classList.remove('dark');
-			}
-		}
+	function handleSetTheme(value: Theme): void {
+		setThemeStore(value);
 	}
 
 	function toggleNotifications(): void {
@@ -94,8 +80,8 @@
 			</p>
 			<div class="flex gap-3">
 				<button
-					on:click={() => setTheme('dark')}
-					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					on:click={() => handleSetTheme('dark')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'dark'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
 						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"
@@ -104,8 +90,8 @@
 					Dark
 				</button>
 				<button
-					on:click={() => setTheme('light')}
-					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					on:click={() => handleSetTheme('light')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'light'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
 						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"
@@ -114,8 +100,8 @@
 					Light
 				</button>
 				<button
-					on:click={() => setTheme('system')}
-					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {theme ===
+					on:click={() => handleSetTheme('system')}
+					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'system'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
 						: 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200'}"

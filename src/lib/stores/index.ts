@@ -193,3 +193,5 @@ export {
 	initOfflineListeners
 } from './offline';
 export type { QueuedAction } from './offline';
+export { theme, effectiveMode, initTheme, setTheme, destroyTheme } from './theme';
+export type { Theme } from './theme';

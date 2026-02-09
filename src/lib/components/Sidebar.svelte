@@ -4,7 +4,15 @@
 	import ConnectionStatus from './ConnectionStatus.svelte';
 	import { sessions, activeSessionKey, switchSession, loadSessions } from '$lib/stores/sessions';
 	import { sortedCustomApps, reorderApps, unpinApp } from '$lib/stores/apps';
+	import { theme, effectiveMode, setTheme } from '$lib/stores/theme';
 	import { pullToRefresh } from '$lib/utils/gestures';
+
+	function cycleTheme(): void {
+		const order: Array<'dark' | 'light' | 'system'> = ['dark', 'light', 'system'];
+		const idx = order.indexOf($theme);
+		const next = order[(idx + 1) % order.length];
+		setTheme(next);
+	}
 
 	async function refreshSessions() {
 		await loadSessions();
@@ -197,6 +205,45 @@
 	<!-- Sidebar footer -->
 	<div class="border-t border-slate-700 px-3 py-3">
 		<ConnectionStatus />
+		<button
+			on:click={cycleTheme}
+			class="mt-2 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-100"
+			aria-label="Toggle theme (current: {$theme})"
+			title="Theme: {$theme}"
+		>
+			{#if $effectiveMode === 'dark'}
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+					/>
+				</svg>
+			{:else}
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<circle cx="12" cy="12" r="5" />
+					<path
+						stroke-linecap="round"
+						d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+					/>
+				</svg>
+			{/if}
+			<span class="capitalize">{$theme}</span>
+		</button>
 		<ul class="mt-2 space-y-1">
 			{#each bottomLinks as link (link.href)}
 				<li>

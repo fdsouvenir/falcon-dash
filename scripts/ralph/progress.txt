@@ -29,6 +29,12 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - Content-visibility: Use `style="content-visibility: auto; contain-intrinsic-size: auto 60px;"` for variable-height list items
 - Bundle splitting: `manualChunks` in vite config separates shiki/mermaid/katex into own chunks
 - Workbox limit: Set `maximumFileSizeToCacheInBytes: 5MB` to accommodate large Shiki chunk (2.3MB)
+- Theme system: `src/lib/stores/theme.ts` — reactive store with `initTheme()`, `setTheme()`, `destroyTheme()`
+- Theme modes: dark (default), light, system — stored in `falcon-dash:preferences` localStorage key
+- Flash prevention: Inline `<script>` in `app.html` reads preference before first paint
+- Light mode: CSS-based overrides in `app.css` using `html:not(.dark)` selectors — avoids touching 44+ component files
+- Theme toggle: Sidebar footer has cycle button (dark → light → system), uses `cycleTheme()` helper
+- Tailwind darkMode: `'class'` in `tailwind.config.js` — `dark` class on `<html>` element
 - ESLint each-key: Always use `(key)` in `{#each}` blocks — e.g., `{#each items as item (item.id)}`
 - ESLint unused `_`: Use `{#each [0,1,2,3] as i (i)}` instead of `{#each Array(4) as _}` to avoid unused var
 - svelte-ignore: `<button>` elements don't need `a11y-click-events-have-key-events` ignore — they handle keyboard natively
@@ -267,3 +273,37 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - `<button>` elements don't need `a11y-click-events-have-key-events` svelte-ignore (buttons handle keyboard natively)
   - `role="switch"` on buttons suppresses `a11y-click-events-have-key-events` — don't add unnecessary svelte-ignore
   - `NotificationPermission` is a browser global type but not in ESLint's `no-undef` scope — use string literal union instead
+
+## 2026-02-08 - US-077
+- Implemented theme system with dark, light, and system modes
+- **Tailwind config:** Added `darkMode: 'class'` to `tailwind.config.js`
+- **Theme store:** Created `src/lib/stores/theme.ts` with reactive `theme` and `effectiveMode` stores
+  - `initTheme()`: loads stored preference, applies to DOM, sets up OS preference listener
+  - `setTheme(value)`: updates store, DOM, and localStorage
+  - `destroyTheme()`: cleans up media query listener
+- **Flash prevention:** Added inline `<script>` in `app.html` that reads localStorage preference before first paint
+  - `<html>` element starts with `class="dark"` and removes it if preference is 'light' or 'system' (non-dark)
+- **Light mode CSS:** Added comprehensive CSS overrides in `app.css` using `html:not(.dark)` selectors
+  - Backgrounds: slate-900→white, slate-800→gray-50, slate-700→gray-200, slate-600→gray-300
+  - Text: slate-100→slate-900, slate-200→slate-800, slate-300→slate-700, slate-400→slate-500
+  - Borders: slate-700→gray-300, slate-600→gray-300
+  - Also handles hover, divide, placeholder, ring, and opacity variants
+- **Settings tab:** Updated DashboardTab to use shared theme store instead of local state
+- **Quick toggle:** Added theme cycle button in Sidebar footer (dark→light→system)
+  - Moon icon for dark mode, sun icon for light mode
+  - Shows current theme name, cycles on click
+- **Layout integration:** `+layout.svelte` calls `initTheme()` on mount, `destroyTheme()` on destroy
+- Files changed:
+  - `tailwind.config.js` (added darkMode: 'class')
+  - `src/app.html` (flash-prevention script, dark class on html)
+  - `src/app.css` (light mode CSS overrides)
+  - `src/lib/stores/theme.ts` (new — theme store)
+  - `src/lib/stores/index.ts` (barrel export for theme)
+  - `src/lib/components/settings/DashboardTab.svelte` (use shared theme store)
+  - `src/lib/components/Sidebar.svelte` (theme cycle toggle button)
+  - `src/routes/+layout.svelte` (initTheme/destroyTheme lifecycle)
+- **Learnings for future iterations:**
+  - CSS-based theme overrides with `html:not(.dark)` selectors avoid touching 44+ component files
+  - Inline script in app.html must run before body to prevent flash — use IIFE, not module
+  - Theme store should manage both `theme` (user preference) and `effectiveMode` (resolved dark/light)
+  - DashboardTab had its own local theme logic — extract to shared store for consistency

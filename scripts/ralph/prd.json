@@ -42,7 +42,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Use touch events (touchstart, touchmove, touchend) for swipe detection. Pull-to-refresh: detect overscroll at top + pull down gesture. Bottom sheet: fixed bottom panel that slides up with backdrop."
 		},
 		{
@@ -65,7 +65,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 3,
-			"passes": false,
+			"passes": true,
 			"notes": "vite-plugin-pwa is already configured from Phase 1. Extend the workbox config with runtime caching for API responses. Push notifications require a VAPID key pair — generate and store in config. Background sync uses the SyncManager API."
 		},
 		{
@@ -87,7 +87,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Focus on the most-used flows first: chat, project management, navigation. Use axe-core or similar for automated checks. Manual test with keyboard-only navigation."
 		},
 		{
@@ -129,7 +129,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "Tailwind dark mode is class-based (darkMode: 'class' in config). Add 'dark' class to <html> for dark mode, remove for light. Load preference from localStorage in a <script> in app.html (before body renders) to prevent flash of wrong theme."
 		},
 		{

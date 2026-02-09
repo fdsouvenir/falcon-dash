@@ -1,3 +1,138 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Light mode overrides.
+ * The app is built dark-first with Tailwind slate-* classes.
+ * When the 'dark' class is removed from <html>, these rules
+ * remap the dark palette to light equivalents.
+ */
+@layer base {
+	/* ── Backgrounds ── */
+	html:not(.dark) .bg-slate-900 {
+		--tw-bg-opacity: 1;
+		background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+	}
+	html:not(.dark) .bg-slate-800 {
+		--tw-bg-opacity: 1;
+		background-color: rgb(249 250 251 / var(--tw-bg-opacity));
+	}
+	html:not(.dark) .bg-slate-700 {
+		--tw-bg-opacity: 1;
+		background-color: rgb(229 231 235 / var(--tw-bg-opacity));
+	}
+
+	/* Opacity-variant backgrounds */
+	html:not(.dark) .bg-slate-800\/50 {
+		background-color: rgb(249 250 251 / 0.5);
+	}
+	html:not(.dark) .bg-slate-800\/60 {
+		background-color: rgb(249 250 251 / 0.6);
+	}
+	html:not(.dark) .bg-slate-700\/50 {
+		background-color: rgb(229 231 235 / 0.5);
+	}
+	html:not(.dark) .bg-slate-700\/60 {
+		background-color: rgb(229 231 235 / 0.6);
+	}
+	html:not(.dark) .bg-slate-600\/30 {
+		background-color: rgb(209 213 219 / 0.3);
+	}
+	html:not(.dark) .bg-slate-600\/20 {
+		background-color: rgb(209 213 219 / 0.2);
+	}
+	html:not(.dark) .bg-slate-600 {
+		--tw-bg-opacity: 1;
+		background-color: rgb(209 213 219 / var(--tw-bg-opacity));
+	}
+
+	/* Hover backgrounds */
+	html:not(.dark) .hover\:bg-slate-700:hover {
+		--tw-bg-opacity: 1;
+		background-color: rgb(229 231 235 / var(--tw-bg-opacity));
+	}
+	html:not(.dark) .hover\:bg-slate-600:hover {
+		--tw-bg-opacity: 1;
+		background-color: rgb(209 213 219 / var(--tw-bg-opacity));
+	}
+
+	/* ── Text colors ── */
+	html:not(.dark) .text-slate-100 {
+		--tw-text-opacity: 1;
+		color: rgb(15 23 42 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .text-slate-200 {
+		--tw-text-opacity: 1;
+		color: rgb(30 41 59 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .text-slate-300 {
+		--tw-text-opacity: 1;
+		color: rgb(51 65 85 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .text-slate-400 {
+		--tw-text-opacity: 1;
+		color: rgb(100 116 139 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .text-slate-500 {
+		--tw-text-opacity: 1;
+		color: rgb(148 163 184 / var(--tw-text-opacity));
+	}
+
+	/* Hover text */
+	html:not(.dark) .hover\:text-slate-100:hover {
+		--tw-text-opacity: 1;
+		color: rgb(15 23 42 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .hover\:text-slate-200:hover {
+		--tw-text-opacity: 1;
+		color: rgb(30 41 59 / var(--tw-text-opacity));
+	}
+	html:not(.dark) .hover\:text-slate-300:hover {
+		--tw-text-opacity: 1;
+		color: rgb(51 65 85 / var(--tw-text-opacity));
+	}
+
+	/* ── Border colors ── */
+	html:not(.dark) .border-slate-700 {
+		--tw-border-opacity: 1;
+		border-color: rgb(209 213 219 / var(--tw-border-opacity));
+	}
+	html:not(.dark) .border-slate-600 {
+		--tw-border-opacity: 1;
+		border-color: rgb(209 213 219 / var(--tw-border-opacity));
+	}
+
+	/* Hover borders */
+	html:not(.dark) .hover\:border-slate-600:hover {
+		--tw-border-opacity: 1;
+		border-color: rgb(156 163 175 / var(--tw-border-opacity));
+	}
+	html:not(.dark) .hover\:border-slate-400:hover {
+		--tw-border-opacity: 1;
+		border-color: rgb(107 114 128 / var(--tw-border-opacity));
+	}
+
+	/* ── Divide colors ── */
+	html:not(.dark) .divide-slate-700 > :not([hidden]) ~ :not([hidden]) {
+		--tw-divide-opacity: 1;
+		border-color: rgb(209 213 219 / var(--tw-divide-opacity));
+	}
+
+	/* ── Placeholder colors ── */
+	html:not(.dark) .placeholder-slate-500::placeholder {
+		--tw-text-opacity: 1;
+		color: rgb(148 163 184 / var(--tw-text-opacity));
+	}
+
+	/* ── Ring colors ── */
+	html:not(.dark) .ring-slate-700 {
+		--tw-ring-color: rgb(209 213 219);
+	}
+
+	/* ── Body scroll bar & base ── */
+	html:not(.dark) body {
+		background-color: rgb(255 255 255);
+		color: rgb(15 23 42);
+	}
+}

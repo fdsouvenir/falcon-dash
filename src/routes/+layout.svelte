@@ -6,8 +6,9 @@
 	import OfflineIndicator from '$lib/components/OfflineIndicator.svelte';
 	import { sessions } from '$lib/stores';
 	import { initOfflineListeners } from '$lib/stores/offline';
+	import { initTheme, destroyTheme } from '$lib/stores/theme';
 	import { updateTabTitle, showNotification } from '$lib/services/notifications';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	let sidebarOpen = false;
 	let moreMenuOpen = false;
@@ -19,6 +20,11 @@
 
 	onMount(() => {
 		initOfflineListeners();
+		initTheme();
+	});
+
+	onDestroy(() => {
+		destroyTheme();
 	});
 
 	// Notify on unread count increase (when tab is not focused)
