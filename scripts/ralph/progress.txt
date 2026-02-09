@@ -39,6 +39,9 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - ESLint unused `_`: Use `{#each [0,1,2,3] as i (i)}` instead of `{#each Array(4) as _}` to avoid unused var
 - svelte-ignore: `<button>` elements don't need `a11y-click-events-have-key-events` ignore — they handle keyboard natively
 - Browser globals: `NotificationPermission` triggers `no-undef` — use `'default' | 'denied' | 'granted'` instead
+- Onboarding wizard: `src/lib/components/onboarding/OnboardingWizard.svelte` — full-screen overlay, 6-step flow
+- First-visit detection: check `falcon-dash:onboarding-completed` + `falcon-dash:gateway-url` in localStorage
+- Reset wizard: Settings > About tab removes `falcon-dash:onboarding-completed` key
 
 ## 2026-02-08 17:30 - US-072
 - Implemented mobile bottom tab bar with 5 tabs (Chat, Projects, Files, Jobs, More)
@@ -307,3 +310,33 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - Inline script in app.html must run before body to prevent flash — use IIFE, not module
   - Theme store should manage both `theme` (user preference) and `effectiveMode` (resolved dark/light)
   - DashboardTab had its own local theme logic — extract to shared store for consistency
+
+## 2026-02-08 - US-078
+- Implemented onboarding wizard for first-time users
+- **OnboardingWizard component** (`src/lib/components/onboarding/OnboardingWizard.svelte`):
+  - 6-step wizard: Welcome → Gateway URL → Token → Connection Test → Quick Tour → Complete
+  - Connection test integrates with real gateway client, handles success/failure/pairing-required
+  - Quick tour with 4 highlights (Sidebar, Chat, Projects, Settings) with dot navigation
+  - Progress bar and step counter at top
+  - Skip button available on all steps
+  - Fly transitions between steps for smooth navigation
+  - ARIA: dialog role, aria-modal, progress bar, alert regions, labeled inputs
+- **First-visit detection** in `+layout.svelte`:
+  - Shows wizard when `falcon-dash:onboarding-completed` is not 'true' AND no `falcon-dash:gateway-url` stored
+  - On complete: marks completed in localStorage, navigates to `/chat`
+  - On skip: marks completed, stays on current page
+- **Reset wizard** in Settings > About tab:
+  - "Reset Onboarding Wizard" button with confirmation flow
+  - Removes `falcon-dash:onboarding-completed` from localStorage
+  - Shows success message: "Wizard reset. It will show on next page load."
+- **Barrel export:** `src/lib/components/onboarding/index.ts`
+- Files changed:
+  - `src/lib/components/onboarding/OnboardingWizard.svelte` (new)
+  - `src/lib/components/onboarding/index.ts` (new)
+  - `src/routes/+layout.svelte` (wizard integration + first-visit detection)
+  - `src/lib/components/settings/AboutTab.svelte` (reset wizard section)
+- **Learnings for future iterations:**
+  - Full-screen overlay wizard (z-[90]) works well above the app shell (z-50 sidebar)
+  - `createEventDispatcher` with typed events keeps parent-child communication clean
+  - Checking both localStorage completion flag AND gateway URL prevents showing wizard to returning users who cleared only one flag
+  - Tour step navigation within a wizard step requires separate state (tourStep) from main wizard steps

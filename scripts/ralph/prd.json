@@ -153,7 +153,7 @@
 				"npm run test passes"
 			],
 			"priority": 7,
-			"passes": false,
+			"passes": true,
 			"notes": "The current connection page (/+page.svelte) already handles URL+token input. The wizard wraps this in a step-by-step flow with better UX for first-time users. After wizard completes, redirect to /chat."
 		}
 	]
