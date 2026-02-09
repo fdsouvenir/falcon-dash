@@ -2,12 +2,16 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { Session } from '$lib/gateway/types';
 
-	export let session: Session | undefined = undefined;
+	interface Props {
+		session?: Session | undefined;
+	}
+
+	let { session = undefined }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ settings: void }>();
 
-	$: modelLabel = session?.model || 'Default';
-	$: thinkingLevel = session?.thinkingLevel || 'off';
+	let modelLabel = $derived(session?.model || 'Default');
+	let thinkingLevel = $derived(session?.thinkingLevel || 'off');
 </script>
 
 <div class="flex items-center gap-3 border-b border-slate-700 px-4 py-3">
@@ -52,7 +56,7 @@
 
 		<button
 			class="ml-auto cursor-pointer text-slate-400 transition-colors hover:text-slate-200"
-			on:click={() => dispatch('settings')}
+			onclick={() => dispatch('settings')}
 			title="Session settings"
 			aria-label="Session settings"
 		>

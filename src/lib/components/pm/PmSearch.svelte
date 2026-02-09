@@ -9,12 +9,12 @@
 
 	// --- State ---
 
-	let query = '';
-	let results: PmSearchResultItem[] = [];
-	let loading = false;
-	let searched = false;
-	let activeIndex = -1;
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let query = $state('');
+	let results: PmSearchResultItem[] = $state([]);
+	let loading = $state(false);
+	let searched = $state(false);
+	let activeIndex = $state(-1);
+	let debounceTimer: ReturnType<typeof setTimeout> | null = $state(null);
 	let inputEl: HTMLInputElement;
 
 	// --- Helpers ---
@@ -113,10 +113,10 @@
 		return sorted;
 	}
 
-	$: grouped = groupResults(results);
+	let grouped = $derived(groupResults(results));
 
 	// Flat list of all results for keyboard navigation
-	$: flatResults = grouped.flatMap((g) => g.items);
+	let flatResults = $derived(grouped.flatMap((g) => g.items));
 
 	// --- Search ---
 
@@ -232,8 +232,8 @@
 			<input
 				bind:this={inputEl}
 				bind:value={query}
-				on:input={handleInput}
-				on:keydown={handleKeydown}
+				oninput={handleInput}
+				onkeydown={handleKeydown}
 				type="text"
 				placeholder="Search projects, tasks, comments..."
 				aria-label="Search projects and tasks"
@@ -241,7 +241,7 @@
 			/>
 			{#if query}
 				<button
-					on:click={clearSearch}
+					onclick={clearSearch}
 					class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200"
 					title="Clear search"
 				>
@@ -336,7 +336,7 @@
 							{@const flatIdx = getFlatIndex(group, i)}
 							{@const ctx = resultContext(item)}
 							<button
-								on:click={() => selectResult(item)}
+								onclick={() => selectResult(item)}
 								data-search-active={flatIdx === activeIndex ? 'true' : 'false'}
 								class="flex w-full items-start px-4 py-2.5 text-left transition-colors
 									{flatIdx === activeIndex ? 'bg-blue-600/20 text-slate-100' : 'text-slate-300 hover:bg-slate-800'}"

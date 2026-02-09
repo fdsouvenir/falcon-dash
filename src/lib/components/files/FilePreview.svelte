@@ -3,8 +3,12 @@
 	import RenderedContent from '$lib/components/chat/RenderedContent.svelte';
 	import { highlighterManager } from '$lib/utils/markdown/highlighter';
 
-	export let content: string;
-	export let filename: string;
+	interface Props {
+		content: string;
+		filename: string;
+	}
+
+	let { content, filename }: Props = $props();
 
 	const extensionToLang: Record<string, string> = {
 		'.ts': 'typescript',
@@ -39,13 +43,14 @@
 		return extensionToLang[ext] ?? null;
 	}
 
-	let highlighterReady = highlighterManager.isReady();
+	let highlighterReady = $state(highlighterManager.isReady());
 
-	$: ext = getExtension(filename);
-	$: isMarkdown = ext === '.md';
-	$: language = getLanguageFromFilename(filename);
-	$: highlightedHtml =
-		language && highlighterReady ? highlighterManager.highlight(content, language) : '';
+	let ext = $derived(getExtension(filename));
+	let isMarkdown = $derived(ext === '.md');
+	let language = $derived(getLanguageFromFilename(filename));
+	let highlightedHtml = $derived(
+		language && highlighterReady ? highlighterManager.highlight(content, language) : ''
+	);
 
 	onMount(() => {
 		if (!highlighterManager.isReady()) {

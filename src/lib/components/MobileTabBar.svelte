@@ -2,7 +2,10 @@
 	import { createEventDispatcher } from 'svelte';
 	import { page } from '$app/stores';
 
-	export let totalUnread: number = 0;
+	interface Props {
+		totalUnread?: number;
+	}
+	let { totalUnread = 0 }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ more: void }>();
 
@@ -20,11 +23,13 @@
 		});
 	}
 
-	$: chatActive = checkActive($page.url.pathname, '/chat', ['/']);
-	$: projectsActive = checkActive($page.url.pathname, '/projects');
-	$: filesActive = checkActive($page.url.pathname, '/files');
-	$: jobsActive = checkActive($page.url.pathname, '/jobs');
-	$: moreActive = checkActive($page.url.pathname, '/settings', ['/passwords', '/apps/*']);
+	let chatActive = $derived(checkActive($page.url.pathname, '/chat', ['/']));
+	let projectsActive = $derived(checkActive($page.url.pathname, '/projects'));
+	let filesActive = $derived(checkActive($page.url.pathname, '/files'));
+	let jobsActive = $derived(checkActive($page.url.pathname, '/jobs'));
+	let moreActive = $derived(
+		checkActive($page.url.pathname, '/settings', ['/passwords', '/apps/*'])
+	);
 </script>
 
 <nav
@@ -145,7 +150,7 @@
 		<!-- More Tab -->
 		<button
 			type="button"
-			on:click={handleMoreClick}
+			onclick={handleMoreClick}
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {moreActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"

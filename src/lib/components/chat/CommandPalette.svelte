@@ -2,18 +2,26 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { SlashCommand } from '$lib/chat/commands';
 
-	export let commands: SlashCommand[] = [];
-	export let filter = '';
+	interface Props {
+		commands?: SlashCommand[];
+		filter?: string;
+	}
+
+	let { commands = [], filter = '' }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ select: SlashCommand }>();
 
-	let selectedIndex = 0;
+	let selectedIndex = $state(0);
 
-	$: filtered = commands.filter((cmd) => cmd.name.toLowerCase().includes(filter.toLowerCase()));
+	let filtered = $derived(
+		commands.filter((cmd) => cmd.name.toLowerCase().includes(filter.toLowerCase()))
+	);
 
-	$: if (filtered.length > 0 && selectedIndex >= filtered.length) {
-		selectedIndex = filtered.length - 1;
-	}
+	$effect(() => {
+		if (filtered.length > 0 && selectedIndex >= filtered.length) {
+			selectedIndex = filtered.length - 1;
+		}
+	});
 
 	export function handleKeydown(event: KeyboardEvent): boolean {
 		if (filtered.length === 0) return false;
@@ -62,7 +70,7 @@
 				selectedIndex
 					? 'bg-blue-600/30 text-slate-100'
 					: 'text-slate-300 hover:bg-slate-700/50'}"
-				on:click={() => selectCommand(cmd)}
+				onclick={() => selectCommand(cmd)}
 				role="option"
 				aria-selected={i === selectedIndex}
 			>

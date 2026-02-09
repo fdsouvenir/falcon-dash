@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { afterUpdate, onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { ConnectionState } from '$lib/gateway/types';
 	import type { ChatMessage } from '$lib/gateway/types';
 	import ThinkingBlock from '$lib/components/chat/ThinkingBlock.svelte';
@@ -34,16 +34,16 @@
 	import type { SessionPatchParams } from '$lib/gateway/types';
 	import type { CommandContext } from '$lib/chat/commands';
 
-	let currentMessages: ChatMessage[] = [];
+	let currentMessages = $state<ChatMessage[]>([]);
 	let unsubMessages: (() => void) | null = null;
 	let container: HTMLDivElement;
-	let isAtBottom = true;
-	let now = Date.now();
-	let settingsOpen = false;
+	let isAtBottom = $state(true);
+	let now = $state(Date.now());
+	let settingsOpen = $state(false);
 
 	// Long-press context menu state
-	let contextMenuOpen = false;
-	let contextMenuMessage: ChatMessage | null = null;
+	let contextMenuOpen = $state(false);
+	let contextMenuMessage = $state<ChatMessage | null>(null);
 
 	function handleSwipeRight() {
 		// On mobile, swipe right to go back to session list
@@ -80,24 +80,26 @@
 		closeContextMenu();
 	}
 
-	$: commandContext = $activeSessionKey
-		? ({
-				sessionKey: $activeSessionKey,
-				sendMessage,
-				abortRun,
-				updateSession: (key: string, patch: Record<string, unknown>) =>
-					updateSession(key, patch as Omit<SessionPatchParams, 'sessionKey'>),
-				injectMessage: (sessionKey: string, role: string, content: string) =>
-					injectMessage(sessionKey, role as 'user' | 'assistant' | 'system' | 'inject', content),
-				insertLocalMessage: (sessionKey: string, role: string, content: string) =>
-					insertLocalMessage(
-						sessionKey,
-						role as 'user' | 'assistant' | 'system' | 'inject',
-						content
-					),
-				gateway
-			} satisfies CommandContext)
-		: undefined;
+	let commandContext = $derived(
+		$activeSessionKey
+			? ({
+					sessionKey: $activeSessionKey,
+					sendMessage,
+					abortRun,
+					updateSession: (key: string, patch: Record<string, unknown>) =>
+						updateSession(key, patch as Omit<SessionPatchParams, 'sessionKey'>),
+					injectMessage: (sessionKey: string, role: string, content: string) =>
+						injectMessage(sessionKey, role as 'user' | 'assistant' | 'system' | 'inject', content),
+					insertLocalMessage: (sessionKey: string, role: string, content: string) =>
+						insertLocalMessage(
+							sessionKey,
+							role as 'user' | 'assistant' | 'system' | 'inject',
+							content
+						),
+					gateway
+				} satisfies CommandContext)
+			: undefined
+	);
 
 	/** Subscribe to messages for the active session */
 	function subscribeToMessages(sessionKey: string) {
@@ -124,13 +126,17 @@
 		settingsOpen = false;
 	}
 
-	$: subscribeToMessages($activeSessionKey);
+	$effect(() => {
+		subscribeToMessages($activeSessionKey);
+	});
 
-	$: if ($activeSessionKey && $connectionState === ConnectionState.READY) {
-		loadHistory($activeSessionKey);
-	}
+	$effect(() => {
+		if ($activeSessionKey && $connectionState === ConnectionState.READY) {
+			loadHistory($activeSessionKey);
+		}
+	});
 
-	$: isRunning = !!$activeRun && $activeRun.status === 'running';
+	let isRunning = $derived(!!$activeRun && $activeRun.status === 'running');
 
 	function handleScroll() {
 		if (!container) return;
@@ -190,9 +196,12 @@
 		}
 	});
 
-	afterUpdate(() => {
+	$effect(() => {
+		// Track currentMessages length to re-run when messages change
+		const _len = currentMessages.length;
+		void _len;
 		if (isAtBottom) {
-			scrollToBottom();
+			tick().then(() => scrollToBottom());
 		}
 	});
 </script>
@@ -220,7 +229,7 @@
 
 		<!-- Message list with inline thinking/tools -->
 		<div class="relative flex-1 overflow-hidden">
-			<div class="h-full overflow-y-auto px-4 py-4" bind:this={container} on:scroll={handleScroll}>
+			<div class="h-full overflow-y-auto px-4 py-4" bind:this={container} onscroll={handleScroll}>
 				{#if currentMessages.length === 0}
 					<div class="flex h-full items-center justify-center">
 						<p class="text-sm text-slate-400">No messages yet. Start a conversation!</p>
@@ -318,7 +327,7 @@
 			{#if !isAtBottom}
 				<button
 					class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-slate-600 px-4 py-1.5 text-xs text-slate-200 shadow-lg transition-colors hover:bg-slate-500"
-					on:click={jumpToBottom}
+					onclick={jumpToBottom}
 					aria-label="Scroll to latest messages"
 				>
 					Jump to bottom
@@ -337,7 +346,7 @@
 	<BottomSheet open={contextMenuOpen} title="Message Actions" on:close={closeContextMenu}>
 		<div class="space-y-1">
 			<button
-				on:click={copyMessageContent}
+				onclick={copyMessageContent}
 				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
 				style="min-height: 44px;"
 			>
@@ -354,7 +363,7 @@
 				<span>Copy message</span>
 			</button>
 			<button
-				on:click={replyToMessage}
+				onclick={replyToMessage}
 				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
 				style="min-height: 44px;"
 			>

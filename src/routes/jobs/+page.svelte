@@ -30,28 +30,28 @@
 
 	type Tab = 'heartbeat' | 'cron';
 
-	let activeTab: Tab = 'heartbeat';
-	let loading = true;
-	let errorMessage = '';
-	let editing = false;
-	let saveError = '';
-	let now = Date.now();
+	let activeTab = $state<Tab>('heartbeat');
+	let loading = $state(true);
+	let errorMessage = $state('');
+	let editing = $state(false);
+	let saveError = $state('');
+	let now = $state(Date.now());
 
-	let intervalValue = 30;
+	let intervalValue = $state(30);
 
-	$: intervalDirty = intervalValue !== $heartbeatConfig.intervalMinutes;
+	let intervalDirty = $derived(intervalValue !== $heartbeatConfig.intervalMinutes);
 
 	let refreshInterval: ReturnType<typeof setInterval>;
 
 	// --- Cron state ---
-	let cronLoading = false;
-	let cronError = '';
-	let cronLoaded = false;
-	let formOpen = false;
-	let editingJob: CronJob | null = null;
-	let deleteConfirmOpen = false;
-	let deleteTarget: CronJob | null = null;
-	let selectedJobId: string | null = null;
+	let cronLoading = $state(false);
+	let cronError = $state('');
+	let cronLoaded = $state(false);
+	let formOpen = $state(false);
+	let editingJob = $state<CronJob | null>(null);
+	let deleteConfirmOpen = $state(false);
+	let deleteTarget = $state<CronJob | null>(null);
+	let selectedJobId = $state<string | null>(null);
 
 	async function loadCronTab(): Promise<void> {
 		if (cronLoaded) return;
@@ -233,7 +233,7 @@
 	<!-- Tab bar -->
 	<div class="flex border-b border-slate-700" role="tablist" aria-label="Job type tabs">
 		<button
-			on:click={() => switchTab('heartbeat')}
+			onclick={() => switchTab('heartbeat')}
 			class="px-6 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 {activeTab ===
 			'heartbeat'
 				? 'border-b-2 border-blue-500 text-slate-100'
@@ -244,7 +244,7 @@
 			Heartbeat
 		</button>
 		<button
-			on:click={() => switchTab('cron')}
+			onclick={() => switchTab('cron')}
 			class="px-6 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 {activeTab ===
 			'cron'
 				? 'border-b-2 border-blue-500 text-slate-100'
@@ -267,7 +267,7 @@
 				<div class="flex flex-col items-center justify-center space-y-3 p-8" aria-live="assertive">
 					<p class="text-sm text-red-400">{errorMessage}</p>
 					<button
-						on:click={retry}
+						onclick={retry}
 						class="rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					>
 						Retry
@@ -290,7 +290,7 @@
 									</p>
 								</div>
 								<button
-									on:click={toggleEnabled}
+									onclick={toggleEnabled}
 									class="rounded px-4 py-1.5 text-sm font-medium transition-colors {$heartbeatConfig.enabled
 										? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
 										: 'bg-slate-700 text-slate-300 hover:bg-slate-600'}"
@@ -317,7 +317,7 @@
 									<span class="text-xs text-slate-400">min</span>
 									{#if intervalDirty}
 										<button
-											on:click={saveInterval}
+											onclick={saveInterval}
 											class="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-500"
 										>
 											Save
@@ -364,7 +364,7 @@
 							</h3>
 							{#if !editing}
 								<button
-									on:click={startEditing}
+									onclick={startEditing}
 									class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 								>
 									Edit
@@ -405,7 +405,7 @@
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Cron Jobs</h3>
 					<button
-						on:click={handleCreateJob}
+						onclick={handleCreateJob}
 						class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500"
 					>
 						New Job

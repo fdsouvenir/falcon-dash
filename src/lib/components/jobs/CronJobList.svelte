@@ -3,9 +3,13 @@
 	import type { CronJob } from '$lib/gateway/types';
 	import { formatRelativeTime } from '$lib/utils/time';
 
-	export let jobs: CronJob[];
-	export let now: number;
-	export let selectedJobId: string | null = null;
+	interface Props {
+		jobs: CronJob[];
+		now: number;
+		selectedJobId?: string | null;
+	}
+
+	let { jobs, now, selectedJobId = null }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		edit: { job: CronJob };
@@ -45,7 +49,7 @@
 					job.id
 						? 'bg-slate-800/80'
 						: 'hover:bg-slate-800/50'}"
-					on:click={() => dispatch('select', { job })}
+					onclick={() => dispatch('select', { job })}
 				>
 					<td class="px-4 py-3 font-medium text-slate-200">{job.name}</td>
 					<td class="px-4 py-3 text-slate-400">
@@ -76,7 +80,10 @@
 					</td>
 					<td class="px-4 py-3">
 						<button
-							on:click|stopPropagation={() => dispatch('toggle', { job })}
+							onclick={(e) => {
+								e.stopPropagation();
+								dispatch('toggle', { job });
+							}}
 							aria-label="{job.enabled ? 'Disable' : 'Enable'} {job.name}"
 							class="rounded-full focus-visible:ring-2 focus-visible:ring-blue-500 px-2.5 py-0.5 text-xs font-medium transition-colors {job.enabled
 								? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
@@ -90,7 +97,10 @@
 							class="flex items-center space-x-1 opacity-0 transition-opacity group-hover:opacity-100"
 						>
 							<button
-								on:click|stopPropagation={() => dispatch('edit', { job })}
+								onclick={(e) => {
+									e.stopPropagation();
+									dispatch('edit', { job });
+								}}
 								aria-label="Edit {job.name}"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-slate-200"
 								title="Edit"
@@ -102,7 +112,10 @@
 								</svg>
 							</button>
 							<button
-								on:click|stopPropagation={() => dispatch('run', { job })}
+								onclick={(e) => {
+									e.stopPropagation();
+									dispatch('run', { job });
+								}}
 								aria-label="Run {job.name} now"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-blue-400"
 								title="Run Now"
@@ -112,7 +125,10 @@
 								</svg>
 							</button>
 							<button
-								on:click|stopPropagation={() => dispatch('delete', { job })}
+								onclick={(e) => {
+									e.stopPropagation();
+									dispatch('delete', { job });
+								}}
 								aria-label="Delete {job.name}"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-red-400"
 								title="Delete"

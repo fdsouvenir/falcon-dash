@@ -4,13 +4,14 @@
 	import { getGatewayUrl, getToken, setGatewayUrl, setToken } from '$lib/gateway/auth';
 	import { connectionState, connId, gatewayUrl, serverVersion } from '$lib/stores';
 
-	let url = getGatewayUrl();
-	let token = getToken() ?? '';
-	let error = '';
-	let connecting = false;
+	let url = $state(getGatewayUrl());
+	let token = $state(getToken() ?? '');
+	let error = $state('');
+	let connecting = $state(false);
 
-	$: isConnected =
-		$connectionState === ConnectionState.READY || $connectionState === ConnectionState.CONNECTED;
+	let isConnected = $derived(
+		$connectionState === ConnectionState.READY || $connectionState === ConnectionState.CONNECTED
+	);
 
 	async function handleConnect() {
 		error = '';
@@ -48,7 +49,7 @@
 			<p>Server Version: {$serverVersion}</p>
 		</div>
 		<button
-			on:click={handleDisconnect}
+			onclick={handleDisconnect}
 			class="mt-6 rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
 		>
 			Disconnect
@@ -62,7 +63,13 @@
 				<p class="mt-1 text-sm text-slate-400">Enter your OpenClaw Gateway details</p>
 			</div>
 
-			<form on:submit|preventDefault={handleConnect} class="space-y-4">
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleConnect();
+				}}
+				class="space-y-4"
+			>
 				<div>
 					<label for="gateway-url" class="block text-sm font-medium text-slate-300">
 						Gateway URL

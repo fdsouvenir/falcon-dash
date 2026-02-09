@@ -18,8 +18,8 @@
 		await loadSessions();
 	}
 
-	$: currentPath = $page.url.pathname;
-	$: sessionList = [...$sessions.values()];
+	let currentPath = $derived($page.url.pathname);
+	let sessionList = $derived([...$sessions.values()]);
 
 	function isActive(href: string): boolean {
 		return currentPath === href || currentPath.startsWith(href + '/');
@@ -46,7 +46,7 @@
 	];
 
 	// Custom apps drag-and-drop reorder state
-	let dragIndex: number | null = null;
+	let dragIndex = $state<number | null>(null);
 
 	function handleDragStart(e: DragEvent, index: number): void {
 		dragIndex = index;
@@ -93,7 +93,7 @@
 		<div class="mb-2 flex items-center justify-between px-2">
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Channels</h3>
 			<button
-				on:click={handleNewChat}
+				onclick={handleNewChat}
 				class="text-sm text-slate-400 transition-colors hover:text-slate-100"
 				aria-label="New chat"
 			>
@@ -109,7 +109,7 @@
 				{#each sessionList as session (session.key)}
 					<li>
 						<button
-							on:click={() => handleSessionClick(session.key)}
+							onclick={() => handleSessionClick(session.key)}
 							class="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm transition-colors"
 							class:bg-slate-700={$activeSessionKey === session.key}
 							class:text-slate-100={$activeSessionKey === session.key}
@@ -162,10 +162,10 @@
 				{#each $sortedCustomApps as customApp, i (customApp.id)}
 					<li
 						draggable="true"
-						on:dragstart={(e) => handleDragStart(e, i)}
-						on:dragover={handleDragOver}
-						on:drop={(e) => handleDrop(e, i)}
-						on:dragend={handleDragEnd}
+						ondragstart={(e) => handleDragStart(e, i)}
+						ondragover={handleDragOver}
+						ondrop={(e) => handleDrop(e, i)}
+						ondragend={handleDragEnd}
 						class="group"
 						class:opacity-50={dragIndex === i}
 					>
@@ -180,7 +180,7 @@
 						>
 							<span class="truncate">{customApp.name}</span>
 							<button
-								on:click={(e) => handleUnpin(e, customApp.id)}
+								onclick={(e) => handleUnpin(e, customApp.id)}
 								class="hidden flex-shrink-0 rounded p-0.5 text-slate-500 transition-colors hover:text-red-400 group-hover:block"
 								aria-label="Unpin {customApp.name}"
 							>
@@ -206,7 +206,7 @@
 	<div class="border-t border-slate-700 px-3 py-3">
 		<ConnectionStatus />
 		<button
-			on:click={cycleTheme}
+			onclick={cycleTheme}
 			class="mt-2 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-100"
 			aria-label="Toggle theme (current: {$theme})"
 			title="Theme: {$theme}"

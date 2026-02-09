@@ -15,13 +15,13 @@
 	import { formatRelativeTime } from '$lib/utils/time';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
-	let loading = true;
-	let error = '';
-	let now = Date.now();
-	let toastMessage = '';
-	let toastType: 'success' | 'error' = 'success';
+	let loading = $state(true);
+	let error = $state('');
+	let now = $state(Date.now());
+	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error'>('success');
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
-	let revokeTarget: DeviceEntry | null = null;
+	let revokeTarget = $state<DeviceEntry | null>(null);
 
 	let refreshInterval: ReturnType<typeof setInterval> | undefined;
 	let nowInterval: ReturnType<typeof setInterval> | undefined;
@@ -111,9 +111,11 @@
 		}
 	}
 
-	$: pendingDevices = $devices.filter((d) => d.status === 'pending');
-	$: pairedDevices = $devices.filter((d) => d.status === 'approved');
-	$: otherDevices = $devices.filter((d) => d.status === 'rejected' || d.status === 'revoked');
+	let pendingDevices = $derived($devices.filter((d) => d.status === 'pending'));
+	let pairedDevices = $derived($devices.filter((d) => d.status === 'approved'));
+	let otherDevices = $derived(
+		$devices.filter((d) => d.status === 'rejected' || d.status === 'revoked')
+	);
 
 	onMount(async () => {
 		initSettingsListeners();
@@ -201,13 +203,13 @@
 								</div>
 								<div class="ml-4 flex flex-shrink-0 gap-2">
 									<button
-										on:click={() => handleApprove(device)}
+										onclick={() => handleApprove(device)}
 										class="rounded bg-green-700 px-3 py-1 text-xs text-white transition-colors hover:bg-green-600"
 									>
 										Approve
 									</button>
 									<button
-										on:click={() => handleReject(device)}
+										onclick={() => handleReject(device)}
 										class="rounded bg-red-700 px-3 py-1 text-xs text-white transition-colors hover:bg-red-600"
 									>
 										Reject
@@ -258,7 +260,7 @@
 								</div>
 								<div class="ml-4 flex-shrink-0">
 									<button
-										on:click={() => (revokeTarget = device)}
+										onclick={() => (revokeTarget = device)}
 										class="rounded bg-slate-700 px-3 py-1 text-xs text-slate-200 transition-colors hover:bg-red-700 hover:text-white"
 									>
 										Revoke

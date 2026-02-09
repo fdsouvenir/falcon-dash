@@ -36,31 +36,31 @@
 		return $activeFileName === path;
 	}
 
-	let loading = true;
-	let errorMessage = '';
-	let sortKey: SortKey = 'name';
-	let sortDir: SortDir = 'asc';
-	let now = Date.now();
-	let editing = false;
-	let saveError = '';
+	let loading = $state(true);
+	let errorMessage = $state('');
+	let sortKey = $state<SortKey>('name');
+	let sortDir = $state<SortDir>('asc');
+	let now = $state(Date.now());
+	let editing = $state(false);
+	let saveError = $state('');
 
 	// Inline rename state
-	let renamingFile: string | null = null;
-	let renameValue = '';
+	let renamingFile = $state<string | null>(null);
+	let renameValue = $state('');
 	let renameInputEl: HTMLInputElement;
 
 	// Delete confirmation state
-	let deleteTarget: WorkspaceFile | null = null;
-	let showDeleteConfirm = false;
+	let deleteTarget = $state<WorkspaceFile | null>(null);
+	let showDeleteConfirm = $state(false);
 
 	// Virtual scrolling for file list
 	const FILE_ROW_HEIGHT = 44;
 	const VIRTUAL_BUFFER = 10;
 	let fileListEl: HTMLDivElement;
-	let visibleStart = 0;
-	let visibleEnd = 0;
-	let topPad = 0;
-	let bottomPad = 0;
+	let visibleStart = $state(0);
+	let visibleEnd = $state(0);
+	let topPad = $state(0);
+	let bottomPad = $state(0);
 
 	function updateVirtualScroll() {
 		if (!fileListEl) return;
@@ -79,14 +79,17 @@
 		updateVirtualScroll();
 	}
 
-	$: pathSegments = $currentPath ? $currentPath.split('/').filter(Boolean) : [];
+	let pathSegments = $derived($currentPath ? $currentPath.split('/').filter(Boolean) : []);
 
-	$: sortedFiles = sortFiles($files, sortKey, sortDir);
-	$: visibleFiles = sortedFiles.slice(visibleStart, visibleEnd);
-	$: if (sortedFiles) {
-		// Recalculate virtual scroll when file list changes
-		requestAnimationFrame(updateVirtualScroll);
-	}
+	let sortedFiles = $derived(sortFiles($files, sortKey, sortDir));
+	let visibleFiles = $derived(sortedFiles.slice(visibleStart, visibleEnd));
+
+	$effect(() => {
+		if (sortedFiles) {
+			// Recalculate virtual scroll when file list changes
+			requestAnimationFrame(updateVirtualScroll);
+		}
+	});
 
 	function sortFiles(list: WorkspaceFile[], key: SortKey, dir: SortDir): WorkspaceFile[] {
 		const sorted = [...list].sort((a, b) => {
@@ -336,7 +339,7 @@
 	<div class="border-b border-slate-700 px-4 py-3">
 		<nav class="flex items-center space-x-1 text-sm" aria-label="File breadcrumb">
 			<button
-				on:click={() => handleNavigate('')}
+				onclick={() => handleNavigate('')}
 				class="text-slate-400 transition-colors hover:text-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500"
 				class:text-slate-100={pathSegments.length === 0}
 			>
@@ -345,7 +348,7 @@
 			{#each pathSegments as segment, i (i)}
 				<span class="text-slate-600">/</span>
 				<button
-					on:click={() => handleNavigate(breadcrumbPath(i))}
+					onclick={() => handleNavigate(breadcrumbPath(i))}
 					class="text-slate-400 transition-colors hover:text-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500"
 					class:text-slate-100={i === pathSegments.length - 1}
 				>
@@ -376,7 +379,7 @@
 				>
 					<p class="text-sm text-red-400">{errorMessage}</p>
 					<button
-						on:click={retry}
+						onclick={retry}
 						class="rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					>
 						Retry
@@ -392,21 +395,21 @@
 					class="grid grid-cols-[1fr_auto] gap-2 border-b border-slate-700 px-4 py-2 text-xs font-medium uppercase tracking-wider text-slate-400 md:grid-cols-[1fr_auto_auto_auto]"
 				>
 					<button
-						on:click={() => toggleSort('name')}
+						onclick={() => toggleSort('name')}
 						class="text-left transition-colors hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500"
 						aria-label="Sort by name"
 					>
 						Name{sortIndicator('name')}
 					</button>
 					<button
-						on:click={() => toggleSort('mtime')}
+						onclick={() => toggleSort('mtime')}
 						class="hidden w-24 text-right transition-colors hover:text-slate-200 md:block focus-visible:ring-2 focus-visible:ring-blue-500"
 						aria-label="Sort by modified date"
 					>
 						Modified{sortIndicator('mtime')}
 					</button>
 					<button
-						on:click={() => toggleSort('size')}
+						onclick={() => toggleSort('size')}
 						class="hidden w-20 text-right transition-colors hover:text-slate-200 md:block focus-visible:ring-2 focus-visible:ring-blue-500"
 						aria-label="Sort by size"
 					>
@@ -419,7 +422,7 @@
 				<div
 					class="flex-1 overflow-y-auto"
 					bind:this={fileListEl}
-					on:scroll={handleFileListScroll}
+					onscroll={handleFileListScroll}
 					use:pullToRefresh={{ onRefresh: refreshFileList }}
 				>
 					<div style="padding-top: {topPad}px; padding-bottom: {bottomPad}px;">
@@ -432,11 +435,11 @@
 									: ''}"
 								style="height: {FILE_ROW_HEIGHT}px;"
 							>
-								<!-- svelte-ignore a11y-click-events-have-key-events -->
-								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<span
 									class="flex cursor-pointer items-center space-x-2 truncate"
-									on:click={() => handleFileClick(file)}
+									onclick={() => handleFileClick(file)}
 								>
 									<span class="flex-shrink-0 text-slate-400">
 										{#if file.isDirectory}
@@ -466,50 +469,54 @@
 										{/if}
 									</span>
 									{#if renamingFile === file.name}
-										<!-- svelte-ignore a11y-click-events-have-key-events -->
-										<!-- svelte-ignore a11y-no-static-element-interactions -->
-										<span on:click|stopPropagation={() => {}}>
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<span
+											onclick={(e) => {
+												e.stopPropagation();
+											}}
+										>
 											<input
 												bind:this={renameInputEl}
 												bind:value={renameValue}
-												on:keydown={handleRenameKeydown}
-												on:blur={submitRename}
+												onkeydown={handleRenameKeydown}
+												onblur={submitRename}
 												class="w-full rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
 												aria-label="Rename file"
 											/>
 										</span>
 									{:else}
-										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
 										<span
 											class="truncate"
 											class:text-slate-100={file.isDirectory}
 											class:text-slate-300={!file.isDirectory}
-											on:dblclick={(e) => handleNameDblClick(e, file)}
+											ondblclick={(e) => handleNameDblClick(e, file)}
 										>
 											{file.name}
 										</span>
 									{/if}
 								</span>
-								<!-- svelte-ignore a11y-click-events-have-key-events -->
-								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<span
 									class="hidden w-24 cursor-pointer text-right text-xs text-slate-500 md:block"
 									title={new Date(file.mtime).toLocaleString()}
-									on:click={() => handleFileClick(file)}
+									onclick={() => handleFileClick(file)}
 								>
 									{formatRelativeTime(new Date(file.mtime).getTime(), now)}
 								</span>
-								<!-- svelte-ignore a11y-click-events-have-key-events -->
-								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<span
 									class="hidden w-20 cursor-pointer text-right text-xs text-slate-500 md:block"
-									on:click={() => handleFileClick(file)}
+									onclick={() => handleFileClick(file)}
 								>
 									{file.isDirectory ? '--' : formatFileSize(file.size)}
 								</span>
 								<span class="flex w-10 items-center justify-center">
 									<button
-										on:click={(e) => requestDelete(e, file)}
+										onclick={(e) => requestDelete(e, file)}
 										class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-500 opacity-100 transition-all hover:bg-red-900/30 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100"
 										aria-label="Delete {file.name}"
 									>
@@ -555,7 +562,7 @@
 					<div class="flex items-center justify-between border-b border-slate-700 px-4 py-2">
 						<h3 class="text-sm font-medium text-slate-200">{$activeFileName}</h3>
 						<button
-							on:click={startEditing}
+							onclick={startEditing}
 							class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 						>
 							Edit

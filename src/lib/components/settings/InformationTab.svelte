@@ -19,16 +19,16 @@
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 	import LogsViewer from './LogsViewer.svelte';
 
-	let loading = true;
-	let showRestartConfirm = false;
-	let restarting = false;
-	let now = Date.now();
+	let loading = $state(true);
+	let showRestartConfirm = $state(false);
+	let restarting = $state(false);
+	let now = $state(Date.now());
 
 	let refreshInterval: ReturnType<typeof setInterval> | undefined;
 	let nowInterval: ReturnType<typeof setInterval> | undefined;
 
 	function formatUptime(ms: number): string {
-		if (ms <= 0) return '—';
+		if (ms <= 0) return '\u2014';
 		const seconds = Math.floor(ms / 1000);
 		const minutes = Math.floor(seconds / 60);
 		const hours = Math.floor(minutes / 60);
@@ -88,8 +88,8 @@
 		}
 	}
 
-	$: activeRuns = $subAgentRuns.filter((r) => r.status === 'running');
-	$: completedRuns = $subAgentRuns.filter((r) => r.status !== 'running');
+	let activeRuns = $derived($subAgentRuns.filter((r) => r.status === 'running'));
+	let completedRuns = $derived($subAgentRuns.filter((r) => r.status !== 'running'));
 
 	onMount(async () => {
 		await loadAllData();
@@ -126,7 +126,7 @@
 					Gateway Status
 				</h2>
 				<button
-					on:click={() => (showRestartConfirm = true)}
+					onclick={() => (showRestartConfirm = true)}
 					disabled={restarting}
 					class="rounded bg-slate-700 px-3 py-1 text-xs text-slate-200 transition-colors hover:bg-slate-600 disabled:opacity-50"
 				>
@@ -150,7 +150,7 @@
 				<div>
 					<dt class="text-xs text-slate-400">Gateway URL</dt>
 					<dd class="mt-0.5 truncate text-sm font-medium text-slate-200">
-						{$gatewayUrl || $gatewayStatus.url || '—'}
+						{$gatewayUrl || $gatewayStatus.url || '\u2014'}
 					</dd>
 				</div>
 				<div>
@@ -162,13 +162,13 @@
 				<div>
 					<dt class="text-xs text-slate-400">Model</dt>
 					<dd class="mt-0.5 text-sm font-medium text-slate-200">
-						{$gatewayStatus.model || '—'}
+						{$gatewayStatus.model || '\u2014'}
 					</dd>
 				</div>
 				<div>
 					<dt class="text-xs text-slate-400">Server Version</dt>
 					<dd class="mt-0.5 text-sm font-medium text-slate-200">
-						{$serverVersion || $gatewayStatus.serverVersion || '—'}
+						{$serverVersion || $gatewayStatus.serverVersion || '\u2014'}
 					</dd>
 				</div>
 				<div>
@@ -217,7 +217,7 @@
 											<td class="py-2 text-right text-slate-300">
 												{provider.estimatedCost != null
 													? `$${provider.estimatedCost.toFixed(4)}`
-													: '—'}
+													: '\u2014'}
 											</td>
 										{/if}
 									</tr>

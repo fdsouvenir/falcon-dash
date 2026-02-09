@@ -7,20 +7,24 @@
 		CronEditParams
 	} from '$lib/gateway/types';
 
-	export let open: boolean;
-	export let job: CronJob | null = null;
+	interface Props {
+		open: boolean;
+		job?: CronJob | null;
+	}
+
+	let { open, job = null }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		save: { params: CronAddParams | CronEditParams };
 		cancel: void;
 	}>();
 
-	let name = '';
-	let scheduleType: CronScheduleType = 'cron';
-	let schedule = '';
-	let prompt = '';
-	let enabled = true;
-	let submitted = false;
+	let name = $state('');
+	let scheduleType: CronScheduleType = $state('cron');
+	let schedule = $state('');
+	let prompt = $state('');
+	let enabled = $state(true);
+	let submitted = $state(false);
 
 	let dialogEl: HTMLDivElement;
 
@@ -30,14 +34,16 @@
 		oneshot: '2026-02-15T12:00'
 	};
 
-	$: if (open) {
-		resetForm();
-	}
+	$effect(() => {
+		if (open) {
+			resetForm();
+		}
+	});
 
-	$: nameError = submitted && !name.trim();
-	$: scheduleError = submitted && !schedule.trim();
-	$: promptError = submitted && !prompt.trim();
-	$: isValid = name.trim() && schedule.trim() && prompt.trim();
+	let nameError = $derived(submitted && !name.trim());
+	let scheduleError = $derived(submitted && !schedule.trim());
+	let promptError = $derived(submitted && !prompt.trim());
+	let isValid = $derived(name.trim() && schedule.trim() && prompt.trim());
 
 	function resetForm(): void {
 		submitted = false;
@@ -129,20 +135,22 @@
 		trapFocus(event);
 	}
 
-	$: if (open && dialogEl) {
-		const input = dialogEl.querySelector<HTMLElement>('input');
-		if (input) input.focus();
-	}
+	$effect(() => {
+		if (open && dialogEl) {
+			const input = dialogEl.querySelector<HTMLElement>('input');
+			if (input) input.focus();
+		}
+	});
 </script>
 
-<svelte:window on:keydown={handleWindowKeydown} />
+<svelte:window onkeydown={handleWindowKeydown} />
 
 {#if open}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
 	>
 		<div
 			bind:this={dialogEl}
@@ -155,7 +163,13 @@
 				{job ? 'Edit Cron Job' : 'New Cron Job'}
 			</h3>
 
-			<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSubmit();
+				}}
+				class="space-y-4"
+			>
 				<!-- Name -->
 				<div>
 					<label for="cron-name" class="mb-1 block text-sm font-medium text-slate-300">
@@ -256,7 +270,7 @@
 				<div class="flex justify-end space-x-3 pt-2">
 					<button
 						type="button"
-						on:click={handleCancel}
+						onclick={handleCancel}
 						class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					>
 						Cancel

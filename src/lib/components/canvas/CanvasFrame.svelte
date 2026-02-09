@@ -1,21 +1,27 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	/** Canvas host base URL (e.g. http://host:18793/__openclaw__/canvas/) */
-	export let baseUrl = 'http://127.0.0.1:18793/__openclaw__/canvas/';
+	interface Props {
+		/** Canvas host base URL (e.g. http://host:18793/__openclaw__/canvas/) */
+		baseUrl?: string;
+		/** Canvas path relative to the base URL */
+		path?: string;
+		/** Optional title for the iframe */
+		title?: string;
+	}
 
-	/** Canvas path relative to the base URL */
-	export let path = '';
-
-	/** Optional title for the iframe */
-	export let title = 'Canvas App';
+	let {
+		baseUrl = 'http://127.0.0.1:18793/__openclaw__/canvas/',
+		path = '',
+		title = 'Canvas App'
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher<{ load: void; error: string }>();
 
-	$: src = baseUrl.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+	let src = $derived(baseUrl.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, ''));
 
-	let loading = true;
-	let loadError = false;
+	let loading = $state(true);
+	let loadError = $state(false);
 
 	function handleLoad(): void {
 		loading = false;
@@ -81,7 +87,7 @@
 		{title}
 		sandbox="allow-scripts"
 		class="h-full w-full border-0"
-		on:load={handleLoad}
-		on:error={handleError}
+		onload={handleLoad}
+		onerror={handleError}
 	/>
 </div>

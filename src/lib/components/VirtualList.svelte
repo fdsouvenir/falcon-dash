@@ -1,19 +1,24 @@
 <script lang="ts">
-	import { onMount, afterUpdate } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
-	export let items: unknown[] = [];
-	export let itemHeight: number = 60;
-	export let buffer: number = 5;
-	export let scrollToEnd: boolean = false;
+	interface Props {
+		items?: unknown[];
+		itemHeight?: number;
+		buffer?: number;
+		scrollToEnd?: boolean;
+		children?: Snippet<[{ item: unknown; index: number }]>;
+	}
+	let { items = [], itemHeight = 60, buffer = 5, scrollToEnd = false, children }: Props = $props();
 
 	let viewport: HTMLDivElement;
-	let visibleStart = 0;
-	let visibleEnd = 0;
-	let topOffset = 0;
-	let bottomOffset = 0;
-	let viewportHeight = 0;
-	let prevItemCount = 0;
-	let wasAtBottom = true;
+	let visibleStart = $state(0);
+	let visibleEnd = $state(0);
+	let topOffset = $state(0);
+	let bottomOffset = $state(0);
+	let viewportHeight = $state(0);
+	let prevItemCount = $state(0);
+	let wasAtBottom = $state(true);
 
 	/** Expose viewport element for external use (e.g. pull-to-refresh) */
 	export function getViewport(): HTMLDivElement {
@@ -55,28 +60,29 @@
 		}
 	});
 
-	afterUpdate(() => {
-		if (items.length !== prevItemCount) {
+	let visibleItems = $derived(items.slice(visibleStart, visibleEnd));
+
+	$effect(() => {
+		// Track items.length to re-run when items change
+		const len = items.length;
+		if (len !== prevItemCount) {
 			if (scrollToEnd && wasAtBottom) {
-				requestAnimationFrame(() => {
+				tick().then(() => {
 					if (viewport) {
 						viewport.scrollTop = viewport.scrollHeight;
 					}
 				});
 			}
-			prevItemCount = items.length;
+			prevItemCount = len;
 		}
 		update();
 	});
-
-	$: visibleItems = items.slice(visibleStart, visibleEnd);
-	$: if (items) update();
 </script>
 
-<div class="flex-1 overflow-y-auto" bind:this={viewport} on:scroll={handleScroll}>
+<div class="flex-1 overflow-y-auto" bind:this={viewport} onscroll={handleScroll}>
 	<div style="padding-top: {topOffset}px; padding-bottom: {bottomOffset}px;">
 		{#each visibleItems as item, i (visibleStart + i)}
-			<slot {item} index={visibleStart + i} />
+			{@render children?.({ item, index: visibleStart + i })}
 		{/each}
 	</div>
 </div>

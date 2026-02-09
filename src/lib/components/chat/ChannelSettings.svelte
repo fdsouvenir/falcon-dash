@@ -4,20 +4,26 @@
 	import type { Session } from '$lib/gateway/types';
 	import { models, loadModels, updateSession } from '$lib/stores';
 
-	export let session: Session;
-	export let open: boolean = false;
+	interface Props {
+		session: Session;
+		open?: boolean;
+	}
+
+	let { session, open = false }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 
-	let displayName = '';
-	let selectedModel = '';
-	let thinkingLevel = 'off';
+	let displayName = $state('');
+	let selectedModel = $state('');
+	let thinkingLevel = $state('off');
 
-	$: if (session) {
-		displayName = session.displayName;
-		selectedModel = session.model || '';
-		thinkingLevel = session.thinkingLevel || 'off';
-	}
+	$effect(() => {
+		if (session) {
+			displayName = session.displayName;
+			selectedModel = session.model || '';
+			thinkingLevel = session.thinkingLevel || 'off';
+		}
+	});
 
 	onMount(() => {
 		loadModels();
@@ -53,13 +59,13 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if open}
 	<!-- Backdrop -->
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="absolute inset-0 z-40 bg-black/30" on:click={handleBackdropClick}></div>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="absolute inset-0 z-40 bg-black/30" onclick={handleBackdropClick}></div>
 
 	<!-- Panel -->
 	<div
@@ -71,7 +77,7 @@
 			<h3 class="text-sm font-semibold text-slate-200">Session Settings</h3>
 			<button
 				class="cursor-pointer text-slate-400 transition-colors hover:text-slate-200"
-				on:click={() => dispatch('close')}
+				onclick={() => dispatch('close')}
 				title="Close settings"
 				aria-label="Close settings"
 			>
@@ -104,8 +110,8 @@
 					id="session-name"
 					type="text"
 					bind:value={displayName}
-					on:blur={handleRename}
-					on:keydown={(e) => {
+					onblur={handleRename}
+					onkeydown={(e) => {
 						if (e.key === 'Enter') handleRename();
 					}}
 					class="w-full rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-blue-500"
@@ -120,7 +126,7 @@
 				<select
 					id="model-select"
 					value={selectedModel}
-					on:change={handleModelChange}
+					onchange={handleModelChange}
 					class="w-full cursor-pointer rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-blue-500"
 				>
 					<option value="">Default</option>
@@ -140,7 +146,7 @@
 							level
 								? 'bg-blue-600 text-white'
 								: 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-200'}"
-							on:click={() => setThinkingLevel(level)}
+							onclick={() => setThinkingLevel(level)}
 						>
 							{level.charAt(0).toUpperCase() + level.slice(1)}
 						</button>

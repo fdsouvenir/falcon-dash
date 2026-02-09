@@ -16,51 +16,53 @@
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
 	// --- State ---
-	let loading = true;
-	let errorMessage = '';
+	let loading = $state(true);
+	let errorMessage = $state('');
 
 	// Unlock / Init form
-	let masterPassword = '';
-	let confirmPassword = '';
-	let authLoading = false;
-	let authError = '';
+	let masterPassword = $state('');
+	let confirmPassword = $state('');
+	let authLoading = $state(false);
+	let authError = $state('');
 
 	// Entry list
-	let searchQuery = '';
-	let selectedEntry: PasswordEntryFull | null = null;
-	let selectedEntryTitle = '';
-	let entryLoading = false;
+	let searchQuery = $state('');
+	let selectedEntry = $state<PasswordEntryFull | null>(null);
+	let selectedEntryTitle = $state('');
+	let entryLoading = $state(false);
 
 	// Password reveal
-	let passwordRevealed = false;
+	let passwordRevealed = $state(false);
 	let revealTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Clipboard auto-clear
 	let clipboardTimers: ReturnType<typeof setTimeout>[] = [];
 
 	// Create/Edit form
-	let formOpen = false;
-	let formMode: 'create' | 'edit' = 'create';
-	let formTitle = '';
-	let formUsername = '';
-	let formPassword = '';
-	let formUrl = '';
-	let formNotes = '';
-	let formLoading = false;
-	let formError = '';
+	let formOpen = $state(false);
+	let formMode = $state<'create' | 'edit'>('create');
+	let formTitle = $state('');
+	let formUsername = $state('');
+	let formPassword = $state('');
+	let formUrl = $state('');
+	let formNotes = $state('');
+	let formLoading = $state(false);
+	let formError = $state('');
 
 	// Delete confirmation
-	let deleteConfirmOpen = false;
-	let deleteTarget: PasswordEntry | null = null;
+	let deleteConfirmOpen = $state(false);
+	let deleteTarget = $state<PasswordEntry | null>(null);
 
 	// Idle timeout (15 minutes)
 	const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 	let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// --- Computed ---
-	$: filteredEntries = searchQuery
-		? $passwordEntries.filter((e) => e.title.toLowerCase().includes(searchQuery.toLowerCase()))
-		: $passwordEntries;
+	let filteredEntries = $derived(
+		searchQuery
+			? $passwordEntries.filter((e) => e.title.toLowerCase().includes(searchQuery.toLowerCase()))
+			: $passwordEntries
+	);
 
 	// --- Idle timeout ---
 	function resetIdle(): void {
@@ -336,11 +338,7 @@
 	});
 </script>
 
-<svelte:window
-	on:mousemove={handleActivity}
-	on:keydown={handleActivity}
-	on:click={handleActivity}
-/>
+<svelte:window onmousemove={handleActivity} onkeydown={handleActivity} onclick={handleActivity} />
 
 <div class="flex h-full flex-col">
 	{#if loading}
@@ -387,7 +385,7 @@
 					</div>
 				</div>
 				<button
-					on:click={() => {
+					onclick={() => {
 						loading = true;
 						errorMessage = '';
 						checkVault()
@@ -450,7 +448,7 @@
 							id="init-password"
 							type="password"
 							bind:value={masterPassword}
-							on:keydown={handleInitKeydown}
+							onkeydown={handleInitKeydown}
 							placeholder="Enter master password"
 							class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 							disabled={authLoading}
@@ -464,14 +462,14 @@
 							id="init-confirm"
 							type="password"
 							bind:value={confirmPassword}
-							on:keydown={handleInitKeydown}
+							onkeydown={handleInitKeydown}
 							placeholder="Confirm master password"
 							class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 							disabled={authLoading}
 						/>
 					</div>
 					<button
-						on:click={handleInit}
+						onclick={handleInit}
 						disabled={authLoading || !masterPassword || !confirmPassword}
 						class="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -526,14 +524,14 @@
 							id="unlock-password"
 							type="password"
 							bind:value={masterPassword}
-							on:keydown={handleUnlockKeydown}
+							onkeydown={handleUnlockKeydown}
 							placeholder="Enter master password"
 							class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 							disabled={authLoading}
 						/>
 					</div>
 					<button
-						on:click={handleUnlock}
+						onclick={handleUnlock}
 						disabled={authLoading || !masterPassword}
 						class="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -557,13 +555,13 @@
 				</div>
 				<div class="flex items-center space-x-2">
 					<button
-						on:click={openCreateForm}
+						onclick={openCreateForm}
 						class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500"
 					>
 						New Entry
 					</button>
 					<button
-						on:click={handleLock}
+						onclick={handleLock}
 						class="rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					>
 						Lock
@@ -621,8 +619,8 @@
 									: ''}"
 								role="button"
 								tabindex="0"
-								on:click={() => handleSelectEntry(entry)}
-								on:keydown={(e) => {
+								onclick={() => handleSelectEntry(entry)}
+								onkeydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();
 										handleSelectEntry(entry);
@@ -651,7 +649,10 @@
 								</span>
 								<span class="flex w-8 items-center justify-center">
 									<button
-										on:click|stopPropagation={() => requestDeleteEntry(entry)}
+										onclick={(e) => {
+											e.stopPropagation();
+											requestDeleteEntry(entry);
+										}}
 										class="rounded p-1 text-slate-500 opacity-0 transition-all hover:bg-red-900/30 hover:text-red-400 group-hover:opacity-100"
 										title="Delete {entry.title}"
 									>
@@ -681,7 +682,7 @@
 							<div class="flex items-center justify-between">
 								<h3 class="text-lg font-medium text-slate-100">{selectedEntry.title}</h3>
 								<button
-									on:click={openEditForm}
+									onclick={openEditForm}
 									class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 								>
 									Edit
@@ -699,7 +700,7 @@
 											<p class="mt-1 text-sm text-slate-200">{selectedEntry.username}</p>
 										</div>
 										<button
-											on:click={() => copyToClipboard(selectedEntry?.username || '')}
+											onclick={() => copyToClipboard(selectedEntry?.username || '')}
 											class="rounded bg-slate-700 p-2 text-slate-300 transition-colors hover:bg-slate-600"
 											title="Copy username"
 										>
@@ -727,13 +728,13 @@
 											{#if passwordRevealed}
 												{selectedEntry.password}
 											{:else}
-												{'•'.repeat(16)}
+												{'*'.repeat(16)}
 											{/if}
 										</p>
 									</div>
 									<div class="ml-3 flex items-center space-x-1">
 										<button
-											on:click={toggleReveal}
+											onclick={toggleReveal}
 											class="rounded bg-slate-700 p-2 text-slate-300 transition-colors hover:bg-slate-600"
 											title={passwordRevealed ? 'Hide password' : 'Show password'}
 										>
@@ -764,7 +765,7 @@
 											{/if}
 										</button>
 										<button
-											on:click={() => copyToClipboard(selectedEntry?.password || '')}
+											onclick={() => copyToClipboard(selectedEntry?.password || '')}
 											class="rounded bg-slate-700 p-2 text-slate-300 transition-colors hover:bg-slate-600"
 											title="Copy password"
 										>
@@ -820,11 +821,11 @@
 
 <!-- Create/Edit Entry Form Modal -->
 {#if formOpen}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-		on:click={handleFormBackdropClick}
+		onclick={handleFormBackdropClick}
 	>
 		<div
 			class="w-full max-w-md rounded-lg border border-slate-700 bg-slate-800 p-6 shadow-xl"
@@ -854,7 +855,7 @@
 							id="entry-title"
 							type="text"
 							bind:value={formTitle}
-							on:keydown={handleFormKeydown}
+							onkeydown={handleFormKeydown}
 							placeholder="e.g. GitHub"
 							class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 							disabled={formLoading}
@@ -869,7 +870,7 @@
 						id="entry-username"
 						type="text"
 						bind:value={formUsername}
-						on:keydown={handleFormKeydown}
+						onkeydown={handleFormKeydown}
 						placeholder="Username or email"
 						class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 						disabled={formLoading}
@@ -887,13 +888,13 @@
 							id="entry-password"
 							type="password"
 							bind:value={formPassword}
-							on:keydown={handleFormKeydown}
+							onkeydown={handleFormKeydown}
 							placeholder={formMode === 'edit' ? 'Unchanged' : 'Password'}
 							class="flex-1 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 							disabled={formLoading}
 						/>
 						<button
-							on:click={generatePassword}
+							onclick={generatePassword}
 							type="button"
 							class="rounded bg-slate-700 px-3 py-2 text-xs text-slate-300 transition-colors hover:bg-slate-600"
 							title="Generate password"
@@ -909,7 +910,7 @@
 						id="entry-url"
 						type="text"
 						bind:value={formUrl}
-						on:keydown={handleFormKeydown}
+						onkeydown={handleFormKeydown}
 						placeholder="https://example.com"
 						class="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 						disabled={formLoading}
@@ -930,14 +931,14 @@
 
 			<div class="mt-6 flex justify-end space-x-3">
 				<button
-					on:click={closeForm}
+					onclick={closeForm}
 					class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					disabled={formLoading}
 				>
 					Cancel
 				</button>
 				<button
-					on:click={handleFormSubmit}
+					onclick={handleFormSubmit}
 					disabled={formLoading || (formMode === 'create' && !formTitle.trim())}
 					class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 				>

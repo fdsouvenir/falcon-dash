@@ -3,11 +3,14 @@
 	import { gateway } from '$lib/gateway';
 	import type { A2UIHostElement, A2UIBundleState, A2UIUserAction } from '$lib/types/canvas';
 
-	/** A2UI messages to render (array of parsed JSONL objects) */
-	export let messages: Array<Record<string, unknown>> = [];
+	interface Props {
+		/** A2UI messages to render (array of parsed JSONL objects) */
+		messages?: Array<Record<string, unknown>>;
+		/** Whether to show in standalone panel mode (taller) vs inline chat mode */
+		standalone?: boolean;
+	}
 
-	/** Whether to show in standalone panel mode (taller) vs inline chat mode */
-	export let standalone = false;
+	let { messages = [], standalone = false }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		action: A2UIUserAction;
@@ -16,12 +19,12 @@
 	}>();
 
 	let containerEl: HTMLDivElement;
-	let hostEl: A2UIHostElement | null = null;
-	let bundleState: A2UIBundleState = 'idle';
-	let errorMessage = '';
+	let hostEl: A2UIHostElement | null = $state(null);
+	let bundleState: A2UIBundleState = $state('idle');
+	let errorMessage = $state('');
 
 	// Track whether the bundle script has been loaded globally
-	let bundleLoadPromise: Promise<void> | null = null;
+	let bundleLoadPromise: Promise<void> | null = $state(null);
 
 	/**
 	 * Load the A2UI bundle script. The bundle registers <openclaw-a2ui-host>
@@ -132,9 +135,11 @@
 	}
 
 	// Reactive: apply messages when they change (and bundle is ready)
-	$: if (bundleState === 'ready' && messages.length > 0) {
-		applyMessages(messages);
-	}
+	$effect(() => {
+		if (bundleState === 'ready' && messages.length > 0) {
+			applyMessages(messages);
+		}
+	});
 
 	onMount(async () => {
 		bundleState = 'loading';

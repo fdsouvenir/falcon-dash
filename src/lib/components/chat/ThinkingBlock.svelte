@@ -1,17 +1,23 @@
 <script lang="ts">
 	import type { ThinkingBlock } from '$lib/gateway/types';
 
-	export let thinking: ThinkingBlock;
+	interface Props {
+		thinking: ThinkingBlock;
+	}
 
-	let open = false;
+	let { thinking }: Props = $props();
 
-	$: isStreaming = !thinking.completedAt;
-	$: durationText = thinking.durationMs
-		? `${(thinking.durationMs / 1000).toFixed(1)}s`
-		: thinking.completedAt && thinking.startedAt
-			? `${((thinking.completedAt - thinking.startedAt) / 1000).toFixed(1)}s`
-			: '';
-	$: summaryText = isStreaming ? 'Thinking...' : `Thought for ${durationText}`;
+	let open = $state(false);
+
+	let isStreaming = $derived(!thinking.completedAt);
+	let durationText = $derived(
+		thinking.durationMs
+			? `${(thinking.durationMs / 1000).toFixed(1)}s`
+			: thinking.completedAt && thinking.startedAt
+				? `${((thinking.completedAt - thinking.startedAt) / 1000).toFixed(1)}s`
+				: ''
+	);
+	let summaryText = $derived(isStreaming ? 'Thinking...' : `Thought for ${durationText}`);
 </script>
 
 <details bind:open class="my-1">

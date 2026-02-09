@@ -1,19 +1,25 @@
 <script lang="ts">
 	import type { ToolCall } from '$lib/gateway/types';
 
-	export let toolCall: ToolCall;
+	interface Props {
+		toolCall: ToolCall;
+	}
 
-	let open = false;
+	let { toolCall }: Props = $props();
 
-	$: statusColor =
+	let open = $state(false);
+
+	let statusColor = $derived(
 		toolCall.status === 'pending'
 			? 'bg-yellow-500/20 text-yellow-400'
 			: toolCall.status === 'complete'
 				? 'bg-green-500/20 text-green-400'
-				: 'bg-red-500/20 text-red-400';
+				: 'bg-red-500/20 text-red-400'
+	);
 
-	$: statusLabel =
-		toolCall.status === 'pending' ? 'Running' : toolCall.status === 'complete' ? 'Done' : 'Error';
+	let statusLabel = $derived(
+		toolCall.status === 'pending' ? 'Running' : toolCall.status === 'complete' ? 'Done' : 'Error'
+	);
 
 	function formatJson(value: unknown): string {
 		try {

@@ -144,29 +144,36 @@
 
 	// --- Derived data ---
 
-	$: stats = $pmStats;
+	let stats = $derived($pmStats);
 
-	$: dueSoonTasks = $pmTasks
-		.filter((t) => {
-			if (!t.dueDate) return false;
-			if (t.status === PmStatus.DONE || t.status === PmStatus.CANCELLED) return false;
-			const due = new Date(t.dueDate);
-			const now = new Date();
-			const diff = due.getTime() - now.getTime();
-			const days = diff / (1000 * 60 * 60 * 24);
-			return days <= 7;
-		})
-		.sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
-
-	$: blockedTaskIds = new Set($pmBlocks.map((b) => b.blockedId));
-
-	$: blockedTasks = $pmTasks.filter(
-		(t) => blockedTaskIds.has(t.id) && t.status !== PmStatus.DONE && t.status !== PmStatus.CANCELLED
+	let dueSoonTasks = $derived(
+		$pmTasks
+			.filter((t) => {
+				if (!t.dueDate) return false;
+				if (t.status === PmStatus.DONE || t.status === PmStatus.CANCELLED) return false;
+				const due = new Date(t.dueDate);
+				const now = new Date();
+				const diff = due.getTime() - now.getTime();
+				const days = diff / (1000 * 60 * 60 * 24);
+				return days <= 7;
+			})
+			.sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
 	);
 
-	$: inProgressTasks = $pmTasks.filter((t) => t.status === PmStatus.IN_PROGRESS);
+	let blockedTaskIds = $derived(new Set($pmBlocks.map((b) => b.blockedId)));
 
-	$: recentActivities = [...$pmActivities].sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
+	let blockedTasks = $derived(
+		$pmTasks.filter(
+			(t) =>
+				blockedTaskIds.has(t.id) && t.status !== PmStatus.DONE && t.status !== PmStatus.CANCELLED
+		)
+	);
+
+	let inProgressTasks = $derived($pmTasks.filter((t) => t.status === PmStatus.IN_PROGRESS));
+
+	let recentActivities = $derived(
+		[...$pmActivities].sort((a, b) => b.createdAt - a.createdAt).slice(0, 20)
+	);
 </script>
 
 <!-- Stats Header -->

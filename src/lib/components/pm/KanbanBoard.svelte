@@ -15,8 +15,8 @@
 	import { longpress } from '$lib/utils/gestures';
 
 	// Long-press context menu state for tasks
-	let taskMenuOpen = false;
-	let taskMenuTask: PmTask | null = null;
+	let taskMenuOpen = $state(false);
+	let taskMenuTask: PmTask | null = $state(null);
 
 	function handleTaskLongPress(task: PmTask) {
 		return () => {
@@ -38,12 +38,20 @@
 
 	// --- Props ---
 
-	/** Filter tasks to a specific project */
-	export let selectedProjectId: number | null = null;
-	/** Filter tasks by focus */
-	export let selectedFocusId: string | null = null;
-	/** Filter tasks by domain */
-	export let selectedDomainId: string | null = null;
+	interface Props {
+		/** Filter tasks to a specific project */
+		selectedProjectId?: number | null;
+		/** Filter tasks by focus */
+		selectedFocusId?: string | null;
+		/** Filter tasks by domain */
+		selectedDomainId?: string | null;
+	}
+
+	let {
+		selectedProjectId = null,
+		selectedFocusId = null,
+		selectedDomainId = null
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		select: { taskId: number };
@@ -60,7 +68,7 @@
 
 	// --- Selection State ---
 
-	let selectedTaskIds = new Set<number>();
+	let selectedTaskIds = $state(new Set<number>());
 
 	function isSelected(taskId: number): boolean {
 		return selectedTaskIds.has(taskId);
@@ -86,13 +94,13 @@
 
 	// --- Drag State ---
 
-	let draggedTaskId: number | null = null;
-	let dragOverColumn: PmStatus | null = null;
+	let draggedTaskId: number | null = $state(null);
+	let dragOverColumn: PmStatus | null = $state(null);
 
 	// --- Add Task State ---
 
-	let addingInColumn: PmStatus | null = null;
-	let newTaskTitle = '';
+	let addingInColumn: PmStatus | null = $state(null);
+	let newTaskTitle = $state('');
 
 	// --- Helpers ---
 
@@ -189,29 +197,35 @@
 
 	// --- Filtering ---
 
-	$: domainFocusIds = selectedDomainId
-		? new Set($pmFocuses.filter((f) => f.domainId === selectedDomainId).map((f) => f.id))
-		: null;
+	let domainFocusIds = $derived(
+		selectedDomainId
+			? new Set($pmFocuses.filter((f) => f.domainId === selectedDomainId).map((f) => f.id))
+			: null
+	);
 
-	$: projectIdsInScope = (() => {
-		if (selectedProjectId != null) return new Set([selectedProjectId]);
-		const projects = $pmProjects.filter((p) => {
-			if (selectedFocusId) return p.focusId === selectedFocusId;
-			if (domainFocusIds) return domainFocusIds.has(p.focusId);
+	let projectIdsInScope = $derived(
+		(() => {
+			if (selectedProjectId != null) return new Set([selectedProjectId]);
+			const projects = $pmProjects.filter((p) => {
+				if (selectedFocusId) return p.focusId === selectedFocusId;
+				if (domainFocusIds) return domainFocusIds.has(p.focusId);
+				return true;
+			});
+			return new Set(projects.map((p) => p.id));
+		})()
+	);
+
+	let visibleTasks = $derived(
+		$pmTasks.filter((t) => {
+			// Must have a parent project and not be a subtask
+			if (!t.parentProjectId || t.parentTaskId) return false;
+			// Must be in scope
+			if (!projectIdsInScope.has(t.parentProjectId)) return false;
+			// Hide cancelled and archived
+			if (t.status === PmStatus.CANCELLED || t.status === PmStatus.ARCHIVED) return false;
 			return true;
-		});
-		return new Set(projects.map((p) => p.id));
-	})();
-
-	$: visibleTasks = $pmTasks.filter((t) => {
-		// Must have a parent project and not be a subtask
-		if (!t.parentProjectId || t.parentTaskId) return false;
-		// Must be in scope
-		if (!projectIdsInScope.has(t.parentProjectId)) return false;
-		// Hide cancelled and archived
-		if (t.status === PmStatus.CANCELLED || t.status === PmStatus.ARCHIVED) return false;
-		return true;
-	});
+		})
+	);
 
 	function tasksForColumn(status: PmStatus): PmTask[] {
 		return visibleTasks
@@ -352,9 +366,9 @@
 		<div
 			class="flex w-72 min-w-[18rem] flex-shrink-0 flex-col rounded-lg border transition-colors
 				{isColumnDragOver(status) ? 'border-blue-500 bg-slate-800/80' : 'border-slate-700 bg-slate-800/40'}"
-			on:dragover={(e) => handleDragOver(e, status)}
-			on:dragleave={handleDragLeave}
-			on:drop={(e) => handleDrop(e, status)}
+			ondragover={(e) => handleDragOver(e, status)}
+			ondragleave={handleDragLeave}
+			ondrop={(e) => handleDrop(e, status)}
 			role="list"
 			aria-label="{statusLabel(status)} column"
 		>
@@ -371,7 +385,7 @@
 					</span>
 				</div>
 				<button
-					on:click={() => startAddTask(status)}
+					onclick={() => startAddTask(status)}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 					aria-label="Add task to {statusLabel(status)} column"
 				>
@@ -394,20 +408,20 @@
 						<input
 							type="text"
 							bind:value={newTaskTitle}
-							on:keydown={(e) => handleAddKeydown(e, status)}
+							onkeydown={(e) => handleAddKeydown(e, status)}
 							placeholder="Task title..."
 							aria-label="Task title"
 							class="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 						/>
 						<div class="mt-2 flex items-center justify-end space-x-2">
 							<button
-								on:click={cancelAddTask}
+								onclick={cancelAddTask}
 								class="rounded px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
 							>
 								Cancel
 							</button>
 							<button
-								on:click={() => submitAddTask(status)}
+								onclick={() => submitAddTask(status)}
 								class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500"
 							>
 								Add
@@ -420,9 +434,9 @@
 				{#each tasksForColumn(status) as task (task.id)}
 					<div
 						draggable="true"
-						on:dragstart={(e) => handleDragStart(e, task.id)}
-						on:dragend={handleDragEnd}
-						on:click={() => selectTask(task.id)}
+						ondragstart={(e) => handleDragStart(e, task.id)}
+						ondragend={handleDragEnd}
+						onclick={() => selectTask(task.id)}
 						use:longpress={{ onLongPress: handleTaskLongPress(task) }}
 						class="cursor-pointer rounded-lg border bg-slate-800 p-3 transition-all hover:bg-slate-750
 							{isDragging(task.id) ? 'opacity-50' : 'opacity-100'}
@@ -432,7 +446,7 @@
 						role="button"
 						tabindex="0"
 						aria-label="View {task.title}"
-						on:keydown={(e) => {
+						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
 								e.preventDefault();
 								selectTask(task.id);
@@ -442,7 +456,7 @@
 						<div class="flex items-start gap-2">
 							<!-- Selection Checkbox -->
 							<button
-								on:click={(e) => toggleSelection(e, task.id)}
+								onclick={(e) => toggleSelection(e, task.id)}
 								aria-label="Select task {task.title}"
 								class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isSelected(
 									task.id
@@ -519,7 +533,7 @@
 		<p class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-400">Change Status</p>
 		{#each kanbanStatuses as status (status)}
 			<button
-				on:click={() => quickChangeStatus(status)}
+				onclick={() => quickChangeStatus(status)}
 				class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700 {taskMenuTask?.status ===
 				status
 					? 'bg-slate-700/50'
@@ -535,7 +549,7 @@
 		{/each}
 		<div class="border-t border-slate-700 pt-2">
 			<button
-				on:click={() => {
+				onclick={() => {
 					if (taskMenuTask) selectTask(taskMenuTask.id);
 					closeTaskMenu();
 				}}

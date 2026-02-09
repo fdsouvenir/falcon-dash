@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import type { Snippet } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import MobileTabBar from '$lib/components/MobileTabBar.svelte';
 	import MobileMoreMenu from '$lib/components/MobileMoreMenu.svelte';
@@ -12,14 +13,22 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	let sidebarOpen = false;
-	let moreMenuOpen = false;
-	let showOnboarding = false;
+	interface Props {
+		children?: Snippet;
+	}
 
-	$: totalUnread = [...$sessions.values()].reduce((sum, s) => sum + s.unreadCount, 0);
+	let { children }: Props = $props();
+
+	let sidebarOpen = $state(false);
+	let moreMenuOpen = $state(false);
+	let showOnboarding = $state(false);
+
+	let totalUnread = $derived([...$sessions.values()].reduce((sum, s) => sum + s.unreadCount, 0));
 
 	// Update tab title with unread count
-	$: updateTabTitle(totalUnread);
+	$effect(() => {
+		updateTabTitle(totalUnread);
+	});
 
 	onMount(() => {
 		initOfflineListeners();
@@ -51,8 +60,8 @@
 	}
 
 	// Notify on unread count increase (when tab is not focused)
-	let prevUnread = 0;
-	$: {
+	let prevUnread = $state(0);
+	$effect(() => {
 		if (totalUnread > prevUnread && prevUnread >= 0) {
 			const diff = totalUnread - prevUnread;
 			if (diff > 0 && prevUnread > 0) {
@@ -63,7 +72,7 @@
 			}
 		}
 		prevUnread = totalUnread;
-	}
+	});
 
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
@@ -93,9 +102,9 @@
 <div class="flex h-screen bg-slate-900 text-slate-100">
 	<!-- Mobile sidebar overlay -->
 	{#if sidebarOpen}
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="fixed inset-0 z-40 bg-black/50 md:hidden" on:click={closeSidebar}></div>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="fixed inset-0 z-40 bg-black/50 md:hidden" onclick={closeSidebar}></div>
 	{/if}
 
 	<!-- Sidebar -->
@@ -113,7 +122,7 @@
 		<!-- Mobile header -->
 		<header class="flex h-14 items-center border-b border-slate-700 px-4 md:hidden">
 			<button
-				on:click={toggleSidebar}
+				onclick={toggleSidebar}
 				class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100"
 				aria-label="Toggle sidebar"
 			>
@@ -137,7 +146,7 @@
 
 		<!-- Page content -->
 		<main class="flex-1 overflow-y-auto pb-14 md:pb-0" id="main-content">
-			<slot />
+			{@render children?.()}
 		</main>
 	</div>
 

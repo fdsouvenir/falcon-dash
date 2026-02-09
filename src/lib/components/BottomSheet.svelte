@@ -1,9 +1,14 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
-	export let open = false;
-	export let title = '';
+	interface Props {
+		open?: boolean;
+		title?: string;
+		children?: Snippet;
+	}
+	let { open = false, title = '', children }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 
@@ -24,15 +29,15 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if open}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- Backdrop -->
 	<div
 		class="fixed inset-0 z-40 bg-black/50"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
 		transition:fade={{ duration: 200 }}
 	></div>
 
@@ -54,7 +59,7 @@
 
 		<!-- Content -->
 		<div class="flex-1 overflow-y-auto px-4 pb-4">
-			<slot />
+			{@render children?.()}
 		</div>
 	</div>
 {/if}

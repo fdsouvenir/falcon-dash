@@ -2,7 +2,7 @@
 	import { isOffline, offlineQueue } from '$lib/stores/offline';
 	import { slide } from 'svelte/transition';
 
-	$: queueCount = $offlineQueue.length;
+	let queueCount = $derived($offlineQueue.length);
 </script>
 
 {#if $isOffline}

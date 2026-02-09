@@ -36,7 +36,7 @@
 
 	const validTabIds = new Set<string>(tabs.map((t) => t.id));
 
-	let activeTab: SettingsTab = 'workspace';
+	let activeTab = $state<SettingsTab>('workspace');
 
 	function parseTabFromHash(): SettingsTab {
 		const hash = $page.url.hash.replace('#', '');
@@ -74,7 +74,7 @@
 		<div class="flex min-w-max">
 			{#each tabs as tab (tab.id)}
 				<button
-					on:click={() => switchTab(tab.id)}
+					onclick={() => switchTab(tab.id)}
 					class="whitespace-nowrap px-5 py-3 text-sm font-medium transition-colors {activeTab ===
 					tab.id
 						? 'border-b-2 border-blue-500 text-slate-100'

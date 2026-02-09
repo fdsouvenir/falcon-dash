@@ -1,17 +1,21 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	export let content: string;
-	export let filename: string;
+	interface Props {
+		content: string;
+		filename: string;
+	}
+
+	let { content, filename }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		save: { content: string };
 		cancel: void;
 	}>();
 
-	let editContent = content;
+	let editContent = $state(content);
 
-	$: isDirty = editContent !== content;
+	let isDirty = $derived(editContent !== content);
 
 	function handleSave(): void {
 		dispatch('save', { content: editContent });
@@ -37,13 +41,13 @@
 		<span class="text-sm text-slate-400">{filename}</span>
 		<div class="flex items-center space-x-2">
 			<button
-				on:click={handleCancel}
+				onclick={handleCancel}
 				class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 			>
 				Cancel
 			</button>
 			<button
-				on:click={handleSave}
+				onclick={handleSave}
 				disabled={!isDirty}
 				class="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 			>
@@ -53,7 +57,7 @@
 	</div>
 	<textarea
 		bind:value={editContent}
-		on:keydown={handleKeydown}
+		onkeydown={handleKeydown}
 		class="flex-1 resize-none border-0 bg-slate-900 p-3 font-mono text-sm text-slate-200 focus:outline-none"
 		spellcheck="false"
 	></textarea>

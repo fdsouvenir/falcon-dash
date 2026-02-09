@@ -3,15 +3,15 @@
 	import { skills, loadSkills, enableSkill, disableSkill, patchConfig } from '$lib/stores';
 	import type { SkillEntry } from '$lib/types/settings';
 
-	let loading = true;
-	let error = '';
-	let expandedSkillId: string | null = null;
-	let editingSkillId: string | null = null;
-	let editConfigJson = '';
-	let editConfigError = '';
-	let saving = false;
-	let toastMessage = '';
-	let toastType: 'success' | 'error' = 'success';
+	let loading = $state(true);
+	let error = $state('');
+	let expandedSkillId: string | null = $state(null);
+	let editingSkillId: string | null = $state(null);
+	let editConfigJson = $state('');
+	let editConfigError = $state('');
+	let saving = $state(false);
+	let toastMessage = $state('');
+	let toastType: 'success' | 'error' = $state('success');
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	function showToast(message: string, type: 'success' | 'error'): void {
@@ -150,7 +150,7 @@
 					<div class="flex items-center gap-3 px-4 py-3">
 						<!-- Expand toggle -->
 						<button
-							on:click={() => toggleExpand(skill.id)}
+							onclick={() => toggleExpand(skill.id)}
 							class="flex-shrink-0 text-slate-400 transition-colors hover:text-slate-200"
 							aria-label={expandedSkillId === skill.id
 								? 'Collapse configuration'
@@ -194,7 +194,7 @@
 
 						<!-- Enable/disable toggle -->
 						<button
-							on:click={() => handleToggle(skill)}
+							onclick={() => handleToggle(skill)}
 							class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors {skill.enabled
 								? 'bg-blue-600'
 								: 'bg-slate-600'}"
@@ -232,14 +232,14 @@
 									></textarea>
 									<div class="flex gap-2">
 										<button
-											on:click={() => saveSkillConfig(skill)}
+											onclick={() => saveSkillConfig(skill)}
 											disabled={saving}
 											class="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
 										>
 											{saving ? 'Saving...' : 'Save'}
 										</button>
 										<button
-											on:click={cancelEditConfig}
+											onclick={cancelEditConfig}
 											class="rounded bg-slate-700 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:bg-slate-600"
 										>
 											Cancel
@@ -262,7 +262,7 @@
 																	.includes('key') || key.toLowerCase().includes('secret') || key
 																		.toLowerCase()
 																		.includes('token'))}
-																{value.slice(0, 4)}{'•'.repeat(4)}{value.slice(-4)}
+																{value.slice(0, 4)}{'*'.repeat(4)}{value.slice(-4)}
 															{:else}
 																{JSON.stringify(value)}
 															{/if}
@@ -287,7 +287,7 @@
 									{/if}
 
 									<button
-										on:click={() => startEditConfig(skill)}
+										onclick={() => startEditConfig(skill)}
 										class="rounded bg-slate-700 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:bg-slate-600"
 									>
 										Edit Configuration

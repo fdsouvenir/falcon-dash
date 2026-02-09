@@ -5,12 +5,16 @@
 	import { codeBlockActions } from '$lib/actions/codeBlockActions';
 	import { mermaidAction } from '$lib/actions/mermaidAction';
 
-	export let content: string;
-	export let isStreaming: boolean;
+	interface Props {
+		content: string;
+		isStreaming: boolean;
+	}
 
-	let renderedHtml = '';
+	let { content, isStreaming }: Props = $props();
+
+	let renderedHtml = $state('');
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-	let highlighterReady = highlighterManager.isReady();
+	let highlighterReady = $state(highlighterManager.isReady());
 
 	/** Regex to detect math content */
 	const MATH_RE = /\$\$[\s\S]+?\$\$|\$[^\n$]+?\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
@@ -25,17 +29,19 @@
 		}
 	}
 
-	$: if (content || highlighterReady) {
-		if (isStreaming) {
-			clearTimeout(debounceTimer);
-			debounceTimer = setTimeout(() => {
+	$effect(() => {
+		if (content || highlighterReady) {
+			if (isStreaming) {
+				clearTimeout(debounceTimer);
+				debounceTimer = setTimeout(() => {
+					doRender(content);
+				}, 50);
+			} else {
+				clearTimeout(debounceTimer);
 				doRender(content);
-			}, 50);
-		} else {
-			clearTimeout(debounceTimer);
-			doRender(content);
+			}
 		}
-	}
+	});
 
 	onMount(() => {
 		if (!highlighterManager.isReady()) {

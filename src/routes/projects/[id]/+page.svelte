@@ -37,12 +37,12 @@
 
 	// --- State ---
 
-	let loading = true;
-	let errorMessage = '';
-	let projectId: number;
+	let loading = $state(true);
+	let errorMessage = $state('');
+	let projectId = $state<number>(0);
 
 	// Selection state
-	let selectedTaskIds = new Set<number>();
+	let selectedTaskIds = $state(new Set<number>());
 
 	function isTaskSelected(taskId: number): boolean {
 		return selectedTaskIds.has(taskId);
@@ -67,38 +67,38 @@
 	}
 
 	// Editing state
-	let editingTitle = false;
-	let editTitleValue = '';
-	let editingDescription = false;
-	let editDescriptionValue = '';
-	let editingStatus = false;
-	let editingPriority = false;
-	let editingFocus = false;
-	let editingMilestone = false;
-	let editingDueDate = false;
-	let editDueDateValue = '';
+	let editingTitle = $state(false);
+	let editTitleValue = $state('');
+	let editingDescription = $state(false);
+	let editDescriptionValue = $state('');
+	let editingStatus = $state(false);
+	let editingPriority = $state(false);
+	let editingFocus = $state(false);
+	let editingMilestone = $state(false);
+	let editingDueDate = $state(false);
+	let editDueDateValue = $state('');
 
 	// New task state
-	let newTaskTitle = '';
-	let addingTask = false;
-	let addingSubtaskFor: number | null = null;
-	let newSubtaskTitle = '';
+	let newTaskTitle = $state('');
+	let addingTask = $state(false);
+	let addingSubtaskFor = $state<number | null>(null);
+	let newSubtaskTitle = $state('');
 
 	// Comment state
-	let newCommentBody = '';
-	let editingCommentId: number | null = null;
-	let editCommentBody = '';
+	let newCommentBody = $state('');
+	let editingCommentId = $state<number | null>(null);
+	let editCommentBody = $state('');
 
 	// Attachment state
-	let newAttachmentName = '';
-	let newAttachmentPath = '';
-	let addingAttachment = false;
+	let newAttachmentName = $state('');
+	let newAttachmentPath = $state('');
+	let addingAttachment = $state(false);
 
 	// Delete confirmation
-	let confirmDeleteTask: PmTask | null = null;
+	let confirmDeleteTask = $state<PmTask | null>(null);
 
 	// Collapsed tasks
-	let collapsedTasks = new Set<number>();
+	let collapsedTasks = $state(new Set<number>());
 
 	// --- Helpers ---
 
@@ -235,26 +235,30 @@
 
 	// --- Derived Data ---
 
-	$: project = $pmProjects.find((p) => p.id === projectId);
+	let project = $derived($pmProjects.find((p) => p.id === projectId));
 
-	$: projectTasks = $pmTasks.filter((t) => t.parentProjectId === projectId);
+	let projectTasks = $derived($pmTasks.filter((t) => t.parentProjectId === projectId));
 
-	$: rootTasks = projectTasks
-		.filter((t) => !t.parentTaskId)
-		.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-	$: projectComments = $pmComments.filter(
-		(c) => c.targetType === 'project' && c.targetId === projectId
+	let rootTasks = $derived(
+		projectTasks
+			.filter((t) => !t.parentTaskId)
+			.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 	);
 
-	$: projectAttachments = $pmAttachments.filter(
-		(a) => a.targetType === 'project' && a.targetId === projectId
+	let projectComments = $derived(
+		$pmComments.filter((c) => c.targetType === 'project' && c.targetId === projectId)
 	);
 
-	$: projectActivities = [...$pmActivities]
-		.filter((a) => a.projectId === projectId)
-		.sort((a, b) => b.createdAt - a.createdAt)
-		.slice(0, 30);
+	let projectAttachments = $derived(
+		$pmAttachments.filter((a) => a.targetType === 'project' && a.targetId === projectId)
+	);
+
+	let projectActivities = $derived(
+		[...$pmActivities]
+			.filter((a) => a.projectId === projectId)
+			.sort((a, b) => b.createdAt - a.createdAt)
+			.slice(0, 30)
+	);
 
 	function getSubtasks(parentId: number): PmTask[] {
 		return projectTasks
@@ -525,7 +529,7 @@
 		<div class="flex flex-1 flex-col items-center justify-center space-y-4">
 			<p class="text-sm text-red-400">{errorMessage}</p>
 			<button
-				on:click={goBack}
+				onclick={goBack}
 				class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 			>
 				Back to Projects
@@ -535,7 +539,7 @@
 		<div class="flex flex-1 flex-col items-center justify-center space-y-4">
 			<p class="text-sm text-slate-400">Project not found</p>
 			<button
-				on:click={goBack}
+				onclick={goBack}
 				class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 			>
 				Back to Projects
@@ -545,7 +549,7 @@
 		<!-- Top Bar -->
 		<div class="flex items-center border-b border-slate-700 px-6 py-3">
 			<button
-				on:click={goBack}
+				onclick={goBack}
 				class="mr-3 rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 				aria-label="Back to projects"
 			>
@@ -563,8 +567,8 @@
 					<input
 						type="text"
 						bind:value={editTitleValue}
-						on:blur={saveTitle}
-						on:keydown={(e) => {
+						onblur={saveTitle}
+						onkeydown={(e) => {
 							if (e.key === 'Enter') saveTitle();
 							if (e.key === 'Escape') cancelEditTitle();
 						}}
@@ -572,10 +576,10 @@
 						autofocus
 					/>
 				{:else}
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<h1
 						class="cursor-pointer truncate text-lg font-semibold text-slate-100 hover:text-blue-400"
-						on:click={startEditTitle}
+						onclick={startEditTitle}
 						title="Click to edit title"
 					>
 						{project.title}
@@ -593,7 +597,7 @@
 					<div class="relative">
 						<p class="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Status</p>
 						<button
-							on:click={() => (editingStatus = !editingStatus)}
+							onclick={() => (editingStatus = !editingStatus)}
 							class="inline-block rounded px-2 py-1 text-xs font-medium {statusColor(
 								project.status
 							)} transition-opacity hover:opacity-80"
@@ -606,7 +610,7 @@
 							>
 								{#each Object.values(PmStatus) as s (s)}
 									<button
-										on:click={() => changeStatus(s)}
+										onclick={() => changeStatus(s)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 									>
 										{statusLabel(s)}
@@ -620,7 +624,7 @@
 					<div class="relative">
 						<p class="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Priority</p>
 						<button
-							on:click={() => (editingPriority = !editingPriority)}
+							onclick={() => (editingPriority = !editingPriority)}
 							class="text-xs font-medium {priorityColor(
 								project.priority
 							)} transition-opacity hover:opacity-80"
@@ -633,7 +637,7 @@
 							>
 								{#each Object.values(PmPriority) as p (p)}
 									<button
-										on:click={() => changePriority(p)}
+										onclick={() => changePriority(p)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 									>
 										{priorityLabel(p)}
@@ -647,7 +651,7 @@
 					<div class="relative">
 						<p class="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Focus</p>
 						<button
-							on:click={() => (editingFocus = !editingFocus)}
+							onclick={() => (editingFocus = !editingFocus)}
 							class="text-xs font-medium text-slate-300 transition-opacity hover:opacity-80"
 						>
 							{getFocusName(project.focusId)}
@@ -658,7 +662,7 @@
 							>
 								{#each $pmFocuses as f (f.id)}
 									<button
-										on:click={() => changeFocus(f.id)}
+										onclick={() => changeFocus(f.id)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 									>
 										{f.name}
@@ -674,7 +678,7 @@
 							Milestone
 						</p>
 						<button
-							on:click={() => (editingMilestone = !editingMilestone)}
+							onclick={() => (editingMilestone = !editingMilestone)}
 							class="text-xs font-medium text-slate-300 transition-opacity hover:opacity-80"
 						>
 							{getMilestoneName(project.milestoneId)}
@@ -684,14 +688,14 @@
 								class="absolute left-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 							>
 								<button
-									on:click={() => changeMilestone(undefined)}
+									onclick={() => changeMilestone(undefined)}
 									class="block w-full px-3 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-700"
 								>
 									None
 								</button>
 								{#each $pmMilestones as ms (ms.id)}
 									<button
-										on:click={() => changeMilestone(ms.id)}
+										onclick={() => changeMilestone(ms.id)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 									>
 										{ms.name}
@@ -708,8 +712,8 @@
 							<input
 								type="date"
 								bind:value={editDueDateValue}
-								on:blur={saveDueDate}
-								on:keydown={(e) => {
+								onblur={saveDueDate}
+								onkeydown={(e) => {
 									if (e.key === 'Enter') saveDueDate();
 									if (e.key === 'Escape') cancelEditDueDate();
 								}}
@@ -717,15 +721,15 @@
 								autofocus
 							/>
 						{:else}
-							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<!-- svelte-ignore a11y-no-static-element-interactions -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<span
 								class="cursor-pointer text-xs font-medium transition-opacity hover:opacity-80 {isDueOverdue(
 									project.dueDate
 								)
 									? 'text-red-400'
 									: 'text-slate-300'}"
-								on:click={startEditDueDate}
+								onclick={startEditDueDate}
 								title="Click to edit due date"
 							>
 								{project.dueDate ? formatDueDate(project.dueDate) : 'Not set'}
@@ -742,7 +746,7 @@
 						</h2>
 						{#if !editingDescription}
 							<button
-								on:click={startEditDescription}
+								onclick={startEditDescription}
 								class="text-xs text-slate-400 hover:text-slate-200"
 							>
 								Edit
@@ -758,13 +762,13 @@
 						></textarea>
 						<div class="mt-2 flex space-x-2">
 							<button
-								on:click={saveDescription}
+								onclick={saveDescription}
 								class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500"
 							>
 								Save
 							</button>
 							<button
-								on:click={cancelEditDescription}
+								onclick={cancelEditDescription}
 								class="rounded bg-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-600"
 							>
 								Cancel
@@ -793,7 +797,7 @@
 							</span>
 						</h2>
 						<button
-							on:click={() => (addingTask = true)}
+							onclick={() => (addingTask = true)}
 							class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500"
 						>
 							Add Task
@@ -806,19 +810,19 @@
 							<input
 								type="text"
 								bind:value={newTaskTitle}
-								on:keydown={handleAddTaskKeydown}
+								onkeydown={handleAddTaskKeydown}
 								class="flex-1 rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-blue-500"
 								placeholder="New task title..."
 								autofocus
 							/>
 							<button
-								on:click={handleAddTask}
+								onclick={handleAddTask}
 								class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
 							>
 								Add
 							</button>
 							<button
-								on:click={() => {
+								onclick={() => {
 									addingTask = false;
 									newTaskTitle = '';
 								}}
@@ -843,7 +847,7 @@
 										<div class="group flex items-center px-4 py-2.5 hover:bg-slate-700/30">
 											<!-- Selection checkbox -->
 											<button
-												on:click={(e) => toggleTaskSelection(e, task.id)}
+												onclick={(e) => toggleTaskSelection(e, task.id)}
 												class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
 													task.id
 												)
@@ -869,7 +873,7 @@
 
 											<!-- Collapse toggle -->
 											<button
-												on:click={() => toggleCollapse(task.id)}
+												onclick={() => toggleCollapse(task.id)}
 												class="mr-2 flex h-5 w-5 items-center justify-center text-slate-500 hover:text-slate-300"
 												class:invisible={!hasSubtasks(task.id)}
 											>
@@ -891,7 +895,7 @@
 
 											<!-- Checkbox -->
 											<button
-												on:click={() => toggleTaskDone(task)}
+												onclick={() => toggleTaskDone(task)}
 												class="mr-3 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border {task.status ===
 												PmStatus.DONE
 													? 'border-green-500 bg-green-500/20'
@@ -954,7 +958,7 @@
 											>
 												<!-- Status dropdown trigger -->
 												<select
-													on:change={(e) => {
+													onchange={(e) => {
 														const target = e.target;
 														if (target instanceof HTMLSelectElement) {
 															changeTaskStatus(task, toStatus(target.value));
@@ -971,7 +975,7 @@
 
 												<!-- Add subtask -->
 												<button
-													on:click={() => (addingSubtaskFor = task.id)}
+													onclick={() => (addingSubtaskFor = task.id)}
 													class="rounded p-1 text-slate-400 hover:bg-slate-600 hover:text-slate-200"
 													title="Add subtask"
 												>
@@ -992,7 +996,7 @@
 
 												<!-- Delete -->
 												<button
-													on:click={() => handleDeleteTask(task)}
+													onclick={() => handleDeleteTask(task)}
 													class="rounded p-1 text-slate-400 hover:bg-red-900/30 hover:text-red-400"
 													title="Delete task"
 												>
@@ -1019,19 +1023,19 @@
 												<input
 													type="text"
 													bind:value={newSubtaskTitle}
-													on:keydown={(e) => handleSubtaskKeydown(e, task.id)}
+													onkeydown={(e) => handleSubtaskKeydown(e, task.id)}
 													class="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
 													placeholder="Subtask title..."
 													autofocus
 												/>
 												<button
-													on:click={() => handleAddSubtask(task.id)}
+													onclick={() => handleAddSubtask(task.id)}
 													class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-500"
 												>
 													Add
 												</button>
 												<button
-													on:click={() => {
+													onclick={() => {
 														addingSubtaskFor = null;
 														newSubtaskTitle = '';
 													}}
@@ -1051,7 +1055,7 @@
 													>
 														<!-- Selection checkbox -->
 														<button
-															on:click={(e) => toggleTaskSelection(e, subtask.id)}
+															onclick={(e) => toggleTaskSelection(e, subtask.id)}
 															class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
 																subtask.id
 															)
@@ -1077,7 +1081,7 @@
 
 														<!-- Collapse toggle for nested -->
 														<button
-															on:click={() => toggleCollapse(subtask.id)}
+															onclick={() => toggleCollapse(subtask.id)}
 															class="mr-2 flex h-5 w-5 items-center justify-center text-slate-500 hover:text-slate-300"
 															class:invisible={!hasSubtasks(subtask.id)}
 														>
@@ -1098,7 +1102,7 @@
 														</button>
 
 														<button
-															on:click={() => toggleTaskDone(subtask)}
+															onclick={() => toggleTaskDone(subtask)}
 															class="mr-3 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border {subtask.status ===
 															PmStatus.DONE
 																? 'border-green-500 bg-green-500/20'
@@ -1159,7 +1163,7 @@
 															class="ml-2 flex items-center space-x-1 opacity-0 transition-opacity group-hover:opacity-100"
 														>
 															<select
-																on:change={(e) => {
+																onchange={(e) => {
 																	const target = e.target;
 																	if (target instanceof HTMLSelectElement) {
 																		changeTaskStatus(subtask, toStatus(target.value));
@@ -1175,7 +1179,7 @@
 															</select>
 
 															<button
-																on:click={() => (addingSubtaskFor = subtask.id)}
+																onclick={() => (addingSubtaskFor = subtask.id)}
 																class="rounded p-1 text-slate-400 hover:bg-slate-600 hover:text-slate-200"
 																title="Add subtask"
 															>
@@ -1195,7 +1199,7 @@
 															</button>
 
 															<button
-																on:click={() => handleDeleteTask(subtask)}
+																onclick={() => handleDeleteTask(subtask)}
 																class="rounded p-1 text-slate-400 hover:bg-red-900/30 hover:text-red-400"
 																title="Delete task"
 															>
@@ -1222,19 +1226,19 @@
 															<input
 																type="text"
 																bind:value={newSubtaskTitle}
-																on:keydown={(e) => handleSubtaskKeydown(e, subtask.id)}
+																onkeydown={(e) => handleSubtaskKeydown(e, subtask.id)}
 																class="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
 																placeholder="Subtask title..."
 																autofocus
 															/>
 															<button
-																on:click={() => handleAddSubtask(subtask.id)}
+																onclick={() => handleAddSubtask(subtask.id)}
 																class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-500"
 															>
 																Add
 															</button>
 															<button
-																on:click={() => {
+																onclick={() => {
 																	addingSubtaskFor = null;
 																	newSubtaskTitle = '';
 																}}
@@ -1253,7 +1257,7 @@
 															>
 																<!-- Selection checkbox -->
 																<button
-																	on:click={(e) => toggleTaskSelection(e, subsubtask.id)}
+																	onclick={(e) => toggleTaskSelection(e, subsubtask.id)}
 																	class="mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isTaskSelected(
 																		subsubtask.id
 																	)
@@ -1278,7 +1282,7 @@
 																</button>
 
 																<button
-																	on:click={() => toggleTaskDone(subsubtask)}
+																	onclick={() => toggleTaskDone(subsubtask)}
 																	class="mr-3 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border {subsubtask.status ===
 																	PmStatus.DONE
 																		? 'border-green-500 bg-green-500/20'
@@ -1323,7 +1327,7 @@
 																	class="ml-2 flex items-center space-x-1 opacity-0 transition-opacity group-hover:opacity-100"
 																>
 																	<button
-																		on:click={() => handleDeleteTask(subsubtask)}
+																		onclick={() => handleDeleteTask(subsubtask)}
 																		class="rounded p-1 text-slate-400 hover:bg-red-900/30 hover:text-red-400"
 																		title="Delete task"
 																	>
@@ -1387,7 +1391,7 @@
 											</div>
 											<div class="flex space-x-1">
 												<button
-													on:click={() => startEditComment(comment)}
+													onclick={() => startEditComment(comment)}
 													class="rounded p-1 text-slate-400 hover:text-slate-200"
 													title="Edit"
 												>
@@ -1406,7 +1410,7 @@
 													</svg>
 												</button>
 												<button
-													on:click={() => handleDeleteComment(comment.id)}
+													onclick={() => handleDeleteComment(comment.id)}
 													class="rounded p-1 text-slate-400 hover:text-red-400"
 													title="Delete"
 												>
@@ -1434,13 +1438,13 @@
 											></textarea>
 											<div class="mt-1 flex space-x-2">
 												<button
-													on:click={saveComment}
+													onclick={saveComment}
 													class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-500"
 												>
 													Save
 												</button>
 												<button
-													on:click={cancelEditComment}
+													onclick={cancelEditComment}
 													class="rounded bg-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-600"
 												>
 													Cancel
@@ -1466,7 +1470,7 @@
 							></textarea>
 							<div class="mt-2 flex justify-end">
 								<button
-									on:click={handleAddComment}
+									onclick={handleAddComment}
 									disabled={!newCommentBody.trim()}
 									class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 								>
@@ -1488,7 +1492,7 @@
 									</span>
 								</h2>
 								<button
-									on:click={() => (addingAttachment = true)}
+									onclick={() => (addingAttachment = true)}
 									class="text-xs text-slate-400 hover:text-slate-200"
 								>
 									Add
@@ -1500,7 +1504,7 @@
 									<input
 										type="text"
 										bind:value={newAttachmentName}
-										on:keydown={handleAttachmentKeydown}
+										onkeydown={handleAttachmentKeydown}
 										class="mb-2 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
 										placeholder="File name..."
 										autofocus
@@ -1508,19 +1512,19 @@
 									<input
 										type="text"
 										bind:value={newAttachmentPath}
-										on:keydown={handleAttachmentKeydown}
+										onkeydown={handleAttachmentKeydown}
 										class="mb-2 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
 										placeholder="File path..."
 									/>
 									<div class="flex space-x-2">
 										<button
-											on:click={handleAddAttachment}
+											onclick={handleAddAttachment}
 											class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-500"
 										>
 											Add
 										</button>
 										<button
-											on:click={() => {
+											onclick={() => {
 												addingAttachment = false;
 												newAttachmentName = '';
 												newAttachmentPath = '';
@@ -1550,7 +1554,7 @@
 												</p>
 											</div>
 											<button
-												on:click={() => handleDeleteAttachment(attachment.id)}
+												onclick={() => handleDeleteAttachment(attachment.id)}
 												class="ml-2 rounded p-1 text-slate-400 hover:text-red-400"
 												title="Remove"
 											>

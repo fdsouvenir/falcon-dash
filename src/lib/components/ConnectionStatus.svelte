@@ -2,10 +2,10 @@
 	import { connectionState } from '$lib/stores';
 	import { ConnectionState } from '$lib/gateway/types';
 
-	$: state = $connectionState;
+	let state = $derived($connectionState);
 
-	$: dotColor = getDotColor(state);
-	$: label = getLabel(state);
+	let dotColor = $derived(getDotColor(state));
+	let label = $derived(getLabel(state));
 
 	function getDotColor(s: ConnectionState): string {
 		switch (s) {

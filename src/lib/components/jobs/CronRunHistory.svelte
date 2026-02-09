@@ -4,12 +4,16 @@
 	import { cronRuns, loadCronRuns } from '$lib/stores';
 	import { formatFullTimestamp } from '$lib/utils/time';
 
-	export let jobId: string;
-	export let now: number;
+	interface Props {
+		jobId: string;
+		now: number;
+	}
 
-	let loading = false;
-	let errorMsg = '';
-	let pollInterval: ReturnType<typeof setInterval> | null = null;
+	let { jobId, now }: Props = $props();
+
+	let loading = $state(false);
+	let errorMsg = $state('');
+	let pollInterval: ReturnType<typeof setInterval> | null = $state(null);
 
 	function formatDuration(
 		startedAt: number,
@@ -55,11 +59,15 @@
 		}
 	}
 
-	$: if (jobId) {
-		loadRuns(jobId);
-	}
+	$effect(() => {
+		if (jobId) {
+			loadRuns(jobId);
+		}
+	});
 
-	$: updatePolling($cronRuns);
+	$effect(() => {
+		updatePolling($cronRuns);
+	});
 
 	onDestroy(() => {
 		if (pollInterval) {

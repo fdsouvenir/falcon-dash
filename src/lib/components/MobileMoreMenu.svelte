@@ -4,7 +4,10 @@
 	import { page } from '$app/stores';
 	import { sortedCustomApps } from '$lib/stores/apps';
 
-	export let open = false;
+	interface Props {
+		open?: boolean;
+	}
+	let { open = false }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 
@@ -20,16 +23,16 @@
 		close();
 	}
 
-	$: currentPath = $page.url.pathname;
+	let currentPath = $derived($page.url.pathname);
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- Backdrop -->
 	<div
 		class="fixed inset-0 z-40 bg-black/50"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
 		transition:fade={{ duration: 200 }}
 	></div>
 
@@ -50,7 +53,7 @@
 				'/settings'
 					? 'bg-slate-700 text-slate-100'
 					: ''}"
-				on:click={handleLinkClick}
+				onclick={handleLinkClick}
 			>
 				<svg
 					class="w-6 h-6"
@@ -77,7 +80,7 @@
 				'/passwords'
 					? 'bg-slate-700 text-slate-100'
 					: ''}"
-				on:click={handleLinkClick}
+				onclick={handleLinkClick}
 			>
 				<svg
 					class="w-6 h-6"
@@ -127,7 +130,7 @@
 						`/apps/${app.id}`
 							? 'bg-slate-700 text-slate-100'
 							: ''}"
-						on:click={handleLinkClick}
+						onclick={handleLinkClick}
 					>
 						<svg
 							class="w-5 h-5"

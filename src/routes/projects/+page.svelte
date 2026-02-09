@@ -32,25 +32,25 @@
 
 	// --- State ---
 
-	let loading = true;
-	let errorMessage = '';
+	let loading = $state(true);
+	let errorMessage = $state('');
 
-	// View state — synced with URL ?view= param
-	let currentView: PmView = 'dashboard';
+	// View state -- synced with URL ?view= param
+	let currentView = $state<PmView>('dashboard');
 
-	// Filter state — preserved across view switches
-	let selectedDomainId: string | null = null;
-	let selectedFocusId: string | null = null;
+	// Filter state -- preserved across view switches
+	let selectedDomainId = $state<string | null>(null);
+	let selectedFocusId = $state<string | null>(null);
 
 	// Task detail panel state
-	let selectedTaskId: number | null = null;
-	let taskDetailOpen = false;
+	let selectedTaskId = $state<number | null>(null);
+	let taskDetailOpen = $state(false);
 
 	// Search visibility
-	let showSearch = false;
+	let showSearch = $state(false);
 
 	// PM sidebar collapsed on mobile
-	let pmSidebarOpen = false;
+	let pmSidebarOpen = $state(false);
 
 	// --- URL sync ---
 
@@ -157,7 +157,7 @@
 			<div class="flex items-center space-x-3">
 				<!-- Mobile PM sidebar toggle -->
 				<button
-					on:click={togglePmSidebar}
+					onclick={togglePmSidebar}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-slate-200 lg:hidden"
 					aria-label="Toggle project filter sidebar"
 				>
@@ -186,7 +186,7 @@
 					aria-label="View switcher"
 				>
 					<button
-						on:click={() => setView('dashboard')}
+						onclick={() => setView('dashboard')}
 						role="tab"
 						aria-selected={isActiveView('dashboard')}
 						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
@@ -198,7 +198,7 @@
 						Dashboard
 					</button>
 					<button
-						on:click={() => setView('list')}
+						onclick={() => setView('list')}
 						role="tab"
 						aria-selected={isActiveView('list')}
 						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
@@ -210,7 +210,7 @@
 						List
 					</button>
 					<button
-						on:click={() => setView('kanban')}
+						onclick={() => setView('kanban')}
 						role="tab"
 						aria-selected={isActiveView('kanban')}
 						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
@@ -227,7 +227,7 @@
 			<div class="flex items-center space-x-2">
 				<!-- Search toggle -->
 				<button
-					on:click={toggleSearch}
+					onclick={toggleSearch}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 					aria-label="Search projects and tasks"
 					class:bg-slate-700={showSearch}
@@ -254,7 +254,7 @@
 		<!-- Mobile view switcher (below header on small screens) -->
 		<div class="flex border-b border-slate-700 sm:hidden" role="tablist" aria-label="View switcher">
 			<button
-				on:click={() => setView('dashboard')}
+				onclick={() => setView('dashboard')}
 				role="tab"
 				aria-selected={isActiveView('dashboard')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
@@ -266,7 +266,7 @@
 				Dashboard
 			</button>
 			<button
-				on:click={() => setView('list')}
+				onclick={() => setView('list')}
 				role="tab"
 				aria-selected={isActiveView('list')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
@@ -278,7 +278,7 @@
 				List
 			</button>
 			<button
-				on:click={() => setView('kanban')}
+				onclick={() => setView('kanban')}
 				role="tab"
 				aria-selected={isActiveView('kanban')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
@@ -309,11 +309,11 @@
 			<!-- PM sidebar: Domain/Focus tree -->
 			<!-- Mobile overlay -->
 			{#if pmSidebarOpen}
-				<!-- svelte-ignore a11y-click-events-have-key-events -->
-				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="fixed inset-0 z-30 bg-black/50 lg:hidden"
-					on:click={() => (pmSidebarOpen = false)}
+					onclick={() => (pmSidebarOpen = false)}
 				></div>
 			{/if}
 

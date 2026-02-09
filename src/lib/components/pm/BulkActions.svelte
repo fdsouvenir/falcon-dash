@@ -4,10 +4,14 @@
 	import { pmProjects, pmMilestones, bulkUpdateTasks, bulkMoveTasks } from '$lib/stores';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
-	/** Set of selected task IDs */
-	export let selectedIds: Set<number>;
-	/** Total number of selectable tasks (for select all toggle) */
-	export let totalCount: number = 0;
+	interface Props {
+		/** Set of selected task IDs */
+		selectedIds: Set<number>;
+		/** Total number of selectable tasks (for select all toggle) */
+		totalCount?: number;
+	}
+
+	let { selectedIds, totalCount = 0 }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		clear: void;
@@ -16,10 +20,10 @@
 
 	// --- Action Dropdown State ---
 
-	let showStatusMenu = false;
-	let showMoveMenu = false;
-	let showMilestoneMenu = false;
-	let confirmAction: { type: string; label: string; fn: () => Promise<void> } | null = null;
+	let showStatusMenu = $state(false);
+	let showMoveMenu = $state(false);
+	let showMilestoneMenu = $state(false);
+	let confirmAction: { type: string; label: string; fn: () => Promise<void> } | null = $state(null);
 
 	// --- Helpers ---
 
@@ -42,9 +46,9 @@
 		}
 	}
 
-	$: count = selectedIds.size;
-	$: ids = Array.from(selectedIds);
-	$: allSelected = totalCount > 0 && count === totalCount;
+	let count = $derived(selectedIds.size);
+	let ids = $derived(Array.from(selectedIds));
+	let allSelected = $derived(totalCount > 0 && count === totalCount);
 
 	// --- Bulk Actions ---
 
@@ -128,16 +132,18 @@
 	];
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 {#if count > 0}
 	<div
 		class="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2.5 shadow-xl"
-		on:click|stopPropagation
+		onclick={(e) => {
+			e.stopPropagation();
+		}}
 	>
 		<!-- Select all toggle -->
 		<button
-			on:click={toggleSelectAll}
+			onclick={toggleSelectAll}
 			aria-label={allSelected ? 'Deselect all tasks' : 'Select all tasks'}
 			class="flex items-center focus-visible:ring-2 focus-visible:ring-blue-500 space-x-2 text-xs text-slate-300 hover:text-slate-100"
 		>
@@ -171,7 +177,7 @@
 		<!-- Change Status -->
 		<div class="relative">
 			<button
-				on:click={() => {
+				onclick={() => {
 					closeMenus();
 					showStatusMenu = !showStatusMenu;
 				}}
@@ -185,7 +191,7 @@
 				>
 					{#each statusOptions as s (s)}
 						<button
-							on:click={() => requestBulkStatus(s)}
+							onclick={() => requestBulkStatus(s)}
 							class="block w-full whitespace-nowrap px-4 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 						>
 							{statusLabel(s)}
@@ -198,7 +204,7 @@
 		<!-- Move to Project -->
 		<div class="relative">
 			<button
-				on:click={() => {
+				onclick={() => {
 					closeMenus();
 					showMoveMenu = !showMoveMenu;
 				}}
@@ -212,7 +218,7 @@
 				>
 					{#each $pmProjects as project (project.id)}
 						<button
-							on:click={() => requestBulkMove(project.id)}
+							onclick={() => requestBulkMove(project.id)}
 							class="block w-full whitespace-nowrap px-4 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 						>
 							{project.title}
@@ -228,7 +234,7 @@
 		<!-- Set Milestone -->
 		<div class="relative">
 			<button
-				on:click={() => {
+				onclick={() => {
 					closeMenus();
 					showMilestoneMenu = !showMilestoneMenu;
 				}}
@@ -241,14 +247,14 @@
 					class="absolute bottom-full left-0 mb-2 max-h-48 overflow-y-auto rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 				>
 					<button
-						on:click={() => requestBulkMilestone(undefined)}
+						onclick={() => requestBulkMilestone(undefined)}
 						class="block w-full whitespace-nowrap px-4 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-700"
 					>
 						None
 					</button>
 					{#each $pmMilestones as ms (ms.id)}
 						<button
-							on:click={() => requestBulkMilestone(ms.id)}
+							onclick={() => requestBulkMilestone(ms.id)}
 							class="block w-full whitespace-nowrap px-4 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
 						>
 							{ms.name}
@@ -262,7 +268,7 @@
 
 		<!-- Clear Selection -->
 		<button
-			on:click={clearSelection}
+			onclick={clearSelection}
 			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 			title="Clear selection"
 		>

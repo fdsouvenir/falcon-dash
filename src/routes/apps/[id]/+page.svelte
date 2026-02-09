@@ -5,11 +5,11 @@
 	import { getApp, renameApp, unpinApp } from '$lib/stores/apps';
 	import type { CustomApp } from '$lib/types/canvas';
 
-	$: appId = $page.params.id ?? '';
-	$: app = appId ? (getApp(appId) as CustomApp | undefined) : undefined;
+	let appId = $derived($page.params.id ?? '');
+	let app = $derived(appId ? (getApp(appId) as CustomApp | undefined) : undefined);
 
-	let editing = false;
-	let editName = '';
+	let editing = $state(false);
+	let editName = $state('');
 
 	function startRename(): void {
 		if (!app) return;
@@ -49,14 +49,14 @@
 						type="text"
 						bind:value={editName}
 						aria-label="Edit app name"
-						on:keydown={handleRenameKeydown}
-						on:blur={saveRename}
+						onkeydown={handleRenameKeydown}
+						onblur={saveRename}
 						class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100 outline-none focus:border-blue-500"
 					/>
 				{:else}
 					<h1 class="text-lg font-semibold text-slate-100">{app.name}</h1>
 					<button
-						on:click={startRename}
+						onclick={startRename}
 						aria-label="Rename app"
 						class="rounded p-1 focus-visible:ring-2 focus-visible:ring-blue-500 text-slate-400 transition-colors hover:text-slate-200"
 						title="Rename app"
@@ -82,7 +82,7 @@
 				</span>
 			</div>
 			<button
-				on:click={handleUnpin}
+				onclick={handleUnpin}
 				class="rounded px-3 py-1 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-red-400"
 			>
 				Unpin

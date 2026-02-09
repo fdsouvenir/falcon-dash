@@ -25,18 +25,20 @@
 		{ name: 'MEMORY.md', description: 'Persistent memory and learnings' }
 	];
 
-	let workspaceFiles: WorkspaceFileDef[] = KNOWN_FILES.map((f) => ({
-		...f,
-		exists: false,
-		mtime: null
-	}));
+	let workspaceFiles = $state<WorkspaceFileDef[]>(
+		KNOWN_FILES.map((f) => ({
+			...f,
+			exists: false,
+			mtime: null
+		}))
+	);
 
-	let selectedFile: string | null = null;
-	let editing = false;
-	let loading = true;
-	let toast: { message: string; type: 'success' | 'error' } | null = null;
-	let showResetConfirm = false;
-	let now = Date.now();
+	let selectedFile = $state<string | null>(null);
+	let editing = $state(false);
+	let loading = $state(true);
+	let toast = $state<{ message: string; type: 'success' | 'error' } | null>(null);
+	let showResetConfirm = $state(false);
+	let now = $state(Date.now());
 
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 	let nowInterval: ReturnType<typeof setInterval> | undefined;
@@ -144,7 +146,7 @@
 		}
 	}
 
-	$: selectedDef = workspaceFiles.find((f) => f.name === selectedFile) ?? null;
+	let selectedDef = $derived(workspaceFiles.find((f) => f.name === selectedFile) ?? null);
 
 	onMount(() => {
 		fetchFileList();
@@ -201,7 +203,7 @@
 							<div class="flex items-start justify-between">
 								{#if file.exists}
 									<button
-										on:click={() => handleSelectFile(file.name)}
+										onclick={() => handleSelectFile(file.name)}
 										class="min-w-0 flex-1 text-left"
 									>
 										<span class="block text-sm font-medium text-slate-200">{file.name}</span>
@@ -218,7 +220,7 @@
 										<span class="mt-0.5 block text-xs text-slate-500">{file.description}</span>
 									</div>
 									<button
-										on:click={() => handleCreateFile(file.name)}
+										onclick={() => handleCreateFile(file.name)}
 										class="ml-2 flex-shrink-0 rounded bg-blue-600 px-2.5 py-1 text-xs text-white transition-colors hover:bg-blue-500"
 									>
 										Create
@@ -251,13 +253,13 @@
 						</div>
 						<div class="ml-4 flex items-center space-x-2">
 							<button
-								on:click={requestReset}
+								onclick={requestReset}
 								class="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 							>
 								Reset
 							</button>
 							<button
-								on:click={startEditing}
+								onclick={startEditing}
 								class="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-500"
 							>
 								Edit

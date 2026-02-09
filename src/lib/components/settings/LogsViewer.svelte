@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { afterUpdate, onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { logEntries, logCursor, tailLogs, clearLogs } from '$lib/stores';
 	import type { LogLevel } from '$lib/types/settings';
 
 	let container: HTMLDivElement;
-	let isAtBottom = true;
-	let streaming = true;
-	let loading = true;
-	let filterLevel: LogLevel | 'all' = 'all';
-	let searchText = '';
+	let isAtBottom = $state(true);
+	let streaming = $state(true);
+	let loading = $state(true);
+	let filterLevel: LogLevel | 'all' = $state('all');
+	let searchText = $state('');
 
 	let tailInterval: ReturnType<typeof setInterval> | undefined;
 
@@ -100,19 +100,21 @@
 		}
 	}
 
-	$: filteredEntries = $logEntries.filter((entry) => {
-		if (filterLevel !== 'all' && entry.level !== filterLevel) return false;
-		if (searchText) {
-			const lower = searchText.toLowerCase();
-			if (
-				!entry.message.toLowerCase().includes(lower) &&
-				!(entry.source && entry.source.toLowerCase().includes(lower))
-			) {
-				return false;
+	let filteredEntries = $derived(
+		$logEntries.filter((entry) => {
+			if (filterLevel !== 'all' && entry.level !== filterLevel) return false;
+			if (searchText) {
+				const lower = searchText.toLowerCase();
+				if (
+					!entry.message.toLowerCase().includes(lower) &&
+					!(entry.source && entry.source.toLowerCase().includes(lower))
+				) {
+					return false;
+				}
 			}
-		}
-		return true;
-	});
+			return true;
+		})
+	);
 
 	onMount(async () => {
 		try {
@@ -130,9 +132,12 @@
 		stopTailing();
 	});
 
-	afterUpdate(() => {
+	$effect(() => {
+		// Track filteredEntries length to re-run when log entries change
+		const _len = filteredEntries.length;
+		void _len;
 		if (isAtBottom && streaming) {
-			scrollToBottom();
+			tick().then(() => scrollToBottom());
 		}
 	});
 </script>
@@ -171,7 +176,7 @@
 
 		<!-- Pause/Resume -->
 		<button
-			on:click={toggleStreaming}
+			onclick={toggleStreaming}
 			class="rounded px-2 py-1 text-xs transition-colors {streaming
 				? 'bg-green-900/40 text-green-400 hover:bg-green-900/60'
 				: 'bg-slate-700 text-slate-300 hover:bg-slate-600'}"
@@ -181,7 +186,7 @@
 
 		<!-- Clear -->
 		<button
-			on:click={handleClear}
+			onclick={handleClear}
 			class="rounded bg-slate-700 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-600"
 		>
 			Clear
@@ -192,7 +197,7 @@
 	<div
 		class="relative flex-1 overflow-y-auto bg-slate-900/50"
 		bind:this={container}
-		on:scroll={handleScroll}
+		onscroll={handleScroll}
 	>
 		{#if loading}
 			<div class="flex items-center justify-center py-8">
@@ -235,7 +240,7 @@
 		{#if !isAtBottom}
 			<button
 				class="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-600 px-3 py-1 text-xs text-slate-200 shadow-lg transition-colors hover:bg-slate-500"
-				on:click={jumpToBottom}
+				onclick={jumpToBottom}
 			>
 				Jump to bottom
 			</button>

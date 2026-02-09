@@ -1,13 +1,17 @@
 <script lang="ts">
-	import { afterUpdate, onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import type { ChatMessage } from '$lib/gateway/types';
 	import { formatRelativeTime, formatFullTimestamp } from '$lib/utils/time';
 
-	export let messages: ChatMessage[] = [];
+	interface Props {
+		messages?: ChatMessage[];
+	}
+
+	let { messages = [] }: Props = $props();
 
 	let container: HTMLDivElement;
-	let isAtBottom = true;
-	let now = Date.now();
+	let isAtBottom = $state(true);
+	let now = $state(Date.now());
 
 	/** Track whether user has scrolled away from bottom */
 	function handleScroll() {
@@ -38,9 +42,12 @@
 		return () => clearInterval(interval);
 	});
 
-	afterUpdate(() => {
+	$effect(() => {
+		// Track messages length to re-run when messages change
+		const _len = messages.length;
+		void _len;
 		if (isAtBottom) {
-			scrollToBottom();
+			tick().then(() => scrollToBottom());
 		}
 	});
 
@@ -59,7 +66,7 @@
 </script>
 
 <div class="relative flex h-full flex-col">
-	<div class="flex-1 overflow-y-auto px-4 py-4" bind:this={container} on:scroll={handleScroll}>
+	<div class="flex-1 overflow-y-auto px-4 py-4" bind:this={container} onscroll={handleScroll}>
 		{#if messages.length === 0}
 			<div class="flex h-full items-center justify-center">
 				<p class="text-sm text-slate-400">No messages yet. Start a conversation!</p>
@@ -91,7 +98,7 @@
 	{#if !isAtBottom}
 		<button
 			class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-slate-600 px-4 py-1.5 text-xs text-slate-200 shadow-lg transition-colors hover:bg-slate-500"
-			on:click={jumpToBottom}
+			onclick={jumpToBottom}
 			aria-label="Scroll to latest messages"
 		>
 			Jump to bottom

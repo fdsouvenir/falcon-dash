@@ -14,26 +14,26 @@
 	import type { ConfigSchemaProperty } from '$lib/types/settings';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
-	let loading = true;
-	let error = '';
-	let toastMessage = '';
-	let toastType: 'success' | 'error' = 'success';
+	let loading = $state(true);
+	let error = $state('');
+	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error'>('success');
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	// --- Exec Allowlist State ---
-	let newPattern = '';
-	let newDescription = '';
-	let addingEntry = false;
-	let removeTarget: string | null = null;
+	let newPattern = $state('');
+	let newDescription = $state('');
+	let addingEntry = $state(false);
+	let removeTarget = $state<string | null>(null);
 
 	// --- Config Editor State ---
-	let configJson = '';
-	let configJsonError = '';
-	let applying = false;
-	let showApplyConfirm = false;
+	let configJson = $state('');
+	let configJsonError = $state('');
+	let applying = $state(false);
+	let showApplyConfirm = $state(false);
 
 	// --- Schema Viewer State ---
-	let schemaExpanded = false;
+	let schemaExpanded = $state(false);
 
 	function showToast(message: string, type: 'success' | 'error'): void {
 		if (toastTimeout) clearTimeout(toastTimeout);
@@ -138,7 +138,7 @@
 		}
 	});
 
-	$: schemaProperties = Object.entries($configSchema.properties);
+	let schemaProperties = $derived(Object.entries($configSchema.properties));
 </script>
 
 <!-- Toast -->
@@ -209,7 +209,7 @@
 						class="flex-1 rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 					/>
 					<button
-						on:click={handleAddEntry}
+						onclick={handleAddEntry}
 						disabled={!newPattern.trim() || addingEntry}
 						class="whitespace-nowrap rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -235,7 +235,7 @@
 									{/if}
 								</div>
 								<button
-									on:click={() => (removeTarget = entry.pattern)}
+									onclick={() => (removeTarget = entry.pattern)}
 									class="ml-4 text-xs text-red-400 transition-colors hover:text-red-300"
 								>
 									Remove
@@ -260,7 +260,7 @@
 			<div class="p-5">
 				<textarea
 					bind:value={configJson}
-					on:input={() => validateConfigJson()}
+					oninput={() => validateConfigJson()}
 					spellcheck="false"
 					class="h-64 w-full resize-y rounded border bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-200 focus:outline-none {configJsonError
 						? 'border-red-500'
@@ -271,14 +271,14 @@
 				{/if}
 				<div class="mt-3 flex items-center gap-3">
 					<button
-						on:click={handleApplyClick}
+						onclick={handleApplyClick}
 						disabled={!!configJsonError || applying}
 						class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{applying ? 'Applying...' : 'Apply Configuration'}
 					</button>
 					<button
-						on:click={syncConfigJson}
+						onclick={syncConfigJson}
 						class="rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 					>
 						Reset
@@ -290,7 +290,7 @@
 		<!-- Config Schema Reference -->
 		<section class="rounded-lg border border-slate-700 bg-slate-800/50">
 			<button
-				on:click={() => (schemaExpanded = !schemaExpanded)}
+				onclick={() => (schemaExpanded = !schemaExpanded)}
 				class="flex w-full items-center justify-between border-b border-slate-700 px-5 py-3 text-left"
 			>
 				<div>

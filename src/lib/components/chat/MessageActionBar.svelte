@@ -1,7 +1,11 @@
 <script lang="ts">
-	export let content: string;
+	interface Props {
+		content: string;
+	}
 
-	let copied = false;
+	let { content }: Props = $props();
+
+	let copied = $state(false);
 	let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	async function handleCopy() {
@@ -23,7 +27,7 @@
 >
 	<button
 		class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded px-2 py-1.5 text-xs text-slate-400 transition-colors hover:bg-slate-600 hover:text-slate-200 md:min-h-0 md:min-w-0 md:px-1.5 md:py-0.5"
-		on:click={handleCopy}
+		onclick={handleCopy}
 		aria-label="Copy message"
 	>
 		{#if copied}

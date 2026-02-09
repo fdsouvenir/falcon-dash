@@ -6,12 +6,12 @@
 	import { theme as themeStore, setTheme as setThemeStore } from '$lib/stores/theme';
 	import type { Theme } from '$lib/stores/theme';
 
-	let notificationsEnabled = true;
-	let notificationSound = true;
-	let compactMode = false;
-	let pushPermission: 'default' | 'denied' | 'granted' = 'default';
+	let notificationsEnabled = $state(true);
+	let notificationSound = $state(true);
+	let compactMode = $state(false);
+	let pushPermission: 'default' | 'denied' | 'granted' = $state('default');
 
-	$: currentTheme = $themeStore;
+	let currentTheme = $derived($themeStore);
 
 	function loadPreferences(): void {
 		try {
@@ -80,7 +80,7 @@
 			</p>
 			<div class="flex gap-3">
 				<button
-					on:click={() => handleSetTheme('dark')}
+					onclick={() => handleSetTheme('dark')}
 					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'dark'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
@@ -90,7 +90,7 @@
 					Dark
 				</button>
 				<button
-					on:click={() => handleSetTheme('light')}
+					onclick={() => handleSetTheme('light')}
 					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'light'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
@@ -100,7 +100,7 @@
 					Light
 				</button>
 				<button
-					on:click={() => handleSetTheme('system')}
+					onclick={() => handleSetTheme('system')}
 					class="flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors {currentTheme ===
 					'system'
 						? 'border-blue-500 bg-blue-500/10 text-blue-400'
@@ -130,7 +130,7 @@
 				<button
 					role="switch"
 					aria-checked={notificationsEnabled}
-					on:click={toggleNotifications}
+					onclick={toggleNotifications}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {notificationsEnabled
 						? 'bg-blue-600'
 						: 'bg-slate-600'}"
@@ -152,7 +152,7 @@
 				<button
 					role="switch"
 					aria-checked={notificationSound}
-					on:click={toggleNotificationSound}
+					onclick={toggleNotificationSound}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {notificationSound
 						? 'bg-blue-600'
 						: 'bg-slate-600'}"
@@ -194,7 +194,7 @@
 					</span>
 				{:else}
 					<button
-						on:click={handleEnablePush}
+						onclick={handleEnablePush}
 						class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
 					>
 						Enable
@@ -220,7 +220,7 @@
 				<button
 					role="switch"
 					aria-checked={compactMode}
-					on:click={toggleCompactMode}
+					onclick={toggleCompactMode}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {compactMode
 						? 'bg-blue-600'
 						: 'bg-slate-600'}"

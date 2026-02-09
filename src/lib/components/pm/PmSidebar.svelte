@@ -19,10 +19,14 @@
 
 	// --- Props ---
 
-	/** Currently selected domain id (null = no domain filter) */
-	export let selectedDomainId: string | null = null;
-	/** Currently selected focus id (null = no focus filter) */
-	export let selectedFocusId: string | null = null;
+	interface Props {
+		/** Currently selected domain id (null = no domain filter) */
+		selectedDomainId?: string | null;
+		/** Currently selected focus id (null = no focus filter) */
+		selectedFocusId?: string | null;
+	}
+
+	let { selectedDomainId = null, selectedFocusId = null }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		select: { domainId: string | null; focusId: string | null };
@@ -30,26 +34,28 @@
 
 	// --- State ---
 
-	let expandedDomains: Set<string> = new Set();
-	let creatingDomain = false;
-	let newDomainId = '';
-	let newDomainName = '';
-	let editingDomainId: string | null = null;
-	let editDomainName = '';
-	let creatingFocusForDomain: string | null = null;
-	let newFocusId = '';
-	let newFocusName = '';
-	let editingFocusId: string | null = null;
-	let editFocusName = '';
+	let expandedDomains: Set<string> = $state(new Set());
+	let creatingDomain = $state(false);
+	let newDomainId = $state('');
+	let newDomainName = $state('');
+	let editingDomainId: string | null = $state(null);
+	let editDomainName = $state('');
+	let creatingFocusForDomain: string | null = $state(null);
+	let newFocusId = $state('');
+	let newFocusName = $state('');
+	let editingFocusId: string | null = $state(null);
+	let editFocusName = $state('');
 
-	let confirmOpen = false;
-	let confirmTitle = '';
-	let confirmMessage = '';
-	let confirmAction: (() => void) | null = null;
+	let confirmOpen = $state(false);
+	let confirmTitle = $state('');
+	let confirmMessage = $state('');
+	let confirmAction: (() => void) | null = $state(null);
 
 	// --- Derived ---
 
-	$: sortedDomains = [...$pmDomains].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+	let sortedDomains = $derived(
+		[...$pmDomains].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+	);
 
 	function focusesForDomain(domainId: string): PmFocus[] {
 		return $pmFocuses
@@ -329,7 +335,7 @@
 	<div class="flex items-center justify-between border-b border-slate-700 px-3 py-3">
 		<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Navigation</h3>
 		<button
-			on:click={startCreateDomain}
+			onclick={startCreateDomain}
 			class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
 			title="Add Domain"
 		>
@@ -343,7 +349,7 @@
 	<div class="flex-1 overflow-y-auto px-2 py-2">
 		<!-- All Projects -->
 		<button
-			on:click={selectAll}
+			onclick={selectAll}
 			class="mb-1 flex w-full items-center rounded px-2 py-1.5 text-left text-sm transition-colors"
 			class:bg-slate-700={selectedDomainId === null && selectedFocusId === null}
 			class:text-slate-100={selectedDomainId === null && selectedFocusId === null}
@@ -366,25 +372,25 @@
 			<div class="mb-2 rounded border border-slate-600 bg-slate-800 p-2">
 				<input
 					bind:value={newDomainId}
-					on:keydown={handleDomainFormKeydown}
+					onkeydown={handleDomainFormKeydown}
 					placeholder="Domain ID"
 					class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 				/>
 				<input
 					bind:value={newDomainName}
-					on:keydown={handleDomainFormKeydown}
+					onkeydown={handleDomainFormKeydown}
 					placeholder="Domain Name"
 					class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 				/>
 				<div class="flex justify-end space-x-1">
 					<button
-						on:click={cancelCreateDomain}
+						onclick={cancelCreateDomain}
 						class="rounded px-2 py-0.5 text-xs text-slate-400 hover:text-slate-200"
 					>
 						Cancel
 					</button>
 					<button
-						on:click={submitCreateDomain}
+						onclick={submitCreateDomain}
 						class="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-500"
 					>
 						Create
@@ -402,18 +408,18 @@
 					<div class="rounded border border-slate-600 bg-slate-800 p-2">
 						<input
 							bind:value={editDomainName}
-							on:keydown={handleEditDomainKeydown}
+							onkeydown={handleEditDomainKeydown}
 							class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 						/>
 						<div class="flex justify-end space-x-1">
 							<button
-								on:click={cancelEditDomain}
+								onclick={cancelEditDomain}
 								class="rounded px-2 py-0.5 text-xs text-slate-400 hover:text-slate-200"
 							>
 								Cancel
 							</button>
 							<button
-								on:click={submitEditDomain}
+								onclick={submitEditDomain}
 								class="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-500"
 							>
 								Save
@@ -424,7 +430,7 @@
 					<div class="group flex items-center">
 						<!-- Expand/collapse toggle -->
 						<button
-							on:click={() => toggleDomain(domain.id)}
+							onclick={() => toggleDomain(domain.id)}
 							class="flex-shrink-0 rounded p-0.5 text-slate-500 transition-colors hover:text-slate-300"
 							title={expandedDomains.has(domain.id) ? 'Collapse' : 'Expand'}
 						>
@@ -446,7 +452,7 @@
 
 						<!-- Domain label (click to select) -->
 						<button
-							on:click={() => selectDomain(domain.id)}
+							onclick={() => selectDomain(domain.id)}
 							class="flex min-w-0 flex-1 items-center rounded px-1.5 py-1 text-left text-sm transition-colors"
 							class:bg-slate-700={selectedDomainId === domain.id && selectedFocusId === null}
 							class:text-slate-100={selectedDomainId === domain.id && selectedFocusId === null}
@@ -475,7 +481,7 @@
 						>
 							{#if domainIndex > 0}
 								<button
-									on:click={() => moveDomainUp(domainIndex)}
+									onclick={() => moveDomainUp(domainIndex)}
 									class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 									title="Move up"
 								>
@@ -491,7 +497,7 @@
 							{/if}
 							{#if domainIndex < sortedDomains.length - 1}
 								<button
-									on:click={() => moveDomainDown(domainIndex)}
+									onclick={() => moveDomainDown(domainIndex)}
 									class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 									title="Move down"
 								>
@@ -506,7 +512,7 @@
 								</button>
 							{/if}
 							<button
-								on:click={() => startCreateFocus(domain.id)}
+								onclick={() => startCreateFocus(domain.id)}
 								class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 								title="Add focus"
 							>
@@ -520,7 +526,7 @@
 								</svg>
 							</button>
 							<button
-								on:click={() => startEditDomain(domain)}
+								onclick={() => startEditDomain(domain)}
 								class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 								title="Edit domain"
 							>
@@ -534,7 +540,7 @@
 								</svg>
 							</button>
 							<button
-								on:click={() => confirmDeleteDomain(domain)}
+								onclick={() => confirmDeleteDomain(domain)}
 								class="rounded p-0.5 text-slate-500 hover:text-red-400"
 								title="Delete domain"
 							>
@@ -560,18 +566,18 @@
 								<div class="mb-1 rounded border border-slate-600 bg-slate-800 p-2">
 									<input
 										bind:value={editFocusName}
-										on:keydown={handleEditFocusKeydown}
+										onkeydown={handleEditFocusKeydown}
 										class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 									/>
 									<div class="flex justify-end space-x-1">
 										<button
-											on:click={cancelEditFocus}
+											onclick={cancelEditFocus}
 											class="rounded px-2 py-0.5 text-xs text-slate-400 hover:text-slate-200"
 										>
 											Cancel
 										</button>
 										<button
-											on:click={submitEditFocus}
+											onclick={submitEditFocus}
 											class="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-500"
 										>
 											Save
@@ -581,7 +587,7 @@
 							{:else}
 								<div class="group/focus flex items-center">
 									<button
-										on:click={() => selectFocus(domain.id, focus.id)}
+										onclick={() => selectFocus(domain.id, focus.id)}
 										class="flex min-w-0 flex-1 items-center rounded px-2 py-1 text-left text-sm transition-colors"
 										class:bg-slate-700={selectedFocusId === focus.id}
 										class:text-slate-100={selectedFocusId === focus.id}
@@ -610,7 +616,7 @@
 									>
 										{#if focusIndex > 0}
 											<button
-												on:click={() => moveFocusUp(domain.id, focusIndex)}
+												onclick={() => moveFocusUp(domain.id, focusIndex)}
 												class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 												title="Move up"
 											>
@@ -626,7 +632,7 @@
 										{/if}
 										{#if focusIndex < focusesForDomain(domain.id).length - 1}
 											<button
-												on:click={() => moveFocusDown(domain.id, focusIndex)}
+												onclick={() => moveFocusDown(domain.id, focusIndex)}
 												class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 												title="Move down"
 											>
@@ -641,7 +647,7 @@
 											</button>
 										{/if}
 										<button
-											on:click={() => startEditFocus(focus)}
+											onclick={() => startEditFocus(focus)}
 											class="rounded p-0.5 text-slate-500 hover:text-slate-300"
 											title="Edit focus"
 										>
@@ -655,7 +661,7 @@
 											</svg>
 										</button>
 										<button
-											on:click={() => confirmDeleteFocus(focus)}
+											onclick={() => confirmDeleteFocus(focus)}
 											class="rounded p-0.5 text-slate-500 hover:text-red-400"
 											title="Delete focus"
 										>
@@ -678,25 +684,25 @@
 							<div class="mb-1 rounded border border-slate-600 bg-slate-800 p-2">
 								<input
 									bind:value={newFocusId}
-									on:keydown={handleFocusFormKeydown}
+									onkeydown={handleFocusFormKeydown}
 									placeholder="Focus ID"
 									class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 								/>
 								<input
 									bind:value={newFocusName}
-									on:keydown={handleFocusFormKeydown}
+									onkeydown={handleFocusFormKeydown}
 									placeholder="Focus Name"
 									class="mb-1.5 w-full rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 								/>
 								<div class="flex justify-end space-x-1">
 									<button
-										on:click={cancelCreateFocus}
+										onclick={cancelCreateFocus}
 										class="rounded px-2 py-0.5 text-xs text-slate-400 hover:text-slate-200"
 									>
 										Cancel
 									</button>
 									<button
-										on:click={submitCreateFocus}
+										onclick={submitCreateFocus}
 										class="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-500"
 									>
 										Create
@@ -718,7 +724,7 @@
 		{#if sortedDomains.length === 0 && !creatingDomain}
 			<div class="px-2 py-4 text-center">
 				<p class="text-xs text-slate-500">No domains yet</p>
-				<button on:click={startCreateDomain} class="mt-2 text-xs text-blue-400 hover:text-blue-300">
+				<button onclick={startCreateDomain} class="mt-2 text-xs text-blue-400 hover:text-blue-300">
 					Create a domain
 				</button>
 			</div>

@@ -2,10 +2,14 @@
 	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
-	export let title: string;
-	export let message: string;
-	export let confirmLabel: string = 'Confirm';
-	export let open: boolean;
+	interface Props {
+		title: string;
+		message: string;
+		confirmLabel?: string;
+		open: boolean;
+	}
+
+	let { title, message, confirmLabel = 'Confirm', open }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		confirm: void;
@@ -65,21 +69,23 @@
 		trapFocus(event);
 	}
 
-	$: if (open && dialogEl) {
-		const btn = dialogEl.querySelector<HTMLElement>('button');
-		if (btn) btn.focus();
-	}
+	$effect(() => {
+		if (open && dialogEl) {
+			const btn = dialogEl.querySelector<HTMLElement>('button');
+			if (btn) btn.focus();
+		}
+	});
 </script>
 
-<svelte:window on:keydown={handleWindowKeydown} />
+<svelte:window onkeydown={handleWindowKeydown} />
 
 {#if open}
 	<!-- Desktop: centered modal -->
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 md:flex"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
 	>
 		<div
 			bind:this={dialogEl}
@@ -92,13 +98,13 @@
 			<p class="mt-2 text-sm text-slate-400">{message}</p>
 			<div class="mt-6 flex justify-end space-x-3">
 				<button
-					on:click={handleCancel}
+					onclick={handleCancel}
 					class="min-h-[44px] rounded bg-slate-700 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-600 focus-visible:ring-2 focus-visible:ring-blue-500"
 				>
 					Cancel
 				</button>
 				<button
-					on:click={handleConfirm}
+					onclick={handleConfirm}
 					class="min-h-[44px] rounded bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 				>
 					{confirmLabel}
@@ -108,11 +114,11 @@
 	</div>
 
 	<!-- Mobile: bottom sheet -->
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 bg-black/50 md:hidden"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
 		transition:fade={{ duration: 200 }}
 	></div>
 	<div
@@ -127,13 +133,13 @@
 		<p class="mt-2 text-sm text-slate-400">{message}</p>
 		<div class="mt-5 space-y-2">
 			<button
-				on:click={handleConfirm}
+				onclick={handleConfirm}
 				class="min-h-[44px] w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-red-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 			>
 				{confirmLabel}
 			</button>
 			<button
-				on:click={handleCancel}
+				onclick={handleCancel}
 				class="min-h-[44px] w-full rounded-lg bg-slate-700 px-4 py-3 text-sm text-slate-200 transition-colors hover:bg-slate-600 focus-visible:ring-2 focus-visible:ring-blue-500"
 			>
 				Cancel

@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { gatewayStatus, loadGatewayStatus, serverVersion } from '$lib/stores';
 
-	let loading = true;
-	let resetConfirm = false;
-	let resetDone = false;
+	let loading = $state(true);
+	let resetConfirm = $state(false);
+	let resetDone = $state(false);
 
 	const dashboardVersion = '0.1.0';
 
@@ -188,15 +188,12 @@
 					<div class="flex items-center gap-3">
 						<span class="text-sm text-amber-400">Are you sure?</span>
 						<button
-							on:click={confirmResetWizard}
+							onclick={confirmResetWizard}
 							class="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
 						>
 							Yes, reset
 						</button>
-						<button
-							on:click={cancelResetWizard}
-							class="text-sm text-slate-400 hover:text-slate-200"
-						>
+						<button onclick={cancelResetWizard} class="text-sm text-slate-400 hover:text-slate-200">
 							Cancel
 						</button>
 					</div>
@@ -204,7 +201,7 @@
 					<p class="text-sm text-green-400">Wizard reset. It will show on next page load.</p>
 				{:else}
 					<button
-						on:click={startResetWizard}
+						onclick={startResetWizard}
 						class="rounded border border-slate-600 bg-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-600"
 						aria-label="Reset onboarding wizard"
 					>

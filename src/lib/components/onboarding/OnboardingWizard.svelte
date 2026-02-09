@@ -8,14 +8,14 @@
 
 	const dispatch = createEventDispatcher<{ complete: void; skip: void }>();
 
-	let step = 0;
-	let url = getGatewayUrl();
-	let token = getToken() || '';
-	let connecting = false;
-	let connectionError = '';
-	let connectionSuccess = false;
-	let pairingRequired = false;
-	let tourStep = 0;
+	let step = $state(0);
+	let url = $state(getGatewayUrl());
+	let token = $state(getToken() || '');
+	let connecting = $state(false);
+	let connectionError = $state('');
+	let connectionSuccess = $state(false);
+	let pairingRequired = $state(false);
+	let tourStep = $state(0);
 
 	const totalSteps = 6;
 
@@ -117,9 +117,9 @@
 		tourStep = i;
 	}
 
-	$: canProceedFromUrl = url.startsWith('ws://') || url.startsWith('wss://');
-	$: canProceedFromToken = token.length > 0;
-	$: progressPercent = Math.round(((step + 1) / totalSteps) * 100);
+	let canProceedFromUrl = $derived(url.startsWith('ws://') || url.startsWith('wss://'));
+	let canProceedFromToken = $derived(token.length > 0);
+	let progressPercent = $derived(Math.round(((step + 1) / totalSteps) * 100));
 </script>
 
 <div
@@ -146,7 +146,7 @@
 
 		<!-- Skip button -->
 		<button
-			on:click={skip}
+			onclick={skip}
 			class="absolute right-4 top-4 text-sm text-slate-500 hover:text-slate-300"
 			aria-label="Skip onboarding wizard"
 		>
@@ -273,7 +273,7 @@
 								</div>
 							{:else}
 								<button
-									on:click={testConnection}
+									onclick={testConnection}
 									class="rounded bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
 								>
 									Test Connection
@@ -288,7 +288,7 @@
 								>
 									<p class="text-sm text-red-400">{connectionError}</p>
 									<button
-										on:click={testConnection}
+										onclick={testConnection}
 										class="mt-2 text-sm text-blue-400 hover:text-blue-300"
 									>
 										Try again
@@ -318,7 +318,7 @@
 								</li>
 							</ol>
 							<button
-								on:click={testConnection}
+								onclick={testConnection}
 								class="mt-4 rounded bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
 							>
 								Retry Connection
@@ -374,7 +374,7 @@
 						<div class="mt-4 flex items-center justify-center gap-2">
 							{#each tourHighlights as highlight, i (i)}
 								<button
-									on:click={() => setTourStep(i)}
+									onclick={() => setTourStep(i)}
 									class="h-2 w-2 rounded-full transition-colors {i === tourStep
 										? 'bg-blue-400'
 										: 'bg-slate-600'}"
@@ -386,14 +386,14 @@
 
 					<div class="mt-4 flex justify-between">
 						<button
-							on:click={prevTourStep}
+							onclick={prevTourStep}
 							disabled={tourStep === 0}
 							class="text-sm text-slate-400 hover:text-slate-200 disabled:opacity-50"
 						>
 							Previous
 						</button>
 						<button
-							on:click={nextTourStep}
+							onclick={nextTourStep}
 							class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
 						>
 							{tourStep === tourHighlights.length - 1 ? 'Continue' : 'Next'}
@@ -428,7 +428,7 @@
 							agents.
 						</p>
 						<button
-							on:click={finish}
+							onclick={finish}
 							class="mt-6 rounded bg-blue-600 px-8 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
 						>
 							Get Started
@@ -442,7 +442,7 @@
 		{#if step < 4}
 			<div class="flex items-center justify-between border-t border-slate-700 px-8 py-4">
 				<button
-					on:click={prev}
+					onclick={prev}
 					disabled={step === 0}
 					class="text-sm text-slate-400 hover:text-slate-200 disabled:invisible"
 				>
@@ -455,14 +455,14 @@
 
 				{#if step === 0}
 					<button
-						on:click={next}
+						onclick={next}
 						class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
 					>
 						Get Started
 					</button>
 				{:else if step === 1}
 					<button
-						on:click={next}
+						onclick={next}
 						disabled={!canProceedFromUrl}
 						class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -470,7 +470,7 @@
 					</button>
 				{:else if step === 2}
 					<button
-						on:click={next}
+						onclick={next}
 						disabled={!canProceedFromToken}
 						class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -478,7 +478,7 @@
 					</button>
 				{:else if step === 3}
 					<button
-						on:click={next}
+						onclick={next}
 						class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
 					>
 						{connectionSuccess ? 'Continue' : 'Skip for Now'}

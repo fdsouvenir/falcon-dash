@@ -4,22 +4,26 @@
 	import { commands, findCommands } from '$lib/chat/commands';
 	import type { SlashCommand, CommandContext } from '$lib/chat/commands';
 
-	export let isRunning = false;
-	export let commandContext: CommandContext | undefined = undefined;
+	interface Props {
+		isRunning?: boolean;
+		commandContext?: CommandContext | undefined;
+	}
+
+	let { isRunning = false, commandContext = undefined }: Props = $props();
 
 	const dispatch = createEventDispatcher<{ send: string; abort: void }>();
 
-	let content = '';
+	let content = $state('');
 	let textarea: HTMLTextAreaElement;
-	let paletteOpen = false;
-	let commandFilter = '';
+	let paletteOpen = $state(false);
+	let commandFilter = $state('');
 	let palette: CommandPalette;
 
 	onMount(() => {
 		if (textarea) textarea.focus();
 	});
 
-	$: {
+	$effect(() => {
 		if (content.startsWith('/') && !isRunning) {
 			paletteOpen = true;
 			// Extract the filter text after /
@@ -29,7 +33,7 @@
 			paletteOpen = false;
 			commandFilter = '';
 		}
-	}
+	});
 
 	function handleKeydown(event: KeyboardEvent) {
 		// If palette is open, let it handle navigation keys
@@ -118,8 +122,8 @@
 	<textarea
 		bind:value={content}
 		bind:this={textarea}
-		on:keydown={handleKeydown}
-		on:input={handleInput}
+		onkeydown={handleKeydown}
+		oninput={handleInput}
 		disabled={isRunning}
 		placeholder="Type a message... (/ for commands)"
 		rows="1"
@@ -129,7 +133,7 @@
 	/>
 	{#if isRunning}
 		<button
-			on:click={abort}
+			onclick={abort}
 			class="min-h-[44px] min-w-[44px] rounded-lg bg-red-600/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-600/30"
 			aria-label="Abort response"
 		>
@@ -137,7 +141,7 @@
 		</button>
 	{:else}
 		<button
-			on:click={send}
+			onclick={send}
 			disabled={!content.trim()}
 			class="min-h-[44px] min-w-[44px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 			aria-label="Send message"

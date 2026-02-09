@@ -6,10 +6,10 @@
 		newfolder: { name: string };
 	}>();
 
-	let showNewFileInput = false;
-	let showNewFolderInput = false;
-	let newFileName = '';
-	let newFolderName = '';
+	let showNewFileInput = $state(false);
+	let showNewFolderInput = $state(false);
+	let newFileName = $state('');
+	let newFolderName = $state('');
 	let fileInputEl: HTMLInputElement;
 	let folderInputEl: HTMLInputElement;
 
@@ -74,7 +74,7 @@
 
 <div class="flex flex-wrap items-center gap-2 border-b border-slate-700 px-4 py-2">
 	<button
-		on:click={startNewFile}
+		onclick={startNewFile}
 		class="flex items-center space-x-1 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 	>
 		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -83,7 +83,7 @@
 		<span>New File</span>
 	</button>
 	<button
-		on:click={startNewFolder}
+		onclick={startNewFolder}
 		class="flex items-center space-x-1 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 	>
 		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -102,8 +102,8 @@
 			<input
 				bind:this={fileInputEl}
 				bind:value={newFileName}
-				on:keydown={handleFileKeydown}
-				on:blur={cancelNewFile}
+				onkeydown={handleFileKeydown}
+				onblur={cancelNewFile}
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
 				placeholder="filename.txt"
 				aria-label="New file name"
@@ -116,8 +116,8 @@
 			<input
 				bind:this={folderInputEl}
 				bind:value={newFolderName}
-				on:keydown={handleFolderKeydown}
-				on:blur={cancelNewFolder}
+				onkeydown={handleFolderKeydown}
+				onblur={cancelNewFolder}
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
 				placeholder="folder-name"
 				aria-label="New folder name"

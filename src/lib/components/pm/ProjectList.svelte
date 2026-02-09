@@ -5,10 +5,14 @@
 
 	// --- Props ---
 
-	/** Filter by domain id (null = no domain filter) */
-	export let selectedDomainId: string | null = null;
-	/** Filter by focus id (null = no focus filter) */
-	export let selectedFocusId: string | null = null;
+	interface Props {
+		/** Filter by domain id (null = no domain filter) */
+		selectedDomainId?: string | null;
+		/** Filter by focus id (null = no focus filter) */
+		selectedFocusId?: string | null;
+	}
+
+	let { selectedDomainId = null, selectedFocusId = null }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		select: { projectId: number };
@@ -16,10 +20,10 @@
 
 	// --- Filter / Sort State ---
 
-	let statusFilter: PmStatus | '' = '';
-	let priorityFilter: PmPriority | '' = '';
-	let sortField: 'title' | 'status' | 'priority' | 'dueDate' | 'createdAt' = 'createdAt';
-	let sortAsc = false;
+	let statusFilter: PmStatus | '' = $state('');
+	let priorityFilter: PmPriority | '' = $state('');
+	let sortField: 'title' | 'status' | 'priority' | 'dueDate' | 'createdAt' = $state('createdAt');
+	let sortAsc = $state(false);
 
 	// --- Helpers ---
 
@@ -160,46 +164,50 @@
 	// --- Derived data ---
 
 	// Get focus IDs for the selected domain
-	$: domainFocusIds = selectedDomainId
-		? new Set($pmFocuses.filter((f) => f.domainId === selectedDomainId).map((f) => f.id))
-		: null;
+	let domainFocusIds = $derived(
+		selectedDomainId
+			? new Set($pmFocuses.filter((f) => f.domainId === selectedDomainId).map((f) => f.id))
+			: null
+	);
 
-	$: filteredProjects = $pmProjects
-		.filter((p) => {
-			// Focus filter (from sidebar)
-			if (selectedFocusId && p.focusId !== selectedFocusId) return false;
-			// Domain filter (from sidebar, if no specific focus)
-			if (!selectedFocusId && domainFocusIds && !domainFocusIds.has(p.focusId)) return false;
-			// Status filter (from filter bar)
-			if (statusFilter && p.status !== statusFilter) return false;
-			// Priority filter (from filter bar)
-			if (priorityFilter && p.priority !== priorityFilter) return false;
-			return true;
-		})
-		.sort((a, b) => {
-			let cmp = 0;
-			switch (sortField) {
-				case 'title':
-					cmp = a.title.localeCompare(b.title);
-					break;
-				case 'status':
-					cmp = statusSortWeight(a.status) - statusSortWeight(b.status);
-					break;
-				case 'priority':
-					cmp = prioritySortWeight(a.priority) - prioritySortWeight(b.priority);
-					break;
-				case 'dueDate': {
-					const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-					const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-					cmp = da - db;
-					break;
+	let filteredProjects = $derived(
+		$pmProjects
+			.filter((p) => {
+				// Focus filter (from sidebar)
+				if (selectedFocusId && p.focusId !== selectedFocusId) return false;
+				// Domain filter (from sidebar, if no specific focus)
+				if (!selectedFocusId && domainFocusIds && !domainFocusIds.has(p.focusId)) return false;
+				// Status filter (from filter bar)
+				if (statusFilter && p.status !== statusFilter) return false;
+				// Priority filter (from filter bar)
+				if (priorityFilter && p.priority !== priorityFilter) return false;
+				return true;
+			})
+			.sort((a, b) => {
+				let cmp = 0;
+				switch (sortField) {
+					case 'title':
+						cmp = a.title.localeCompare(b.title);
+						break;
+					case 'status':
+						cmp = statusSortWeight(a.status) - statusSortWeight(b.status);
+						break;
+					case 'priority':
+						cmp = prioritySortWeight(a.priority) - prioritySortWeight(b.priority);
+						break;
+					case 'dueDate': {
+						const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+						const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+						cmp = da - db;
+						break;
+					}
+					case 'createdAt':
+						cmp = a.createdAt - b.createdAt;
+						break;
 				}
-				case 'createdAt':
-					cmp = a.createdAt - b.createdAt;
-					break;
-			}
-			return sortAsc ? cmp : -cmp;
-		});
+				return sortAsc ? cmp : -cmp;
+			})
+	);
 
 	// --- Sort ---
 
@@ -303,7 +311,7 @@
 					<tr class="border-b border-slate-700 text-xs uppercase text-slate-400">
 						<th class="px-4 py-3 font-medium">
 							<button
-								on:click={() => toggleSort('title')}
+								onclick={() => toggleSort('title')}
 								class="flex items-center space-x-1 hover:text-slate-200"
 							>
 								<span>Title</span>
@@ -312,7 +320,7 @@
 						</th>
 						<th class="px-4 py-3 font-medium">
 							<button
-								on:click={() => toggleSort('status')}
+								onclick={() => toggleSort('status')}
 								class="flex items-center space-x-1 hover:text-slate-200"
 							>
 								<span>Status</span>
@@ -321,7 +329,7 @@
 						</th>
 						<th class="px-4 py-3 font-medium">
 							<button
-								on:click={() => toggleSort('priority')}
+								onclick={() => toggleSort('priority')}
 								class="flex items-center space-x-1 hover:text-slate-200"
 							>
 								<span>Priority</span>
@@ -331,7 +339,7 @@
 						<th class="hidden px-4 py-3 font-medium sm:table-cell">Focus</th>
 						<th class="px-4 py-3 font-medium">
 							<button
-								on:click={() => toggleSort('dueDate')}
+								onclick={() => toggleSort('dueDate')}
 								class="flex items-center space-x-1 hover:text-slate-200"
 							>
 								<span>Due Date</span>
@@ -345,7 +353,7 @@
 					{#each filteredProjects as project (project.id)}
 						<tr
 							class="group cursor-pointer border-b border-slate-700/50 transition-colors hover:bg-slate-800/50"
-							on:click={() => selectProject(project.id)}
+							onclick={() => selectProject(project.id)}
 						>
 							<td class="px-4 py-3">
 								<p class="font-medium text-slate-200">{project.title}</p>
