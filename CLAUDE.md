@@ -4,19 +4,26 @@ Web dashboard for the OpenClaw AI platform (docs.openclaw.com/llms.txt). Connect
 
 ## Tech Stack
 
-- **SvelteKit 2** + **Svelte 4** + **TypeScript** (strict)
+- **SvelteKit 2** + **Svelte 5** + **TypeScript** (strict)
 - **Tailwind CSS 3** for styling
 - **PWA** via vite-plugin-pwa
-- **State:** Svelte writable/readable stores
+- **State:** Svelte 5 runes (`$state`, `$derived`, `$effect`) + Svelte writable/readable stores
 
-## Critical: Svelte 4 Syntax
+## Svelte 5 Runes Syntax
 
-This project uses **Svelte 4**, NOT Svelte 5. Use:
+This project uses **Svelte 5 runes mode**. Use:
 
-- `on:click`, `on:input`, `on:submit` (NOT `onclick`, `oninput`)
-- `export let prop` for component props (NOT `$props()`)
-- `$:` reactive declarations (NOT `$derived()` or `$effect()`)
-- `{#if}`, `{#each}`, `{#await}` blocks
+- `$state(value)` for reactive variables (NOT bare `let`)
+- `let { prop }: Props = $props()` for component props (NOT `export let`)
+- `$derived(expr)` for computed values (NOT `$:` reactive declarations)
+- `$effect(() => { ... })` for side effects (NOT `$:` blocks)
+- `onclick`, `oninput`, `onsubmit` for DOM events (NOT `on:click`, `on:input`)
+- Callback props for component events (NOT `createEventDispatcher`)
+- `{@render children?.()}` for content projection (NOT `<slot />`)
+- `$bindable()` for props that accept `bind:` from parents
+- `{#if}`, `{#each}`, `{#await}` blocks (unchanged)
+- `onMount`, `onDestroy` lifecycle hooks (unchanged)
+- `$storeName` auto-subscriptions (unchanged)
 
 ## Formatting & Linting
 
