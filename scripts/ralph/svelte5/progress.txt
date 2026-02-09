@@ -206,3 +206,23 @@ Started: 2026-02-09
   - Svelte 5 passive touch events only matter for `ontouchstart`/`ontouchmove` in templates — `use:` actions with `addEventListener` already control their own passive options
   - `:global()` selectors in `<style>` blocks are unaffected by `:where()` scoping — only the scoped parent selector changes specificity
   - `stopPropagation` works correctly with Svelte 5 event delegation for parent-child patterns because the delegation handler respects propagation state before firing parent handlers
+
+## 2026-02-09 - US-S5-008
+- Updated CLAUDE.md documentation:
+  - Tech stack: "Svelte 4" → "Svelte 5", added runes to State description
+  - Replaced "Critical: Svelte 4 Syntax" section with "Svelte 5 Runes Syntax"
+  - Documents: `$state()`, `$props()`, `$derived()`, `$effect()`, `onclick`, callback props, `{@render children?.()}`, `$bindable()`
+  - Notes unchanged items: `{#if}`/`{#each}` blocks, `onMount`/`onDestroy`, `$storeName`
+- Final verification — all quality gates pass:
+  - npm run format: all files unchanged (clean)
+  - npm run check: 0 errors (42 warnings — pre-existing a11y/self-closing tags)
+  - npm run build: succeeds
+  - npm run lint: passes (prettier + eslint)
+  - npm run test: 1 passed (playwright smoke test)
+- Legacy pattern verification — zero matches in entire codebase:
+  - Zero `svelte/legacy` imports
+  - Zero `createEventDispatcher` imports
+  - Zero `afterUpdate`/`beforeUpdate` imports
+  - Zero `on:event|modifier` patterns
+- Files changed: 1 (CLAUDE.md)
+- **This completes the entire Svelte 5 migration (all 8 user stories)**

@@ -167,7 +167,7 @@
 				"No remaining on:event|modifier patterns"
 			],
 			"priority": 8,
-			"passes": false,
+			"passes": true,
 			"notes": "Final story. Update CLAUDE.md syntax section to reflect Svelte 5 runes: $state() for reactive variables, $props() for props (not export let), $derived()/$effect() (not $:), onclick (not on:click), callback props (not createEventDispatcher), {@render children()} (not <slot/>), $bindable() for bound props."
 		}
 	]
