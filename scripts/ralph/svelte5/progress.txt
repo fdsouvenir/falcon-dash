@@ -176,3 +176,18 @@ Started: 2026-02-09
   - projects/+page.svelte handlers used `CustomEvent<T>` wrapper types — all 5 handlers needed their signatures changed from `(e: CustomEvent<T>) => e.detail.x` to `(data: T) => data.x`
   - BulkActions had the most dispatch calls (7 total across 6 `dispatch('clear')` + 1 `dispatch('selectAll')`) — using `replace_all` on the Edit tool is efficient for this
   - This completes the entire createEventDispatcher migration — all 21 components across 3 stories (US-S5-003, 004, 005) are now using callback props
+
+## 2026-02-09 - US-S5-006
+- Verification-only story — all transformations were already completed in US-S5-002
+- Confirmed afterUpdate → $effect() in 4 files: VirtualList, MessageList, LogsViewer, chat/+page
+- Confirmed zero afterUpdate/beforeUpdate imports in entire codebase
+- Confirmed event modifiers converted in all 9 instances across 6 files (+page root, CronJobForm, CronJobList 4x, BulkActions, files/+page, passwords/+page)
+- Confirmed zero `on:event|modifier` patterns remain
+- Confirmed no component event forwarding issues — all use explicit callback props
+- Confirmed no `bind:` on child components — no `$bindable()` needed
+- Confirmed no duplicate event handlers on same element
+- No files changed (all work done in US-S5-002)
+- **Learnings for future iterations:**
+  - When the automated migration tool (US-S5-002) handles afterUpdate and event modifiers early, later verification stories become no-ops
+  - `$bindable()` is only needed for `bind:propName` on custom Svelte components, NOT for DOM element bindings (`bind:value`, `bind:this`, etc.)
+  - Always check acceptance criteria against current codebase state before writing code — the work may already be done

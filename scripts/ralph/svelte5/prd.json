@@ -129,7 +129,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 6,
-			"passes": false,
+			"passes": true,
 			"notes": "afterUpdate → $effect: explicitly reference tracked dependencies, use tick() for DOM timing. Event modifiers: on:submit|preventDefault={fn} → onsubmit={(e) => { e.preventDefault(); fn(); }}. Search for bind: usage on child components to find $bindable() candidates."
 		},
 		{
