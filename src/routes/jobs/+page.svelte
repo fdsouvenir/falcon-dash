@@ -72,20 +72,18 @@
 		formOpen = true;
 	}
 
-	function handleEditJob(event: CustomEvent<{ job: CronJob }>): void {
-		editingJob = event.detail.job;
+	function handleEditJob(data: { job: CronJob }): void {
+		editingJob = data.job;
 		formOpen = true;
 	}
 
-	async function handleFormSave(
-		event: CustomEvent<{ params: CronAddParams | CronEditParams }>
-	): Promise<void> {
+	async function handleFormSave(data: { params: CronAddParams | CronEditParams }): Promise<void> {
 		formOpen = false;
 		try {
-			if ('jobId' in event.detail.params) {
-				await editCronJob(event.detail.params as CronEditParams);
+			if ('jobId' in data.params) {
+				await editCronJob(data.params as CronEditParams);
 			} else {
-				await addCronJob(event.detail.params as CronAddParams);
+				await addCronJob(data.params as CronAddParams);
 			}
 		} catch (err) {
 			cronError = err instanceof Error ? err.message : 'Failed to save cron job';
@@ -97,8 +95,8 @@
 		editingJob = null;
 	}
 
-	function handleDeleteRequest(event: CustomEvent<{ job: CronJob }>): void {
-		deleteTarget = event.detail.job;
+	function handleDeleteRequest(data: { job: CronJob }): void {
+		deleteTarget = data.job;
 		deleteConfirmOpen = true;
 	}
 
@@ -120,8 +118,8 @@
 		deleteTarget = null;
 	}
 
-	async function handleToggle(event: CustomEvent<{ job: CronJob }>): Promise<void> {
-		const job = event.detail.job;
+	async function handleToggle(data: { job: CronJob }): Promise<void> {
+		const job = data.job;
 		try {
 			if (job.enabled) {
 				await disableCronJob(job.id);
@@ -133,16 +131,16 @@
 		}
 	}
 
-	async function handleRunNow(event: CustomEvent<{ job: CronJob }>): Promise<void> {
+	async function handleRunNow(data: { job: CronJob }): Promise<void> {
 		try {
-			await runCronJob(event.detail.job.id);
+			await runCronJob(data.job.id);
 		} catch (err) {
 			cronError = err instanceof Error ? err.message : 'Failed to run cron job';
 		}
 	}
 
-	function handleSelectJob(event: CustomEvent<{ job: CronJob }>): void {
-		selectedJobId = selectedJobId === event.detail.job.id ? null : event.detail.job.id;
+	function handleSelectJob(data: { job: CronJob }): void {
+		selectedJobId = selectedJobId === data.job.id ? null : data.job.id;
 	}
 
 	// --- Heartbeat ---
@@ -174,10 +172,10 @@
 		saveError = '';
 	}
 
-	async function handleSave(event: CustomEvent<{ content: string }>): Promise<void> {
+	async function handleSave(data: { content: string }): Promise<void> {
 		saveError = '';
 		try {
-			await saveHeartbeatFile(event.detail.content, $heartbeatFileHash);
+			await saveHeartbeatFile(data.content, $heartbeatFileHash);
 			editing = false;
 		} catch (err) {
 			saveError = err instanceof Error ? err.message : 'Failed to save file';
@@ -382,8 +380,8 @@
 							<FileEditor
 								content={$heartbeatFileContent}
 								filename="HEARTBEAT.md"
-								on:save={handleSave}
-								on:cancel={cancelEditing}
+								onsave={handleSave}
+								oncancel={cancelEditing}
 							/>
 						{:else if $heartbeatFileContent}
 							<div class="p-5">
@@ -431,11 +429,11 @@
 							jobs={$cronJobs}
 							{now}
 							{selectedJobId}
-							on:edit={handleEditJob}
-							on:delete={handleDeleteRequest}
-							on:run={handleRunNow}
-							on:toggle={handleToggle}
-							on:select={handleSelectJob}
+							onedit={handleEditJob}
+							ondelete={handleDeleteRequest}
+							onrun={handleRunNow}
+							ontoggle={handleToggle}
+							onselect={handleSelectJob}
 						/>
 					</div>
 
@@ -453,8 +451,8 @@
 			<CronJobForm
 				open={formOpen}
 				job={editingJob}
-				on:save={handleFormSave}
-				on:cancel={handleFormCancel}
+				onsave={handleFormSave}
+				oncancel={handleFormCancel}
 			/>
 
 			<ConfirmDialog
@@ -463,8 +461,8 @@
 					''}&quot;? This action cannot be undone."
 				confirmLabel="Delete"
 				open={deleteConfirmOpen}
-				on:confirm={handleDeleteConfirm}
-				on:cancel={handleDeleteCancel}
+				onconfirm={handleDeleteConfirm}
+				oncancel={handleDeleteCancel}
 			/>
 		{/if}
 	</div>

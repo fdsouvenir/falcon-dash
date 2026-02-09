@@ -1,28 +1,23 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-
 	interface Props {
 		content: string;
 		filename: string;
+		onsave?: (data: { content: string }) => void;
+		oncancel?: () => void;
 	}
 
-	let { content, filename }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		save: { content: string };
-		cancel: void;
-	}>();
+	let { content, filename, onsave, oncancel }: Props = $props();
 
 	let editContent = $state(content);
 
 	let isDirty = $derived(editContent !== content);
 
 	function handleSave(): void {
-		dispatch('save', { content: editContent });
+		onsave?.({ content: editContent });
 	}
 
 	function handleCancel(): void {
-		dispatch('cancel');
+		oncancel?.();
 	}
 
 	function handleKeydown(event: KeyboardEvent): void {

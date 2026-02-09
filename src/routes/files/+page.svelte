@@ -184,13 +184,13 @@
 		saveError = '';
 	}
 
-	async function handleSave(event: CustomEvent<{ content: string }>): Promise<void> {
+	async function handleSave(data: { content: string }): Promise<void> {
 		if (!$activeFile || !$activeFileName) return;
 		saveError = '';
 		try {
-			const result = await saveFile($activeFileName, event.detail.content, $activeFile.hash);
+			const result = await saveFile($activeFileName, data.content, $activeFile.hash);
 			activeFile.set({
-				content: event.detail.content,
+				content: data.content,
 				hash: result.hash,
 				mtime: new Date().toISOString()
 			});
@@ -202,8 +202,8 @@
 
 	// --- New File / New Folder ---
 
-	async function handleNewFile(event: CustomEvent<{ name: string }>): Promise<void> {
-		const name = event.detail.name;
+	async function handleNewFile(data: { name: string }): Promise<void> {
+		const name = data.name;
 		const filePath = $currentPath ? `${$currentPath}/${name}` : name;
 		try {
 			await createFile(filePath, '');
@@ -213,8 +213,8 @@
 		}
 	}
 
-	async function handleNewFolder(event: CustomEvent<{ name: string }>): Promise<void> {
-		const name = event.detail.name;
+	async function handleNewFolder(data: { name: string }): Promise<void> {
+		const name = data.name;
 		try {
 			await createFolder($currentPath, name);
 			await loadFiles($currentPath || undefined);
@@ -366,7 +366,7 @@
 			class="flex flex-1 flex-col overflow-hidden border-b border-slate-700 md:border-b-0 md:border-r"
 		>
 			<!-- File actions toolbar -->
-			<FileActions on:newfile={handleNewFile} on:newfolder={handleNewFolder} />
+			<FileActions onnewfile={handleNewFile} onnewfolder={handleNewFolder} />
 
 			{#if loading}
 				<div class="flex flex-1 items-center justify-center">
@@ -555,8 +555,8 @@
 					<FileEditor
 						content={$activeFile.content}
 						filename={$activeFileName}
-						on:save={handleSave}
-						on:cancel={cancelEditing}
+						onsave={handleSave}
+						oncancel={cancelEditing}
 					/>
 				{:else}
 					<div class="flex items-center justify-between border-b border-slate-700 px-4 py-2">
@@ -587,6 +587,6 @@
 		''}&quot;? This action cannot be undone."
 	confirmLabel="Delete"
 	open={showDeleteConfirm}
-	on:confirm={confirmDelete}
-	on:cancel={cancelDelete}
+	onconfirm={confirmDelete}
+	oncancel={cancelDelete}
 />

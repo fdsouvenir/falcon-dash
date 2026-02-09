@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { CronJob } from '$lib/gateway/types';
 	import { formatRelativeTime } from '$lib/utils/time';
 
@@ -7,17 +6,23 @@
 		jobs: CronJob[];
 		now: number;
 		selectedJobId?: string | null;
+		onedit?: (data: { job: CronJob }) => void;
+		ondelete?: (data: { job: CronJob }) => void;
+		onrun?: (data: { job: CronJob }) => void;
+		ontoggle?: (data: { job: CronJob }) => void;
+		onselect?: (data: { job: CronJob }) => void;
 	}
 
-	let { jobs, now, selectedJobId = null }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		edit: { job: CronJob };
-		delete: { job: CronJob };
-		run: { job: CronJob };
-		toggle: { job: CronJob };
-		select: { job: CronJob };
-	}>();
+	let {
+		jobs,
+		now,
+		selectedJobId = null,
+		onedit,
+		ondelete,
+		onrun,
+		ontoggle,
+		onselect
+	}: Props = $props();
 
 	function scheduleLabel(job: CronJob): string {
 		if (job.scheduleType === 'interval') return `Every ${job.schedule}s`;
@@ -49,7 +54,7 @@
 					job.id
 						? 'bg-slate-800/80'
 						: 'hover:bg-slate-800/50'}"
-					onclick={() => dispatch('select', { job })}
+					onclick={() => onselect?.({ job })}
 				>
 					<td class="px-4 py-3 font-medium text-slate-200">{job.name}</td>
 					<td class="px-4 py-3 text-slate-400">
@@ -82,7 +87,7 @@
 						<button
 							onclick={(e) => {
 								e.stopPropagation();
-								dispatch('toggle', { job });
+								ontoggle?.({ job });
 							}}
 							aria-label="{job.enabled ? 'Disable' : 'Enable'} {job.name}"
 							class="rounded-full focus-visible:ring-2 focus-visible:ring-blue-500 px-2.5 py-0.5 text-xs font-medium transition-colors {job.enabled
@@ -99,7 +104,7 @@
 							<button
 								onclick={(e) => {
 									e.stopPropagation();
-									dispatch('edit', { job });
+									onedit?.({ job });
 								}}
 								aria-label="Edit {job.name}"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-slate-200"
@@ -114,7 +119,7 @@
 							<button
 								onclick={(e) => {
 									e.stopPropagation();
-									dispatch('run', { job });
+									onrun?.({ job });
 								}}
 								aria-label="Run {job.name} now"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-blue-400"
@@ -127,7 +132,7 @@
 							<button
 								onclick={(e) => {
 									e.stopPropagation();
-									dispatch('delete', { job });
+									ondelete?.({ job });
 								}}
 								aria-label="Delete {job.name}"
 								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-red-400"

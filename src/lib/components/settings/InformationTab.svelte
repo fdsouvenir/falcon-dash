@@ -383,6 +383,6 @@
 	message="This will restart the OpenClaw gateway. Active connections will be briefly interrupted."
 	confirmLabel="Restart"
 	open={showRestartConfirm}
-	on:confirm={handleRestart}
-	on:cancel={() => (showRestartConfirm = false)}
+	onconfirm={handleRestart}
+	oncancel={() => (showRestartConfirm = false)}
 />

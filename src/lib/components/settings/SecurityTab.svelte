@@ -392,6 +392,6 @@
 		'this device'}. The device will need to re-pair to connect again."
 	confirmLabel="Revoke"
 	open={revokeTarget !== null}
-	on:confirm={handleRevoke}
-	on:cancel={() => (revokeTarget = null)}
+	onconfirm={handleRevoke}
+	oncancel={() => (revokeTarget = null)}
 />

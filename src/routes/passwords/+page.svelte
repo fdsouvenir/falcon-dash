@@ -960,6 +960,6 @@
 		''}&quot;? This action cannot be undone."
 	confirmLabel="Delete"
 	open={deleteConfirmOpen}
-	on:confirm={confirmDeleteEntry}
-	on:cancel={cancelDeleteEntry}
+	onconfirm={confirmDeleteEntry}
+	oncancel={cancelDeleteEntry}
 />

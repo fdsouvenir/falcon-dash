@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { gateway } from '$lib/gateway';
 	import type { A2UIHostElement, A2UIBundleState, A2UIUserAction } from '$lib/types/canvas';
 
@@ -8,15 +8,12 @@
 		messages?: Array<Record<string, unknown>>;
 		/** Whether to show in standalone panel mode (taller) vs inline chat mode */
 		standalone?: boolean;
+		onaction?: (action: A2UIUserAction) => void;
+		onready?: () => void;
+		onerror?: (message: string) => void;
 	}
 
-	let { messages = [], standalone = false }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		action: A2UIUserAction;
-		ready: void;
-		error: string;
-	}>();
+	let { messages = [], standalone = false, onaction, onready, onerror }: Props = $props();
 
 	let containerEl: HTMLDivElement;
 	let hostEl: A2UIHostElement | null = $state(null);
@@ -88,7 +85,7 @@
 					const payload = JSON.parse(json);
 					if (payload.userAction) {
 						const action: A2UIUserAction = payload.userAction;
-						dispatch('action', action);
+						onaction?.(action);
 
 						// Forward to gateway
 						gateway
@@ -130,7 +127,7 @@
 		} catch {
 			errorMessage = 'Failed to render A2UI content';
 			bundleState = 'error';
-			dispatch('error', errorMessage);
+			onerror?.(errorMessage);
 		}
 	}
 
@@ -149,7 +146,7 @@
 			await loadBundle();
 			createHostElement();
 			bundleState = 'ready';
-			dispatch('ready');
+			onready?.();
 
 			// Apply any messages that were set before mount completed
 			if (messages.length > 0) {
@@ -158,7 +155,7 @@
 		} catch (err) {
 			bundleState = 'error';
 			errorMessage = err instanceof Error ? err.message : 'Failed to load A2UI component';
-			dispatch('error', errorMessage);
+			onerror?.(errorMessage);
 		}
 	});
 

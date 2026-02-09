@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type {
 		CronJob,
 		CronScheduleType,
@@ -10,14 +9,11 @@
 	interface Props {
 		open: boolean;
 		job?: CronJob | null;
+		onsave?: (data: { params: CronAddParams | CronEditParams }) => void;
+		oncancel?: () => void;
 	}
 
-	let { open, job = null }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		save: { params: CronAddParams | CronEditParams };
-		cancel: void;
-	}>();
+	let { open, job = null, onsave, oncancel }: Props = $props();
 
 	let name = $state('');
 	let scheduleType: CronScheduleType = $state('cron');
@@ -75,7 +71,7 @@
 				payload: { type: 'agent', prompt: prompt.trim() },
 				enabled
 			};
-			dispatch('save', { params });
+			onsave?.({ params });
 		} else {
 			const params: CronAddParams = {
 				name: name.trim(),
@@ -84,12 +80,12 @@
 				payload: { type: 'agent', prompt: prompt.trim() },
 				enabled
 			};
-			dispatch('save', { params });
+			onsave?.({ params });
 		}
 	}
 
 	function handleCancel(): void {
-		dispatch('cancel');
+		oncancel?.();
 	}
 
 	function handleBackdropClick(event: MouseEvent): void {

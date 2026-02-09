@@ -1465,6 +1465,6 @@
 	title="Delete Task"
 	message={task ? `Are you sure you want to delete "${task.title}"? This cannot be undone.` : ''}
 	confirmLabel="Delete"
-	on:confirm={handleConfirmDelete}
-	on:cancel={handleCancelDelete}
+	onconfirm={handleConfirmDelete}
+	oncancel={handleCancelDelete}
 />

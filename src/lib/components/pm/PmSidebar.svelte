@@ -737,6 +737,6 @@
 	message={confirmMessage}
 	confirmLabel="Delete"
 	open={confirmOpen}
-	on:confirm={handleConfirm}
-	on:cancel={handleConfirmCancel}
+	onconfirm={handleConfirm}
+	oncancel={handleConfirmCancel}
 />

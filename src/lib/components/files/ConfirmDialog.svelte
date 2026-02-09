@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
 	interface Props {
@@ -7,23 +6,20 @@
 		message: string;
 		confirmLabel?: string;
 		open: boolean;
+		onconfirm?: () => void;
+		oncancel?: () => void;
 	}
 
-	let { title, message, confirmLabel = 'Confirm', open }: Props = $props();
-
-	const dispatch = createEventDispatcher<{
-		confirm: void;
-		cancel: void;
-	}>();
+	let { title, message, confirmLabel = 'Confirm', open, onconfirm, oncancel }: Props = $props();
 
 	let dialogEl: HTMLDivElement;
 
 	function handleConfirm(): void {
-		dispatch('confirm');
+		onconfirm?.();
 	}
 
 	function handleCancel(): void {
-		dispatch('cancel');
+		oncancel?.();
 	}
 
 	function handleKeydown(event: KeyboardEvent): void {

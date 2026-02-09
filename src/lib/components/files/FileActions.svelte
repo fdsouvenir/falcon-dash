@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	interface Props {
+		onnewfile?: (data: { name: string }) => void;
+		onnewfolder?: (data: { name: string }) => void;
+	}
 
-	const dispatch = createEventDispatcher<{
-		newfile: { name: string };
-		newfolder: { name: string };
-	}>();
+	let { onnewfile, onnewfolder }: Props = $props();
 
 	let showNewFileInput = $state(false);
 	let showNewFolderInput = $state(false);
@@ -30,7 +30,7 @@
 	function submitNewFile(): void {
 		const name = newFileName.trim();
 		if (!name) return;
-		dispatch('newfile', { name });
+		onnewfile?.({ name });
 		showNewFileInput = false;
 		newFileName = '';
 	}
@@ -38,7 +38,7 @@
 	function submitNewFolder(): void {
 		const name = newFolderName.trim();
 		if (!name) return;
-		dispatch('newfolder', { name });
+		onnewfolder?.({ name });
 		showNewFolderInput = false;
 		newFolderName = '';
 	}

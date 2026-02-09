@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-
 	interface Props {
 		/** Canvas host base URL (e.g. http://host:18793/__openclaw__/canvas/) */
 		baseUrl?: string;
@@ -8,15 +6,17 @@
 		path?: string;
 		/** Optional title for the iframe */
 		title?: string;
+		onload?: () => void;
+		onerror?: (message: string) => void;
 	}
 
 	let {
 		baseUrl = 'http://127.0.0.1:18793/__openclaw__/canvas/',
 		path = '',
-		title = 'Canvas App'
+		title = 'Canvas App',
+		onload,
+		onerror
 	}: Props = $props();
-
-	const dispatch = createEventDispatcher<{ load: void; error: string }>();
 
 	let src = $derived(baseUrl.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, ''));
 
@@ -26,13 +26,13 @@
 	function handleLoad(): void {
 		loading = false;
 		loadError = false;
-		dispatch('load');
+		onload?.();
 	}
 
 	function handleError(): void {
 		loading = false;
 		loadError = true;
-		dispatch('error', 'Failed to load canvas');
+		onerror?.('Failed to load canvas');
 	}
 </script>
 

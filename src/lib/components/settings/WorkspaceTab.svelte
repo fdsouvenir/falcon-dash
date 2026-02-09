@@ -125,12 +125,12 @@
 		showResetConfirm = false;
 	}
 
-	async function handleSave(event: CustomEvent<{ content: string }>): Promise<void> {
+	async function handleSave(data: { content: string }): Promise<void> {
 		if (!$activeFile || !selectedFile) return;
 		try {
-			const result = await saveFile(selectedFile, event.detail.content, $activeFile.hash);
+			const result = await saveFile(selectedFile, data.content, $activeFile.hash);
 			activeFile.set({
-				content: event.detail.content,
+				content: data.content,
 				hash: result.hash,
 				mtime: new Date().toISOString()
 			});
@@ -240,8 +240,8 @@
 					<FileEditor
 						content={$activeFile.content}
 						filename={selectedFile}
-						on:save={handleSave}
-						on:cancel={cancelEditing}
+						onsave={handleSave}
+						oncancel={cancelEditing}
 					/>
 				{:else}
 					<div class="flex items-center justify-between border-b border-slate-700 px-4 py-2">
@@ -289,6 +289,6 @@
 	message="Discard any unsaved changes and reload the file from disk?"
 	confirmLabel="Reset"
 	open={showResetConfirm}
-	on:confirm={confirmReset}
-	on:cancel={cancelReset}
+	onconfirm={confirmReset}
+	oncancel={cancelReset}
 />

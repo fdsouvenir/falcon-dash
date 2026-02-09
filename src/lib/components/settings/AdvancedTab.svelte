@@ -159,8 +159,8 @@
 	message="This will remove the pattern '{removeTarget ?? ''}' from the execution allowlist."
 	confirmLabel="Remove"
 	open={removeTarget !== null}
-	on:confirm={handleRemoveEntry}
-	on:cancel={() => (removeTarget = null)}
+	onconfirm={handleRemoveEntry}
+	oncancel={() => (removeTarget = null)}
 />
 
 <ConfirmDialog
@@ -168,8 +168,8 @@
 	message="This will overwrite the current gateway configuration and may trigger a restart. Are you sure?"
 	confirmLabel="Apply"
 	open={showApplyConfirm}
-	on:confirm={handleApplyConfig}
-	on:cancel={() => (showApplyConfirm = false)}
+	onconfirm={handleApplyConfig}
+	oncancel={() => (showApplyConfirm = false)}
 />
 
 <div class="space-y-6 overflow-y-auto p-6">

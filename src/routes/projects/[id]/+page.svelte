@@ -1656,6 +1656,6 @@
 		? `Are you sure you want to delete "${confirmDeleteTask.title}"? This cannot be undone.`
 		: ''}
 	confirmLabel="Delete"
-	on:confirm={confirmDelete}
-	on:cancel={cancelDelete}
+	onconfirm={confirmDelete}
+	oncancel={cancelDelete}
 />

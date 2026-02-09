@@ -289,6 +289,6 @@
 	title="Confirm Bulk Action"
 	message={confirmAction ? confirmAction.label : ''}
 	confirmLabel="Confirm"
-	on:confirm={handleConfirm}
-	on:cancel={handleCancel}
+	onconfirm={handleConfirm}
+	oncancel={handleCancel}
 />
