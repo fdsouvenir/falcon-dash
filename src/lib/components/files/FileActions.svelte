@@ -77,7 +77,7 @@
 		on:click={startNewFile}
 		class="flex items-center space-x-1 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 	>
-		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 		</svg>
 		<span>New File</span>
@@ -86,7 +86,7 @@
 		on:click={startNewFolder}
 		class="flex items-center space-x-1 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-slate-600"
 	>
-		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 			<path
 				stroke-linecap="round"
 				stroke-linejoin="round"
@@ -106,6 +106,7 @@
 				on:blur={cancelNewFile}
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
 				placeholder="filename.txt"
+				aria-label="New file name"
 			/>
 		</div>
 	{/if}
@@ -119,6 +120,7 @@
 				on:blur={cancelNewFolder}
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
 				placeholder="folder-name"
+				aria-label="New folder name"
 			/>
 		</div>
 	{/if}

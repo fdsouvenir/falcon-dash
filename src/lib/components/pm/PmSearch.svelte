@@ -220,7 +220,13 @@
 	<div class="border-b border-slate-700 px-4 py-3">
 		<div class="relative">
 			<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-				<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					class="h-4 w-4 text-slate-400"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -236,6 +242,7 @@
 				on:keydown={handleKeydown}
 				type="text"
 				placeholder="Search projects, tasks, comments..."
+				aria-label="Search projects and tasks"
 				class="w-full rounded-lg border border-slate-600 bg-slate-800 py-2 pl-10 pr-8 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 			/>
 			{#if query}
@@ -256,7 +263,7 @@
 			{/if}
 		</div>
 		{#if query}
-			<p class="mt-1.5 text-xs text-slate-500">
+			<p class="mt-1.5 text-xs text-slate-500" role="status" aria-live="polite">
 				{#if loading}
 					Searching...
 				{:else if searched}

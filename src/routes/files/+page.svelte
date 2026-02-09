@@ -303,21 +303,22 @@
 <div class="flex h-full flex-col">
 	<!-- Breadcrumb navigation -->
 	<div class="border-b border-slate-700 px-4 py-3">
-		<nav class="flex items-center space-x-1 text-sm">
+		<nav class="flex items-center space-x-1 text-sm" aria-label="File breadcrumb">
 			<button
 				on:click={() => handleNavigate('')}
-				class="text-slate-400 transition-colors hover:text-slate-100"
+				class="text-slate-400 transition-colors hover:text-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500"
 				class:text-slate-100={pathSegments.length === 0}
 			>
-				Home
+				Home aria-current={pathSegments.length === 0 ? 'page' : undefined}
 			</button>
 			{#each pathSegments as segment, i (i)}
 				<span class="text-slate-600">/</span>
 				<button
 					on:click={() => handleNavigate(breadcrumbPath(i))}
-					class="text-slate-400 transition-colors hover:text-slate-100"
+					class="text-slate-400 transition-colors hover:text-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500"
 					class:text-slate-100={i === pathSegments.length - 1}
 				>
+					aria-current={i === pathSegments.length - 1 ? 'page' : undefined}
 					{segment}
 				</button>
 			{/each}
@@ -338,7 +339,10 @@
 					<p class="text-sm text-slate-400">Loading files...</p>
 				</div>
 			{:else if errorMessage}
-				<div class="flex flex-1 flex-col items-center justify-center space-y-3">
+				<div
+					class="flex flex-1 flex-col items-center justify-center space-y-3"
+					aria-live="assertive"
+				>
 					<p class="text-sm text-red-400">{errorMessage}</p>
 					<button
 						on:click={retry}
@@ -358,19 +362,22 @@
 				>
 					<button
 						on:click={() => toggleSort('name')}
-						class="text-left transition-colors hover:text-slate-200"
+						class="text-left transition-colors hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500"
+						aria-label="Sort by name"
 					>
 						Name{sortIndicator('name')}
 					</button>
 					<button
 						on:click={() => toggleSort('mtime')}
-						class="hidden w-24 text-right transition-colors hover:text-slate-200 md:block"
+						class="hidden w-24 text-right transition-colors hover:text-slate-200 md:block focus-visible:ring-2 focus-visible:ring-blue-500"
+						aria-label="Sort by modified date"
 					>
 						Modified{sortIndicator('mtime')}
 					</button>
 					<button
 						on:click={() => toggleSort('size')}
-						class="hidden w-20 text-right transition-colors hover:text-slate-200 md:block"
+						class="hidden w-20 text-right transition-colors hover:text-slate-200 md:block focus-visible:ring-2 focus-visible:ring-blue-500"
+						aria-label="Sort by size"
 					>
 						Size{sortIndicator('size')}
 					</button>
@@ -395,13 +402,13 @@
 							>
 								<span class="flex-shrink-0 text-slate-400">
 									{#if file.isDirectory}
-										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
 											<path
 												d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
 											/>
 										</svg>
 									{:else}
-										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
 											<path
 												fill-rule="evenodd"
 												d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
@@ -420,6 +427,7 @@
 											on:keydown={handleRenameKeydown}
 											on:blur={submitRename}
 											class="w-full rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+											aria-label="Rename file"
 										/>
 									</span>
 								{:else}
@@ -455,9 +463,15 @@
 								<button
 									on:click={(e) => requestDelete(e, file)}
 									class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-500 opacity-100 transition-all hover:bg-red-900/30 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100"
-									title="Delete {file.name}"
+									aria-label="Delete {file.name}"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg
+										class="h-4 w-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"
@@ -478,7 +492,7 @@
 			{#if $activeFile}
 				{#if editing}
 					{#if saveError}
-						<div class="border-b border-red-800 bg-red-900/30 px-4 py-2">
+						<div class="border-b border-red-800 bg-red-900/30 px-4 py-2" aria-live="assertive">
 							<p class="text-sm text-red-400">{saveError}</p>
 						</div>
 					{/if}

@@ -361,7 +361,8 @@
 			<!-- Column Header -->
 			<div class="flex items-center justify-between border-b border-slate-700 px-3 py-3">
 				<div class="flex items-center space-x-2">
-					<span class="h-2.5 w-2.5 rounded-full {statusHeaderColor(status)}"></span>
+					<span class="h-2.5 w-2.5 rounded-full {statusHeaderColor(status)}" aria-hidden="true"
+					></span>
 					<span class="text-sm font-medium text-slate-200">{statusLabel(status)}</span>
 					<span
 						class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-slate-700 px-1.5 text-xs text-slate-400"
@@ -372,7 +373,7 @@
 				<button
 					on:click={() => startAddTask(status)}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
-					title="Add task"
+					aria-label="Add task to {statusLabel(status)} column"
 				>
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
@@ -395,6 +396,7 @@
 							bind:value={newTaskTitle}
 							on:keydown={(e) => handleAddKeydown(e, status)}
 							placeholder="Task title..."
+							aria-label="Task title"
 							class="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 						/>
 						<div class="mt-2 flex items-center justify-end space-x-2">
@@ -424,17 +426,24 @@
 						use:longpress={{ onLongPress: handleTaskLongPress(task) }}
 						class="cursor-pointer rounded-lg border bg-slate-800 p-3 transition-all hover:bg-slate-750
 							{isDragging(task.id) ? 'opacity-50' : 'opacity-100'}
-							{isSelected(task.id) ? 'border-blue-500' : 'border-slate-700 hover:border-slate-600'}"
+							{isSelected(task.id)
+							? 'border-blue-500'
+							: 'border-slate-700 hover:border-slate-600'} focus-visible:ring-2 focus-visible:ring-blue-500"
 						role="button"
 						tabindex="0"
+						aria-label="View {task.title}"
 						on:keydown={(e) => {
-							if (e.key === 'Enter') selectTask(task.id);
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								selectTask(task.id);
+							}
 						}}
 					>
 						<div class="flex items-start gap-2">
 							<!-- Selection Checkbox -->
 							<button
 								on:click={(e) => toggleSelection(e, task.id)}
+								aria-label="Select task {task.title}"
 								class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors {isSelected(
 									task.id
 								)
@@ -516,7 +525,8 @@
 					? 'bg-slate-700/50'
 					: ''}"
 			>
-				<span class="h-2.5 w-2.5 rounded-full {statusHeaderColor(status)}"></span>
+				<span class="h-2.5 w-2.5 rounded-full {statusHeaderColor(status)}" aria-hidden="true"
+				></span>
 				<span>{statusLabel(status)}</span>
 				{#if taskMenuTask?.status === status}
 					<span class="ml-auto text-xs text-slate-400">Current</span>

@@ -125,11 +125,13 @@
 		rows="1"
 		class="flex-1 resize-none rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 		style="max-height: 200px"
+		aria-label="Message input"
 	/>
 	{#if isRunning}
 		<button
 			on:click={abort}
 			class="min-h-[44px] min-w-[44px] rounded-lg bg-red-600/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-600/30"
+			aria-label="Abort response"
 		>
 			Abort
 		</button>
@@ -138,6 +140,7 @@
 			on:click={send}
 			disabled={!content.trim()}
 			class="min-h-[44px] min-w-[44px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+			aria-label="Send message"
 		>
 			Send
 		</button>

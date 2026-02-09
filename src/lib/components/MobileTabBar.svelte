@@ -27,7 +27,10 @@
 	$: moreActive = isActive('/settings', ['/passwords', '/apps/*']);
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-30 bg-slate-800 border-t border-slate-700 md:hidden">
+<nav
+	class="fixed bottom-0 left-0 right-0 z-30 bg-slate-800 border-t border-slate-700 md:hidden"
+	aria-label="Main navigation"
+>
 	<div class="flex items-center justify-around">
 		<!-- Chat Tab -->
 		<a
@@ -35,9 +38,17 @@
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {chatActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"
+			aria-current={chatActive ? 'page' : undefined}
 		>
 			<div class="relative">
-				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg
+					class="w-6 h-6"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -47,6 +58,7 @@
 				{#if totalUnread > 0}
 					<span
 						class="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-semibold text-white bg-red-500 rounded-full"
+						aria-label="{totalUnread} unread messages"
 					>
 						{totalUnread > 99 ? '99+' : totalUnread}
 					</span>
@@ -61,8 +73,16 @@
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {projectsActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"
+			aria-current={projectsActive ? 'page' : undefined}
 		>
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<svg
+				class="w-6 h-6"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -78,8 +98,16 @@
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {filesActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"
+			aria-current={filesActive ? 'page' : undefined}
 		>
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<svg
+				class="w-6 h-6"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -95,8 +123,16 @@
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {jobsActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"
+			aria-current={jobsActive ? 'page' : undefined}
 		>
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<svg
+				class="w-6 h-6"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -113,8 +149,16 @@
 			class="flex flex-col items-center justify-center flex-1 min-h-[44px] py-2 transition-colors {moreActive
 				? 'text-blue-400'
 				: 'text-slate-400'}"
+			aria-label="More menu"
 		>
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<svg
+				class="w-6 h-6"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"

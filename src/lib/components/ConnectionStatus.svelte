@@ -47,7 +47,12 @@
 	}
 </script>
 
-<div class="flex items-center gap-2 px-2 py-1.5">
-	<span class="inline-block h-2 w-2 rounded-full {dotColor}"></span>
+<div
+	class="flex items-center gap-2 px-2 py-1.5"
+	role="status"
+	aria-live="polite"
+	aria-label="Connection status: {label}"
+>
+	<span class="inline-block h-2 w-2 rounded-full {dotColor}" aria-hidden="true"></span>
 	<span class="text-xs text-slate-400">{label}</span>
 </div>

@@ -65,7 +65,7 @@
 				<p class="text-sm text-slate-400">No messages yet. Start a conversation!</p>
 			</div>
 		{:else}
-			<div class="space-y-3">
+			<div class="space-y-3" role="log" aria-live="polite" aria-label="Chat messages">
 				{#each messages as message (message.id)}
 					<div class="rounded-lg px-4 py-3 {roleClass(message.role)}">
 						<div class="mb-1 flex items-center justify-between">
@@ -89,6 +89,7 @@
 		<button
 			class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-slate-600 px-4 py-1.5 text-xs text-slate-200 shadow-lg transition-colors hover:bg-slate-500"
 			on:click={jumpToBottom}
+			aria-label="Scroll to latest messages"
 		>
 			Jump to bottom
 		</button>

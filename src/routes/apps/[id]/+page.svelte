@@ -48,6 +48,7 @@
 					<input
 						type="text"
 						bind:value={editName}
+						aria-label="Edit app name"
 						on:keydown={handleRenameKeydown}
 						on:blur={saveRename}
 						class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-100 outline-none focus:border-blue-500"
@@ -56,7 +57,8 @@
 					<h1 class="text-lg font-semibold text-slate-100">{app.name}</h1>
 					<button
 						on:click={startRename}
-						class="rounded p-1 text-slate-400 transition-colors hover:text-slate-200"
+						aria-label="Rename app"
+						class="rounded p-1 focus-visible:ring-2 focus-visible:ring-blue-500 text-slate-400 transition-colors hover:text-slate-200"
 						title="Rename app"
 					>
 						<svg
@@ -65,6 +67,7 @@
 							fill="none"
 							stroke="currentColor"
 							stroke-width="2"
+							aria-hidden="true"
 						>
 							<path
 								stroke-linecap="round"

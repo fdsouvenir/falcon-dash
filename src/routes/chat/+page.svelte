@@ -233,7 +233,7 @@
 						<p class="text-sm text-slate-400">No messages yet. Start a conversation!</p>
 					</div>
 				{:else}
-					<div class="space-y-3">
+					<div class="space-y-3" role="log" aria-live="polite" aria-label="Chat messages">
 						{#each currentMessages as message (message.id)}
 							{#if message.role === 'assistant'}
 								<div
@@ -324,6 +324,7 @@
 				<button
 					class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-slate-600 px-4 py-1.5 text-xs text-slate-200 shadow-lg transition-colors hover:bg-slate-500"
 					on:click={jumpToBottom}
+					aria-label="Scroll to latest messages"
 				>
 					Jump to bottom
 				</button>
@@ -345,7 +346,13 @@
 				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
 				style="min-height: 44px;"
 			>
-				<svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					class="h-5 w-5 text-slate-400"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2" />
 					<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2" />
 				</svg>
@@ -356,7 +363,13 @@
 				class="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700"
 				style="min-height: 44px;"
 			>
-				<svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					class="h-5 w-5 text-slate-400"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"

@@ -73,6 +73,7 @@
 				class="cursor-pointer text-slate-400 transition-colors hover:text-slate-200"
 				on:click={() => dispatch('close')}
 				title="Close settings"
+				aria-label="Close settings"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -84,6 +85,7 @@
 					stroke-width="2"
 					stroke-linecap="round"
 					stroke-linejoin="round"
+					aria-hidden="true"
 				>
 					<path d="M18 6 6 18" />
 					<path d="m6 6 12 12" />

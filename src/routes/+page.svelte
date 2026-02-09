@@ -90,7 +90,7 @@
 				</div>
 
 				{#if error}
-					<p class="text-sm text-red-400">{error}</p>
+					<p class="text-sm text-red-400" role="alert" aria-live="assertive">{error}</p>
 				{/if}
 
 				<button

@@ -77,7 +77,8 @@
 					<td class="px-4 py-3">
 						<button
 							on:click|stopPropagation={() => dispatch('toggle', { job })}
-							class="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors {job.enabled
+							aria-label="{job.enabled ? 'Disable' : 'Enable'} {job.name}"
+							class="rounded-full focus-visible:ring-2 focus-visible:ring-blue-500 px-2.5 py-0.5 text-xs font-medium transition-colors {job.enabled
 								? 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
 								: 'bg-slate-700 text-slate-400 hover:bg-slate-600'}"
 						>
@@ -90,10 +91,11 @@
 						>
 							<button
 								on:click|stopPropagation={() => dispatch('edit', { job })}
-								class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+								aria-label="Edit {job.name}"
+								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-slate-200"
 								title="Edit"
 							>
-								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
 									<path
 										d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.463 11.098l-.59 2.063 2.063-.59 8.61-8.61a.25.25 0 000-.354L12.427 2.487z"
 									/>
@@ -101,19 +103,21 @@
 							</button>
 							<button
 								on:click|stopPropagation={() => dispatch('run', { job })}
-								class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-blue-400"
+								aria-label="Run {job.name} now"
+								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-blue-400"
 								title="Run Now"
 							>
-								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
 									<path d="M4 2l10 6-10 6V2z" />
 								</svg>
 							</button>
 							<button
 								on:click|stopPropagation={() => dispatch('delete', { job })}
-								class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-red-400"
+								aria-label="Delete {job.name}"
+								class="rounded p-1 text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors hover:bg-slate-700 hover:text-red-400"
 								title="Delete"
 							>
-								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+								<svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
 									<path
 										d="M6.5 1.75a.25.25 0 01.25-.25h2.5a.25.25 0 01.25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 010 1.5H2.75a.75.75 0 010-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 10-1.492.15l.66 6.6A1.75 1.75 0 005.405 15h5.19a1.75 1.75 0 001.741-1.575l.66-6.6a.75.75 0 00-1.492-.15l-.66 6.6a.25.25 0 01-.249.225h-5.19a.25.25 0 01-.249-.225l-.66-6.6z"
 									/>

@@ -231,20 +231,26 @@
 
 <div class="flex h-full flex-col">
 	<!-- Tab bar -->
-	<div class="flex border-b border-slate-700">
+	<div class="flex border-b border-slate-700" role="tablist" aria-label="Job type tabs">
 		<button
 			on:click={() => switchTab('heartbeat')}
-			class="px-6 py-3 text-sm font-medium transition-colors {activeTab === 'heartbeat'
+			class="px-6 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 {activeTab ===
+			'heartbeat'
 				? 'border-b-2 border-blue-500 text-slate-100'
 				: 'text-slate-400 hover:text-slate-200'}"
+			role="tab"
+			aria-selected={activeTab === 'heartbeat'}
 		>
 			Heartbeat
 		</button>
 		<button
 			on:click={() => switchTab('cron')}
-			class="px-6 py-3 text-sm font-medium transition-colors {activeTab === 'cron'
+			class="px-6 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 {activeTab ===
+			'cron'
 				? 'border-b-2 border-blue-500 text-slate-100'
 				: 'text-slate-400 hover:text-slate-200'}"
+			role="tab"
+			aria-selected={activeTab === 'cron'}
 		>
 			Cron Jobs
 		</button>
@@ -258,7 +264,7 @@
 					<p class="text-sm text-slate-400">Loading heartbeat configuration...</p>
 				</div>
 			{:else if errorMessage}
-				<div class="flex flex-col items-center justify-center space-y-3 p-8">
+				<div class="flex flex-col items-center justify-center space-y-3 p-8" aria-live="assertive">
 					<p class="text-sm text-red-400">{errorMessage}</p>
 					<button
 						on:click={retry}
@@ -306,6 +312,7 @@
 										max="1440"
 										bind:value={intervalValue}
 										class="w-20 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-right text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+										aria-label="Heartbeat interval in minutes"
 									/>
 									<span class="text-xs text-slate-400">min</span>
 									{#if intervalDirty}
@@ -366,7 +373,7 @@
 						</div>
 
 						{#if saveError}
-							<div class="border-b border-red-800 bg-red-900/30 px-5 py-2">
+							<div class="border-b border-red-800 bg-red-900/30 px-5 py-2" aria-live="assertive">
 								<p class="text-sm text-red-400">{saveError}</p>
 							</div>
 						{/if}
@@ -406,7 +413,10 @@
 				</div>
 
 				{#if cronError}
-					<div class="mb-4 rounded border border-red-800 bg-red-900/30 px-4 py-2">
+					<div
+						class="mb-4 rounded border border-red-800 bg-red-900/30 px-4 py-2"
+						aria-live="assertive"
+					>
 						<p class="text-sm text-red-400">{cronError}</p>
 					</div>
 				{/if}

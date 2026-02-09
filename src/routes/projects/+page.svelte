@@ -159,9 +159,15 @@
 				<button
 					on:click={togglePmSidebar}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-slate-200 lg:hidden"
-					aria-label="Toggle sidebar"
+					aria-label="Toggle project filter sidebar"
 				>
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="h-5 w-5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -174,10 +180,16 @@
 				<h1 class="text-lg font-semibold text-slate-100">Projects</h1>
 
 				<!-- View switcher tabs -->
-				<div class="hidden items-center space-x-1 sm:flex">
+				<div
+					class="hidden items-center space-x-1 sm:flex"
+					role="tablist"
+					aria-label="View switcher"
+				>
 					<button
 						on:click={() => setView('dashboard')}
-						class="rounded px-3 py-1.5 text-xs font-medium transition-colors {isActiveView(
+						role="tab"
+						aria-selected={isActiveView('dashboard')}
+						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
 							'dashboard'
 						)
 							? 'bg-slate-700 text-slate-100'
@@ -187,7 +199,11 @@
 					</button>
 					<button
 						on:click={() => setView('list')}
-						class="rounded px-3 py-1.5 text-xs font-medium transition-colors {isActiveView('list')
+						role="tab"
+						aria-selected={isActiveView('list')}
+						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
+							'list'
+						)
 							? 'bg-slate-700 text-slate-100'
 							: 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}"
 					>
@@ -195,7 +211,11 @@
 					</button>
 					<button
 						on:click={() => setView('kanban')}
-						class="rounded px-3 py-1.5 text-xs font-medium transition-colors {isActiveView('kanban')
+						role="tab"
+						aria-selected={isActiveView('kanban')}
+						class="rounded px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900 {isActiveView(
+							'kanban'
+						)
 							? 'bg-slate-700 text-slate-100'
 							: 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}"
 					>
@@ -209,11 +229,17 @@
 				<button
 					on:click={toggleSearch}
 					class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
-					aria-label="Search"
+					aria-label="Search projects and tasks"
 					class:bg-slate-700={showSearch}
 					class:text-slate-200={showSearch}
 				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="h-4 w-4"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -226,9 +252,11 @@
 		</div>
 
 		<!-- Mobile view switcher (below header on small screens) -->
-		<div class="flex border-b border-slate-700 sm:hidden">
+		<div class="flex border-b border-slate-700 sm:hidden" role="tablist" aria-label="View switcher">
 			<button
 				on:click={() => setView('dashboard')}
+				role="tab"
+				aria-selected={isActiveView('dashboard')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
 					'dashboard'
 				)
@@ -239,6 +267,8 @@
 			</button>
 			<button
 				on:click={() => setView('list')}
+				role="tab"
+				aria-selected={isActiveView('list')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
 					'list'
 				)
@@ -249,6 +279,8 @@
 			</button>
 			<button
 				on:click={() => setView('kanban')}
+				role="tab"
+				aria-selected={isActiveView('kanban')}
 				class="min-h-[44px] flex-1 text-center text-xs font-medium transition-colors {isActiveView(
 					'kanban'
 				)
@@ -260,7 +292,7 @@
 		</div>
 
 		{#if errorMessage}
-			<div class="border-b border-red-800 bg-red-900/30 px-6 py-2">
+			<div class="border-b border-red-800 bg-red-900/30 px-6 py-2" aria-live="assertive">
 				<p class="text-sm text-red-400">{errorMessage}</p>
 			</div>
 		{/if}

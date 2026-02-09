@@ -138,7 +138,8 @@
 		<!-- Select all toggle -->
 		<button
 			on:click={toggleSelectAll}
-			class="flex items-center space-x-2 text-xs text-slate-300 hover:text-slate-100"
+			aria-label={allSelected ? 'Deselect all tasks' : 'Select all tasks'}
+			class="flex items-center focus-visible:ring-2 focus-visible:ring-blue-500 space-x-2 text-xs text-slate-300 hover:text-slate-100"
 		>
 			<span
 				class="flex h-4 w-4 items-center justify-center rounded border {allSelected
@@ -146,7 +147,13 @@
 					: 'border-slate-500'}"
 			>
 				{#if allSelected}
-					<svg class="h-3 w-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="h-3 w-3 text-blue-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"

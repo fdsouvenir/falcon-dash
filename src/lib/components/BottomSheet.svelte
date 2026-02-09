@@ -46,7 +46,7 @@
 	>
 		<!-- Drag handle -->
 		<div class="flex flex-shrink-0 flex-col items-center px-4 pb-2 pt-3">
-			<div class="mb-2 h-1 w-12 rounded-full bg-slate-600"></div>
+			<div class="mb-2 h-1 w-12 rounded-full bg-slate-600" aria-hidden="true"></div>
 			{#if title}
 				<h3 class="text-sm font-semibold text-slate-200">{title}</h3>
 			{/if}

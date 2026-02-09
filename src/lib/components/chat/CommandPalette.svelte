@@ -53,6 +53,8 @@
 {#if filtered.length > 0}
 	<div
 		class="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-slate-600 bg-slate-800 shadow-xl"
+		role="listbox"
+		aria-label="Slash commands"
 	>
 		{#each filtered as cmd, i (cmd.name)}
 			<button
@@ -61,6 +63,8 @@
 					? 'bg-blue-600/30 text-slate-100'
 					: 'text-slate-300 hover:bg-slate-700/50'}"
 				on:click={() => selectCommand(cmd)}
+				role="option"
+				aria-selected={i === selectedIndex}
 			>
 				<span class="font-mono text-blue-400">/{cmd.name}</span>
 				<span class="text-slate-400">{cmd.description}</span>

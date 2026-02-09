@@ -165,13 +165,17 @@
 						id="cron-name"
 						type="text"
 						bind:value={name}
+						aria-invalid={nameError}
+						aria-describedby={nameError ? 'cron-name-error' : undefined}
 						class="w-full rounded border px-3 py-2 text-sm text-slate-200 focus:outline-none {nameError
 							? 'border-red-500 bg-slate-900 focus:border-red-500'
 							: 'border-slate-600 bg-slate-900 focus:border-blue-500'}"
 						placeholder="Daily report"
 					/>
 					{#if nameError}
-						<p class="mt-1 text-xs text-red-400">Name is required</p>
+						<p id="cron-name-error" class="mt-1 text-xs text-red-400" role="alert">
+							Name is required
+						</p>
 					{/if}
 				</div>
 
@@ -200,13 +204,17 @@
 						id="cron-schedule"
 						type="text"
 						bind:value={schedule}
+						aria-invalid={scheduleError}
+						aria-describedby={scheduleError ? 'cron-schedule-error' : undefined}
 						class="w-full rounded border px-3 py-2 text-sm text-slate-200 focus:outline-none {scheduleError
 							? 'border-red-500 bg-slate-900 focus:border-red-500'
 							: 'border-slate-600 bg-slate-900 focus:border-blue-500'}"
 						placeholder={placeholders[scheduleType]}
 					/>
 					{#if scheduleError}
-						<p class="mt-1 text-xs text-red-400">Schedule is required</p>
+						<p id="cron-schedule-error" class="mt-1 text-xs text-red-400" role="alert">
+							Schedule is required
+						</p>
 					{/if}
 				</div>
 
@@ -219,13 +227,17 @@
 						id="cron-prompt"
 						bind:value={prompt}
 						rows="4"
+						aria-invalid={promptError}
+						aria-describedby={promptError ? 'cron-prompt-error' : undefined}
 						class="w-full rounded border px-3 py-2 text-sm text-slate-200 focus:outline-none {promptError
 							? 'border-red-500 bg-slate-900 focus:border-red-500'
 							: 'border-slate-600 bg-slate-900 focus:border-blue-500'}"
 						placeholder="Run the daily status report..."
 					/>
 					{#if promptError}
-						<p class="mt-1 text-xs text-red-400">Prompt is required</p>
+						<p id="cron-prompt-error" class="mt-1 text-xs text-red-400" role="alert">
+							Prompt is required
+						</p>
 					{/if}
 				</div>
 

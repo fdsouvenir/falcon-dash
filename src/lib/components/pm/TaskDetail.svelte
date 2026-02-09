@@ -583,12 +583,13 @@
 							<input
 								type="text"
 								bind:value={editTitleValue}
+								aria-label="Edit task title"
 								on:blur={saveTitle}
 								on:keydown={(e) => {
 									if (e.key === 'Enter') saveTitle();
 									if (e.key === 'Escape') cancelEditTitle();
 								}}
-								class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-base font-semibold text-slate-100 outline-none focus:border-blue-500"
+								class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-base font-semibold text-slate-100 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 								autofocus
 							/>
 						{:else}
@@ -702,7 +703,7 @@
 											if (e.key === 'Enter') saveDueDate();
 											if (e.key === 'Escape') cancelEditDueDate();
 										}}
-										class="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-200 outline-none focus:border-blue-500"
+										class="rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 										autofocus
 									/>
 								{:else}
@@ -813,7 +814,7 @@
 								<textarea
 									bind:value={editDescriptionValue}
 									rows="4"
-									class="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500"
+									class="w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 									placeholder="Add a description..."
 								></textarea>
 								<div class="mt-2 flex space-x-2">
@@ -866,7 +867,8 @@
 										type="text"
 										bind:value={newSubtaskTitle}
 										on:keydown={handleSubtaskKeydown}
-										class="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+										aria-label="New subtask title"
+										class="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 										placeholder="Subtask title..."
 										autofocus
 									/>
@@ -1005,7 +1007,7 @@
 												type="number"
 												bind:value={blockerTaskIdInput}
 												on:keydown={handleBlockerKeydown}
-												class="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+												class="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 												placeholder="Task ID"
 												autofocus
 											/>
@@ -1092,7 +1094,7 @@
 												type="number"
 												bind:value={blockedTaskIdInput}
 												on:keydown={handleBlockedKeydown}
-												class="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+												class="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 												placeholder="Task ID"
 												autofocus
 											/>
@@ -1228,7 +1230,7 @@
 													<textarea
 														bind:value={editCommentBody}
 														rows="2"
-														class="mt-2 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+														class="mt-2 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 													></textarea>
 													<div class="mt-1 flex space-x-2">
 														<button
@@ -1259,7 +1261,7 @@
 									<textarea
 										bind:value={newCommentBody}
 										rows="2"
-										class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-200 outline-none focus:border-blue-500"
+										class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 										placeholder="Write a comment..."
 									></textarea>
 									<div class="mt-1.5 flex justify-end">
@@ -1298,7 +1300,7 @@
 										type="text"
 										bind:value={newAttachmentName}
 										on:keydown={handleAttachmentKeydown}
-										class="mb-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+										class="mb-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 										placeholder="File name..."
 										autofocus
 									/>
@@ -1306,7 +1308,7 @@
 										type="text"
 										bind:value={newAttachmentPath}
 										on:keydown={handleAttachmentKeydown}
-										class="mb-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500"
+										class="mb-1 w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500"
 										placeholder="File path..."
 									/>
 									<div class="flex space-x-2">

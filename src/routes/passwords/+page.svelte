@@ -352,7 +352,13 @@
 		<div class="flex flex-1 items-center justify-center p-8">
 			<div class="max-w-md space-y-4 text-center">
 				<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
-					<svg class="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="h-8 w-8 text-slate-500"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -411,6 +417,7 @@
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
+							aria-hidden="true"
 						>
 							<path
 								stroke-linecap="round"
@@ -425,7 +432,11 @@
 				</div>
 
 				{#if authError}
-					<div class="rounded border border-red-800 bg-red-900/30 px-4 py-2">
+					<div
+						class="rounded border border-red-800 bg-red-900/30 px-4 py-2"
+						role="alert"
+						aria-live="assertive"
+					>
 						<p class="text-sm text-red-400">{authError}</p>
 					</div>
 				{/if}
@@ -482,6 +493,7 @@
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
+							aria-hidden="true"
 						>
 							<path
 								stroke-linecap="round"
@@ -496,7 +508,11 @@
 				</div>
 
 				{#if authError}
-					<div class="rounded border border-red-800 bg-red-900/30 px-4 py-2">
+					<div
+						class="rounded border border-red-800 bg-red-900/30 px-4 py-2"
+						role="alert"
+						aria-live="assertive"
+					>
 						<p class="text-sm text-red-400">{authError}</p>
 					</div>
 				{/if}
@@ -556,7 +572,11 @@
 			</div>
 
 			{#if errorMessage}
-				<div class="border-b border-red-800 bg-red-900/30 px-4 py-2">
+				<div
+					class="border-b border-red-800 bg-red-900/30 px-4 py-2"
+					role="alert"
+					aria-live="assertive"
+				>
 					<p class="text-sm text-red-400">{errorMessage}</p>
 				</div>
 			{/if}
@@ -567,6 +587,7 @@
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search entries..."
+					aria-label="Search password entries"
 					class="w-full rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
 				/>
 			</div>
@@ -594,7 +615,7 @@
 						</div>
 						{#each filteredEntries as entry (entry.title)}
 							<div
-								class="group grid cursor-pointer grid-cols-[1fr_auto_auto] gap-2 px-4 py-2.5 text-sm transition-colors hover:bg-slate-700/50 {selectedEntryTitle ===
+								class="group grid cursor-pointer grid-cols-[1fr_auto_auto] gap-2 px-4 py-2.5 text-sm transition-colors hover:bg-slate-700/50 focus-visible:ring-2 focus-visible:ring-blue-500 {selectedEntryTitle ===
 								entry.title
 									? 'bg-slate-700/30'
 									: ''}"
@@ -602,7 +623,10 @@
 								tabindex="0"
 								on:click={() => handleSelectEntry(entry)}
 								on:keydown={(e) => {
-									if (e.key === 'Enter') handleSelectEntry(entry);
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										handleSelectEntry(entry);
+									}
 								}}
 							>
 								<span class="flex items-center space-x-2 truncate">
@@ -611,6 +635,7 @@
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
+										aria-hidden="true"
 									>
 										<path
 											stroke-linecap="round"
@@ -812,7 +837,11 @@
 			</h3>
 
 			{#if formError}
-				<div class="mt-3 rounded border border-red-800 bg-red-900/30 px-3 py-2">
+				<div
+					class="mt-3 rounded border border-red-800 bg-red-900/30 px-3 py-2"
+					role="alert"
+					aria-live="assertive"
+				>
 					<p class="text-sm text-red-400">{formError}</p>
 				</div>
 			{/if}

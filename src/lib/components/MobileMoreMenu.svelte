@@ -42,7 +42,7 @@
 		<div class="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-4"></div>
 
 		<!-- Navigation items -->
-		<nav class="space-y-1">
+		<nav class="space-y-1" aria-label="Additional navigation">
 			<!-- Settings -->
 			<a
 				href="/settings"
@@ -58,6 +58,7 @@
 					stroke="currentColor"
 					viewBox="0 0 24 24"
 					xmlns="http://www.w3.org/2000/svg"
+					aria-hidden="true"
 				>
 					<path
 						stroke-linecap="round"
@@ -84,6 +85,7 @@
 					stroke="currentColor"
 					viewBox="0 0 24 24"
 					xmlns="http://www.w3.org/2000/svg"
+					aria-hidden="true"
 				>
 					<path
 						stroke-linecap="round"
@@ -105,6 +107,7 @@
 							stroke="currentColor"
 							viewBox="0 0 24 24"
 							xmlns="http://www.w3.org/2000/svg"
+							aria-hidden="true"
 						>
 							<path
 								stroke-linecap="round"
@@ -126,7 +129,13 @@
 							: ''}"
 						on:click={handleLinkClick}
 					>
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg
+							class="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
