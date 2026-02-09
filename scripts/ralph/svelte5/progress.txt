@@ -154,3 +154,25 @@ Started: 2026-02-09
   - PM components (PmSidebar, BulkActions, TaskDetail) use ConfirmDialog but also have their own dispatchers — only migrate the ConfirmDialog call sites, leave their own dispatchers for US-S5-005
   - projects/[id]/+page.svelte uses BulkActions with on:clear/on:selectAll — must keep on: syntax since BulkActions' own dispatcher isn't migrated yet
   - apps/[id]/+page.svelte uses CanvasFrame and A2UIHost without any event listeners — no changes needed there
+
+## 2026-02-09 - US-S5-005
+- Migrated 7 components from createEventDispatcher to callback props:
+  - KanbanBoard (`onselect` with `{ taskId: number }` param)
+  - PmSearch (`onselect` with `{ entityType: string; id: number | string }` param)
+  - PmSidebar (`onselect` with `{ domainId: string | null; focusId: string | null }` param)
+  - ProjectList (`onselect` with `{ projectId: number }` param)
+  - TaskDetail (`onclose`, `onnavigate` with `{ taskId: number }` param)
+  - BulkActions (`onclear`, `onselectall`) — 6 dispatch('clear') calls + 1 dispatch('selectAll') replaced
+  - OnboardingWizard (`oncomplete`, `onskip`)
+- Updated 4 parent call sites:
+  - `src/routes/projects/+page.svelte` — PmSearch, PmSidebar, ProjectList, KanbanBoard, TaskDetail (5 components, removed all CustomEvent<T> wrappers)
+  - `src/routes/projects/[id]/+page.svelte` — BulkActions (on:clear/on:selectAll → onclear/onselectall)
+  - `src/routes/+layout.svelte` — OnboardingWizard (on:complete/on:skip → oncomplete/onskip)
+  - `src/lib/components/pm/KanbanBoard.svelte` — BulkActions (on:clear/on:selectAll → onclear/onselectall)
+- Zero createEventDispatcher imports in ENTIRE codebase (confirmed via grep — 0 matches)
+- Zero `on:select`, `on:clear`, `on:selectAll`, `on:close`, `on:navigate`, `on:complete`, `on:skip` patterns remain
+- Files changed: 10 (7 components + 3 parent routes + 1 parent component)
+- **Learnings for future iterations:**
+  - projects/+page.svelte handlers used `CustomEvent<T>` wrapper types — all 5 handlers needed their signatures changed from `(e: CustomEvent<T>) => e.detail.x` to `(data: T) => data.x`
+  - BulkActions had the most dispatch calls (7 total across 6 `dispatch('clear')` + 1 `dispatch('selectAll')`) — using `replace_all` on the Edit tool is efficient for this
+  - This completes the entire createEventDispatcher migration — all 21 components across 3 stories (US-S5-003, 004, 005) are now using callback props

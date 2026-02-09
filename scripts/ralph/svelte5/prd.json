@@ -102,7 +102,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 5,
-			"passes": false,
+			"passes": true,
 			"notes": "Same transformation pattern as US-S5-003. Final batch — after this, the entire codebase should be free of createEventDispatcher. Verify with: grep -r 'createEventDispatcher' src/ — should return 0 matches."
 		},
 		{
