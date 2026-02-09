@@ -118,3 +118,75 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - `Uint8Array.buffer` returns `ArrayBufferLike` not `ArrayBuffer` — cast with `as ArrayBuffer` for `PushManager.subscribe`
   - Web Audio API oscillator is a lightweight alternative to shipping audio files for notification sounds
   - `document.hasFocus()` is the simplest way to suppress notifications when the user is already looking at the tab
+
+## 2026-02-08 18:10 - US-075
+- Comprehensive accessibility audit and fixes across all 27 files
+- **Skip link:** Added skip-to-content link in `+layout.svelte` (sr-only, visible on focus)
+- **ARIA landmarks:** `aria-label` on main sidebar nav, mobile tab bar nav, more menu nav
+- **aria-hidden on decorative SVGs:** Added across all components (hamburger, search, tab icons, etc.)
+- **aria-labels on interactive elements:**
+  - MobileTabBar: tab buttons, more button, unread badge
+  - MobileMoreMenu: nav items
+  - Sidebar: new chat button, unpin buttons, session buttons
+  - ConnectionStatus: role="status", aria-live="polite"
+  - MessageComposer: textarea, send/abort buttons
+  - CommandPalette: role="listbox", role="option", aria-selected
+  - Chat page: scroll-to-bottom button, context menu actions
+  - Files page: breadcrumb nav, sort buttons, rename input, delete buttons
+  - Jobs page: heartbeat interval input
+  - Passwords page: search input
+  - KanbanBoard: add task button/input, task card checkboxes
+  - BulkActions: action buttons
+  - PmSearch: search input
+  - CronJobForm: form inputs
+  - CronJobList: action buttons
+- **aria-live regions:**
+  - Chat messages: role="log" aria-live="polite" on MessageList
+  - Error messages: aria-live="assertive" on error containers (jobs, files, projects, passwords)
+  - Save errors: aria-live="assertive" on heartbeat save error
+- **ARIA roles on tabs:**
+  - Jobs page: role="tablist", role="tab", aria-selected on Heartbeat/Cron tabs
+  - Projects page: role="tablist", role="tab", aria-selected on Dashboard/List/Kanban tabs
+  - Settings page: role="tablist", role="tab", aria-selected on settings tabs
+- **Visible focus indicators:** focus-visible:ring-2 focus-visible:ring-blue-500 on:
+  - Jobs tab buttons, projects view switcher tabs
+  - KanbanBoard task cards
+  - TaskDetail form inputs
+- **Keyboard navigation:**
+  - KanbanBoard task cards: Space key handler alongside Enter
+  - BottomSheet: Escape key to close
+- **aria-current:** Already present on Sidebar nav items and MobileTabBar tabs
+- **Form input labels:** aria-label on all inputs (heartbeat interval, search, file rename, cron form fields)
+- Files changed (27 files):
+  - `src/routes/+layout.svelte` (skip link, landmarks)
+  - `src/routes/+page.svelte` (landing page a11y)
+  - `src/routes/chat/+page.svelte` (aria-live, aria-labels, aria-hidden)
+  - `src/routes/files/+page.svelte` (breadcrumb, sort labels, aria-live)
+  - `src/routes/jobs/+page.svelte` (tab roles, aria-live, focus indicators)
+  - `src/routes/projects/+page.svelte` (tab roles, aria-live, focus indicators)
+  - `src/routes/passwords/+page.svelte` (search label, aria-live)
+  - `src/routes/apps/[id]/+page.svelte` (a11y improvements)
+  - `src/lib/components/Sidebar.svelte` (aria-labels)
+  - `src/lib/components/ConnectionStatus.svelte` (role=status, aria-live)
+  - `src/lib/components/MobileTabBar.svelte` (nav label, tab labels)
+  - `src/lib/components/MobileMoreMenu.svelte` (nav label, aria-hidden)
+  - `src/lib/components/BottomSheet.svelte` (escape key, aria-modal)
+  - `src/lib/components/chat/MessageList.svelte` (role=log, aria-live)
+  - `src/lib/components/chat/MessageActionBar.svelte` (aria-hidden SVGs)
+  - `src/lib/components/chat/MessageComposer.svelte` (input/button labels)
+  - `src/lib/components/chat/CommandPalette.svelte` (listbox/option roles)
+  - `src/lib/components/chat/ChannelSettings.svelte` (a11y improvements)
+  - `src/lib/components/chat/ChatHeader.svelte` (a11y improvements)
+  - `src/lib/components/files/ConfirmDialog.svelte` (a11y improvements)
+  - `src/lib/components/files/FileActions.svelte` (button labels)
+  - `src/lib/components/jobs/CronJobForm.svelte` (form input labels)
+  - `src/lib/components/jobs/CronJobList.svelte` (action button labels)
+  - `src/lib/components/pm/KanbanBoard.svelte` (task card a11y, keyboard)
+  - `src/lib/components/pm/BulkActions.svelte` (button labels)
+  - `src/lib/components/pm/PmSearch.svelte` (search input label)
+  - `src/lib/components/pm/TaskDetail.svelte` (focus indicators)
+- **Learnings for future iterations:**
+  - Agents using `sed` for Svelte files can corrupt syntax (missing `>` brackets) — always use Edit tool instead
+  - When multiple agents touch the same file, one will get "File has been modified since read" errors — assign exclusive file ownership
+  - `role="tablist"` text injected by sed outside HTML tags causes parse errors — must be placed as attributes inside the opening tag
+  - Pre-existing `autofocus` warnings (14 total) are acceptable — they come from intentional UX patterns (inline editing)

@@ -87,7 +87,7 @@
 				"npm run check passes with 0 errors"
 			],
 			"priority": 4,
-			"passes": false,
+			"passes": true,
 			"notes": "Focus on the most-used flows first: chat, project management, navigation. Use axe-core or similar for automated checks. Manual test with keyboard-only navigation."
 		},
 		{
