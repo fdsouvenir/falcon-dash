@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ralph Wiggum - Long-running AI agent loop
+# Ralph Wiggum - Long-running AI agent loop (Svelte 5 Migration)
 # Usage: ./ralph.sh [--tool amp|claude] [max_iterations]
 #
 # Each iteration:
@@ -7,6 +7,11 @@
 #   2. Quality gates run EXTERNALLY (not by the agent)
 #   3. If gates fail, next iteration gets the error output
 #   4. Loop until all stories pass or max iterations reached
+#
+# Enhancements over build/ralph.sh:
+#   - 60-minute timeout on agent invocation (catches hangs)
+#   - Timeouts on quality gates (120s check/lint/test, 180s build)
+#   - Staleness watchdog (warns if no commit in 30+ minutes)
 
 # NO set -e — we handle all errors explicitly
 # This prevents the script from dying when quality gates return non-zero
@@ -33,7 +38,7 @@ if [[ "$TOOL" != "amp" && "$TOOL" != "claude" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
 PROGRESS_FILE="$SCRIPT_DIR/progress.txt"
 ARCHIVE_DIR="$SCRIPT_DIR/archive"
@@ -86,7 +91,7 @@ if check_all_complete; then
   exit 0
 fi
 
-echo "Starting Ralph - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
+echo "Starting Ralph (Svelte 5 Migration) - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
 echo "Project: $PROJECT_DIR"
 echo ""
 
@@ -121,20 +126,26 @@ $GATE_CONTEXT
 "
   fi
 
-  # ── Run the agent ─────────────────────────────────────────────
+  # ── Run the agent (with 60-minute timeout) ─────────────────────
   if [[ "$TOOL" == "amp" ]]; then
-    OUTPUT=$(echo "$PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+    OUTPUT=$(timeout 3600 bash -c 'echo "$1" | amp --dangerously-allow-all 2>&1' _ "$PROMPT" | tee /dev/stderr) || true
   else
-    OUTPUT=$(echo "$PROMPT" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+    OUTPUT=$(timeout 3600 bash -c 'echo "$1" | claude --dangerously-skip-permissions --print 2>&1' _ "$PROMPT" | tee /dev/stderr) || true
   fi
 
-  # ── External quality gates ────────────────────────────────────
+  # ── Staleness watchdog ─────────────────────────────────────────
+  cd "$PROJECT_DIR"
+  LAST_COMMIT_AGE=$(( $(date +%s) - $(git log -1 --format=%ct 2>/dev/null || echo "0") ))
+  if [ "$LAST_COMMIT_AGE" -gt 1800 ]; then
+    echo "⚠️ No new commit in 30+ minutes — agent may have stalled"
+  fi
+
+  # ── External quality gates (with timeouts) ─────────────────────
   echo ""
   echo "───────────────────────────────────────────────────────"
   echo "  Running external quality gates..."
   echo "───────────────────────────────────────────────────────"
 
-  cd "$PROJECT_DIR"
   GATE_PASSED=true
   GATE_OUTPUT=""
 
@@ -143,10 +154,9 @@ $GATE_CONTEXT
   npm run format >/dev/null 2>&1 || true
   echo "  ✅ formatted"
 
-  # Gate 2: svelte-check
+  # Gate 2: svelte-check (120s timeout)
   echo "  [2/5] npm run check..."
-  CHECK_OUT=$(npm run check 2>&1 || true)
-  CHECK_EXIT=${PIPESTATUS[0]:-$?}
+  CHECK_OUT=$(timeout 120 npm run check 2>&1 || true)
   if echo "$CHECK_OUT" | grep -q "found 0 errors"; then
     echo "  ✅ npm run check passed"
   else
@@ -158,9 +168,9 @@ $CHECK_OUT
     echo "  ❌ npm run check failed"
   fi
 
-  # Gate 3: lint
+  # Gate 3: lint (120s timeout)
   echo "  [3/5] npm run lint..."
-  LINT_OUT=$(npm run lint 2>&1 || true)
+  LINT_OUT=$(timeout 120 npm run lint 2>&1 || true)
   if [ $? -eq 0 ] && ! echo "$LINT_OUT" | grep -qE "(error|Error)"; then
     echo "  ✅ npm run lint passed"
   else
@@ -177,9 +187,9 @@ $LINT_OUT
     fi
   fi
 
-  # Gate 4: build
+  # Gate 4: build (180s timeout)
   echo "  [4/5] npm run build..."
-  BUILD_OUT=$(npm run build 2>&1 || true)
+  BUILD_OUT=$(timeout 180 npm run build 2>&1 || true)
   if echo "$BUILD_OUT" | grep -q "✔ done"; then
     echo "  ✅ npm run build passed"
   else
@@ -191,9 +201,9 @@ $BUILD_OUT
     echo "  ❌ npm run build failed"
   fi
 
-  # Gate 5: playwright tests
+  # Gate 5: playwright tests (120s timeout)
   echo "  [5/5] npm run test..."
-  TEST_OUT=$(npm run test 2>&1 || true)
+  TEST_OUT=$(timeout 120 npm run test 2>&1 || true)
   if echo "$TEST_OUT" | grep -q "passed"; then
     echo "  ✅ npm run test passed"
   else

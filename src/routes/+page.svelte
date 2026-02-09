@@ -5,7 +5,7 @@
 	import { connectionState, connId, gatewayUrl, serverVersion } from '$lib/stores';
 
 	let url = getGatewayUrl();
-	let token = getToken() || '';
+	let token = getToken() ?? '';
 	let error = '';
 	let connecting = false;
 

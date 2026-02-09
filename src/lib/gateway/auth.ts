@@ -1,10 +1,12 @@
+import { PUBLIC_DEFAULT_GATEWAY_URL, PUBLIC_DEFAULT_TOKEN } from '$env/static/public';
 import type { AuthParams, ConnectParams, DeviceParams } from './types';
 
 const STORAGE_KEY_TOKEN = 'falcon-dash:gateway-token';
 const STORAGE_KEY_URL = 'falcon-dash:gateway-url';
 const STORAGE_KEY_DEVICE_ID = 'falcon-dash:device-id';
 
-const DEFAULT_GATEWAY_URL = 'ws://127.0.0.1:18789';
+const DEFAULT_GATEWAY_URL = PUBLIC_DEFAULT_GATEWAY_URL || 'ws://127.0.0.1:18789';
+const DEFAULT_TOKEN = PUBLIC_DEFAULT_TOKEN || '';
 const PROTOCOL_VERSION = 3;
 const CLIENT_VERSION = '0.1.0';
 
@@ -13,9 +15,9 @@ export function setToken(token: string): void {
 	localStorage.setItem(STORAGE_KEY_TOKEN, token);
 }
 
-/** Retrieve the gateway token from localStorage */
+/** Retrieve the gateway token from localStorage, falling back to env default */
 export function getToken(): string | null {
-	return localStorage.getItem(STORAGE_KEY_TOKEN);
+	return localStorage.getItem(STORAGE_KEY_TOKEN) || DEFAULT_TOKEN || null;
 }
 
 /** Store the gateway URL in localStorage */

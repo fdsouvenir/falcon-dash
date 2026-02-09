@@ -1,6 +1,6 @@
 # falcon-dash
 
-Web dashboard for the OpenClaw AI platform. Connects to the OpenClaw Gateway via WebSocket.
+Web dashboard for the OpenClaw AI platform (docs.openclaw.com/llms.txt). Connects to the OpenClaw Gateway via WebSocket.
 
 ## Tech Stack
 

@@ -1,0 +1,24 @@
+A timeout on the Claude invocation could help catch hangs if the agent step has no time limit:
+
+OUTPUT=$(echo "$PROMPT" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+
+If Claude hangs (network issue, API timeout, rate limit, just gets confused and spins), this blocks forever. Simple fix:
+
+OUTPUT=$(timeout 3600 bash -c 'echo "$1" | claude --dangerously-skip-permissions --print 2>&1' _ "$PROMPT" | tee /dev/stderr) || true
+
+That gives it 60 minutes per story. If it doesn't finish, timeout kills it, the output capture gets whatever was produced, and the loop continues — next iteration picks up the same story with fresh context.
+
+You'd also want timeouts on the quality gates (they hung too when memory was low):
+
+CHECK_OUT=$(timeout 120 npm run check 2>&1 || true)
+LINT_OUT=$(timeout 120 npm run lint 2>&1 || true)
+BUILD_OUT=$(timeout 180 npm run build 2>&1 || true)
+TEST_OUT=$(timeout 120 npm run test 2>&1 || true)
+
+And a watchdog that detects staleness — if no git commit has been made in the last N minutes, something's wrong:
+
+# After the agent step, before quality gates
+LAST_COMMIT_AGE=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+if [ "$LAST_COMMIT_AGE" -gt 1800 ]; then
+  echo "⚠️ No new commit in 30+ minutes — agent may have stalled"
+fi
