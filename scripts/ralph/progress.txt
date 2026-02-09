@@ -22,6 +22,13 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - Preferences key: `falcon-dash:preferences` — includes `notificationSound` alongside existing fields
 - Web Audio API: Use `AudioContext` with oscillator for notification sounds (no external audio files needed)
 - `Uint8Array.buffer` type: Returns `ArrayBufferLike`, needs cast `as ArrayBuffer` for `PushManager.subscribe`
+- Virtual scrolling: Inline implementation (scroll handler + computed visible slice) avoids typed slot issues in Svelte 4
+- VirtualList component: `src/lib/components/VirtualList.svelte` — reusable for fixed-height items, exposes `getViewport()`
+- Lazy KaTeX: Two-processor approach — base (no KaTeX), math (with KaTeX loaded on first math detection)
+- Lazy images: Rehype plugin `lazy-images-plugin.ts` adds `loading="lazy"` to all `<img>` elements
+- Content-visibility: Use `style="content-visibility: auto; contain-intrinsic-size: auto 60px;"` for variable-height list items
+- Bundle splitting: `manualChunks` in vite config separates shiki/mermaid/katex into own chunks
+- Workbox limit: Set `maximumFileSizeToCacheInBytes: 5MB` to accommodate large Shiki chunk (2.3MB)
 
 ## 2026-02-08 17:30 - US-072
 - Implemented mobile bottom tab bar with 5 tabs (Chat, Projects, Files, Jobs, More)
@@ -190,3 +197,51 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - When multiple agents touch the same file, one will get "File has been modified since read" errors — assign exclusive file ownership
   - `role="tablist"` text injected by sed outside HTML tags causes parse errors — must be placed as attributes inside the opening tag
   - Pre-existing `autofocus` warnings (14 total) are acceptable — they come from intentional UX patterns (inline editing)
+
+## 2026-02-08 22:30 - US-076
+- Performance optimization across rendering, bundling, and loading
+- **Virtual scrolling on file list:**
+  - Inline virtual scrolling in files page with scroll handler + computed visible slice
+  - Fixed 44px row height, 10-item buffer, padding spacers for scroll position
+  - Preserves pull-to-refresh gesture on scroll container
+- **VirtualList component:**
+  - Created reusable `VirtualList.svelte` for fixed-height items
+  - Exposes `getViewport()` for external scroll container access
+  - Supports `scrollToEnd` for auto-scroll-to-bottom behavior
+- **Content-visibility for chat messages:**
+  - Added `content-visibility: auto` with `contain-intrinsic-size` on all message containers
+  - Applied to both chat page (assistant + user messages) and MessageList component
+  - Browser skips layout/paint for off-screen messages automatically
+- **Lazy KaTeX loading:**
+  - Split markdown pipeline into base processor (no KaTeX) and math processor (with KaTeX)
+  - KaTeX only loaded via dynamic `import('rehype-katex')` when math syntax detected
+  - Math detection regex: `$$...$$`, `$...$`, `\(...\)`, `\[...\]`
+  - RenderedContent tries sync render first, then async-loads KaTeX if math detected
+- **Image lazy loading:**
+  - Created `rehypeLazyImagesPlugin` that adds `loading="lazy"` to all `<img>` elements
+  - Added `loading` to sanitize schema allowed attributes for `img`
+  - Applied in both base and math processor pipelines
+- **Bundle optimization:**
+  - Added `manualChunks` in vite config to split shiki, mermaid, katex into separate chunks
+  - Increased workbox `maximumFileSizeToCacheInBytes` to 5MB for large Shiki chunk
+  - Route-based code splitting verified working (SvelteKit default behavior)
+- **Verified:**
+  - Debounced search consistency: PmSearch uses debounced API calls, passwords uses reactive filter
+  - Shiki and Mermaid already lazy-loaded via dynamic imports
+  - npm run format passes, npm run check 0 errors, npm run build succeeds
+- Files changed:
+  - `src/lib/components/VirtualList.svelte` (new)
+  - `src/lib/utils/markdown/lazy-images-plugin.ts` (new)
+  - `src/lib/utils/markdown/pipeline.ts` (lazy KaTeX, dual processor)
+  - `src/lib/utils/markdown/index.ts` (export renderMarkdownAsync)
+  - `src/lib/utils/markdown/sanitize-schema.ts` (img loading attr)
+  - `src/lib/components/chat/RenderedContent.svelte` (async KaTeX, content-visibility on imgs)
+  - `src/lib/components/chat/MessageList.svelte` (content-visibility on messages)
+  - `src/routes/chat/+page.svelte` (content-visibility on messages)
+  - `src/routes/files/+page.svelte` (virtual scrolling on file list)
+  - `vite.config.ts` (manualChunks, workbox limit)
+- **Learnings for future iterations:**
+  - `content-visibility: auto` is the simplest performance win for variable-height lists — no JS virtual scrolling needed
+  - Typed slot variables in Svelte 4 VirtualList component are `unknown` — inline virtual scrolling avoids cast issues
+  - Shiki with 17 languages produces a ~2.3MB chunk — this is normal and expected, lazy-loaded
+  - `ReturnType<typeof unified>` type inference breaks with multi-use chains — use explicit interface type instead
