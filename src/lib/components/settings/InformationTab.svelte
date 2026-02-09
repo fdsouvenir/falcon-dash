@@ -12,8 +12,7 @@
 		restartGateway,
 		connectionState,
 		gatewayUrl,
-		serverVersion,
-		connId
+		serverVersion
 	} from '$lib/stores';
 	import type { NodeEntry, SubAgentRun } from '$lib/types/settings';
 	import { formatRelativeTime } from '$lib/utils/time';

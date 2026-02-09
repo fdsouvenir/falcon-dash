@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { PmStatus, PmPriority } from '$lib/types';
-	import type { PmTask, PmComment, PmAttachment, PmBlock, PmActivity } from '$lib/types';
+	import type { PmComment, PmActivity } from '$lib/types';
 	import {
 		pmTasks,
 		pmComments,
@@ -166,10 +166,6 @@
 		if (!dateStr) return '';
 		const d = new Date(dateStr);
 		return d.toLocaleDateString();
-	}
-
-	function toStatus(val: string): PmStatus {
-		return val as PmStatus;
 	}
 
 	function isDueOverdue(dateStr: string | undefined): boolean {
@@ -594,7 +590,6 @@
 							/>
 						{:else}
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<h2
 								class="cursor-pointer truncate text-base font-semibold text-slate-100 hover:text-blue-400"
 								on:click={startEditTitle}
@@ -648,7 +643,7 @@
 									<div
 										class="absolute left-0 top-full z-10 mt-1 rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 									>
-										{#each Object.values(PmStatus) as s}
+										{#each Object.values(PmStatus) as s (s)}
 											<button
 												on:click={() => changeStatus(s)}
 												class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
@@ -677,7 +672,7 @@
 									<div
 										class="absolute left-0 top-full z-10 mt-1 rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 									>
-										{#each Object.values(PmPriority) as p}
+										{#each Object.values(PmPriority) as p (p)}
 											<button
 												on:click={() => changePriority(p)}
 												class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
@@ -1033,7 +1028,7 @@
 										<p class="text-xs text-slate-500 italic">None</p>
 									{:else}
 										<div class="space-y-1">
-											{#each blockerIds as bid}
+											{#each blockerIds as bid (bid)}
 												<div class="group flex items-center rounded bg-slate-800/50 px-2 py-1">
 													<!-- svelte-ignore a11y-click-events-have-key-events -->
 													<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1120,7 +1115,7 @@
 										<p class="text-xs text-slate-500 italic">None</p>
 									{:else}
 										<div class="space-y-1">
-											{#each blockedByThisIds as bid}
+											{#each blockedByThisIds as bid (bid)}
 												<div class="group flex items-center rounded bg-slate-800/50 px-2 py-1">
 													<!-- svelte-ignore a11y-click-events-have-key-events -->
 													<!-- svelte-ignore a11y-no-static-element-interactions -->

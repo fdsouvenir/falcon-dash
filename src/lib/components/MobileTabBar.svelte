@@ -10,21 +10,21 @@
 		dispatch('more');
 	}
 
-	$: isActive = (path: string, alternates: string[] = []) => {
-		if ($page.url.pathname === path) return true;
+	function checkActive(pathname: string, path: string, alternates: string[] = []): boolean {
+		if (pathname === path) return true;
 		return alternates.some((alt) => {
 			if (alt.endsWith('*')) {
-				return $page.url.pathname.startsWith(alt.slice(0, -1));
+				return pathname.startsWith(alt.slice(0, -1));
 			}
-			return $page.url.pathname === alt;
+			return pathname === alt;
 		});
-	};
+	}
 
-	$: chatActive = isActive('/chat', ['/']);
-	$: projectsActive = isActive('/projects');
-	$: filesActive = isActive('/files');
-	$: jobsActive = isActive('/jobs');
-	$: moreActive = isActive('/settings', ['/passwords', '/apps/*']);
+	$: chatActive = checkActive($page.url.pathname, '/chat', ['/']);
+	$: projectsActive = checkActive($page.url.pathname, '/projects');
+	$: filesActive = checkActive($page.url.pathname, '/files');
+	$: jobsActive = checkActive($page.url.pathname, '/jobs');
+	$: moreActive = checkActive($page.url.pathname, '/settings', ['/passwords', '/apps/*']);
 </script>
 
 <nav

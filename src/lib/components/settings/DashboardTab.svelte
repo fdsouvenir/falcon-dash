@@ -10,7 +10,7 @@
 	let notificationsEnabled = true;
 	let notificationSound = true;
 	let compactMode = false;
-	let pushPermission: NotificationPermission = 'default';
+	let pushPermission: 'default' | 'denied' | 'granted' = 'default';
 
 	function loadPreferences(): void {
 		try {
@@ -141,7 +141,6 @@
 						Show browser notifications for agent responses, mentions, and alerts.
 					</p>
 				</div>
-				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<button
 					role="switch"
 					aria-checked={notificationsEnabled}
@@ -164,7 +163,6 @@
 					<p class="text-sm font-medium text-slate-200">Notification Sound</p>
 					<p class="mt-0.5 text-xs text-slate-400">Play a sound when notifications arrive.</p>
 				</div>
-				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<button
 					role="switch"
 					aria-checked={notificationSound}
@@ -233,7 +231,6 @@
 						Reduce spacing and padding for a denser layout.
 					</p>
 				</div>
-				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<button
 					role="switch"
 					aria-checked={compactMode}

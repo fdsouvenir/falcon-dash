@@ -224,7 +224,7 @@
 	</div>
 {:else}
 	<div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-		{#each Array(4) as _}
+		{#each [0, 1, 2, 3] as i (i)}
 			<div class="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
 				<div class="h-3 w-16 animate-pulse rounded bg-slate-700"></div>
 				<div class="mt-3 h-7 w-12 animate-pulse rounded bg-slate-700"></div>

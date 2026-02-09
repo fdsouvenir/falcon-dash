@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { PmStatus, PmPriority } from '$lib/types';
+	import { PmStatus } from '$lib/types';
 	import { pmProjects, pmMilestones, bulkUpdateTasks, bulkMoveTasks } from '$lib/stores';
 	import ConfirmDialog from '$lib/components/files/ConfirmDialog.svelte';
 
@@ -183,7 +183,7 @@
 				<div
 					class="absolute bottom-full left-0 mb-2 rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 				>
-					{#each statusOptions as s}
+					{#each statusOptions as s (s)}
 						<button
 							on:click={() => requestBulkStatus(s)}
 							class="block w-full whitespace-nowrap px-4 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"

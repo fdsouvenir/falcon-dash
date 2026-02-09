@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { PmStatus, PmPriority } from '$lib/types';
-	import type { PmProject, PmTask, PmComment, PmAttachment, PmActivity } from '$lib/types';
+	import type { PmTask, PmComment, PmActivity } from '$lib/types';
 	import {
 		pmProjects,
 		pmTasks,
@@ -12,7 +12,6 @@
 		pmActivities,
 		pmFocuses,
 		pmMilestones,
-		pmBlocks,
 		loadProjects,
 		loadTasks,
 		loadComments,
@@ -574,7 +573,6 @@
 					/>
 				{:else}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<h1
 						class="cursor-pointer truncate text-lg font-semibold text-slate-100 hover:text-blue-400"
 						on:click={startEditTitle}
@@ -606,7 +604,7 @@
 							<div
 								class="absolute left-0 top-full z-10 mt-1 rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 							>
-								{#each Object.values(PmStatus) as s}
+								{#each Object.values(PmStatus) as s (s)}
 									<button
 										on:click={() => changeStatus(s)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
@@ -633,7 +631,7 @@
 							<div
 								class="absolute left-0 top-full z-10 mt-1 rounded border border-slate-600 bg-slate-800 py-1 shadow-lg"
 							>
-								{#each Object.values(PmPriority) as p}
+								{#each Object.values(PmPriority) as p (p)}
 									<button
 										on:click={() => changePriority(p)}
 										class="block w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700"
@@ -964,7 +962,7 @@
 													}}
 													class="h-6 rounded border border-slate-600 bg-slate-800 px-1 text-xs text-slate-300"
 												>
-													{#each Object.values(PmStatus) as s}
+													{#each Object.values(PmStatus) as s (s)}
 														<option value={s} selected={s === task.status}>
 															{statusLabel(s)}
 														</option>
@@ -1169,7 +1167,7 @@
 																}}
 																class="h-6 rounded border border-slate-600 bg-slate-800 px-1 text-xs text-slate-300"
 															>
-																{#each Object.values(PmStatus) as s}
+																{#each Object.values(PmStatus) as s (s)}
 																	<option value={s} selected={s === subtask.status}>
 																		{statusLabel(s)}
 																	</option>

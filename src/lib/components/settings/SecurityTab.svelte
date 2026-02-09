@@ -355,7 +355,6 @@
 								</div>
 								<div class="ml-4 flex-shrink-0 text-right">
 									{#if channel.inviteLink}
-										<!-- svelte-ignore a11y-missing-attribute -->
 										<a
 											href={channel.inviteLink}
 											target="_blank"

@@ -111,6 +111,7 @@
 		if (!containerEl || hostEl) return;
 
 		const el = document.createElement('openclaw-a2ui-host');
+		// eslint-disable-next-line svelte/no-dom-manipulating -- Web component host requires imperative DOM insertion
 		containerEl.appendChild(el);
 		hostEl = el as A2UIHostElement;
 	}

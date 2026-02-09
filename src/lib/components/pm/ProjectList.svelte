@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { PmStatus, PmPriority } from '$lib/types';
-	import type { PmProject, PmFocus } from '$lib/types';
 	import { pmProjects, pmFocuses, pmTasks } from '$lib/stores';
 
 	// --- Props ---
@@ -253,7 +252,7 @@
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
 			>
 				<option value="">All</option>
-				{#each statusOptions as s}
+				{#each statusOptions as s (s)}
 					<option value={s}>{statusLabel(s)}</option>
 				{/each}
 			</select>
@@ -267,7 +266,7 @@
 				class="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
 			>
 				<option value="">All</option>
-				{#each priorityOptions as p}
+				{#each priorityOptions as p (p)}
 					<option value={p}>{priorityLabel(p)}</option>
 				{/each}
 			</select>

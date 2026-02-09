@@ -253,7 +253,7 @@
 										<div>
 											<h4 class="mb-1.5 text-xs font-medium text-slate-400">Configuration</h4>
 											<div class="space-y-1">
-												{#each Object.entries(skill.config) as [key, value]}
+												{#each Object.entries(skill.config) as [key, value] (key)}
 													<div class="flex items-baseline justify-between gap-4 text-xs">
 														<span class="text-slate-400">{key}</span>
 														<span class="truncate text-right font-mono text-slate-300">

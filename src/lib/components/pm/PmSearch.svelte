@@ -51,12 +51,6 @@
 		}
 	}
 
-	function getProjectTitle(projectId: number | undefined): string {
-		if (projectId == null) return '';
-		const proj = $pmProjects.find((p) => p.id === projectId);
-		return proj ? proj.title : `#${projectId}`;
-	}
-
 	function getFocusName(focusId: string | undefined): string {
 		if (!focusId) return '';
 		const focus = $pmFocuses.find((f) => f.id === focusId);

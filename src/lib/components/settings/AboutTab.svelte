@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { gatewayStatus, loadGatewayStatus, serverVersion } from '$lib/stores';
 
 	let loading = true;
-	let now = Date.now();
-	let nowInterval: ReturnType<typeof setInterval> | undefined;
 
 	const dashboardVersion = '0.1.0';
 
@@ -29,13 +27,6 @@
 		} finally {
 			loading = false;
 		}
-		nowInterval = setInterval(() => {
-			now = Date.now();
-		}, 1000);
-	});
-
-	onDestroy(() => {
-		if (nowInterval) clearInterval(nowInterval);
 	});
 </script>
 

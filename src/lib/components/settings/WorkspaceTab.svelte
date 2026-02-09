@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { WorkspaceFile, FileContent } from '$lib/types';
+	import type { WorkspaceFile } from '$lib/types';
 	import { loadFile, saveFile, createFile, activeFile, activeFileName } from '$lib/stores';
 	import { formatRelativeTime } from '$lib/utils/time';
 	import FilePreview from '$lib/components/files/FilePreview.svelte';
@@ -34,7 +34,6 @@
 	let selectedFile: string | null = null;
 	let editing = false;
 	let loading = true;
-	let saving = false;
 	let toast: { message: string; type: 'success' | 'error' } | null = null;
 	let showResetConfirm = false;
 	let now = Date.now();
@@ -126,7 +125,6 @@
 
 	async function handleSave(event: CustomEvent<{ content: string }>): Promise<void> {
 		if (!$activeFile || !selectedFile) return;
-		saving = true;
 		try {
 			const result = await saveFile(selectedFile, event.detail.content, $activeFile.hash);
 			activeFile.set({
@@ -143,8 +141,6 @@
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : 'Failed to save file';
 			showToast(msg, 'error');
-		} finally {
-			saving = false;
 		}
 	}
 

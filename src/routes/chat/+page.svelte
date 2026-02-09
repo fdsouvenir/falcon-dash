@@ -44,8 +44,6 @@
 	// Long-press context menu state
 	let contextMenuOpen = false;
 	let contextMenuMessage: ChatMessage | null = null;
-	let copiedMessageId: string | null = null;
-	let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	function handleSwipeRight() {
 		// On mobile, swipe right to go back to session list
@@ -56,7 +54,7 @@
 	}
 
 	function handleMessageLongPress(message: ChatMessage) {
-		return (x: number, y: number) => {
+		return () => {
 			contextMenuMessage = message;
 			contextMenuOpen = true;
 		};
@@ -71,11 +69,6 @@
 		if (!contextMenuMessage) return;
 		try {
 			await navigator.clipboard.writeText(contextMenuMessage.content);
-			copiedMessageId = contextMenuMessage.id;
-			clearTimeout(copiedTimer);
-			copiedTimer = setTimeout(() => {
-				copiedMessageId = null;
-			}, 2000);
 		} catch {
 			// Clipboard API may fail in insecure contexts
 		}

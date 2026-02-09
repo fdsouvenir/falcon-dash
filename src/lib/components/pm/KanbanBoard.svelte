@@ -348,7 +348,7 @@
 </script>
 
 <div class="flex h-full gap-4 overflow-x-auto p-4">
-	{#each kanbanStatuses as status}
+	{#each kanbanStatuses as status (status)}
 		<div
 			class="flex w-72 min-w-[18rem] flex-shrink-0 flex-col rounded-lg border transition-colors
 				{isColumnDragOver(status) ? 'border-blue-500 bg-slate-800/80' : 'border-slate-700 bg-slate-800/40'}"
@@ -517,7 +517,7 @@
 >
 	<div class="space-y-1">
 		<p class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-400">Change Status</p>
-		{#each kanbanStatuses as status}
+		{#each kanbanStatuses as status (status)}
 			<button
 				on:click={() => quickChangeStatus(status)}
 				class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-slate-200 transition-colors hover:bg-slate-700 {taskMenuTask?.status ===
