@@ -29,6 +29,10 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
 - Content-visibility: Use `style="content-visibility: auto; contain-intrinsic-size: auto 60px;"` for variable-height list items
 - Bundle splitting: `manualChunks` in vite config separates shiki/mermaid/katex into own chunks
 - Workbox limit: Set `maximumFileSizeToCacheInBytes: 5MB` to accommodate large Shiki chunk (2.3MB)
+- ESLint each-key: Always use `(key)` in `{#each}` blocks — e.g., `{#each items as item (item.id)}`
+- ESLint unused `_`: Use `{#each [0,1,2,3] as i (i)}` instead of `{#each Array(4) as _}` to avoid unused var
+- svelte-ignore: `<button>` elements don't need `a11y-click-events-have-key-events` ignore — they handle keyboard natively
+- Browser globals: `NotificationPermission` triggers `no-undef` — use `'default' | 'denied' | 'granted'` instead
 
 ## 2026-02-08 17:30 - US-072
 - Implemented mobile bottom tab bar with 5 tabs (Chat, Projects, Files, Jobs, More)
@@ -245,3 +249,21 @@ Started: Sun Feb  8 05:23:56 PM CST 2026
   - Typed slot variables in Svelte 4 VirtualList component are `unknown` — inline virtual scrolling avoids cast issues
   - Shiki with 17 languages produces a ~2.3MB chunk — this is normal and expected, lazy-loaded
   - `ReturnType<typeof unified>` type inference breaks with multi-use chains — use explicit interface type instead
+
+## 2026-02-08 23:15 - US-072 (lint fix pass)
+- Fixed all 44 ESLint errors across 17 files that were blocking quality gates for US-072 through US-075
+- **Errors fixed by category:**
+  - `@typescript-eslint/no-unused-vars`: Removed unused imports (PmProject, PmFocus, PmAttachment, PmBlock, PmTask, PmPriority, FileContent, connId, pmBlocks), unused variables (saving, copiedMessageId, now), unused functions (getProjectTitle, toStatus)
+  - `svelte/require-each-key`: Added `(key)` expressions to 16 `{#each}` blocks across pm/, settings/, and route files
+  - `svelte/no-unused-svelte-ignore`: Removed 6 stale svelte-ignore comments that weren't suppressing actual warnings
+  - `svelte/require-event-dispatcher-types`: Added type params to `createEventDispatcher()` in MobileMoreMenu
+  - `svelte/no-reactive-functions`: Extracted function from reactive statement in MobileTabBar
+  - `svelte/no-dom-manipulating`: Added eslint-disable comment for intentional DOM manipulation in A2UIHost
+  - `no-undef`: Replaced `NotificationPermission` global type with string literal union in DashboardTab
+- Files changed: 17 files across components/pm/, components/settings/, components/, routes/chat/, routes/projects/
+- **Learnings for future iterations:**
+  - `_` prefix does NOT suppress ESLint `no-unused-vars` — need explicit `argsIgnorePattern` in config or omit params
+  - `{#each Array(4) as _}` creates unused `_` — use `{#each [0,1,2,3] as i (i)}` instead
+  - `<button>` elements don't need `a11y-click-events-have-key-events` svelte-ignore (buttons handle keyboard natively)
+  - `role="switch"` on buttons suppresses `a11y-click-events-have-key-events` — don't add unnecessary svelte-ignore
+  - `NotificationPermission` is a browser global type but not in ESLint's `no-undef` scope — use string literal union instead

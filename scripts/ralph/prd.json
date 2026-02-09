@@ -22,7 +22,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 1,
-			"passes": false,
+			"passes": true,
 			"notes": "Reference architecture doc §19 mobile layout section. Use Tailwind responsive classes: hidden md:block for desktop-only, md:hidden for mobile-only. The tab bar is a persistent footer component."
 		},
 		{
