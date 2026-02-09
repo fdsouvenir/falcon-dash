@@ -36,7 +36,7 @@
 				"npm run build succeeds"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "Phase B1 of migration plan. The tool auto-transforms: export let → $props(), reactive let → $state(), $: → $derived()/$effect(), on:click → onclick, <slot/> → {@render children()}. It may produce run() from svelte/legacy for ambiguous reactive blocks — convert these to proper $derived()/$effect(). Batch-replace svelte-ignore hyphens: find src -name '*.svelte' -exec sed -i 's/svelte-ignore a11y-/svelte-ignore a11y_/g' {} +"
 		},
 		{
