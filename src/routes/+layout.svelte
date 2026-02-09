@@ -151,10 +151,10 @@
 	</div>
 
 	<!-- Mobile bottom tab bar -->
-	<MobileTabBar {totalUnread} on:more={handleMore} />
+	<MobileTabBar {totalUnread} onmore={handleMore} />
 
 	<!-- Mobile "More" menu -->
-	<MobileMoreMenu open={moreMenuOpen} on:close={closeMoreMenu} />
+	<MobileMoreMenu open={moreMenuOpen} onclose={closeMoreMenu} />
 </div>
 
 {#if showOnboarding}

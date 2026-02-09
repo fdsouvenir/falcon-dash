@@ -527,7 +527,7 @@
 <BottomSheet
 	open={taskMenuOpen}
 	title={taskMenuTask ? taskMenuTask.title : 'Task Actions'}
-	on:close={closeTaskMenu}
+	onclose={closeTaskMenu}
 >
 	<div class="space-y-1">
 		<p class="mb-2 text-xs font-medium uppercase tracking-wider text-slate-400">Change Status</p>

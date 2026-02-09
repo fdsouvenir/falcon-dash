@@ -1,18 +1,16 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { page } from '$app/stores';
 	import { sortedCustomApps } from '$lib/stores/apps';
 
 	interface Props {
 		open?: boolean;
+		onclose?: () => void;
 	}
-	let { open = false }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ close: void }>();
+	let { open = false, onclose }: Props = $props();
 
 	function close() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleLinkClick() {

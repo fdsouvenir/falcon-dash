@@ -1,15 +1,13 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { SlashCommand } from '$lib/chat/commands';
 
 	interface Props {
 		commands?: SlashCommand[];
 		filter?: string;
+		onselect?: (cmd: SlashCommand | undefined) => void;
 	}
 
-	let { commands = [], filter = '' }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ select: SlashCommand }>();
+	let { commands = [], filter = '', onselect }: Props = $props();
 
 	let selectedIndex = $state(0);
 
@@ -40,13 +38,13 @@
 
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			dispatch('select', filtered[selectedIndex]);
+			onselect?.(filtered[selectedIndex]);
 			return true;
 		}
 
 		if (event.key === 'Escape') {
 			event.preventDefault();
-			dispatch('select', undefined as unknown as SlashCommand);
+			onselect?.(undefined);
 			return true;
 		}
 
@@ -54,7 +52,7 @@
 	}
 
 	function selectCommand(cmd: SlashCommand) {
-		dispatch('select', cmd);
+		onselect?.(cmd);
 	}
 </script>
 

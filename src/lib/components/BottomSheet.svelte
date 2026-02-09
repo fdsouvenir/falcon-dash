@@ -1,19 +1,17 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
 	interface Props {
 		open?: boolean;
 		title?: string;
+		onclose?: () => void;
 		children?: Snippet;
 	}
-	let { open = false, title = '', children }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ close: void }>();
+	let { open = false, title = '', onclose, children }: Props = $props();
 
 	function close() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleBackdropClick() {

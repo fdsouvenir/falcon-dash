@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import CommandPalette from './CommandPalette.svelte';
 	import { commands, findCommands } from '$lib/chat/commands';
 	import type { SlashCommand, CommandContext } from '$lib/chat/commands';
@@ -7,11 +7,11 @@
 	interface Props {
 		isRunning?: boolean;
 		commandContext?: CommandContext | undefined;
+		onsend?: (message: string) => void;
+		onabort?: () => void;
 	}
 
-	let { isRunning = false, commandContext = undefined }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ send: string; abort: void }>();
+	let { isRunning = false, commandContext = undefined, onsend, onabort }: Props = $props();
 
 	let content = $state('');
 	let textarea: HTMLTextAreaElement;
@@ -48,8 +48,7 @@
 		}
 	}
 
-	function handleCommandSelect(event: CustomEvent<SlashCommand>) {
-		const cmd = event.detail;
+	function handleCommandSelect(cmd: SlashCommand | undefined) {
 		if (!cmd) {
 			// Escape pressed — close palette, keep text
 			paletteOpen = false;
@@ -91,7 +90,7 @@
 		}
 
 		// Normal message send
-		dispatch('send', trimmed);
+		onsend?.(trimmed);
 		content = '';
 		if (textarea) {
 			textarea.style.height = 'auto';
@@ -99,7 +98,7 @@
 	}
 
 	function abort() {
-		dispatch('abort');
+		onabort?.();
 	}
 
 	function handleInput() {
@@ -115,7 +114,7 @@
 			bind:this={palette}
 			commands={findCommands(commandFilter)}
 			filter={commandFilter}
-			on:select={handleCommandSelect}
+			onselect={handleCommandSelect}
 		/>
 	{/if}
 

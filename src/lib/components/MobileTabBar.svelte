@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { page } from '$app/stores';
 
 	interface Props {
 		totalUnread?: number;
+		onmore?: () => void;
 	}
-	let { totalUnread = 0 }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ more: void }>();
+	let { totalUnread = 0, onmore }: Props = $props();
 
 	function handleMoreClick() {
-		dispatch('more');
+		onmore?.();
 	}
 
 	function checkActive(pathname: string, path: string, alternates: string[] = []): boolean {

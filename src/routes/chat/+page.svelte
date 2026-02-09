@@ -155,8 +155,8 @@
 		scrollToBottom();
 	}
 
-	function handleSend(event: CustomEvent<string>) {
-		sendMessage(event.detail);
+	function handleSend(message: string) {
+		sendMessage(message);
 	}
 
 	function handleAbort() {
@@ -225,7 +225,7 @@
 {:else}
 	<div class="flex h-full flex-col" use:swipe={{ onSwipeRight: handleSwipeRight }}>
 		<!-- Session header -->
-		<ChatHeader session={$activeSession} on:settings={toggleSettings} />
+		<ChatHeader session={$activeSession} onsettings={toggleSettings} />
 
 		<!-- Message list with inline thinking/tools -->
 		<div class="relative flex-1 overflow-hidden">
@@ -335,15 +335,15 @@
 			{/if}
 
 			<!-- Channel settings panel -->
-			<ChannelSettings session={$activeSession} open={settingsOpen} on:close={closeSettings} />
+			<ChannelSettings session={$activeSession} open={settingsOpen} onclose={closeSettings} />
 		</div>
 
 		<!-- Composer -->
-		<MessageComposer {isRunning} {commandContext} on:send={handleSend} on:abort={handleAbort} />
+		<MessageComposer {isRunning} {commandContext} onsend={handleSend} onabort={handleAbort} />
 	</div>
 
 	<!-- Long-press context menu (bottom sheet on mobile) -->
-	<BottomSheet open={contextMenuOpen} title="Message Actions" on:close={closeContextMenu}>
+	<BottomSheet open={contextMenuOpen} title="Message Actions" onclose={closeContextMenu}>
 		<div class="space-y-1">
 			<button
 				onclick={copyMessageContent}

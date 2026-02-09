@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import type { Session } from '$lib/gateway/types';
 	import { models, loadModels, updateSession } from '$lib/stores';
@@ -7,11 +7,10 @@
 	interface Props {
 		session: Session;
 		open?: boolean;
+		onclose?: () => void;
 	}
 
-	let { session, open = false }: Props = $props();
-
-	const dispatch = createEventDispatcher<{ close: void }>();
+	let { session, open = false, onclose }: Props = $props();
 
 	let displayName = $state('');
 	let selectedModel = $state('');
@@ -31,12 +30,12 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && open) {
-			dispatch('close');
+			onclose?.();
 		}
 	}
 
 	function handleBackdropClick() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	async function handleRename() {
@@ -77,7 +76,7 @@
 			<h3 class="text-sm font-semibold text-slate-200">Session Settings</h3>
 			<button
 				class="cursor-pointer text-slate-400 transition-colors hover:text-slate-200"
-				onclick={() => dispatch('close')}
+				onclick={() => onclose?.()}
 				title="Close settings"
 				aria-label="Close settings"
 			>
