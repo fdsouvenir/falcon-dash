@@ -422,3 +422,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - MessageActions is a floating toolbar — meant to appear on message hover (parent manages visibility)
   - replyToMessageId is stored both in ChatMessage and sent as chat.send param
 ---
+
+## 2026-02-10 03:50 CST - US-028
+- Created thread store (src/lib/stores/threads.ts) with openThread, closeThread, getThreadForMessage
+- Thread key format: agent:<agentId>:webchat:group:<parentId>:thread:<uuid>
+- Creates thread session via sessions.patch with parentSessionId and originMessageId
+- Each thread gets its own ChatSessionStore via createChatSession()
+- Created ThreadPanel.svelte — 80-width side panel with header, messages, composer
+- Added 'Start Thread' button to MessageActions.svelte (onthread prop)
+- Files changed: src/lib/stores/threads.ts (new), src/lib/components/ThreadPanel.svelte (new), src/lib/components/MessageActions.svelte (modified)
+- **Learnings for future iterations:**
+  - Thread sessions reuse createChatSession() — same message handling, streaming, etc.
+  - Thread key includes parentId extracted from parent session key
+  - Previous thread session is destroyed when opening a new thread
+  - MessageActions now has both onreply and onthread props
+---

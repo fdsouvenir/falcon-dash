@@ -472,7 +472,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 28,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-14."
 		},
 		{
