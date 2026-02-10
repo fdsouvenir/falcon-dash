@@ -89,3 +89,31 @@ export function unsubscribeFromHeartbeatEvents(): void {
 		eventUnsub = null;
 	}
 }
+
+export interface HeartbeatExecution {
+	id: string;
+	timestamp: number;
+	checked: string[];
+	surfaced: string[];
+	summary: string;
+	status: 'success' | 'error';
+}
+
+const _executions: Writable<HeartbeatExecution[]> = writable([]);
+const _executionsLoading: Writable<boolean> = writable(false);
+
+export const heartbeatExecutions: Readable<HeartbeatExecution[]> = readonly(_executions);
+export const heartbeatExecutionsLoading: Readable<boolean> = readonly(_executionsLoading);
+
+export async function loadHeartbeatHistory(): Promise<void> {
+	_executionsLoading.set(true);
+	try {
+		const result = await call<{ executions: HeartbeatExecution[] }>('last-heartbeat', {});
+		_executions.set(result.executions ?? []);
+	} catch (err) {
+		_error.set((err as Error).message);
+		_executions.set([]);
+	} finally {
+		_executionsLoading.set(false);
+	}
+}

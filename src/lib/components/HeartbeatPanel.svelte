@@ -14,6 +14,7 @@
 		type HeartbeatStatus
 	} from '$lib/stores/heartbeat.js';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
+	import HeartbeatHistory from './HeartbeatHistory.svelte';
 	import { formatRelativeTime } from '$lib/chat/time-utils.js';
 
 	let config = $state<HeartbeatConfig | null>(null);
@@ -235,6 +236,11 @@
 				{:else}
 					<p class="text-xs text-gray-500">No HEARTBEAT.md template found</p>
 				{/if}
+			</div>
+
+			<!-- History Section -->
+			<div class="mt-6">
+				<HeartbeatHistory />
 			</div>
 		</div>
 	{/if}
