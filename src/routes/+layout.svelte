@@ -9,6 +9,7 @@
 	} from '$lib/stores/sessions.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
 
 	let { children } = $props();
 
@@ -56,3 +57,5 @@
 {:else}
 	<TokenEntry />
 {/if}
+
+<ToastContainer />

@@ -1,5 +1,6 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
 import { call, eventBus } from '$lib/stores/gateway.js';
+import { addToast } from '$lib/stores/toast.js';
 
 export interface CronJob {
 	id: string;
@@ -43,6 +44,21 @@ export function subscribeToCronEvents(): void {
 	if (eventUnsub) return;
 	eventUnsub = eventBus.on('cron', (payload: Record<string, unknown>) => {
 		const action = payload.action as string;
+		const jobName = (payload.name as string) ?? 'Job';
+
+		if (action === 'ran') {
+			const status = payload.status as string;
+			if (status === 'error') {
+				addToast(`Job "${jobName}" failed`, 'error');
+			} else {
+				addToast(`Job "${jobName}" completed`, 'success');
+			}
+		} else if (action === 'created') {
+			addToast(`Job "${jobName}" created`, 'info');
+		} else if (action === 'deleted') {
+			addToast(`Job "${jobName}" deleted`, 'info');
+		}
+
 		if (action === 'updated' || action === 'created' || action === 'deleted' || action === 'ran') {
 			// Reload the full list on any cron event
 			loadCronJobs();
