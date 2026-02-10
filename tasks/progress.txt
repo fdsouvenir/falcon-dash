@@ -360,3 +360,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Session key format: agent:<agentId>:webchat:group:<uuid>
   - Optimistic updates should add to list AND set active before server call
 ---
+
+## 2026-02-10 03:20 CST - US-024
+- Added ensureGeneralSession() to sessions store
+- Checks sessions.list for isGeneral session, creates if missing
+- General session key: agent:<agentId>:webchat:group:general (fixed key, not UUID)
+- Auto-sets General as active session on connect
+- Added $effect in +layout.svelte watching connection.state for 'READY'
+- On READY: calls ensureGeneralSession() and subscribeToEvents()
+- Files changed: src/lib/stores/sessions.ts (modified), src/routes/+layout.svelte (modified)
+- **Learnings for future iterations:**
+  - Connection state values are uppercase strings: 'READY', 'DISCONNECTED', etc.
+  - ensureGeneralSession should be called after connection is READY (not during connect)
+  - General session uses fixed key suffix 'general' not a random UUID
+  - $effect cleanup in layout handles unsubscribeFromEvents on teardown
+---
