@@ -10,6 +10,9 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
 - Vite dev proxy at `/ws` routes to `ws://127.0.0.1:18789`
 - Always run `npm run format` after writing code
 - Don't commit `.omc/` directory (local state)
+- Gateway connection: client.id must be "openclaw-control-ui", client.mode must be "webchat" (gateway validates)
+- Prettier adds semicolons on format — don't write them manually, let Prettier handle it
+- Use `.js` extension in TypeScript imports (e.g., `from './types.js'`) for ESM compatibility
 
 ---
 
@@ -25,4 +28,21 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - SvelteKit `svelte-kit sync` must run before `svelte-check` to generate types
   - `.svelte-kit/tsconfig.json` is auto-generated — our tsconfig.json extends it
   - `@tailwindcss/vite` plugin is used for Tailwind v4 integration (not postcss)
+---
+
+## 2026-02-10 01:20 CST - US-002
+- Implemented GatewayConnection class in src/lib/gateway/connection.ts
+- Created type definitions in src/lib/gateway/types.ts (Frame types, ConnectionState, HelloOkPayload, etc.)
+- Created barrel export in src/lib/gateway/index.ts
+- Connection lifecycle: DISCONNECTED → CONNECTING → AUTHENTICATING → CONNECTED → READY
+- Handles connect.challenge event, sends connect frame with protocol v3
+- Parses hello-ok response, exposes snapshot/features/policy via helloOk readable store
+- Exposes connection state as Svelte readable store
+- Files changed: src/lib/gateway/connection.ts, src/lib/gateway/types.ts, src/lib/gateway/index.ts
+- **Learnings for future iterations:**
+  - ESLint flags unused params even with underscore prefix — store challenge for future Ed25519 signing (US-102)
+  - Prettier auto-adds semicolons — the original code was written without them but Prettier normalizes
+  - Use `readonly()` from svelte/store to expose writable stores as read-only to consumers
+  - Connection uses id "1" for the connect request — future RequestCorrelator will use different IDs
+  - WebSocket close code 1008 indicates "pairing required" from gateway
 ---

@@ -33,7 +33,7 @@
 				"Typecheck passes"
 			],
 			"priority": 2,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P1-02. Gateway URL default: ws://127.0.0.1:18789"
 		},
 		{
