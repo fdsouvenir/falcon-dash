@@ -368,7 +368,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 22,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-08."
 		},
 		{
@@ -1148,7 +1148,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 69,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4B-05."
 		},
 		{

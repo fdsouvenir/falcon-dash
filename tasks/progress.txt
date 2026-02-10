@@ -958,3 +958,29 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Filter state managed locally with reactive updates
   - Inline create uses minimal form that expands on focus
 ---
+
+## 2026-02-10 ~12:00 CST - US-022
+- Wired ChatList.svelte into Sidebar.svelte (replaced "No chats yet" placeholder)
+- Added reorderSessions() to sessions.ts store — calls sessions.reorder gateway method
+- Added drag-and-drop reorder to ChatList.svelte using HTML5 drag API
+- General chat protected from drag/reorder/delete/rename
+- Files changed: src/lib/components/Sidebar.svelte (modified), src/lib/stores/sessions.ts (modified), src/lib/components/ChatList.svelte (modified)
+- **Learnings for future iterations:**
+  - ChatList was already built but not wired into Sidebar — always check component usage
+  - HTML5 drag API: draggable, ondragstart, ondragover, ondrop pattern
+  - General session is always first in sort order, protected from all mutations
+---
+
+## 2026-02-10 ~12:00 CST - US-069
+- Created KanbanBoard.svelte PM component
+- Four columns: todo, in_progress, review, done (color-coded borders)
+- HTML5 drag-and-drop between columns (status change) and within columns (reorder)
+- Task cards show: title, priority badge, due date, subtask count, blocked indicator
+- Filter bar: project dropdown, priority dropdown, clear filters
+- 305 lines, fully typed
+- Files created: src/lib/components/pm/KanbanBoard.svelte
+- **Learnings for future iterations:**
+  - KanbanBoard takes tasks array as prop, not from store directly
+  - Drag state: draggedTaskId, dragOverColumn, dragOverTaskId for visual feedback
+  - Column tasks sorted by sort_order for consistent ordering
+---
