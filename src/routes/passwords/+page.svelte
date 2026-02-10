@@ -11,9 +11,11 @@
 	import PasswordList from '$lib/components/PasswordList.svelte';
 	import PasswordForm from '$lib/components/PasswordForm.svelte';
 	import PasswordDetail from '$lib/components/PasswordDetail.svelte';
+	import SecretsMigration from '$lib/components/SecretsMigration.svelte';
 
 	let vaultStatus = $state<VaultState>('checking');
 	let showForm = $state(false);
+	let showMigration = $state(false);
 	let editPath = $state<string | null>(null);
 	let selectedPath = $state<string | null>(null);
 	let refreshKey = $state(0);
@@ -46,6 +48,15 @@
 	}
 
 	function handleSaved() {
+		refreshKey++;
+	}
+
+	function handleImportSecrets() {
+		showMigration = true;
+	}
+
+	function handleCloseMigration() {
+		showMigration = false;
 		refreshKey++;
 	}
 
@@ -82,6 +93,12 @@
 				<h1 class="text-sm font-medium text-white">Password Manager</h1>
 				<div class="flex gap-2">
 					<button
+						onclick={handleImportSecrets}
+						class="rounded bg-purple-600 px-3 py-1.5 text-xs text-white hover:bg-purple-500"
+					>
+						Import Secrets
+					</button>
+					<button
 						onclick={handleAddEntry}
 						class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
 					>
@@ -97,7 +114,19 @@
 			</div>
 
 			<div class="flex flex-1 overflow-hidden">
-				{#if selectedPath}
+				{#if showMigration}
+					<div class="flex-1 overflow-hidden">
+						<SecretsMigration sessionToken={getToken() ?? ''} />
+						<div class="border-t border-gray-800 px-4 py-3">
+							<button
+								onclick={handleCloseMigration}
+								class="rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+							>
+								Back to Passwords
+							</button>
+						</div>
+					</div>
+				{:else if selectedPath}
 					<PasswordDetail
 						sessionToken={getToken() ?? ''}
 						path={selectedPath}
