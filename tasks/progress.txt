@@ -896,3 +896,23 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
 - Returns: project/task counts by status, blocked, overdue, recentActivity (24h), dueSoon (7d)
 - Uses ISO date strings for SQLite date comparisons
 ---
+
+## 2026-02-10 ~11:00 CST - US-064
+- Implemented PM bulk operations backend
+- Files created: src/lib/server/pm/bulk.ts
+- bulkUpdate: status/priority/milestone/due_date on multiple projects or tasks
+- bulkMove: moves tasks to new parent with circular dependency check
+- Returns { updated, errors[] } with per-item error reporting
+- Uses db.transaction() for atomicity
+---
+
+## 2026-02-10 ~11:00 CST - US-065
+- Implemented PM store layer
+- Files created: src/lib/stores/pm-store.ts
+- Map-based caches for domains, focuses, projects, tasks
+- hydratePMStores() loads all in parallel via Promise.all
+- Optimistic updates with rollback on error for projects and tasks
+- stateVersion gap detection (threshold=5) triggers full refetch
+- Derived views: kanbanView (by status), listView (by activity), treeView (hierarchy)
+- Feature detection: checkPMAvailability() checks features.methods
+---

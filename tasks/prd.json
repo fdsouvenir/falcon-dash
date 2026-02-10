@@ -1061,7 +1061,7 @@
 				"Typecheck passes"
 			],
 			"priority": 64,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-08. End of Phase 4A."
 		},
 		{
@@ -1078,7 +1078,7 @@
 				"Typecheck passes"
 			],
 			"priority": 65,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4B-01. Phase 4B: PM Dashboard UI."
 		},
 		{
