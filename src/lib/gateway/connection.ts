@@ -22,12 +22,29 @@ export class GatewayConnection {
 	private config: ConnectionConfig | null = null;
 	private frameHandlers = new Set<(frame: Frame) => void>();
 	private lastChallenge: ChallengePayload | null = null;
+	private _onHelloOk: ((helloOk: HelloOkPayload) => void) | null = null;
+	private _connId: string | null = null;
 
 	/** Connection state as a Svelte readable store */
 	readonly state: Readable<ConnectionState> = readonly(this._state);
 
 	/** Hello-OK payload as a Svelte readable store */
 	readonly helloOk: Readable<HelloOkPayload | null> = readonly(this._helloOk);
+
+	/** Connection ID from hello-ok (for debugging) */
+	get connId(): string | null {
+		return this._connId;
+	}
+
+	/** Register a callback invoked after hello-ok, before READY. Used to hydrate SnapshotStore. */
+	setOnHelloOk(callback: (helloOk: HelloOkPayload) => void): void {
+		this._onHelloOk = callback;
+	}
+
+	/** Set connection state (used by reconnection logic) */
+	setConnectionState(state: ConnectionState): void {
+		this._state.set(state);
+	}
 
 	/** Connect to the gateway */
 	connect(config: ConnectionConfig): void {
@@ -60,6 +77,7 @@ export class GatewayConnection {
 		this.cleanup();
 		this._state.set('DISCONNECTED');
 		this._helloOk.set(null);
+		this._connId = null;
 	}
 
 	/** Send a raw frame */
@@ -102,8 +120,12 @@ export class GatewayConnection {
 				const helloOk = res.payload as unknown as HelloOkPayload;
 				if (helloOk.type === 'hello-ok') {
 					this._helloOk.set(helloOk);
+					this._connId = helloOk.server?.connId ?? null;
 					this._state.set('CONNECTED');
-					// Immediately set READY after hello-ok (snapshot is already included)
+					// Call onHelloOk callback to hydrate snapshot before setting READY
+					if (this._onHelloOk) {
+						this._onHelloOk(helloOk);
+					}
 					this._state.set('READY');
 				}
 			} else if (!res.ok) {
@@ -172,5 +194,6 @@ export class GatewayConnection {
 			this.ws.close();
 			this.ws = null;
 		}
+		this._connId = null;
 	}
 }
