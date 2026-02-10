@@ -604,7 +604,7 @@
 				"Typecheck passes"
 			],
 			"priority": 36,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3A-01. Phase 3A: Documents."
 		},
 		{
