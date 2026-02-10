@@ -789,7 +789,7 @@
 				"Typecheck passes"
 			],
 			"priority": 47,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3C-01. Phase 3C: Passwords."
 		},
 		{

@@ -705,3 +705,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - crypto.randomUUID() for unique toast IDs
   - Toast pattern reusable for other event-driven notifications
 ---
+
+## 2026-02-10 — US-047: Password server routes
+- Created `src/lib/server/passwords-config.ts` with in-memory session management (30min expiry)
+- Created `src/lib/server/keepassxc.ts` with spawn-based CLI wrapper (no shell injection)
+- Created `src/routes/api/passwords/+server.ts` for list/unlock/lock/init
+- Created `src/routes/api/passwords/[...path]/+server.ts` for get/put/delete
+- Session token via X-Session-Token header
+- PUT uses edit-then-add fallback pattern for create-or-update
+- **Learnings for future iterations:**
+  - Use spawn with args array NOT exec with string concatenation for security
+  - KeePassXC CLI reads password from stdin (proc.stdin.write)
+  - `ls -R -f` lists all entries recursively with full paths
+  - `show -s` skips password display, `show` includes password
+  - In-memory session store maps token -> { password, expires }
+---
