@@ -1,3 +1,28 @@
 # Ralph Progress Log
 Started: Tue Feb 10 01:06:48 AM CST 2026
+
+## Codebase Patterns
+- Prettier config: tabs, single quotes, no trailing commas, printWidth 100
+- Svelte 5 syntax: use `$props()` not `export let`, use `{@render children()}` not `<slot />`
+- TypeScript strict mode enabled in tsconfig.json
+- Tailwind CSS v4 with `@import 'tailwindcss'` in app.css (not v3 @tailwind directives)
+- ESLint v9 flat config format (eslint.config.js, not .eslintrc)
+- Vite dev proxy at `/ws` routes to `ws://127.0.0.1:18789`
+- Always run `npm run format` after writing code
+- Don't commit `.omc/` directory (local state)
+
+---
+
+## 2026-02-10 01:15 CST - US-001
+- Scaffolded SvelteKit project with TypeScript strict mode
+- Configured Tailwind CSS v4, ESLint v9 flat config, Prettier
+- Created directory structure: src/lib/gateway/, src/lib/stores/, src/lib/components/, src/routes/
+- Configured vite.config.ts with dev proxy to gateway port 18789
+- Files changed: package.json, svelte.config.js, vite.config.ts, tsconfig.json, .prettierrc, .prettierignore, eslint.config.js, src/app.html, src/app.css, src/app.d.ts, src/routes/+layout.svelte, src/routes/+page.svelte, src/lib/gateway/.gitkeep, src/lib/stores/.gitkeep, src/lib/components/.gitkeep
+- **Learnings for future iterations:**
+  - Tailwind CSS v4 uses `@import 'tailwindcss'` instead of v3's `@tailwind base/components/utilities`
+  - ESLint v9 uses flat config (eslint.config.js) with `ts.config()` wrapper, not .eslintrc
+  - SvelteKit `svelte-kit sync` must run before `svelte-check` to generate types
+  - `.svelte-kit/tsconfig.json` is auto-generated — our tsconfig.json extends it
+  - `@tailwindcss/vite` plugin is used for Tailwind v4 integration (not postcss)
 ---
