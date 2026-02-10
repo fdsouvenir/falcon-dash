@@ -45,7 +45,7 @@ export interface PMSearchResult {
 	rank: number;
 }
 
-// Dashboard context type
+// Dashboard context type (structured data for UI)
 export interface DashboardContext {
 	activeProjects: number;
 	dueSoon: { type: string; id: number; title: string; due_date: string }[];
@@ -53,14 +53,14 @@ export interface DashboardContext {
 	recentActivity: Activity[];
 }
 
-// Domain context type
+// Domain context type (structured data for UI)
 export interface DomainContext {
 	domain: { id: string; name: string };
 	focuses: { id: string; name: string; projectCount: number }[];
 	projects: { id: number; title: string; status: string; taskCount: number }[];
 }
 
-// Project context type
+// Project context type (structured data for UI)
 export interface ProjectContext {
 	project: {
 		id: number;
@@ -72,6 +72,23 @@ export interface ProjectContext {
 	comments: Comment[];
 	activities: Activity[];
 	blocks: { blocker_id: number; blocked_id: number }[];
+}
+
+// AI Context types (markdown summaries for agents)
+export interface AIProjectContext {
+	markdown: string;
+	generated_at: number;
+}
+
+export interface AIDashboardContext {
+	markdown: string;
+	generated_at: number;
+	stats: {
+		activeProjects: number;
+		dueSoon: number;
+		blocked: number;
+		overdue: number;
+	};
 }
 
 // PM Stats type
@@ -152,7 +169,7 @@ export async function listActivities(projectId: number, limit?: number): Promise
 	return res.activities;
 }
 
-// --- CONTEXT methods ---
+// --- CONTEXT methods (structured data) ---
 export async function getDashboardContext(): Promise<DashboardContext> {
 	return call<DashboardContext>('pm.context.dashboard');
 }
@@ -161,6 +178,14 @@ export async function getDomainContext(domainId: string): Promise<DomainContext>
 }
 export async function getProjectContext(projectId: number): Promise<ProjectContext> {
 	return call<ProjectContext>('pm.context.project', { projectId });
+}
+
+// --- AI CONTEXT methods (markdown summaries) ---
+export async function getAIProjectContext(projectId: number): Promise<AIProjectContext> {
+	return call<AIProjectContext>('pm.context.project', { projectId });
+}
+export async function getAIDashboardContext(): Promise<AIDashboardContext> {
+	return call<AIDashboardContext>('pm.context.dashboard');
 }
 
 // --- SEARCH ---
