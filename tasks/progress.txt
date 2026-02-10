@@ -508,3 +508,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - EmojiPicker uses fixed backdrop + absolute positioning pattern
   - clipboard.ts uses navigator.clipboard with document.execCommand fallback
 ---
+
+## 2026-02-10 04:50 CST - US-034
+- Created chat-search store — searchAllChats, searchInSession via chat.search gateway call
+- Created ChatSearch.svelte — search panel with All Chats / This Chat toggle, debounced input
+- Created ScrollManager.svelte — infinite scroll, jump-to-bottom, new message count badge
+- Created time-utils.ts — formatRelativeTime, formatAbsoluteTime, formatMessageTime
+- ScrollManager uses onscrollmanager callback prop (Svelte 5 no export function)
+- Highlight animation on jump-to-message via CSS keyframes
+- Files changed: src/lib/stores/chat-search.ts (new), src/lib/components/ChatSearch.svelte (new), src/lib/components/ScrollManager.svelte (new), src/lib/chat/time-utils.ts (new)
+- **Learnings for future iterations:**
+  - Search uses debounced input (300ms) to avoid excessive gateway calls
+  - ScrollManager exposes API via onscrollmanager callback prop, not export function
+  - Scroll position detection: scrollTop < 50 triggers loadmore, >100px from bottom shows jump button
+  - data-message-id attribute on message elements enables scrollToMessage targeting
+---
