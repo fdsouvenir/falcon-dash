@@ -1,5 +1,6 @@
 export { GatewayConnection } from './connection.js';
 export { RequestCorrelator, GatewayRequestError } from './correlator.js';
+export { EventBus } from './event-bus.js';
 export type { GatewayError } from './correlator.js';
 export type {
 	ConnectionState,
