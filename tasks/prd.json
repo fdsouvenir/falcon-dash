@@ -839,7 +839,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 50,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3C-04."
 		},
 		{
@@ -857,7 +857,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 51,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3C-05."
 		},
 		{
