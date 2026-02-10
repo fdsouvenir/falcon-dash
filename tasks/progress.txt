@@ -916,3 +916,45 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
 - Derived views: kanbanView (by status), listView (by activity), treeView (hierarchy)
 - Feature detection: checkPMAvailability() checks features.methods
 ---
+
+## 2026-02-10 ~11:30 CST - US-066
+- Implemented PM dashboard view
+- Files created: src/lib/components/pm/PMDashboard.svelte, src/routes/projects/+page.svelte
+- Stats header: 5 cards (total projects, in-progress, tasks, blocked, overdue)
+- Due soon list with date formatting
+- In-progress projects with progress bars (done/total tasks)
+- Blocked items display
+- Recent activity feed
+- Auto-refreshes via hydratePMStores on mount
+- **Learnings for future iterations:**
+  - PM components live in src/lib/components/pm/ subdirectory
+  - Stats come from pm.stats.overview gateway call
+  - Progress bars use percentage width with inline styles
+---
+
+## 2026-02-10 ~11:30 CST - US-067
+- Implemented domain/focus navigation tree
+- Files created: src/lib/components/pm/PMNavTree.svelte
+- Domain->Focus hierarchy sidebar with expand/collapse
+- Selection filtering updates parent project list
+- Count badges showing project counts per focus
+- Visual indicators for active selection
+- **Learnings for future iterations:**
+  - Nav tree uses expand/collapse state per domain
+  - Selection dispatches via onselect callback prop
+  - Count badges query project count per focus_id
+---
+
+## 2026-02-10 ~11:30 CST - US-068
+- Implemented project list view
+- Files created: src/lib/components/pm/ProjectList.svelte
+- Sortable table with columns: title, status, priority, focus, due date, tasks
+- Filters: status, priority, milestone, due date range, overdue toggle
+- Cursor-based pagination (50 per page)
+- Inline create form for quick project creation
+- Click row to open detail view (placeholder)
+- **Learnings for future iterations:**
+  - Pagination uses cursor-based approach with last item ID
+  - Filter state managed locally with reactive updates
+  - Inline create uses minimal form that expands on focus
+---
