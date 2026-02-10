@@ -63,3 +63,62 @@ export function formatSchedule(job: CronJob): string {
 	if (job.scheduleType === 'one-shot') return 'One-shot';
 	return job.schedule;
 }
+
+export interface CronJobInput {
+	name: string;
+	description?: string;
+	scheduleType: 'cron' | 'interval' | 'one-shot';
+	schedule: string;
+	payloadType: 'system-event' | 'agent-turn';
+	sessionTarget?: string;
+}
+
+export async function createCronJob(input: CronJobInput): Promise<boolean> {
+	try {
+		await call('cron.create', input as unknown as Record<string, unknown>);
+		await loadCronJobs();
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function updateCronJob(
+	id: string,
+	patch: Partial<CronJobInput & { enabled: boolean }>
+): Promise<boolean> {
+	try {
+		await call('cron.update', { id, patch });
+		await loadCronJobs();
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function deleteCronJob(id: string): Promise<boolean> {
+	try {
+		await call('cron.delete', { id });
+		await loadCronJobs();
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function runCronJob(id: string): Promise<boolean> {
+	try {
+		await call('cron.run', { id, mode: 'force' });
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function toggleCronJob(id: string, enabled: boolean): Promise<boolean> {
+	return updateCronJob(id, { enabled });
+}
