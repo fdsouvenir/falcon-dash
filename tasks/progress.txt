@@ -60,3 +60,16 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - cancelAll() should be called on disconnect to reject all pending requests
   - Monotonic counter starts at 0 — avoid using id "1" for connect (reserved in GatewayConnection)
 ---
+
+## 2026-02-10 01:30 CST - US-004
+- Implemented EventBus class in src/lib/gateway/event-bus.ts
+- on(event, handler) returns unsubscribe function, once(event) returns Promise
+- Wildcard support: "pm.*" matches "pm.task.create", "*" matches everything
+- clear() for auto-cleanup on disconnect
+- handleFrame() dispatches EventFrame to exact and wildcard handlers
+- Files changed: src/lib/gateway/event-bus.ts, src/lib/gateway/index.ts
+- **Learnings for future iterations:**
+  - Wildcard matching uses prefix: "pm.*" → startsWith("pm.")
+  - EventBus.clear() must be called on disconnect to prevent stale handler references
+  - Handlers receive both payload and full EventFrame (for seq/stateVersion access)
+---
