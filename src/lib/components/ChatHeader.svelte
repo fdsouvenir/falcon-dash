@@ -29,7 +29,7 @@
 
 	async function updateSetting(field: string, value: unknown) {
 		if (!currentSessionKey) return;
-		await call('sessions.patch', { sessionKey: currentSessionKey, [field]: value });
+		await call('sessions.patch', { key: currentSessionKey, [field]: value });
 	}
 
 	async function handleModelChange(e: Event) {

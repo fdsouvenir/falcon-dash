@@ -50,8 +50,8 @@ export async function openThread(
 
 	// Create thread session on server
 	const patchParams: Record<string, unknown> = {
-		sessionKey: threadKey,
-		displayName: name,
+		key: threadKey,
+		label: name,
 		parentSessionId: parentSessionKey,
 		originMessageId
 	};
@@ -110,7 +110,7 @@ export function updateThreadReplyCount(threadKey: string, count: number): void {
 
 /** Archive a thread */
 export async function archiveThread(threadKey: string): Promise<void> {
-	await call('sessions.patch', { sessionKey: threadKey, state: 'archived' });
+	await call('sessions.patch', { key: threadKey, state: 'archived' });
 	_threads.update((map) => {
 		const updated = new Map(map);
 		const info = updated.get(threadKey);
@@ -121,7 +121,7 @@ export async function archiveThread(threadKey: string): Promise<void> {
 
 /** Unarchive a thread (set to active) */
 export async function unarchiveThread(threadKey: string): Promise<void> {
-	await call('sessions.patch', { sessionKey: threadKey, state: 'active' });
+	await call('sessions.patch', { key: threadKey, state: 'active' });
 	_threads.update((map) => {
 		const updated = new Map(map);
 		const info = updated.get(threadKey);
@@ -132,7 +132,7 @@ export async function unarchiveThread(threadKey: string): Promise<void> {
 
 /** Lock a thread */
 export async function lockThread(threadKey: string): Promise<void> {
-	await call('sessions.patch', { sessionKey: threadKey, state: 'locked' });
+	await call('sessions.patch', { key: threadKey, state: 'locked' });
 	_threads.update((map) => {
 		const updated = new Map(map);
 		const info = updated.get(threadKey);
@@ -198,7 +198,7 @@ export function checkAutoArchive(): void {
 			if (info.state === 'active' && now - info.lastActivity > AUTO_ARCHIVE_MS) {
 				updated.set(key, { ...info, state: 'archived' });
 				// Fire and forget server update
-				call('sessions.patch', { sessionKey: key, state: 'archived' }).catch(() => {});
+				call('sessions.patch', { key, state: 'archived' }).catch(() => {});
 			}
 		}
 		return updated;

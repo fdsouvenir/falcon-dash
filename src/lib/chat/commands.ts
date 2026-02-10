@@ -36,7 +36,7 @@ export const commands: SlashCommand[] = [
 		args: '[off|minimal|low|medium|high|xhigh]',
 		handler: async (args, ctx) => {
 			const level = args.trim() || 'medium';
-			await call('sessions.patch', { sessionKey: ctx.sessionKey, thinkingLevel: level });
+			await call('sessions.patch', { key: ctx.sessionKey, thinkingLevel: level });
 		}
 	},
 	{

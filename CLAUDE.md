@@ -47,6 +47,8 @@ WebSocket client for the OpenClaw Gateway protocol v3. Five classes, wired toget
 - **`SnapshotStore`** — hydrates from hello-ok snapshot (presence, health, session defaults), subscribes to EventBus for incremental updates
 - **`Reconnector`** — exponential backoff (800ms base, 1.7x multiplier, 15s cap), tick-based health monitoring (2x tick = timeout)
 - **`AgentStreamManager`** (`stream.ts`) — reassembles streaming agent responses (delta, toolCall, toolResult, messageEnd events)
+- **`DiagnosticLog`** (`diagnostic-log.ts`) — ring-buffer logger for connection events, used by DiagnosticPanel
+- **`DeviceIdentity`** (`device-identity.ts`) — Ed25519 keypair generation and challenge signing via WebCrypto
 
 The `call<T>(method, params)` function in `stores/gateway.ts` is the primary way to make gateway RPC calls from anywhere in the app.
 
@@ -62,6 +64,7 @@ Svelte writable/readable stores that provide reactive state to components. Key s
 - `passwords.ts` — password vault state
 - `pm-store.ts`, `pm-domains.ts`, `pm-projects.ts`, `pm-operations.ts`, `pm-events.ts` — project management stores
 - `heartbeat.ts`, `cron.ts`, `toast.ts`, `notifications.ts`, `discord.ts` — utility stores
+- `diagnostics.ts` — connection health metrics (tick health tracking)
 - `token.ts` — gateway token + URL persistence
 
 ### Server-Side (`src/lib/server/`)
@@ -76,6 +79,7 @@ SvelteKit server code using better-sqlite3:
 
 - `files/[...path]` — file CRUD operations
 - `files-bulk` — bulk file operations
+- `gateway-config` — gateway configuration proxy
 - `passwords/` — vault management
 - `passwords/[...path]` — individual password operations
 - `passwords/import-secrets` — secret migration
@@ -90,11 +94,13 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - `/heartbeat` — system health monitoring
 - `/passwords` — password vault (KeePassXC)
 - `/projects` — project management (kanban, nav tree, detail panels)
+- `/settings` — settings page (config editor, devices, Discord, exec approvals, live logs, models, skills, workspace files)
 
 ### Specialized Modules
 
 - **`src/lib/chat/`** — markdown rendering pipeline, syntax highlighting (Shiki), slash commands, clipboard, reply utils, time formatting
 - **`src/lib/canvas/`** — A2UI bridge, HTML canvas frame, custom app panels, delivery system
+- **`src/lib/passwords/`** — password utility helpers
 - **`src/lib/pwa/`** — service worker registration
 - **`src/lib/theme/`** — theme manager
 - **`src/lib/performance/`** — virtual scroll implementation
@@ -106,13 +112,17 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **client.mode:** `"webchat"`
 - **Protocol version:** 3
 - **Frame types:** `req` (request), `res` (response), `event`
-- **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request → gateway responds with `hello-ok`
+- **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request (id `__connect`) → gateway responds with `hello-ok`
+- **Connect frame ID:** uses `'__connect'` (non-numeric) to avoid collision with `RequestCorrelator`'s monotonic counter — do NOT change to a numeric ID
+- **Scopes:** `operator.read`, `operator.write`, `operator.admin`, `operator.approvals`, `operator.pairing`
 - **Thinking levels:** off/minimal/low/medium/high/xhigh (NOT off/on/stream)
+- **`sessions.patch` params:** `key` (required, NOT `sessionKey`), `label` (optional, NOT `displayName`)
 - **Dev auth:** set `gateway.controlUi.allowInsecureAuth: true` for token-only
 
 ## Reference Docs
 
 Architecture specs and prior research in `builddocs/`:
+
 - `falcon-dash-architecture-v02.md` — full architecture spec
 - `ws-protocol.md` — WebSocket protocol reference
 - `pm-spec.md` — PM specification

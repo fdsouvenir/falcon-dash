@@ -67,7 +67,7 @@ export function setActiveSession(sessionKey: string): void {
 }
 
 export async function renameSession(sessionKey: string, name: string): Promise<void> {
-	await call('sessions.patch', { sessionKey, displayName: name });
+	await call('sessions.patch', { key: sessionKey, label: name });
 	_sessions.update((list) =>
 		list.map((s) => (s.sessionKey === sessionKey ? { ...s, displayName: name } : s))
 	);
@@ -104,7 +104,7 @@ export async function createSession(label?: string, channel?: string): Promise<s
 	_activeSessionKey.set(sessionKey);
 
 	// Create on server
-	const patchParams: Record<string, unknown> = { sessionKey, displayName };
+	const patchParams: Record<string, unknown> = { key: sessionKey, label: displayName };
 	if (channel) patchParams.channel = channel;
 	await call('sessions.patch', patchParams);
 
@@ -169,7 +169,7 @@ export async function ensureGeneralSession(): Promise<string> {
 	const sessionKey = `agent:${agentId}:webchat:group:general`;
 	const now = Date.now();
 
-	await call('sessions.patch', { sessionKey, displayName: 'General' });
+	await call('sessions.patch', { key: sessionKey, label: 'General' });
 
 	_sessions.update((sessions) => [
 		{
