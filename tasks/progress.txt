@@ -481,3 +481,16 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Discord thread sync uses same session events as regular threads
   - subscribeToThreadEvents/unsubscribeFromThreadEvents pattern mirrors sessions store
 ---
+
+## 2026-02-10 04:30 CST - US-032
+- Added handleIncomingMessage to chat store for Discord-originated messages
+- Subscribes to 'chat.message' eventBus events, deduplicates by ID
+- Preserves replyToMessageId from incoming messages
+- Created reply-utils.ts — findReferencedMessage, getReplyPreviewText, isReply
+- Updated destroy() to unsubscribe from chat events
+- Files changed: src/lib/stores/chat.ts (modified), src/lib/chat/reply-utils.ts (new)
+- **Learnings for future iterations:**
+  - Incoming Discord messages arrive via 'chat.message' eventBus events
+  - handleIncomingMessage filters by sessionKey to only process relevant messages
+  - reply-utils provides stateless helpers for UI components
+---
