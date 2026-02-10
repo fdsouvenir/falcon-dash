@@ -116,3 +116,19 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Reconnector.onDisconnect() should be called from GatewayConnection close handler
   - Backoff formula: min(800 * 1.7^attempt, 15000)
 ---
+
+## 2026-02-10 01:50 CST - US-008
+- Created token storage in src/lib/stores/token.ts (localStorage persistence)
+- Created TokenEntry.svelte component with gateway URL and token fields
+- Created gateway client singleton in src/lib/stores/gateway.ts wiring all subsystems
+- Updated +layout.svelte to show TokenEntry when no token, app when token exists
+- Auto-connect on token availability via $effect
+- call() helper for typed RPC calls
+- Files changed: src/lib/stores/token.ts, src/lib/stores/gateway.ts, src/lib/components/TokenEntry.svelte, src/routes/+layout.svelte
+- **Learnings for future iterations:**
+  - Gateway singleton in stores/gateway.ts wires: connection → correlator (responses) → eventBus (events)
+  - connectToGateway() creates instanceId per connection attempt (crypto.randomUUID())
+  - Token stored at localStorage key "falcon-dash:gateway-token"
+  - Gateway URL stored at localStorage key "falcon-dash:gateway-url"
+  - Manual browser verification needed (no dev-browser skill available)
+---
