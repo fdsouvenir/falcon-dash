@@ -604,3 +604,23 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Drag-and-drop uses ondragover/ondragleave/ondrop on container div
   - File download creates temporary anchor element with download attribute
 ---
+
+## 2026-02-10 — US-040: Document bulk operations
+- Created `src/routes/api/files-bulk/+server.ts` with POST handler for delete/move/download actions
+- Added selection state to `src/lib/stores/files.ts`: selectedPaths, selectedCount, toggleSelection, selectAll, clearSelection, selectRange
+- Added bulk operation functions: bulkDelete, bulkMove, bulkDownload
+- Enhanced `src/lib/components/DocumentBrowser.svelte` with:
+  - Checkboxes per entry row (4-column grid layout)
+  - Shift-click range selection
+  - Bulk action toolbar (shows when items selected): Select All, Clear, Download, Move, Delete
+  - Bulk delete confirmation dialog
+  - Move destination picker dialog (lists available folders)
+  - Select-all checkbox in column headers
+- loadDirectory() now clears selection when navigating
+- **Learnings for future iterations:**
+  - Bulk API endpoint uses single POST with `action` field to handle multiple operations
+  - Selection state uses Set<string> for O(1) lookup performance
+  - selectRange uses entry index positions from sorted entries array
+  - Bulk download returns file contents as JSON for client-side individual downloads
+  - Move dialog filters out selected folders from destination options to prevent self-move
+---
