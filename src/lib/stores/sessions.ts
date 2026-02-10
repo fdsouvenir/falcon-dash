@@ -9,6 +9,7 @@ export interface ChatSessionInfo {
 	unreadCount: number;
 	isGeneral: boolean;
 	kind: string;
+	channel?: string;
 }
 
 const _sessions = writable<ChatSessionInfo[]>([]);
@@ -48,7 +49,8 @@ export async function loadSessions(): Promise<void> {
 			updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
 			unreadCount: (s.unreadCount ?? 0) as number,
 			isGeneral: (s.isGeneral ?? s.sessionKey === 'general') as boolean,
-			kind: (s.kind ?? 'group') as string
+			kind: (s.kind ?? 'group') as string,
+			channel: s.channel as string | undefined
 		}));
 		_sessions.set(parsed);
 	} catch {
@@ -76,7 +78,7 @@ export async function deleteSession(sessionKey: string): Promise<void> {
 	_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
 }
 
-export async function createSession(label?: string): Promise<string> {
+export async function createSession(label?: string, channel?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:group:${crypto.randomUUID()}`;
@@ -93,7 +95,8 @@ export async function createSession(label?: string): Promise<string> {
 			updatedAt: now,
 			unreadCount: 0,
 			isGeneral: false,
-			kind: 'group'
+			kind: 'group',
+			channel
 		}
 	]);
 
@@ -101,7 +104,9 @@ export async function createSession(label?: string): Promise<string> {
 	_activeSessionKey.set(sessionKey);
 
 	// Create on server
-	await call('sessions.patch', { sessionKey, displayName });
+	const patchParams: Record<string, unknown> = { sessionKey, displayName };
+	if (channel) patchParams.channel = channel;
+	await call('sessions.patch', patchParams);
 
 	return sessionKey;
 }
