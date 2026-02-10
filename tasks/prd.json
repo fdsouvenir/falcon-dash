@@ -906,7 +906,7 @@
 				"Typecheck passes"
 			],
 			"priority": 54,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-01a. Split from P4A-01 (PM SQLite Data Layer). Phase 4A: PM Skill Backend."
 		},
 		{
@@ -921,7 +921,7 @@
 				"Typecheck passes"
 			],
 			"priority": 55,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-01b. Split from P4A-01."
 		},
 		{
@@ -937,7 +937,7 @@
 				"Typecheck passes"
 			],
 			"priority": 56,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-02."
 		},
 		{
