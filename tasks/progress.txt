@@ -624,3 +624,17 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Bulk download returns file contents as JSON for client-side individual downloads
   - Move dialog filters out selected folders from destination options to prevent self-move
 ---
+
+## 2026-02-10 — US-041: Cron job list
+- Created `src/lib/stores/cron.ts` with loadCronJobs, subscribeToCronEvents, formatSchedule
+- Created `src/lib/components/CronJobList.svelte` with grid columns: name, schedule, next/last run, status
+- Created `src/routes/jobs/+page.svelte` route
+- Status badges: Enabled (green), Disabled (gray), Error (red)
+- Empty state with clock icon and "Create Job" prompt
+- Live updates: subscribes to `event:cron` and reloads on any action
+- **Learnings for future iterations:**
+  - Gateway call pattern: `call<T>('method.name', { params })` returns Promise<T>
+  - Event subscription: `eventBus.on('eventType', callback)` returns unsub function
+  - Cron events reload full list rather than patching individual items (simpler)
+  - Use `@const` in Svelte template for computed values like `{@const badge = statusBadge(job)}`
+---

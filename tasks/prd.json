@@ -691,7 +691,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 41,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3B-01. Phase 3B: Agent Jobs."
 		},
 		{
