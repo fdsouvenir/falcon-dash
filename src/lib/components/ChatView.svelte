@@ -10,6 +10,7 @@
 	import MessageComposer from './MessageComposer.svelte';
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallCard from './ToolCallCard.svelte';
+	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ReplyPreview from './ReplyPreview.svelte';
 	import ThreadPanel from './ThreadPanel.svelte';
 	import type { ThreadInfo } from '$lib/stores/threads.js';
@@ -265,6 +266,11 @@
 										{#each message.toolCalls as toolCall (toolCall.toolCallId)}
 											<ToolCallCard {toolCall} />
 										{/each}
+									{/if}
+
+									<!-- Canvas content (inline A2UI) -->
+									{#if message.runId}
+										<CanvasBlock runId={message.runId} />
 									{/if}
 
 									<!-- Timestamp and actions -->

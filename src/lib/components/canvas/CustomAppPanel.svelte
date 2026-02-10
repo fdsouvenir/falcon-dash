@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
-	import { eventBus } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/gateway.js';
+	import type { CanvasSurface } from '$lib/stores/canvas.js';
+	import InlineA2UI from './InlineA2UI.svelte';
 
 	interface PinnedApp {
 		id: string;
 		name: string;
 		surfaceId: string;
-		state: unknown[];
 	}
 
 	let pinnedApps = $state<PinnedApp[]>([]);
-	let surfaceRegistry = new Map<string, unknown[]>();
+	let surfaces = $state<Map<string, CanvasSurface>>(new Map());
 	let draggedIndex = $state<number | null>(null);
 
 	onMount(() => {
@@ -25,22 +25,12 @@
 			}
 		}
 
-		// Subscribe to canvas.update events
-		const unsubscribe = eventBus.on('canvas.update', (data: Record<string, unknown>) => {
-			const surfaceId = data.surfaceId as string;
-			const messages = data.messages as unknown[];
-			if (surfaceId && messages) {
-				surfaceRegistry.set(surfaceId, messages);
-				// Update pinned app state if it exists
-				const app = pinnedApps.find((a) => a.surfaceId === surfaceId);
-				if (app) {
-					app.state = messages;
-					savePinnedApps();
-				}
-			}
+		// Subscribe to canvas store for surface updates
+		const unsub = canvasStore.surfaces.subscribe((s: Map<string, CanvasSurface>) => {
+			surfaces = s;
 		});
 
-		return unsubscribe;
+		return unsub;
 	});
 
 	function savePinnedApps() {
@@ -68,6 +58,10 @@
 		draggedIndex = null;
 		savePinnedApps();
 	}
+
+	function getSurface(surfaceId: string): CanvasSurface | undefined {
+		return surfaces.get(surfaceId);
+	}
 </script>
 
 <div class="custom-app-panel">
@@ -77,6 +71,7 @@
 	{:else}
 		<ul class="app-list">
 			{#each pinnedApps as app, index (app.id)}
+				{@const surface = getSurface(app.surfaceId)}
 				<li
 					class="app-item"
 					draggable="true"
@@ -90,6 +85,11 @@
 							×
 						</button>
 					</div>
+					{#if surface && surface.messages.length > 0}
+						<div class="app-canvas">
+							<InlineA2UI messages={surface.messages} surfaceId={app.surfaceId} />
+						</div>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -168,5 +168,11 @@
 	.unpin-btn:hover {
 		background: var(--color-bg-hover);
 		color: var(--color-text-primary);
+	}
+
+	.app-canvas {
+		margin-top: 0.5rem;
+		border-top: 1px solid var(--color-border, #313244);
+		padding-top: 0.5rem;
 	}
 </style>

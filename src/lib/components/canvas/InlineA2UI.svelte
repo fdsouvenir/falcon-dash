@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
-	import { call } from '$lib/stores/gateway.js';
+	import { call, snapshot } from '$lib/stores/gateway.js';
 
 	interface Props {
 		messages: unknown[];
@@ -11,9 +11,13 @@
 	let { messages = $bindable(), surfaceId }: Props = $props();
 
 	let hostElement: A2UIHostElement | null = $state(null);
+	let serverInfo = $derived(snapshot.server);
 
 	onMount(async () => {
-		await ensureA2UILoaded();
+		// Get server info from snapshot to construct canvas host URL
+		const serverHost = $serverInfo?.host;
+		// Gateway port is always 18789 for now (no config API for this yet)
+		await ensureA2UILoaded(serverHost, 18789);
 		if (hostElement) {
 			hostElement.applyMessages(messages);
 		}

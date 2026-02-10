@@ -211,8 +211,14 @@ export class GatewayConnection {
 					'operator.approvals',
 					'operator.pairing'
 				],
-				caps: [],
-				commands: [],
+				caps: ['canvas', 'canvas.a2ui'],
+				commands: [
+					'canvas.present',
+					'canvas.hide',
+					'canvas.navigate',
+					'canvas.a2ui.pushJSONL',
+					'canvas.a2ui.reset'
+				],
 				permissions: {},
 				auth: { token: this.config.token },
 				locale: navigator?.language || 'en-US',

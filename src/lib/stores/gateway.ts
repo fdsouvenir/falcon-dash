@@ -8,12 +8,15 @@ import { diagnosticLog } from '$lib/gateway/diagnostic-log.js';
 import { tickHealth } from '$lib/stores/diagnostics.js';
 import { addToast } from '$lib/stores/toast.js';
 import type { Frame, ConnectionState } from '$lib/gateway/types.js';
+import { CanvasStore } from '$lib/stores/canvas.js';
+import { initA2UIBridge } from '$lib/canvas/a2ui-bridge.js';
 
 export const connection = new GatewayConnection();
 export const correlator = new RequestCorrelator();
 export const eventBus = new EventBus();
 export const snapshot = new SnapshotStore();
 export const reconnector = new Reconnector(connection, eventBus);
+export const canvasStore = new CanvasStore();
 
 // Re-export for convenient access
 export { diagnosticLog };
@@ -120,11 +123,17 @@ connection.onFrame((frame: Frame) => {
 connection.setOnHelloOk((helloOk) => {
 	snapshot.hydrate(helloOk);
 	snapshot.subscribe(eventBus);
+	canvasStore.subscribe(eventBus, call);
 	reconnector.onConnected(helloOk.policy.tickIntervalMs);
 	tickHealth.set({
 		lastTickAt: Date.now(),
 		tickIntervalMs: helloOk.policy.tickIntervalMs
 	});
+});
+
+// --- A2UI action bridge: wire canvas actions from A2UI web component ---
+initA2UIBridge((action) => {
+	canvasStore.sendAction(action.surfaceId, action.actionId, action.payload);
 });
 
 /**
@@ -145,6 +154,7 @@ export function disconnectFromGateway(): void {
 	correlator.cancelAll();
 	eventBus.clear();
 	snapshot.clear();
+	canvasStore.clear();
 }
 
 /**

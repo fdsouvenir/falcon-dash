@@ -1,6 +1,13 @@
 import { writable, derived, readonly, type Readable } from 'svelte/store';
 
-export type DiagnosticCategory = 'connection' | 'auth' | 'reconnect' | 'tick' | 'request' | 'error';
+export type DiagnosticCategory =
+	| 'connection'
+	| 'auth'
+	| 'reconnect'
+	| 'tick'
+	| 'request'
+	| 'error'
+	| 'canvas';
 
 export type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error';
 

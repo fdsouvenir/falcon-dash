@@ -42,3 +42,8 @@ export function pushSurfaceMessage(msg: CanvasMessage): void {
 export function clearSurface(surfaceId: string): void {
 	activeSurfaces.delete(surfaceId);
 }
+
+// Check if an invoke request is a canvas command
+export function isCanvasCommand(command: string): boolean {
+	return command.startsWith('canvas.');
+}

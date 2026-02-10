@@ -39,7 +39,7 @@ No test runner is configured. No single-test command exists.
 
 ### Gateway Layer (`src/lib/gateway/`)
 
-WebSocket client for the OpenClaw Gateway protocol v3. Five classes, wired together as singletons in `src/lib/stores/gateway.ts`:
+WebSocket client for the OpenClaw Gateway protocol v3. Six classes, wired together as singletons in `src/lib/stores/gateway.ts`:
 
 - **`GatewayConnection`** — WebSocket lifecycle, frame send/receive, challenge→connect→hello-ok handshake
 - **`RequestCorrelator`** — maps request IDs to Promises for req/res correlation
@@ -49,6 +49,7 @@ WebSocket client for the OpenClaw Gateway protocol v3. Five classes, wired toget
 - **`AgentStreamManager`** (`stream.ts`) — reassembles streaming agent responses (delta, toolCall, toolResult, messageEnd events)
 - **`DiagnosticLog`** (`diagnostic-log.ts`) — ring-buffer logger for connection events, used by DiagnosticPanel
 - **`DeviceIdentity`** (`device-identity.ts`) — Ed25519 keypair generation and challenge signing via WebCrypto
+- **`CanvasStore`** (`stores/canvas.ts`) — manages canvas surface state, subscribes to EventBus for `node.invoke.request`, `canvas.deliver`, and `canvas.message` events; handles canvas commands (present, hide, navigate, pushJSONL, reset) and responds to invoke requests
 
 The `call<T>(method, params)` function in `stores/gateway.ts` is the primary way to make gateway RPC calls from anywhere in the app.
 
@@ -56,7 +57,7 @@ The `call<T>(method, params)` function in `stores/gateway.ts` is the primary way
 
 Svelte writable/readable stores that provide reactive state to components. Key stores:
 
-- `gateway.ts` — singleton gateway instances + `connectToGateway()`, `call()`
+- `gateway.ts` — singleton gateway instances + `connectToGateway()`, `call()`, `canvasStore`
 - `chat.ts` — `createChatSession(sessionKey)` factory returning a session store with send/abort/reconcile/streaming
 - `threads.ts`, `bookmarks.ts`, `chat-search.ts`, `chat-resilience.ts` — chat feature stores
 - `sessions.ts` — session lifecycle (general session, event subscriptions)
@@ -99,7 +100,7 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 ### Specialized Modules
 
 - **`src/lib/chat/`** — markdown rendering pipeline, syntax highlighting (Shiki), slash commands, clipboard, reply utils, time formatting
-- **`src/lib/canvas/`** — A2UI bridge, HTML canvas frame, custom app panels, delivery system
+- **`src/lib/canvas/`** — A2UI bridge (dynamic bundle loading from canvas host with placeholder fallback), HTML canvas frame, custom app panels, delivery system, canvas action bridge
 - **`src/lib/passwords/`** — password utility helpers
 - **`src/lib/pwa/`** — service worker registration
 - **`src/lib/theme/`** — theme manager
@@ -114,6 +115,8 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **Frame types:** `req` (request), `res` (response), `event`
 - **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request (id `__connect`) → gateway responds with `hello-ok`
 - **Connect frame ID:** uses `'__connect'` (non-numeric) to avoid collision with `RequestCorrelator`'s monotonic counter — do NOT change to a numeric ID
+- **Canvas caps:** connect frame declares `caps: ['canvas', 'canvas.a2ui']` and `commands: ['canvas.present', 'canvas.hide', 'canvas.navigate', 'canvas.a2ui.pushJSONL', 'canvas.a2ui.reset']`
+- **Canvas host:** A2UI bundle served at `http://<host>:<gatewayPort+4>/__openclaw__/a2ui/a2ui.bundle.js` (default port 18793)
 - **Scopes:** `operator.read`, `operator.write`, `operator.admin`, `operator.approvals`, `operator.pairing`
 - **Thinking levels:** off/minimal/low/medium/high/xhigh (NOT off/on/stream)
 - **`sessions.patch` params:** `key` (required, NOT `sessionKey`), `label` (optional, NOT `displayName`)
