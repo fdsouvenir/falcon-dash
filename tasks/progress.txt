@@ -768,3 +768,27 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Use copyWithAutoClear pattern for sensitive clipboard data
   - Activity monitor returns cleanup function for $effect teardown
 ---
+
+## 2026-02-10 ~10:05 CST - US-052
+- Implemented secrets migration feature
+- Files created: src/routes/api/passwords/import-secrets/+server.ts, src/lib/components/SecretsMigration.svelte
+- Files modified: src/routes/passwords/+page.svelte
+- GET endpoint scans ~/.openclaw/secrets/ and returns file list with masked preview
+- POST endpoint imports files into vault using addEntry, filename as title
+- SecretsMigration component: scan button, preview table, import with confirmation
+- **Learnings for future iterations:**
+  - Handle missing directories gracefully (return empty array, not error)
+  - Mask preview content in scan results for security
+---
+
+## 2026-02-10 ~10:05 CST - US-053
+- Implemented password security model utilities
+- Files created: src/lib/server/password-security.ts
+- Files modified: src/routes/api/passwords/[...path]/+server.ts
+- sanitizeForAI strips vault:// references and password patterns before AI model
+- maskSecretInLog replaces sensitive data with [REDACTED] for logging
+- Added X-Secret-Content: true header to password detail GET responses
+- **Learnings for future iterations:**
+  - Most security was already in place from US-047/048/051 (keepassxc-cli, masking, auto-clear)
+  - X-Secret-Content header pattern useful for middleware to detect sensitive responses
+---

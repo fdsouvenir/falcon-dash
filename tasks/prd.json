@@ -873,7 +873,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 52,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3C-06."
 		},
 		{
@@ -890,7 +890,7 @@
 				"Typecheck passes"
 			],
 			"priority": 53,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3C-07. End of Phase 3C."
 		},
 		{
