@@ -1,4 +1,4 @@
-import { writable, readonly, derived, type Readable, type Writable } from 'svelte/store';
+import { writable, readonly, derived, get, type Readable, type Writable } from 'svelte/store';
 
 export interface FileEntry {
 	name: string;
@@ -98,4 +98,104 @@ export function navigateUp(): void {
 	const parts = path.split('/').filter(Boolean);
 	parts.pop();
 	loadDirectory(parts.join('/'));
+}
+
+export async function createFile(name: string, content = ''): Promise<boolean> {
+	const path = get(_currentPath);
+	const filePath = path ? `${path}/${name}` : name;
+	try {
+		const res = await fetch(`/api/files/${encodeURIComponent(filePath)}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'file', content })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		await loadDirectory(path);
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function createFolder(name: string): Promise<boolean> {
+	const path = get(_currentPath);
+	const folderPath = path ? `${path}/${name}` : name;
+	try {
+		const res = await fetch(`/api/files/${encodeURIComponent(folderPath)}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'directory' })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		await loadDirectory(path);
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function deleteEntry(entryPath: string): Promise<boolean> {
+	try {
+		const res = await fetch(`/api/files/${encodeURIComponent(entryPath)}`, {
+			method: 'DELETE'
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		const path = get(_currentPath);
+		await loadDirectory(path);
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function renameEntry(entryPath: string, newName: string): Promise<boolean> {
+	try {
+		const res = await fetch(`/api/files/${encodeURIComponent(entryPath)}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ newName })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		const path = get(_currentPath);
+		await loadDirectory(path);
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function uploadFile(file: File): Promise<boolean> {
+	const path = get(_currentPath);
+	const filePath = path ? `${path}/${file.name}` : file.name;
+	try {
+		const content = await file.text();
+		const res = await fetch(`/api/files/${encodeURIComponent(filePath)}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'file', content })
+		});
+		if (res.status === 409) {
+			// File exists, overwrite with PUT using empty baseHash trick
+			const putRes = await fetch(`/api/files/${encodeURIComponent(filePath)}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/octet-stream',
+					'X-Base-Hash': '' // new file
+				},
+				body: content
+			});
+			if (!putRes.ok) throw new Error('Upload failed: file already exists');
+		} else if (!res.ok) {
+			throw new Error((await res.json()).message ?? res.statusText);
+		}
+		await loadDirectory(path);
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
 }

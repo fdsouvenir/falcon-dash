@@ -11,6 +11,11 @@
 		setSortField,
 		sortField,
 		sortDirection,
+		createFile,
+		createFolder,
+		deleteEntry,
+		renameEntry,
+		uploadFile,
 		type FileEntry,
 		type SortField
 	} from '$lib/stores/files.js';
@@ -25,6 +30,20 @@
 	let query = $state('');
 	let currentSort = $state<SortField>('name');
 	let currentDirection = $state<'asc' | 'desc'>('asc');
+
+	// Dialog state
+	let showNewFileDialog = $state(false);
+	let showNewFolderDialog = $state(false);
+	let showDeleteConfirm = $state(false);
+	let newFileName = $state('');
+	let newFolderName = $state('');
+	let deleteTarget = $state<FileEntry | null>(null);
+	let renamingPath = $state<string | null>(null);
+	let renameValue = $state('');
+	let isDragging = $state(false);
+	let contextMenu = $state<{ x: number; y: number; entry: FileEntry } | null>(null);
+
+	let fileInputEl: HTMLInputElement | undefined = $state();
 
 	$effect(() => {
 		const u = sortedEntries.subscribe((v) => {
@@ -69,6 +88,15 @@
 		return u;
 	});
 
+	// Close context menu on click anywhere
+	$effect(() => {
+		function handleClick() {
+			contextMenu = null;
+		}
+		document.addEventListener('click', handleClick);
+		return () => document.removeEventListener('click', handleClick);
+	});
+
 	// Load root on mount
 	$effect(() => {
 		loadDirectory('');
@@ -110,9 +138,130 @@
 		if (currentSort !== field) return '';
 		return currentDirection === 'asc' ? ' ↑' : ' ↓';
 	}
+
+	// --- File operations ---
+	async function handleCreateFile() {
+		if (!newFileName.trim()) return;
+		await createFile(newFileName.trim());
+		newFileName = '';
+		showNewFileDialog = false;
+	}
+
+	async function handleCreateFolder() {
+		if (!newFolderName.trim()) return;
+		await createFolder(newFolderName.trim());
+		newFolderName = '';
+		showNewFolderDialog = false;
+	}
+
+	async function handleDelete() {
+		if (!deleteTarget) return;
+		await deleteEntry(deleteTarget.path);
+		deleteTarget = null;
+		showDeleteConfirm = false;
+	}
+
+	function confirmDelete(entry: FileEntry) {
+		deleteTarget = entry;
+		showDeleteConfirm = true;
+		contextMenu = null;
+	}
+
+	function startRename(entry: FileEntry) {
+		renamingPath = entry.path;
+		renameValue = entry.name;
+		contextMenu = null;
+	}
+
+	async function handleRename(entryPath: string) {
+		if (!renameValue.trim() || !renamingPath) return;
+		await renameEntry(entryPath, renameValue.trim());
+		renamingPath = null;
+		renameValue = '';
+	}
+
+	function handleRenameKeydown(e: KeyboardEvent, entryPath: string) {
+		if (e.key === 'Enter') {
+			handleRename(entryPath);
+		} else if (e.key === 'Escape') {
+			renamingPath = null;
+			renameValue = '';
+		}
+	}
+
+	async function copyPath(entry: FileEntry) {
+		try {
+			await navigator.clipboard.writeText(entry.path);
+		} catch {
+			// Fallback
+			const ta = document.createElement('textarea');
+			ta.value = entry.path;
+			document.body.appendChild(ta);
+			ta.select();
+			document.execCommand('copy');
+			document.body.removeChild(ta);
+		}
+		contextMenu = null;
+	}
+
+	function downloadFile(entry: FileEntry) {
+		const url = `/api/files/${encodeURIComponent(entry.path)}`;
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = entry.name;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		contextMenu = null;
+	}
+
+	// --- Upload ---
+	function handleUploadClick() {
+		fileInputEl?.click();
+	}
+
+	async function handleFileInput(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const files = input.files;
+		if (!files) return;
+		for (const file of files) {
+			await uploadFile(file);
+		}
+		input.value = '';
+	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+		isDragging = true;
+	}
+
+	function handleDragLeave() {
+		isDragging = false;
+	}
+
+	async function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		isDragging = false;
+		const files = e.dataTransfer?.files;
+		if (!files) return;
+		for (const file of files) {
+			await uploadFile(file);
+		}
+	}
+
+	function handleContextMenu(e: MouseEvent, entry: FileEntry) {
+		e.preventDefault();
+		contextMenu = { x: e.clientX, y: e.clientY, entry };
+	}
 </script>
 
-<div class="flex h-full flex-col">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="flex h-full flex-col"
+	ondragover={handleDragOver}
+	ondragleave={handleDragLeave}
+	ondrop={handleDrop}
+>
 	<!-- Breadcrumbs -->
 	<div class="flex items-center gap-1 border-b border-gray-800 px-4 py-2">
 		{#each crumbs as crumb, i (crumb.path)}
@@ -139,6 +288,29 @@
 			placeholder="Search files..."
 			class="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
 		/>
+		<button
+			onclick={() => {
+				showNewFileDialog = true;
+			}}
+			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+		>
+			+ File
+		</button>
+		<button
+			onclick={() => {
+				showNewFolderDialog = true;
+			}}
+			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+		>
+			+ Folder
+		</button>
+		<button
+			onclick={handleUploadClick}
+			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+		>
+			Upload
+		</button>
+		<input bind:this={fileInputEl} type="file" multiple class="hidden" onchange={handleFileInput} />
 	</div>
 
 	<!-- Column headers -->
@@ -157,7 +329,16 @@
 	</div>
 
 	<!-- Entries -->
-	<div class="flex-1 overflow-y-auto">
+	<div class="relative flex-1 overflow-y-auto">
+		<!-- Drag overlay -->
+		{#if isDragging}
+			<div
+				class="absolute inset-0 z-10 flex items-center justify-center rounded border-2 border-dashed border-blue-500 bg-blue-900/20"
+			>
+				<span class="text-sm text-blue-300">Drop files to upload</span>
+			</div>
+		{/if}
+
 		{#if loading}
 			<div class="py-8 text-center text-xs text-gray-500">Loading...</div>
 		{:else if error}
@@ -176,24 +357,289 @@
 			{/if}
 
 			{#each entries as entry (entry.path)}
-				<button
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<div
 					onclick={() => handleNavigate(entry)}
-					class="grid w-full grid-cols-[1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-gray-800 {entry.type ===
+					oncontextmenu={(e) => handleContextMenu(e, entry)}
+					class="group grid w-full cursor-pointer grid-cols-[1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-gray-800 {entry.type ===
 					'directory'
 						? 'text-white'
 						: 'text-gray-300'}"
 				>
-					<span class="truncate">{getIcon(entry)} {entry.name}</span>
+					<span class="flex items-center gap-1 truncate">
+						{#if renamingPath === entry.path}
+							<!-- svelte-ignore a11y_autofocus -->
+							<input
+								type="text"
+								value={renameValue}
+								oninput={(e) => {
+									renameValue = (e.target as HTMLInputElement).value;
+								}}
+								onkeydown={(e) => handleRenameKeydown(e, entry.path)}
+								onblur={() => handleRename(entry.path)}
+								autofocus
+								class="w-full rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs text-white focus:outline-none"
+								onclick={(e) => e.stopPropagation()}
+							/>
+						{:else}
+							{getIcon(entry)}
+							{entry.name}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<span class="ml-auto flex gap-1 opacity-0 group-hover:opacity-100">
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<span
+									onclick={(e) => {
+										e.stopPropagation();
+										startRename(entry);
+									}}
+									class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+									title="Rename"
+								>
+									✏️
+								</span>
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<span
+									onclick={(e) => {
+										e.stopPropagation();
+										copyPath(entry);
+									}}
+									class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+									title="Copy path"
+								>
+									📋
+								</span>
+								{#if entry.type === 'file'}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<span
+										onclick={(e) => {
+											e.stopPropagation();
+											downloadFile(entry);
+										}}
+										class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+										title="Download"
+									>
+										⬇️
+									</span>
+								{/if}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<span
+									onclick={(e) => {
+										e.stopPropagation();
+										confirmDelete(entry);
+									}}
+									class="cursor-pointer rounded px-1 text-gray-500 hover:text-red-400"
+									title="Delete"
+								>
+									🗑️
+								</span>
+							</span>
+						{/if}
+					</span>
 					<span class="text-gray-500" title={new Date(entry.modified).toLocaleString()}>
 						{formatRelativeTime(entry.modified)}
 					</span>
 					<span class="text-right text-gray-500">{formatSize(entry.size)}</span>
-				</button>
+				</div>
 			{/each}
 
 			{#if entries.length === 0 && !path}
-				<div class="py-8 text-center text-xs text-gray-500">Empty folder</div>
+				<div class="py-8 text-center text-xs text-gray-500">
+					Empty folder — drag files here or use the toolbar to create
+				</div>
 			{/if}
 		{/if}
 	</div>
+
+	<!-- Context menu -->
+	{#if contextMenu}
+		<div
+			class="fixed z-50 min-w-[140px] rounded border border-gray-700 bg-gray-800 py-1 shadow-lg"
+			style="left: {contextMenu.x}px; top: {contextMenu.y}px"
+		>
+			<button
+				onclick={() => startRename(contextMenu!.entry)}
+				class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+			>
+				Rename
+			</button>
+			<button
+				onclick={() => copyPath(contextMenu!.entry)}
+				class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+			>
+				Copy Path
+			</button>
+			{#if contextMenu.entry.type === 'file'}
+				<button
+					onclick={() => downloadFile(contextMenu!.entry)}
+					class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+				>
+					Download
+				</button>
+			{/if}
+			<hr class="my-1 border-gray-700" />
+			<button
+				onclick={() => confirmDelete(contextMenu!.entry)}
+				class="block w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-gray-700"
+			>
+				Delete
+			</button>
+		</div>
+	{/if}
+
+	<!-- New File Dialog -->
+	{#if showNewFileDialog}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			onclick={() => {
+				showNewFileDialog = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showNewFileDialog = false;
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h3 class="mb-3 text-sm font-medium text-white">New File</h3>
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					type="text"
+					bind:value={newFileName}
+					placeholder="filename.txt"
+					autofocus
+					class="mb-3 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') handleCreateFile();
+						if (e.key === 'Escape') showNewFileDialog = false;
+					}}
+				/>
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => {
+							showNewFileDialog = false;
+						}}
+						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={handleCreateFile}
+						class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
+					>
+						Create
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- New Folder Dialog -->
+	{#if showNewFolderDialog}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			onclick={() => {
+				showNewFolderDialog = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showNewFolderDialog = false;
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h3 class="mb-3 text-sm font-medium text-white">New Folder</h3>
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					type="text"
+					bind:value={newFolderName}
+					placeholder="folder-name"
+					autofocus
+					class="mb-3 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') handleCreateFolder();
+						if (e.key === 'Escape') showNewFolderDialog = false;
+					}}
+				/>
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => {
+							showNewFolderDialog = false;
+						}}
+						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={handleCreateFolder}
+						class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
+					>
+						Create
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Delete Confirmation Dialog -->
+	{#if showDeleteConfirm && deleteTarget}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			onclick={() => {
+				showDeleteConfirm = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showDeleteConfirm = false;
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h3 class="mb-2 text-sm font-medium text-white">
+					Delete {deleteTarget.type === 'directory' ? 'Folder' : 'File'}
+				</h3>
+				<p class="mb-4 text-xs text-gray-400">
+					Are you sure you want to delete <span class="font-medium text-white"
+						>{deleteTarget.name}</span
+					>?
+					{#if deleteTarget.type === 'directory'}
+						This will delete all contents.
+					{/if}
+				</p>
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => {
+							showDeleteConfirm = false;
+						}}
+						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={handleDelete}
+						class="rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-500"
+					>
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>

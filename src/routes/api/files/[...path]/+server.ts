@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { readdir, readFile, writeFile, mkdir, rm, stat } from 'fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm, stat, rename } from 'fs/promises';
 import { createHash } from 'crypto';
 import { join, basename, extname } from 'path';
 import { resolveFilePath, isSecretPath, getDocumentsRoot } from '$lib/server/files-config.js';
@@ -171,6 +171,41 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	try {
 		await rm(resolved, { recursive: true });
 		return json({ deleted: true, path });
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+			return error(404, 'Not found');
+		}
+		return error(500, 'Internal server error');
+	}
+};
+
+/** PATCH: Rename file or folder */
+export const PATCH: RequestHandler = async ({ params, request }) => {
+	const path = params.path || '';
+
+	if (!path || isSecretPath(path)) {
+		return error(403, 'Access denied');
+	}
+
+	const resolved = resolveFilePath(path);
+	if (!resolved) {
+		return error(400, 'Invalid path');
+	}
+
+	const body = await request.json();
+	const newName = body.newName as string;
+	if (!newName || newName.includes('/') || newName.includes('..')) {
+		return error(400, 'Invalid new name');
+	}
+
+	const parentDir = resolved.substring(0, resolved.lastIndexOf('/'));
+	const newPath = join(parentDir, newName);
+
+	try {
+		await rename(resolved, newPath);
+		const parentPath = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+		const resultPath = parentPath ? `${parentPath}/${newName}` : newName;
+		return json({ renamed: true, oldPath: path, newPath: resultPath });
 	} catch (err) {
 		if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
 			return error(404, 'Not found');
