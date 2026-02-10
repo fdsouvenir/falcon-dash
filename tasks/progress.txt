@@ -101,3 +101,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - setConnectionState(RECONNECTING) will be used by US-007 reconnection logic
   - connId comes from hello-ok.server.connId — useful for connection status display
 ---
+
+## 2026-02-10 01:45 CST - US-007
+- Implemented Reconnector class in src/lib/gateway/reconnector.ts
+- Exponential backoff: 800ms base, 1.7x multiplier, 15s cap
+- Tick timeout: 2x policy.tickIntervalMs triggers reconnection
+- Shutdown event: uses restartExpectedMs as initial delay when available
+- Attempt counter resets on successful connection via onConnected()
+- Subscribes to tick and shutdown events via EventBus
+- Files changed: src/lib/gateway/reconnector.ts, src/lib/gateway/index.ts
+- **Learnings for future iterations:**
+  - Reconnector.enable(config) must be called after initial connect succeeds
+  - Reconnector.onConnected(tickIntervalMs) resets attempt counter and starts tick monitoring
+  - Reconnector.onDisconnect() should be called from GatewayConnection close handler
+  - Backoff formula: min(800 * 1.7^attempt, 15000)
+---
