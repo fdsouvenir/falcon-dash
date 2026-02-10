@@ -1379,7 +1379,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 82,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-06."
 		},
 		{
@@ -1397,7 +1397,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 83,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-07."
 		},
 		{
@@ -1415,7 +1415,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 84,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-08."
 		},
 		{
@@ -1431,7 +1431,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 85,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-09."
 		},
 		{
@@ -1448,7 +1448,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 86,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-10."
 		},
 		{
@@ -1465,7 +1465,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 87,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5A-11. End of Phase 5A."
 		},
 		{
