@@ -468,3 +468,16 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Gateway handles actual sync — dashboard just passes channel info
   - Discord events on eventBus: action 'connected' / 'disconnected'
 ---
+
+## 2026-02-10 04:20 CST - US-031
+- Added channel field to ThreadInfo interface for Discord thread sync
+- openThread() accepts optional channel param, passes to sessions.patch
+- Added subscribeToThreadEvents() — handles session events for Discord-originated threads
+- Handles actions: created, updated, deleted, archived, unarchived
+- loadThreads parses channel field from server response
+- Files changed: src/lib/stores/threads.ts (modified)
+- **Learnings for future iterations:**
+  - Thread events come via 'session' event with parentSessionId present
+  - Discord thread sync uses same session events as regular threads
+  - subscribeToThreadEvents/unsubscribeFromThreadEvents pattern mirrors sessions store
+---
