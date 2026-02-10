@@ -557,3 +557,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - writeFile flag 'wx' = exclusive create (fail if exists)
   - Phase 3A: Documents begins here
 ---
+
+## 2026-02-10 05:20 CST - US-037
+- Created files store — loadDirectory, setSortField, navigateUp, breadcrumbs derived
+- sortedEntries: directories first, then by field/direction, with search filter
+- Created DocumentBrowser.svelte — grid layout with sortable column headers
+- File type icons (emoji) based on extension, relative timestamps, formatted sizes
+- Breadcrumb navigation, back (..) entry, search input
+- Created /documents route page
+- Files changed: src/lib/stores/files.ts (new), src/lib/components/DocumentBrowser.svelte (new), src/routes/documents/+page.svelte (new)
+- **Learnings for future iterations:**
+  - File browser fetches from /api/files/ (US-036 routes)
+  - Directories always sorted before files regardless of sort field
+  - breadcrumbs derived store splits path and accumulates segments
+  - setSortField toggles direction if same field clicked again
+---
