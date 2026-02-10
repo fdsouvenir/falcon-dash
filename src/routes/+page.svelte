@@ -1,2 +1,4 @@
-<h1 class="text-2xl font-bold p-4">falcon-dash</h1>
-<p class="px-4 text-gray-600">OpenClaw AI Dashboard</p>
+<div class="p-6">
+	<h1 class="text-2xl font-bold">Welcome</h1>
+	<p class="mt-2 text-gray-400">Select a chat or app from the sidebar to get started.</p>
+</div>

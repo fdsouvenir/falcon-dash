@@ -3,6 +3,7 @@
 	import { gatewayToken, gatewayUrl } from '$lib/stores/token.js';
 	import { connectToGateway } from '$lib/stores/gateway.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
+	import AppShell from '$lib/components/AppShell.svelte';
 
 	let { children } = $props();
 
@@ -30,7 +31,9 @@
 </script>
 
 {#if hasToken}
-	{@render children()}
+	<AppShell>
+		{@render children()}
+	</AppShell>
 {:else}
 	<TokenEntry />
 {/if}
