@@ -437,3 +437,19 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Previous thread session is destroyed when opening a new thread
   - MessageActions now has both onreply and onthread props
 ---
+
+## 2026-02-10 04:00 CST - US-029
+- Added ThreadState type (active/archived/locked) and lifecycle functions to threads store
+- archiveThread, unarchiveThread, lockThread — update local state + call sessions.patch
+- loadThreads(parentSessionKey) — fetches threads from server via sessions.list
+- threadsForSession(parentSessionKey) — derived store filtering threads by parent
+- checkAutoArchive() — auto-archives threads inactive >24h
+- Created ThreadList.svelte — displays threads with state color, message count, last activity
+- Added threads button to ChatHeader.svelte — toggles thread list panel
+- Files changed: src/lib/stores/threads.ts (modified), src/lib/components/ThreadList.svelte (new), src/lib/components/ChatHeader.svelte (modified)
+- **Learnings for future iterations:**
+  - ThreadState is 'active' | 'archived' | 'locked' — server stores state via sessions.patch
+  - Auto-archive threshold is 24h (configurable via AUTO_ARCHIVE_MS constant)
+  - threadsForSession returns a custom Readable that filters _threads map
+  - ChatHeader now has both showSettings and showThreads toggle states
+---
