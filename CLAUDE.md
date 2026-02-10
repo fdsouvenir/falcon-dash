@@ -106,6 +106,17 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **`src/lib/theme/`** — theme manager
 - **`src/lib/performance/`** — virtual scroll implementation
 
+### Gateway Plugin (`openclaw-canvas-bridge/`)
+
+Standalone OpenClaw gateway plugin that bridges operators into the canvas pipeline. Registers operators as virtual canvas nodes so the agent's `node.list`/`node.invoke` flow can route canvas commands to the dashboard.
+
+- **`canvas.bridge.register`** — registers calling operator as virtual canvas node via `nodeRegistry.register()` with synthetic `role: "node"` client
+- **`canvas.bridge.invokeResult`** — proxies invoke results to `nodeRegistry.handleInvokeResult()`, bypassing `NODE_ROLE_METHODS` authorization
+- **`canvas.bridge.unregister`** — explicit cleanup via `nodeRegistry.unregister()`
+
+Build: `cd openclaw-canvas-bridge && npm install && npm run build`
+Install: `openclaw plugin install ./openclaw-canvas-bridge`
+
 ## Gateway Protocol Quick Reference
 
 - **URL:** `ws://127.0.0.1:18789` (proxied via Vite `/ws` in dev)

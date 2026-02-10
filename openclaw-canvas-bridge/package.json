@@ -1,0 +1,19 @@
+{
+	"name": "openclaw-canvas-bridge",
+	"version": "0.1.0",
+	"description": "Routes canvas commands to operator connections with canvas capabilities",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist"
+	},
+	"peerDependencies": {
+		"openclaw": "*"
+	},
+	"devDependencies": {
+		"openclaw": "*",
+		"typescript": "^5.7.0"
+	}
+}
