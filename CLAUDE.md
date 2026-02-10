@@ -130,6 +130,7 @@ Architecture specs and prior research in `builddocs/`:
 - `falcon-dash-architecture-v02.md` — full architecture spec
 - `ws-protocol.md` — WebSocket protocol reference
 - `pm-spec.md` — PM specification
+- `track-a-gateway-canvas-plan.md` — gateway plugin plan for canvas routing to operators
 - `research/` — canvas, control-ui features, file ops, PM API, webchat client, ws-protocol test
 
 Consult these before making architectural decisions.
