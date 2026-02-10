@@ -1481,7 +1481,7 @@
 				"Typecheck passes"
 			],
 			"priority": 88,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5B-01. Phase 5B: Canvas/A2UI."
 		},
 		{
@@ -1498,7 +1498,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 89,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5B-02."
 		},
 		{
@@ -1517,7 +1517,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 90,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5B-03."
 		},
 		{
@@ -1535,7 +1535,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 91,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5B-04."
 		},
 		{
@@ -1549,7 +1549,7 @@
 				"Typecheck passes"
 			],
 			"priority": 92,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P5B-05. End of Phase 5B. Open question OQ-1 must be resolved."
 		},
 		{
@@ -1567,7 +1567,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 93,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-01. Phase 6: Mobile & Polish."
 		},
 		{
@@ -1584,7 +1584,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 94,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-02."
 		},
 		{
@@ -1600,7 +1600,7 @@
 				"Typecheck passes"
 			],
 			"priority": 95,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-03."
 		},
 		{
@@ -1618,7 +1618,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 96,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-04."
 		},
 		{
@@ -1634,7 +1634,7 @@
 				"Typecheck passes"
 			],
 			"priority": 97,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-05."
 		},
 		{
@@ -1651,7 +1651,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 98,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-06."
 		},
 		{
@@ -1668,7 +1668,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 99,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-07."
 		},
 		{
@@ -1686,7 +1686,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 100,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-08."
 		},
 		{
@@ -1703,7 +1703,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 101,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-09."
 		},
 		{
@@ -1721,7 +1721,7 @@
 				"Typecheck passes"
 			],
 			"priority": 102,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P6-10. End of Phase 6. Final story."
 		}
 	]
