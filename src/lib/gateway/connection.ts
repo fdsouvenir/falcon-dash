@@ -25,6 +25,7 @@ export class GatewayConnection {
 	private frameHandlers = new Set<(frame: Frame) => void>();
 	private lastChallenge: ChallengePayload | null = null;
 	private _onHelloOk: ((helloOk: HelloOkPayload) => void) | null = null;
+	private _onClose: ((code: number, reason: string) => void) | null = null;
 	private _connId: string | null = null;
 	private _diagnosticCb: DiagnosticCallback | null = null;
 
@@ -42,6 +43,11 @@ export class GatewayConnection {
 	/** Register a callback invoked after hello-ok, before READY. Used to hydrate SnapshotStore. */
 	setOnHelloOk(callback: (helloOk: HelloOkPayload) => void): void {
 		this._onHelloOk = callback;
+	}
+
+	/** Register a callback invoked on unexpected WebSocket close (non-user-initiated). */
+	setOnClose(callback: (code: number, reason: string) => void): void {
+		this._onClose = callback;
 	}
 
 	/** Set a diagnostic callback for state transitions and protocol events */
@@ -69,15 +75,18 @@ export class GatewayConnection {
 		});
 
 		ws.addEventListener('message', (event: MessageEvent) => {
+			if (this.ws !== ws) return;
 			this.handleMessage(event);
 		});
 
 		ws.addEventListener('close', (event: CloseEvent) => {
+			if (this.ws !== ws) return;
 			this.handleClose(event);
 		});
 
 		ws.addEventListener('error', () => {
-			// Error always followed by close, handle there
+			if (this.ws !== ws) return;
+			this._diagnosticCb?.('ws-error');
 		});
 	}
 
@@ -124,8 +133,8 @@ export class GatewayConnection {
 			return;
 		}
 
-		// Handle hello-ok response
-		if (frame.type === 'res' && (frame as ResponseFrame).id === '1') {
+		// Handle hello-ok response (connect frame uses '__connect' to avoid correlator ID collision)
+		if (frame.type === 'res' && (frame as ResponseFrame).id === '__connect') {
 			const res = frame as ResponseFrame;
 			if (res.ok && res.payload) {
 				const helloOk = res.payload as unknown as HelloOkPayload;
@@ -169,6 +178,7 @@ export class GatewayConnection {
 		} else {
 			this._state.set('DISCONNECTED');
 			this._diagnosticCb?.('close', { code: event.code, reason: event.reason });
+			this._onClose?.(event.code, event.reason ?? '');
 		}
 	}
 
@@ -180,7 +190,7 @@ export class GatewayConnection {
 
 		const connectFrame: RequestFrame = {
 			type: 'req',
-			id: '1',
+			id: '__connect',
 			method: 'connect',
 			params: {
 				minProtocol: PROTOCOL_VERSION,
@@ -194,7 +204,13 @@ export class GatewayConnection {
 					instanceId
 				},
 				role: 'operator',
-				scopes: ['operator.read', 'operator.write'],
+				scopes: [
+					'operator.read',
+					'operator.write',
+					'operator.admin',
+					'operator.approvals',
+					'operator.pairing'
+				],
 				caps: [],
 				commands: [],
 				permissions: {},

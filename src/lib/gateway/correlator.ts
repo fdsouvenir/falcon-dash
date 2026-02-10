@@ -126,6 +126,17 @@ export class RequestCorrelator {
 		return true;
 	}
 
+	/** Cancel a single pending request by ID (e.g., when send fails) */
+	cancel(id: string, error: Error): void {
+		const entry = this.pending.get(id);
+		if (entry) {
+			clearTimeout(entry.timer);
+			this.pending.delete(id);
+			entry.reject(error);
+			this.updateMetrics();
+		}
+	}
+
 	/** Cancel all pending requests (e.g., on disconnect) */
 	cancelAll(reason = 'Connection closed'): void {
 		for (const [id, pending] of this.pending) {

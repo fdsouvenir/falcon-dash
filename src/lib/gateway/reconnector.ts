@@ -6,9 +6,12 @@ import type { ConnectionConfig } from './types.js';
 const BACKOFF_BASE_MS = 800;
 const BACKOFF_MULTIPLIER = 1.7;
 const BACKOFF_CAP_MS = 15_000;
+const MAX_ATTEMPTS_DEFAULT = 20;
 
 export interface ReconnectorMetrics {
 	attempt: number;
+	maxAttempts: number;
+	exhausted: boolean;
 	nextRetryAt: number | null;
 	nextRetryDelayMs: number | null;
 	lastReconnectAt: number | null;
@@ -20,15 +23,20 @@ export class Reconnector {
 	private eventBus: EventBus;
 	private config: ConnectionConfig | null = null;
 	private attempt = 0;
+	private maxAttempts = MAX_ATTEMPTS_DEFAULT;
+	private _exhausted = false;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private tickTimer: ReturnType<typeof setTimeout> | null = null;
 	private tickIntervalMs: number | null = null;
 	private enabled = false;
 	private shutdownDelay: number | null = null;
 	private unsubscribers: Array<() => void> = [];
+	private onlineListener: (() => void) | null = null;
 
 	private _metrics = writable<ReconnectorMetrics>({
 		attempt: 0,
+		maxAttempts: MAX_ATTEMPTS_DEFAULT,
+		exhausted: false,
 		nextRetryAt: null,
 		nextRetryDelayMs: null,
 		lastReconnectAt: null,
@@ -40,6 +48,9 @@ export class Reconnector {
 
 	/** Optional callback fired on tick timeout (before reconnect is scheduled) */
 	onTickTimeout: ((timeoutMs: number) => void) | null = null;
+
+	/** Optional callback fired when max reconnection attempts are exhausted */
+	onMaxAttemptsExhausted: (() => void) | null = null;
 
 	constructor(connection: GatewayConnection, eventBus: EventBus) {
 		this.connection = connection;
@@ -53,6 +64,7 @@ export class Reconnector {
 		this.config = config;
 		this.enabled = true;
 		this.attempt = 0;
+		this._exhausted = false;
 		this.subscribeToEvents();
 	}
 
@@ -63,6 +75,7 @@ export class Reconnector {
 		this.enabled = false;
 		this.cancelTimer();
 		this.cancelTickTimer();
+		this.cleanupOnlineListener();
 		this.unsubscribeAll();
 	}
 
@@ -72,10 +85,14 @@ export class Reconnector {
 	 */
 	onConnected(tickIntervalMs: number): void {
 		this.attempt = 0;
+		this._exhausted = false;
 		this.shutdownDelay = null;
 		this.tickIntervalMs = tickIntervalMs;
+		this.cleanupOnlineListener();
 		this._metrics.set({
 			attempt: 0,
+			maxAttempts: this.maxAttempts,
+			exhausted: false,
 			nextRetryAt: null,
 			nextRetryDelayMs: null,
 			lastReconnectAt: Date.now(),
@@ -88,9 +105,43 @@ export class Reconnector {
 	 * Trigger a reconnection attempt. Sets state to RECONNECTING and schedules retry.
 	 */
 	scheduleReconnect(): void {
+		this.cancelTimer();
+		this.cancelTickTimer();
 		if (!this.enabled || !this.config) return;
 
-		this.cancelTickTimer();
+		// Check if max attempts exhausted
+		if (this.attempt >= this.maxAttempts) {
+			this._exhausted = true;
+			this.connection.setConnectionState('DISCONNECTED');
+			this._metrics.set({
+				attempt: this.attempt,
+				maxAttempts: this.maxAttempts,
+				exhausted: true,
+				nextRetryAt: null,
+				nextRetryDelayMs: null,
+				lastReconnectAt: Date.now(),
+				tickIntervalMs: this.tickIntervalMs
+			});
+			this.onMaxAttemptsExhausted?.();
+			return;
+		}
+
+		// Check network status — don't burn attempts while offline
+		if (typeof navigator !== 'undefined' && !navigator.onLine) {
+			this.connection.setConnectionState('RECONNECTING');
+			this._metrics.set({
+				attempt: this.attempt,
+				maxAttempts: this.maxAttempts,
+				exhausted: false,
+				nextRetryAt: null,
+				nextRetryDelayMs: null,
+				lastReconnectAt: Date.now(),
+				tickIntervalMs: this.tickIntervalMs
+			});
+			this.waitForOnline();
+			return;
+		}
+
 		this.connection.setConnectionState('RECONNECTING');
 
 		const delay = this.getDelay();
@@ -99,6 +150,8 @@ export class Reconnector {
 		const now = Date.now();
 		this._metrics.set({
 			attempt: this.attempt,
+			maxAttempts: this.maxAttempts,
+			exhausted: false,
 			nextRetryAt: now + delay,
 			nextRetryDelayMs: delay,
 			lastReconnectAt: now,
@@ -111,6 +164,15 @@ export class Reconnector {
 				this.connection.connect(this.config);
 			}
 		}, delay);
+	}
+
+	/**
+	 * Reset attempt counter and exhausted state. Use for manual retry after exhaustion.
+	 */
+	resetAttempts(): void {
+		this.attempt = 0;
+		this._exhausted = false;
+		this._metrics.update((m) => ({ ...m, attempt: 0, exhausted: false }));
 	}
 
 	private subscribeToEvents(): void {
@@ -161,6 +223,28 @@ export class Reconnector {
 		this.cancelTickTimer();
 		if (this.enabled) {
 			this.scheduleReconnect();
+		}
+	}
+
+	/**
+	 * Wait for the browser to come back online before retrying.
+	 * Does not increment the attempt counter while offline.
+	 */
+	private waitForOnline(): void {
+		if (this.onlineListener) return; // Already waiting
+		this.onlineListener = () => {
+			this.cleanupOnlineListener();
+			if (this.enabled) {
+				this.scheduleReconnect();
+			}
+		};
+		window.addEventListener('online', this.onlineListener);
+	}
+
+	private cleanupOnlineListener(): void {
+		if (this.onlineListener) {
+			window.removeEventListener('online', this.onlineListener);
+			this.onlineListener = null;
 		}
 	}
 

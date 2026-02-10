@@ -56,6 +56,28 @@ export class DiagnosticLog {
 	export(): string {
 		return JSON.stringify(this.buffer, null, 2);
 	}
+
+	/** Return a snapshot summary of the diagnostic log */
+	summary(): Record<string, unknown> {
+		const errors = this.buffer.filter((e) => e.level === 'error');
+		const lastError = errors.length > 0 ? errors[errors.length - 1] : null;
+		const reconnections = this.buffer.filter((e) => e.category === 'reconnect').length;
+
+		return {
+			entryCount: this.buffer.length,
+			errorCount: errors.length,
+			warnCount: this.buffer.filter((e) => e.level === 'warn').length,
+			totalReconnections: reconnections,
+			lastError: lastError
+				? { ts: lastError.ts, message: lastError.message, detail: lastError.detail }
+				: null,
+			oldestEntry: this.buffer.length > 0 ? new Date(this.buffer[0].ts).toISOString() : null,
+			newestEntry:
+				this.buffer.length > 0
+					? new Date(this.buffer[this.buffer.length - 1].ts).toISOString()
+					: null
+		};
+	}
 }
 
 /** Singleton diagnostic log instance */

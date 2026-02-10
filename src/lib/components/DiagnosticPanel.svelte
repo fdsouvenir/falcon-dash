@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { diagnosticLog } from '$lib/stores/diagnostics.js';
+	import { getConnectionSummary } from '$lib/stores/gateway.js';
 	import type { DiagnosticEvent, DiagnosticLevel } from '$lib/gateway/diagnostic-log.js';
 
 	let { open = $bindable(false) } = $props();
@@ -53,6 +54,10 @@
 
 	function handleCopyLog() {
 		navigator.clipboard.writeText(diagnosticLog.export());
+	}
+
+	function handleCopySummary() {
+		navigator.clipboard.writeText(JSON.stringify(getConnectionSummary(), null, 2));
 	}
 
 	function handleClose() {
@@ -149,6 +154,12 @@
 				<option value="info">Info</option>
 				<option value="debug">Debug</option>
 			</select>
+			<button
+				class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+				onclick={handleCopySummary}
+			>
+				Copy Summary
+			</button>
 			<button
 				class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
 				onclick={handleCopyLog}

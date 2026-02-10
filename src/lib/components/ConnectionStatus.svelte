@@ -17,6 +17,8 @@
 	let currentTime = $state(Date.now());
 	let reconnectMetrics = $state<ReconnectorMetrics>({
 		attempt: 0,
+		maxAttempts: 20,
+		exhausted: false,
 		nextRetryAt: null,
 		nextRetryDelayMs: null,
 		lastReconnectAt: null,
@@ -140,6 +142,7 @@
 	}
 
 	function handleRetryConnection() {
+		reconnector.resetAttempts();
 		let url = 'ws://127.0.0.1:18789';
 		let token: string | null = null;
 		const unsubUrl = gatewayUrl.subscribe((v) => {
@@ -229,14 +232,31 @@
 					<div class="border-t border-gray-700 pt-2 mt-2">
 						<div>
 							<dt class="text-gray-400">Attempt</dt>
-							<dd class="text-yellow-400">{reconnectMetrics.attempt}</dd>
+							<dd class="text-yellow-400">
+								{reconnectMetrics.attempt}/{reconnectMetrics.maxAttempts}
+							</dd>
 						</div>
 						<div class="mt-1">
 							<dt class="text-gray-400">Next retry in</dt>
 							<dd class="text-yellow-400">
-								{retryCountdown !== null ? `${retryCountdown}s` : 'scheduling...'}
+								{retryCountdown !== null ? `${retryCountdown}s` : 'waiting for network...'}
 							</dd>
 						</div>
+					</div>
+				{/if}
+
+				<!-- Retries exhausted -->
+				{#if reconnectMetrics.exhausted && connectionState === 'DISCONNECTED'}
+					<div class="border-t border-gray-700 pt-2 mt-2">
+						<p class="text-red-400 mb-2">
+							Connection failed after {reconnectMetrics.maxAttempts} attempts
+						</p>
+						<button
+							class="w-full rounded bg-blue-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+							onclick={handleRetryConnection}
+						>
+							Retry Connection
+						</button>
 					</div>
 				{/if}
 

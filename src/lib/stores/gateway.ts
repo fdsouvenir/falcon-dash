@@ -1,3 +1,4 @@
+import { get } from 'svelte/store';
 import { GatewayConnection } from '$lib/gateway/connection.js';
 import { RequestCorrelator } from '$lib/gateway/correlator.js';
 import { EventBus } from '$lib/gateway/event-bus.js';
@@ -43,11 +44,38 @@ connection.setDiagnosticCallback((event, detail) => {
 		case 'close':
 			diagnosticLog.log('connection', 'warn', 'Connection closed', detail);
 			break;
+		case 'ws-error':
+			diagnosticLog.log('error', 'warn', 'WebSocket error event (close will follow)');
+			break;
 		case 'parse-error':
 			diagnosticLog.log('error', 'error', 'Failed to parse gateway frame');
 			break;
 	}
 });
+
+// --- Wire unexpected close to reconnector and correlator ---
+connection.setOnClose((code, reason) => {
+	diagnosticLog.log('connection', 'warn', `Unexpected close: code=${code}`, { code, reason });
+	correlator.cancelAll('Connection lost unexpectedly');
+	reconnector.onDisconnect();
+});
+
+// --- Disable reconnector on terminal auth states ---
+connection.state.subscribe((state) => {
+	if (state === 'AUTH_FAILED' || state === 'PAIRING_REQUIRED') {
+		reconnector.disable();
+	}
+});
+
+// --- Max reconnection attempts exhausted ---
+reconnector.onMaxAttemptsExhausted = () => {
+	diagnosticLog.log('reconnect', 'error', 'Max reconnection attempts exhausted — giving up');
+	addToast(
+		'Unable to reach gateway after multiple attempts. Check your connection and retry.',
+		'error',
+		0
+	);
+};
 
 // --- Toast notifications on state transitions ---
 let previousState: ConnectionState = 'DISCONNECTED';
@@ -56,7 +84,10 @@ connection.state.subscribe((state) => {
 		addToast('Authentication failed. Check your gateway token.', 'error', 8000);
 	} else if (state === 'PAIRING_REQUIRED') {
 		addToast('Device pairing required.', 'error', 8000);
-	} else if (state === 'RECONNECTING' && previousState === 'READY') {
+	} else if (
+		state === 'RECONNECTING' &&
+		(previousState === 'READY' || previousState === 'DISCONNECTED')
+	) {
 		addToast('Connection lost. Reconnecting...', 'info', 4000);
 	} else if (state === 'READY' && previousState === 'RECONNECTING') {
 		addToast('Reconnected to gateway.', 'success', 3000);
@@ -101,8 +132,8 @@ connection.setOnHelloOk((helloOk) => {
  */
 export function connectToGateway(url: string, token: string): void {
 	const config = { url, token, instanceId: crypto.randomUUID() };
-	connection.connect(config);
 	reconnector.enable(config);
+	connection.connect(config);
 }
 
 /**
@@ -122,6 +153,47 @@ export function disconnectFromGateway(): void {
 export function call<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
 	const id = correlator.nextId();
 	const promise = correlator.track<T>(id);
-	connection.send({ type: 'req', id, method, params });
+	try {
+		connection.send({ type: 'req', id, method, params });
+	} catch (err) {
+		correlator.cancel(id, err instanceof Error ? err : new Error(String(err)));
+	}
 	return promise;
+}
+
+/**
+ * Return a complete connection health snapshot for diagnostics export.
+ */
+export function getConnectionSummary(): Record<string, unknown> {
+	const state = get(connection.state);
+	const reconMetrics = get(reconnector.metrics);
+	const corrMetrics = get(correlator.metrics);
+
+	return {
+		timestamp: new Date().toISOString(),
+		connectionState: state,
+		connId: connection.connId,
+		networkOnline: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
+		reconnect: {
+			attempt: reconMetrics.attempt,
+			maxAttempts: reconMetrics.maxAttempts,
+			exhausted: reconMetrics.exhausted,
+			tickIntervalMs: reconMetrics.tickIntervalMs
+		},
+		requests: {
+			total: corrMetrics.totalRequests,
+			pending: corrMetrics.pendingCount,
+			timeouts: corrMetrics.totalTimeouts,
+			errors: corrMetrics.totalErrors,
+			successRate:
+				corrMetrics.totalRequests > 0
+					? (
+							((corrMetrics.totalRequests - corrMetrics.totalErrors - corrMetrics.totalTimeouts) /
+								corrMetrics.totalRequests) *
+							100
+						).toFixed(1) + '%'
+					: 'N/A'
+		},
+		log: diagnosticLog.summary()
+	};
 }
