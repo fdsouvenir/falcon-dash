@@ -279,22 +279,22 @@ export class CanvasStore {
 		});
 	}
 
-	/** Respond OK to a node.invoke.request */
+	/** Respond OK to a canvas bridge invoke request */
 	private respondOk(requestId: string): void {
 		if (!this.callFn) return;
-		this.callFn('node.invoke.result', {
-			requestId,
+		this.callFn('canvas.bridge.invokeResult', {
+			id: requestId,
 			ok: true
 		}).catch((err) => {
 			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
 		});
 	}
 
-	/** Respond with error to a node.invoke.request */
+	/** Respond with error to a canvas bridge invoke request */
 	private respondError(requestId: string, message: string): void {
 		if (!this.callFn) return;
-		this.callFn('node.invoke.result', {
-			requestId,
+		this.callFn('canvas.bridge.invokeResult', {
+			id: requestId,
 			ok: false,
 			error: { code: 'CANVAS_ERROR', message }
 		}).catch((err) => {

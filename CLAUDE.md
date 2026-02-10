@@ -115,7 +115,7 @@ Standalone OpenClaw gateway plugin that bridges operators into the canvas pipeli
 - **`canvas.bridge.unregister`** — explicit cleanup via `nodeRegistry.unregister()`
 
 Build: `cd openclaw-canvas-bridge && npm install && npm run build`
-Install: `openclaw plugin install ./openclaw-canvas-bridge`
+Install: `openclaw plugins install ./openclaw-canvas-bridge` (then restart gateway)
 
 ## Gateway Protocol Quick Reference
 

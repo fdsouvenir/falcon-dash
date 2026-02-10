@@ -124,6 +124,13 @@ connection.setOnHelloOk((helloOk) => {
 	snapshot.hydrate(helloOk);
 	snapshot.subscribe(eventBus);
 	canvasStore.subscribe(eventBus, call);
+	call('canvas.bridge.register', {}).catch(() => {
+		diagnosticLog.log(
+			'canvas',
+			'info',
+			'canvas.bridge.register unavailable — plugin not installed'
+		);
+	});
 	reconnector.onConnected(helloOk.policy.tickIntervalMs);
 	tickHealth.set({
 		lastTickAt: Date.now(),

@@ -15,5 +15,10 @@
 	"devDependencies": {
 		"openclaw": "*",
 		"typescript": "^5.7.0"
+	},
+	"openclaw": {
+		"extensions": [
+			"dist/index.js"
+		]
 	}
 }
