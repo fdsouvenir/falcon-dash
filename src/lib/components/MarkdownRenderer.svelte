@@ -1,14 +1,70 @@
 <script lang="ts">
 	import { renderMarkdownSync } from '$lib/chat/markdown.js';
+	import MermaidDiagram from './MermaidDiagram.svelte';
 
 	let { content = '' }: { content: string } = $props();
 
-	let html = $derived(renderMarkdownSync(content));
+	// Split content into segments: markdown text and mermaid blocks
+	interface Segment {
+		type: 'markdown' | 'mermaid';
+		content: string;
+	}
+
+	let segments = $derived.by(() => {
+		const result: Array<Segment & { id: string }> = [];
+		const regex = /```mermaid\n([\s\S]*?)```/g;
+		let lastIndex = 0;
+		let match;
+		let segmentIndex = 0;
+
+		while ((match = regex.exec(content)) !== null) {
+			// Add markdown before mermaid block
+			if (match.index > lastIndex) {
+				result.push({
+					type: 'markdown',
+					content: content.slice(lastIndex, match.index),
+					id: `segment-${segmentIndex++}`
+				});
+			}
+			// Add mermaid block
+			result.push({
+				type: 'mermaid',
+				content: match[1].trim(),
+				id: `segment-${segmentIndex++}`
+			});
+			lastIndex = match.index + match[0].length;
+		}
+
+		// Add remaining markdown
+		if (lastIndex < content.length) {
+			result.push({
+				type: 'markdown',
+				content: content.slice(lastIndex),
+				id: `segment-${segmentIndex++}`
+			});
+		}
+
+		if (result.length === 0) {
+			result.push({ type: 'markdown', content, id: `segment-${segmentIndex++}` });
+		}
+
+		return result;
+	});
 </script>
 
+<svelte:head>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+</svelte:head>
+
 <div class="markdown-content prose prose-invert max-w-none">
-	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-	{@html html}
+	{#each segments as segment (segment.id)}
+		{#if segment.type === 'mermaid'}
+			<MermaidDiagram code={segment.content} />
+		{:else}
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			{@html renderMarkdownSync(segment.content)}
+		{/if}
+	{/each}
 </div>
 
 <style>

@@ -1,18 +1,45 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
+import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 
 // Extend sanitize schema to allow details/summary and other needed elements
 const sanitizeSchema = {
 	...defaultSchema,
-	tagNames: [...(defaultSchema.tagNames ?? []), 'details', 'summary', 'hr'],
+	tagNames: [
+		...(defaultSchema.tagNames ?? []),
+		'details',
+		'summary',
+		'hr',
+		'span',
+		'div',
+		'math',
+		'semantics',
+		'mrow',
+		'mi',
+		'mo',
+		'mn',
+		'msup',
+		'msub',
+		'mfrac',
+		'mover',
+		'munder',
+		'msqrt',
+		'mtext',
+		'annotation'
+	],
 	attributes: {
 		...defaultSchema.attributes,
 		details: ['open'],
+		span: ['class', 'style', 'aria-hidden'],
+		div: ['class', 'style'],
+		annotation: ['encoding'],
+		math: ['xmlns'],
 		'*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'class']
 	}
 };
@@ -20,8 +47,10 @@ const sanitizeSchema = {
 const processor = unified()
 	.use(remarkParse)
 	.use(remarkGfm)
+	.use(remarkMath)
 	.use(remarkRehype, { allowDangerousHtml: true })
 	.use(rehypeRaw)
+	.use(rehypeKatex)
 	.use(rehypeSanitize, sanitizeSchema)
 	.use(rehypeStringify);
 
