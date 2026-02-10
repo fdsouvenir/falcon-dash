@@ -586,3 +586,21 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - formatJson() in editor component handles display formatting without modifying stored content
   - 409 status from PUT indicates external modification — show reload prompt
 ---
+
+## 2026-02-10 — US-039: Document create and upload
+- Added PATCH handler to `src/routes/api/files/[...path]/+server.ts` for rename operations
+- Added createFile, createFolder, deleteEntry, renameEntry, uploadFile to `src/lib/stores/files.ts`
+- Enhanced `src/lib/components/DocumentBrowser.svelte` with full file management:
+  - Toolbar: + File, + Folder, Upload buttons
+  - Inline hover actions: Rename, Copy Path, Download, Delete
+  - Right-click context menu with same actions
+  - Drag-and-drop upload with visual overlay
+  - Modal dialogs for create file, create folder, delete confirmation
+  - Inline rename with Enter/Escape keyboard support
+- **Learnings for future iterations:**
+  - PATCH handler validates newName to prevent path traversal (no / or ..)
+  - Upload uses POST for new files, falls back to PUT if file exists (409)
+  - Context menu uses fixed positioning with click-away-to-close pattern
+  - Drag-and-drop uses ondragover/ondragleave/ondrop on container div
+  - File download creates temporary anchor element with download attribute
+---

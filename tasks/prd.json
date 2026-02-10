@@ -659,7 +659,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 39,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P3A-04."
 		},
 		{
