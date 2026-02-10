@@ -19,6 +19,7 @@ export interface ChatMessage {
 	thinkingText?: string;
 	toolCalls?: ToolCallInfo[];
 	errorMessage?: string;
+	replyToMessageId?: string;
 }
 
 export interface ToolCallInfo {
@@ -46,11 +47,13 @@ export function createChatSession(sessionKey: string) {
 	const _activeRunId: Writable<string | null> = writable(null);
 	const _isStreaming: Writable<boolean> = writable(false);
 	const _pendingQueue: Writable<string[]> = writable([]);
+	const _replyTo: Writable<ChatMessage | null> = writable(null);
 
 	// Public readable stores
 	const messages: Readable<ChatMessage[]> = readonly(_messages);
 	const activeRunId: Readable<string | null> = readonly(_activeRunId);
 	const isStreaming: Readable<boolean> = readonly(_isStreaming);
+	const replyTo: Readable<ChatMessage | null> = readonly(_replyTo);
 
 	// Derived: is there an active run?
 	const hasActiveRun: Readable<boolean> = derived(_activeRunId, ($id) => $id !== null);
@@ -150,20 +153,32 @@ export function createChatSession(sessionKey: string) {
 	}
 
 	/**
+	 * Set or clear the message being replied to.
+	 */
+	function setReplyTo(message: ChatMessage | null): void {
+		_replyTo.set(message);
+	}
+
+	/**
 	 * Send a message to the agent. Optimistic: user message appears immediately.
 	 */
 	async function send(message: string): Promise<void> {
 		const idempotencyKey = crypto.randomUUID();
+		const currentReplyTo = get(_replyTo);
 		const userMessage: ChatMessage = {
 			id: idempotencyKey,
 			role: 'user',
 			content: message,
 			timestamp: Date.now(),
-			status: 'sending'
+			status: 'sending',
+			replyToMessageId: currentReplyTo?.id
 		};
 
 		// Optimistic: add user message immediately
 		_messages.update((msgs) => [...msgs, userMessage]);
+
+		// Clear reply state after using it
+		_replyTo.set(null);
 
 		// Check connection state — queue if not ready
 		const state = get(connection.state);
@@ -179,7 +194,8 @@ export function createChatSession(sessionKey: string) {
 				sessionKey,
 				message,
 				idempotencyKey,
-				deliver: false
+				deliver: false,
+				replyToMessageId: currentReplyTo?.id
 			});
 
 			const runId = result.runId;
@@ -299,7 +315,9 @@ export function createChatSession(sessionKey: string) {
 		isStreaming,
 		hasActiveRun,
 		pendingQueue: readonly(_pendingQueue) as Readable<string[]>,
+		replyTo,
 		send,
+		setReplyTo,
 		abort,
 		loadHistory,
 		reconcile,
