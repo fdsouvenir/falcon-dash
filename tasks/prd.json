@@ -1,0 +1,1728 @@
+{
+	"project": "falcon-dash",
+	"branchName": "ralph/falcon-dash",
+	"description": "Unified web dashboard for the OpenClaw AI platform — chat, project management, documents, agent jobs, passwords, settings, and Canvas/A2UI",
+	"userStories": [
+		{
+			"id": "US-001",
+			"title": "Scaffold SvelteKit project",
+			"description": "As a developer, I want a properly configured SvelteKit project so that I have a foundation to build all modules on.",
+			"acceptanceCriteria": [
+				"SvelteKit project initialized with TypeScript strict mode",
+				"Tailwind CSS configured with project Prettier config (tabs, single quotes, no trailing commas)",
+				"ESLint + Prettier configured and passing",
+				"Folder structure: src/lib/gateway/, src/lib/stores/, src/lib/components/, src/routes/",
+				"vite.config.ts configured for dev proxy to gateway port 18789",
+				"Typecheck passes"
+			],
+			"priority": 1,
+			"passes": false,
+			"notes": "PRD: P1-01. Phase 1: Core Infrastructure."
+		},
+		{
+			"id": "US-002",
+			"title": "Implement GatewayConnection class",
+			"description": "As a developer, I want a low-level WebSocket connection manager so that all modules can communicate with the gateway.",
+			"acceptanceCriteria": [
+				"GatewayConnection class manages WS lifecycle (open, close, send, receive)",
+				"Sends client.id: 'openclaw-control-ui' and client.mode: 'webchat'",
+				"Handles connect.challenge event on WS open",
+				"Sends connect request frame with protocol version 3",
+				"Parses hello-ok response and exposes snapshot, features, policy",
+				"Exposes connection state as a Svelte readable store",
+				"Typecheck passes"
+			],
+			"priority": 2,
+			"passes": false,
+			"notes": "PRD: P1-02. Gateway URL default: ws://127.0.0.1:18789"
+		},
+		{
+			"id": "US-003",
+			"title": "Implement RequestCorrelator",
+			"description": "As a developer, I want request/response correlation so that call() returns a typed Promise for any gateway method.",
+			"acceptanceCriteria": [
+				"Maps req.id to pending Promise",
+				"Resolves Promise on matching res frame with ok: true",
+				"Rejects Promise on matching res frame with ok: false (includes error code, message, details)",
+				"Timeout handling per request (configurable, default 30s)",
+				"Generates unique request IDs (monotonic counter or UUID)",
+				"Generates idempotency keys for mutating methods",
+				"Typecheck passes"
+			],
+			"priority": 3,
+			"passes": false,
+			"notes": "PRD: P1-03."
+		},
+		{
+			"id": "US-004",
+			"title": "Implement EventBus",
+			"description": "As a developer, I want an event subscription system so that modules can react to server-push events.",
+			"acceptanceCriteria": [
+				"on(event, handler) registers handler and returns unsubscribe function",
+				"once(event) returns a Promise that resolves on the next occurrence",
+				"Supports wildcard patterns (e.g., pm.*)",
+				"Auto-cleanup on disconnect (all handlers cleared)",
+				"Dispatches agent, chat, presence, tick, shutdown, exec-approval.*, pm, cron, health, heartbeat events",
+				"Typecheck passes"
+			],
+			"priority": 4,
+			"passes": false,
+			"notes": "PRD: P1-04."
+		},
+		{
+			"id": "US-005",
+			"title": "Implement SnapshotStore",
+			"description": "As a developer, I want a reactive store hydrated from hello-ok so that the UI can render gateway state immediately on connect.",
+			"acceptanceCriteria": [
+				"Hydrated from hello-ok.snapshot (presence, health, stateVersion, sessionDefaults)",
+				"Presence store updated incrementally from presence events",
+				"Health store updated from health events",
+				"stateVersion tracked per domain ({ presence: N, health: N })",
+				"Session defaults (model, contextTokens, thinking level) exposed as readable stores",
+				"features.methods from hello-ok stored for runtime feature detection",
+				"Typecheck passes"
+			],
+			"priority": 5,
+			"passes": false,
+			"notes": "PRD: P1-05."
+		},
+		{
+			"id": "US-006",
+			"title": "Implement Connection State Machine",
+			"description": "As a developer, I want a well-defined connection state machine so that the UI shows accurate connection status.",
+			"acceptanceCriteria": [
+				"States: DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, PAIRING_REQUIRED, AUTH_FAILED, READY, RECONNECTING",
+				"Transitions match architecture spec section 4.2",
+				"State exposed as a Svelte readable store",
+				"READY state set only after hello-ok received and snapshot hydrated",
+				"Typecheck passes"
+			],
+			"priority": 6,
+			"passes": false,
+			"notes": "PRD: P1-06."
+		},
+		{
+			"id": "US-007",
+			"title": "Implement reconnection with exponential backoff",
+			"description": "As a user, I want the dashboard to automatically reconnect so that I never have to manually refresh.",
+			"acceptanceCriteria": [
+				"Exponential backoff: 800ms base, 1.7x multiplier, 15s cap",
+				"Reconnection triggered on WS close or tick timeout (2x policy.tickIntervalMs)",
+				"On shutdown event, uses restartExpectedMs as initial delay",
+				"On successful reconnect, hydrates from new hello-ok snapshot",
+				"Attempt counter resets on successful connection",
+				"Tick interval read dynamically from hello-ok policy (never hardcoded)",
+				"Typecheck passes"
+			],
+			"priority": 7,
+			"passes": false,
+			"notes": "PRD: P1-07."
+		},
+		{
+			"id": "US-008",
+			"title": "Implement token-only auth (dev mode)",
+			"description": "As a developer, I want token-only authentication so that I can connect during development without device identity.",
+			"acceptanceCriteria": [
+				"Sends auth.token from stored gateway token",
+				"Works when gateway.controlUi.allowInsecureAuth: true is set",
+				"Token stored in localStorage",
+				"Gateway token entry UI (paste token on first connect)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 8,
+			"passes": false,
+			"notes": "PRD: P1-08."
+		},
+		{
+			"id": "US-009",
+			"title": "Implement app shell layout",
+			"description": "As a user, I want a sidebar navigation layout so that I can switch between modules.",
+			"acceptanceCriteria": [
+				"Sidebar with two sections: Chats and Apps",
+				"Apps section: Projects, Documents, Agent Jobs entries",
+				"Settings and Passwords links at sidebar bottom",
+				"Connection status indicator in sidebar header",
+				"Responsive: sidebar collapses on mobile",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 9,
+			"passes": false,
+			"notes": "PRD: P1-09. Chats section populated in Phase 2."
+		},
+		{
+			"id": "US-010",
+			"title": "Implement connection status indicator",
+			"description": "As a user, I want to see connection status at a glance so that I know if the dashboard is connected.",
+			"acceptanceCriteria": [
+				"Green dot when READY, yellow dot + 'Reconnecting...' when RECONNECTING, red dot + 'Disconnected' when DISCONNECTED",
+				"Shows gateway host name from hello-ok.server.host",
+				"Clicking shows connection details (connId, uptime, protocol version)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 10,
+			"passes": false,
+			"notes": "PRD: P1-10."
+		},
+		{
+			"id": "US-011",
+			"title": "Render presence list from snapshot",
+			"description": "As a user, I want to see who/what is connected so that I know the system status.",
+			"acceptanceCriteria": [
+				"Presence list rendered from hello-ok.snapshot.presence",
+				"Updated in real-time from presence events",
+				"Shows device type, display name, connection duration",
+				"Deduplicates by instanceId",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 11,
+			"passes": false,
+			"notes": "PRD: P1-11."
+		},
+		{
+			"id": "US-012",
+			"title": "Implement PWA manifest",
+			"description": "As a user, I want a basic PWA manifest so that I can install the dashboard as an app.",
+			"acceptanceCriteria": [
+				"manifest.json with app name, icons, theme color, display: standalone",
+				"Proper <link rel='manifest'> in app.html",
+				"App icon in multiple sizes (192px, 512px)",
+				"start_url set to /",
+				"theme-color and background-color set",
+				"Typecheck passes"
+			],
+			"priority": 12,
+			"passes": false,
+			"notes": "PRD: P1-12. End of Phase 1."
+		},
+		{
+			"id": "US-013",
+			"title": "Implement AgentStreamManager",
+			"description": "As a developer, I want a stream manager for agent responses so that the chat UI can render streaming content.",
+			"acceptanceCriteria": [
+				"Tracks active agent runs by runId",
+				"Handles two-stage response: ack ({ runId, status: 'started' }) -> stream -> final ({ runId, status: 'ok' })",
+				"Accumulates event:agent deltas (text contains full accumulated text, not incremental diffs)",
+				"Emits higher-level events: messageStart, delta, toolCall, toolResult, messageEnd",
+				"Detects seq gaps in agent events",
+				"Handles chat.abort for stopping active runs",
+				"Typecheck passes"
+			],
+			"priority": 13,
+			"passes": false,
+			"notes": "PRD: P2-01. Phase 2: Chat Module."
+		},
+		{
+			"id": "US-014",
+			"title": "Implement Chat Store",
+			"description": "As a developer, I want per-session reactive stores so that the chat UI stays in sync with gateway state.",
+			"acceptanceCriteria": [
+				"Per-session writable store with message list",
+				"Active run tracking by runId",
+				"Streaming deltas append to current message buffer",
+				"Final response commits message to history",
+				"Optimistic send: user message appears immediately, confirmed on ack",
+				"Error state for failed sends",
+				"Messages deduped by ID on reconnect reconciliation",
+				"Typecheck passes"
+			],
+			"priority": 14,
+			"passes": false,
+			"notes": "PRD: P2-02."
+		},
+		{
+			"id": "US-015",
+			"title": "Implement markdown pipeline (CommonMark + GFM)",
+			"description": "As a user, I want basic rich message rendering so that agent responses display formatted content.",
+			"acceptanceCriteria": [
+				"unified/remark/rehype pipeline for CommonMark + GFM (tables, strikethrough, task lists)",
+				"Renders headings, lists, blockquotes, links, images, inline code, code blocks",
+				"GFM tables render correctly",
+				"Collapsible <details>/<summary> sections render",
+				"Compaction divider renders as visual separator",
+				"Link previews (URL unfurling) supported",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 15,
+			"passes": false,
+			"notes": "PRD: P2-03a. Split from P2-03 (Markdown Rendering Pipeline)."
+		},
+		{
+			"id": "US-016",
+			"title": "Implement math and diagram rendering",
+			"description": "As a user, I want math equations and diagrams rendered inline so that technical content displays correctly.",
+			"acceptanceCriteria": [
+				"KaTeX renders inline math ($...$) and block equations ($$...$$)",
+				"Mermaid.js renders flowcharts, sequence diagrams, pie charts, Gantt charts, state diagrams",
+				"Diagrams render within the markdown message flow",
+				"No rendering errors on malformed math/diagram input (graceful fallback)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 16,
+			"passes": false,
+			"notes": "PRD: P2-03b. Split from P2-03."
+		},
+		{
+			"id": "US-017",
+			"title": "Implement code highlighting and admonitions",
+			"description": "As a user, I want syntax-highlighted code blocks and callout boxes so that code and warnings are clearly formatted.",
+			"acceptanceCriteria": [
+				"Shiki provides syntax-highlighted code blocks with language detection",
+				"Admonition/callout boxes render for NOTE, TIP, WARNING, CAUTION, IMPORTANT",
+				"Code blocks show language label and copy button",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 17,
+			"passes": false,
+			"notes": "PRD: P2-03c. Split from P2-03."
+		},
+		{
+			"id": "US-018",
+			"title": "Implement thinking blocks",
+			"description": "As a user, I want to see the agent's thinking process so that I can understand its reasoning.",
+			"acceptanceCriteria": [
+				"Collapsible section above the response, default collapsed while streaming",
+				"Thinking text streams in real-time inside the collapsible",
+				"User can expand to watch thinking in progress; collapse state persists",
+				"Label: 'Thinking...' while streaming, 'Thought for Xs' when complete",
+				"Supports all thinking levels: off, minimal, low, medium, high, xhigh",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 18,
+			"passes": false,
+			"notes": "PRD: P2-04. Thinking levels are NOT off/on/stream."
+		},
+		{
+			"id": "US-019",
+			"title": "Implement tool call cards",
+			"description": "As a user, I want to see agent tool calls so that I know what actions the agent performed.",
+			"acceptanceCriteria": [
+				"Cards display tool name, arguments (collapsed by default), and result",
+				"Expandable to show full args and result JSON",
+				"Shows runtime shell information when available",
+				"Visual distinction between running, completed, and failed tool calls",
+				"Renders inline in the message flow at the point the tool was called",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 19,
+			"passes": false,
+			"notes": "PRD: P2-05."
+		},
+		{
+			"id": "US-020",
+			"title": "Implement message composer",
+			"description": "As a user, I want a rich message input so that I can communicate with the agent effectively.",
+			"acceptanceCriteria": [
+				"SHIFT+ENTER inserts newline (multi-line input)",
+				"ENTER sends message",
+				"File upload button + drag-and-drop to attach files",
+				"Clipboard paste support for screenshots/images",
+				"Disabled state while agent is responding (with abort button)",
+				"Auto-resize textarea to fit content",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 20,
+			"passes": false,
+			"notes": "PRD: P2-06."
+		},
+		{
+			"id": "US-021",
+			"title": "Implement slash commands",
+			"description": "As a user, I want slash commands in the composer so that I can quickly control the chat.",
+			"acceptanceCriteria": [
+				"Typing / opens autocomplete dropdown (Discord-style)",
+				"Fuzzy-filter as user types",
+				"Commands: /new, /status, /stop, /compact, /usage, /reasoning, /verbose, /context, /subagents, /send",
+				"/new [model] calls sessions.reset, optionally sets model",
+				"/stop calls chat.abort",
+				"/reasoning [level] calls sessions.patch with thinking level",
+				"/compact [instructions] calls sessions.compact",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 21,
+			"passes": false,
+			"notes": "PRD: P2-07."
+		},
+		{
+			"id": "US-022",
+			"title": "Implement chat list sidebar",
+			"description": "As a user, I want a list of my chats so that I can switch between conversations.",
+			"acceptanceCriteria": [
+				"Loads via sessions.list with kinds filter (only group sessions)",
+				"'General' chat always first, cannot be deleted or renamed",
+				"Regular chats can be created, renamed, deleted, reordered",
+				"Unread badges per chat",
+				"Search/filter chats",
+				"Live updates from session events",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 22,
+			"passes": false,
+			"notes": "PRD: P2-08."
+		},
+		{
+			"id": "US-023",
+			"title": "Implement new chat creation",
+			"description": "As a user, I want to create new chats so that I can start fresh conversations.",
+			"acceptanceCriteria": [
+				"'+ New Chat' button in chat list",
+				"Generates key: agent:<agentId>:webchat:group:<crypto.randomUUID()>",
+				"agentId from hello-ok.snapshot.sessionDefaults.defaultAgentId",
+				"Creates via sessions.patch with label",
+				"Navigates to new chat view",
+				"Session appears in sessions.list immediately",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 23,
+			"passes": false,
+			"notes": "PRD: P2-09."
+		},
+		{
+			"id": "US-024",
+			"title": "Implement General chat persistence",
+			"description": "As a user, I want a 'General' chat that always exists so that I have a default conversation.",
+			"acceptanceCriteria": [
+				"On first connect, checks sessions.list for group session with label 'General' and channel 'webchat'",
+				"If not found, creates via sessions.patch",
+				"Cannot be deleted or renamed",
+				"Default landing chat when opening the dashboard",
+				"Typecheck passes"
+			],
+			"priority": 24,
+			"passes": false,
+			"notes": "PRD: P2-10."
+		},
+		{
+			"id": "US-025",
+			"title": "Implement chat session settings",
+			"description": "As a user, I want per-chat settings so that I can configure individual conversations.",
+			"acceptanceCriteria": [
+				"Chat header shows current model and settings gear",
+				"Settings panel: model override, thinking level (off/minimal/low/medium/high/xhigh), verbose mode",
+				"Reset session (equivalent to /new)",
+				"Compact transcript (equivalent to /compact)",
+				"Settings applied via sessions.patch",
+				"Defaults from hello-ok.snapshot.sessionDefaults",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 25,
+			"passes": false,
+			"notes": "PRD: P2-11."
+		},
+		{
+			"id": "US-026",
+			"title": "Implement connection resilience for chat",
+			"description": "As a user, I want chat to survive reconnections so that I never lose messages.",
+			"acceptanceCriteria": [
+				"On reconnect, calls chat.history to fill message gaps since last known message",
+				"Deduplicates messages by ID when reconciling",
+				"Resumes streaming if agent was mid-response",
+				"Messages typed while disconnected are queued and sent on reconnect",
+				"Silent reconnect if <2s (no visible indicator)",
+				"Typecheck passes"
+			],
+			"priority": 26,
+			"passes": false,
+			"notes": "PRD: P2-12."
+		},
+		{
+			"id": "US-027",
+			"title": "Implement message replies",
+			"description": "As a user, I want to reply to specific messages so that I can reference earlier context.",
+			"acceptanceCriteria": [
+				"'Reply' action on message hover/menu",
+				"Composer shows compact preview of referenced message above input",
+				"Cancel reply by clicking X on preview",
+				"Reply messages display compact preview of referenced message above content",
+				"Clicking reply preview scrolls to and highlights referenced message",
+				"replyToMessageId sent in chat.send params",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 27,
+			"passes": false,
+			"notes": "PRD: P2-13."
+		},
+		{
+			"id": "US-028",
+			"title": "Implement thread panel",
+			"description": "As a user, I want threaded conversations so that I can discuss topics without cluttering the main chat.",
+			"acceptanceCriteria": [
+				"'Start Thread' action on messages opens side panel",
+				"Generates thread key: agent:<agentId>:webchat:group:<parentId>:thread:<uuid>",
+				"Creates thread session via sessions.patch with parentSessionId and originMessageId",
+				"Thread panel: header (name, parent chat, close), messages, composer",
+				"Independent message history for the thread sub-session",
+				"Thread composer sends to thread session, not parent",
+				"Messages with threads show thread indicator with reply count",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 28,
+			"passes": false,
+			"notes": "PRD: P2-14."
+		},
+		{
+			"id": "US-029",
+			"title": "Implement thread lifecycle",
+			"description": "As a user, I want threads to have lifecycle states so that old threads don't clutter the interface.",
+			"acceptanceCriteria": [
+				"Thread states: Active, Archived, Locked",
+				"Auto-archive after configurable inactivity (default 24h)",
+				"Sending a message to archived thread auto-unarchives",
+				"Thread list button in chat header shows all threads for current chat",
+				"Thread list: name, last activity, message count, state",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 29,
+			"passes": false,
+			"notes": "PRD: P2-15."
+		},
+		{
+			"id": "US-030",
+			"title": "Implement Discord chat sync",
+			"description": "As a user, I want chats synced with Discord channels so that I can use either interface.",
+			"acceptanceCriteria": [
+				"Creating a chat in the dashboard syncs as a new Discord channel (when Discord is connected)",
+				"Creating a channel in Discord syncs as a new chat in the dashboard",
+				"Renaming/deleting syncs bidirectionally",
+				"Messages sent from dashboard appear in Discord and vice versa",
+				"Chat list updates in real-time when Discord channels change",
+				"Typecheck passes"
+			],
+			"priority": 30,
+			"passes": false,
+			"notes": "PRD: P2-16."
+		},
+		{
+			"id": "US-031",
+			"title": "Implement Discord thread sync",
+			"description": "As a user, I want threads synced with Discord threads so that threaded conversations work across both interfaces.",
+			"acceptanceCriteria": [
+				"Creating a thread in the dashboard syncs as a new Discord thread",
+				"Creating a thread in Discord syncs as a thread sub-session",
+				"Thread archive/unarchive syncs bidirectionally",
+				"Thread messages sync in both directions",
+				"Typecheck passes"
+			],
+			"priority": 31,
+			"passes": false,
+			"notes": "PRD: P2-17."
+		},
+		{
+			"id": "US-032",
+			"title": "Implement Discord reply sync",
+			"description": "As a user, I want replies synced with Discord message references so that reply context is preserved.",
+			"acceptanceCriteria": [
+				"replyToMessageId in chat.send maps to Discord message_reference",
+				"Replies from Discord appear as reply messages in dashboard",
+				"Reply preview shows correct referenced message in both interfaces",
+				"Typecheck passes"
+			],
+			"priority": 32,
+			"passes": false,
+			"notes": "PRD: P2-18."
+		},
+		{
+			"id": "US-033",
+			"title": "Implement message actions",
+			"description": "As a user, I want quick actions on messages so that I can interact with responses efficiently.",
+			"acceptanceCriteria": [
+				"Copy response (one-click copy entire response as raw markdown)",
+				"Reactions (quick emoji responses)",
+				"Reply action starts inline reply",
+				"Start Thread action opens thread panel",
+				"Bookmark/Star to mark important messages",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 33,
+			"passes": false,
+			"notes": "PRD: P2-19."
+		},
+		{
+			"id": "US-034",
+			"title": "Implement chat navigation and search",
+			"description": "As a user, I want search and navigation within chats so that I can find specific messages.",
+			"acceptanceCriteria": [
+				"Global search across all chats",
+				"Search within a single chat's messages",
+				"Unread indicators: badge counts on chats, visual markers for new messages",
+				"Jump to message via deep link (scroll + highlight)",
+				"Infinite scroll: load history on scroll up",
+				"Jump to bottom button when scrolled up + 'new messages' banner",
+				"Timestamps: relative display, hover for absolute",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 34,
+			"passes": false,
+			"notes": "PRD: P2-20."
+		},
+		{
+			"id": "US-035",
+			"title": "Implement chat notifications",
+			"description": "As a user, I want notifications for new messages so that I don't miss agent responses.",
+			"acceptanceCriteria": [
+				"Tab title changes when new messages arrive",
+				"Notification sound (configurable)",
+				"Browser notification API for when tab is not focused",
+				"Unread badge on Chat tab and individual chats",
+				"Typecheck passes"
+			],
+			"priority": 35,
+			"passes": false,
+			"notes": "PRD: P2-21. End of Phase 2."
+		},
+		{
+			"id": "US-036",
+			"title": "Implement document server routes",
+			"description": "As a developer, I want server-side file API routes so that the browser can access the user's documents folder.",
+			"acceptanceCriteria": [
+				"GET /api/files?root=documents returns root directory listing",
+				"GET /api/files/*path returns file content (with hash) or directory listing",
+				"PUT /api/files/*path writes file content (requires baseHash for concurrency)",
+				"POST /api/files/*path creates new file or folder",
+				"DELETE /api/files/*path deletes file or folder",
+				"Root resolves to dashboard.documentsPath config (default ~/Documents)",
+				"SHA-256 hash-based optimistic concurrency on writes",
+				".secrets/ directory never exposed",
+				"Typecheck passes"
+			],
+			"priority": 36,
+			"passes": false,
+			"notes": "PRD: P3A-01. Phase 3A: Documents."
+		},
+		{
+			"id": "US-037",
+			"title": "Implement document browser",
+			"description": "As a user, I want to browse my documents folder so that I can find and manage files.",
+			"acceptanceCriteria": [
+				"Directory listing with name, modified date, size columns",
+				"Navigate into folders; breadcrumb path for quick navigation",
+				"Back navigation (.. entry)",
+				"Sort by name, modified date, size",
+				"Search files by name across documents folder",
+				"File type icons (folder, markdown, code, image, etc.)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 37,
+			"passes": false,
+			"notes": "PRD: P3A-02."
+		},
+		{
+			"id": "US-038",
+			"title": "Implement document editor",
+			"description": "As a user, I want to edit documents in the browser so that I can make changes without leaving the dashboard.",
+			"acceptanceCriteria": [
+				"CodeMirror (or similar) editor for markdown and text files",
+				"Syntax highlighting for code files",
+				"Preview pane for rendered markdown",
+				"Hash-based save (rejects if file changed externally since load)",
+				"Unsaved changes indicator",
+				"File type-specific previews: markdown rendered, code highlighted, images displayed, JSON/YAML formatted",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 38,
+			"passes": false,
+			"notes": "PRD: P3A-03."
+		},
+		{
+			"id": "US-039",
+			"title": "Implement document create and upload",
+			"description": "As a user, I want to create and upload files so that I can add content to my documents folder.",
+			"acceptanceCriteria": [
+				"Create new file (specify name + optional content)",
+				"Create new folder",
+				"Upload file via drag-and-drop or file picker",
+				"Rename files and folders",
+				"Delete files and folders (confirmation required)",
+				"Copy file path to clipboard",
+				"Download file to local machine",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 39,
+			"passes": false,
+			"notes": "PRD: P3A-04."
+		},
+		{
+			"id": "US-040",
+			"title": "Implement document bulk operations",
+			"description": "As a user, I want to perform bulk operations so that I can manage multiple files at once.",
+			"acceptanceCriteria": [
+				"Multi-select files/folders",
+				"Bulk delete (confirmation required)",
+				"Bulk move to different folder",
+				"Bulk download as zip",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 40,
+			"passes": false,
+			"notes": "PRD: P3A-05. End of Phase 3A."
+		},
+		{
+			"id": "US-041",
+			"title": "Implement cron job list",
+			"description": "As a user, I want to see all scheduled jobs so that I know what the agent does automatically.",
+			"acceptanceCriteria": [
+				"Loads via cron.list with includeDisabled: true",
+				"Columns: name, schedule (cron/interval/one-shot), next run, last run, status (enabled/disabled)",
+				"Live updates from event:cron events",
+				"Empty state with 'Create Job' prompt",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 41,
+			"passes": false,
+			"notes": "PRD: P3B-01. Phase 3B: Agent Jobs."
+		},
+		{
+			"id": "US-042",
+			"title": "Implement cron job CRUD",
+			"description": "As a user, I want to create, edit, and delete cron jobs so that I can configure the agent's automated tasks.",
+			"acceptanceCriteria": [
+				"Create form: name, description, schedule type (cron expression/interval/one-shot), payload type (system event/agent turn), session target",
+				"Edit existing job (all fields)",
+				"Delete job (confirmation required)",
+				"Enable/disable toggle via cron.update({ id, patch: { enabled: bool } })",
+				"'Run Now' button via cron.run({ id, mode: 'force' })",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 42,
+			"passes": false,
+			"notes": "PRD: P3B-02."
+		},
+		{
+			"id": "US-043",
+			"title": "Implement cron run history",
+			"description": "As a user, I want to see job execution history so that I can verify jobs ran successfully.",
+			"acceptanceCriteria": [
+				"Per-job run history via cron.runs({ id, limit: 50 })",
+				"Table: timestamp, status (success/error), output (expandable)",
+				"Detail view with full run output",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 43,
+			"passes": false,
+			"notes": "PRD: P3B-03."
+		},
+		{
+			"id": "US-044",
+			"title": "Implement heartbeat configuration",
+			"description": "As a user, I want to configure the agent's heartbeat so that I control what it checks periodically.",
+			"acceptanceCriteria": [
+				"View heartbeat status: active/paused, interval, last run time",
+				"View and edit active hours (start, end, timezone from config)",
+				"View and edit delivery target (last, none, channel name)",
+				"Preview rendered HEARTBEAT.md",
+				"Edit HEARTBEAT.md in-browser markdown editor",
+				"Save writes via agents-files.set",
+				"Config changes via config.patch",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 44,
+			"passes": false,
+			"notes": "PRD: P3B-04."
+		},
+		{
+			"id": "US-045",
+			"title": "Implement heartbeat history",
+			"description": "As a user, I want to see recent heartbeat results so that I know what the agent checked.",
+			"acceptanceCriteria": [
+				"View recent heartbeat executions via last-heartbeat method",
+				"Shows what was checked and what was surfaced",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 45,
+			"passes": false,
+			"notes": "PRD: P3B-05."
+		},
+		{
+			"id": "US-046",
+			"title": "Implement cron event integration",
+			"description": "As a user, I want live job status updates so that I see changes without refreshing.",
+			"acceptanceCriteria": [
+				"Subscribe to event:cron events",
+				"Update job list in real-time on status changes",
+				"Toast notification for job completion/failure",
+				"Typecheck passes"
+			],
+			"priority": 46,
+			"passes": false,
+			"notes": "PRD: P3B-06. End of Phase 3B."
+		},
+		{
+			"id": "US-047",
+			"title": "Implement password server routes",
+			"description": "As a developer, I want server-side password API routes so that the browser can interact with the KeePassXC vault.",
+			"acceptanceCriteria": [
+				"GET /api/passwords lists entries (titles, usernames, URLs; no secret values)",
+				"POST /api/passwords/unlock unlocks vault with master password; returns session token",
+				"GET /api/passwords/:path gets entry with decrypted password (requires session token)",
+				"PUT /api/passwords/:path creates or updates entry (requires session token)",
+				"DELETE /api/passwords/:path deletes entry (requires session token)",
+				"POST /api/passwords/lock clears session",
+				"POST /api/passwords/init creates new vault (first-run only)",
+				"All operations shell out to keepassxc-cli against ~/.openclaw/passwords.kdbx",
+				"Typecheck passes"
+			],
+			"priority": 47,
+			"passes": false,
+			"notes": "PRD: P3C-01. Phase 3C: Passwords."
+		},
+		{
+			"id": "US-048",
+			"title": "Implement vault creation flow",
+			"description": "As a user, I want to create a password vault on first run so that I have secure secret storage.",
+			"acceptanceCriteria": [
+				"Detect if ~/.openclaw/passwords.kdbx exists",
+				"If not: prompt for master password, create vault via keepassxc-cli db-create",
+				"Validate master password strength",
+				"Confirm password (type twice)",
+				"Vault uses KDBX4 format (AES-256 + Argon2)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 48,
+			"passes": false,
+			"notes": "PRD: P3C-02."
+		},
+		{
+			"id": "US-049",
+			"title": "Implement password list UI",
+			"description": "As a user, I want to browse stored credentials so that I can find and use them.",
+			"acceptanceCriteria": [
+				"List view: title, username, URL (password always masked)",
+				"Group/folder navigation",
+				"Search by title, username, URL",
+				"Sort by title, modified date",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 49,
+			"passes": false,
+			"notes": "PRD: P3C-03."
+		},
+		{
+			"id": "US-050",
+			"title": "Implement password CRUD",
+			"description": "As a user, I want to add, edit, and delete credentials so that I can manage my secrets.",
+			"acceptanceCriteria": [
+				"Add new entry: title, username, password, URL, notes",
+				"Edit existing entry (all fields)",
+				"Delete entry (confirmation required)",
+				"Password masked during input (toggle visibility)",
+				"Password generator (optional)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 50,
+			"passes": false,
+			"notes": "PRD: P3C-04."
+		},
+		{
+			"id": "US-051",
+			"title": "Implement vault unlock flow",
+			"description": "As a user, I want to unlock the vault with my master password so that I can access secret values.",
+			"acceptanceCriteria": [
+				"Master password prompt before any secret values are accessible",
+				"Server-side session (in-memory) with configurable idle timeout",
+				"Auto-lock after idle timeout",
+				"Manual lock button",
+				"'Reveal' button per entry to show password (requires active session)",
+				"Copy to clipboard with auto-clear after timeout",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 51,
+			"passes": false,
+			"notes": "PRD: P3C-05."
+		},
+		{
+			"id": "US-052",
+			"title": "Implement secrets migration",
+			"description": "As a user, I want to import existing .secrets/ files so that I can consolidate credentials.",
+			"acceptanceCriteria": [
+				"POST /api/passwords/import-secrets migrates .secrets/ files into vault",
+				"One-time migration with confirmation",
+				"Shows preview of files to import before proceeding",
+				"Preserves file names as entry titles",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 52,
+			"passes": false,
+			"notes": "PRD: P3C-06."
+		},
+		{
+			"id": "US-053",
+			"title": "Implement password security model",
+			"description": "As a user, I want my credentials secured so that they are never accidentally exposed.",
+			"acceptanceCriteria": [
+				"Secret values never sent to the AI model or included in system prompts",
+				"Agent references secrets by path, never by value",
+				"Values masked in UI by default",
+				"Clipboard auto-clears after configurable timeout",
+				"All encryption/decryption happens server-side via keepassxc-cli",
+				".kdbx file encrypted at rest (no plaintext secrets on disk)",
+				"Typecheck passes"
+			],
+			"priority": 53,
+			"passes": false,
+			"notes": "PRD: P3C-07. End of Phase 3C."
+		},
+		{
+			"id": "US-054",
+			"title": "Implement PM database schema and migrations",
+			"description": "As a developer, I want the PM SQLite schema created so that the PM system has a data foundation.",
+			"acceptanceCriteria": [
+				"Database at ~/.openclaw/data/pm.db (configurable via pm.database.path)",
+				"Schema applied: domains, focuses, milestones, projects, tasks, comments, blocks, activities, attachments, sync_mappings tables",
+				"sort_order columns on domains, focuses, tasks for drag-and-drop reorder",
+				"last_activity_at and updated_at columns with correct semantics",
+				"better-sqlite3 for synchronous access",
+				"Typecheck passes"
+			],
+			"priority": 54,
+			"passes": false,
+			"notes": "PRD: P4A-01a. Split from P4A-01 (PM SQLite Data Layer). Phase 4A: PM Skill Backend."
+		},
+		{
+			"id": "US-055",
+			"title": "Implement PM CRUD operations and activity logging",
+			"description": "As a developer, I want CRUD operations for all PM entities so that data can be created, read, updated, and deleted.",
+			"acceptanceCriteria": [
+				"All CRUD operations for domains, focuses, milestones, projects, tasks, comments, blocks, activities, attachments",
+				"Activity auto-logging on all mutations",
+				"last_activity_at updated on any activity (comments, child updates)",
+				"updated_at updated only on direct field edits",
+				"Typecheck passes"
+			],
+			"priority": 55,
+			"passes": false,
+			"notes": "PRD: P4A-01b. Split from P4A-01."
+		},
+		{
+			"id": "US-056",
+			"title": "Implement PM FTS5 search index",
+			"description": "As a developer, I want full-text search so that users can find PM entities by content.",
+			"acceptanceCriteria": [
+				"FTS5 virtual table: pm_search with entity_type, entity_id, project_id, title, body",
+				"Tokenizer: porter unicode61",
+				"Triggers to keep FTS in sync (insert, update, delete on projects, tasks, comments)",
+				"Search returns ranked results with match context snippets",
+				"Relevance scoring",
+				"Typecheck passes"
+			],
+			"priority": 56,
+			"passes": false,
+			"notes": "PRD: P4A-02."
+		},
+		{
+			"id": "US-057",
+			"title": "Implement PM WS methods: Domain, Focus, Milestone",
+			"description": "As a developer, I want Domain/Focus/Milestone methods registered with the gateway so that the dashboard can manage organizational hierarchy.",
+			"acceptanceCriteria": [
+				"Domain: pm.domain.list, get, create, update, delete, reorder registered",
+				"Focus: pm.focus.list, get, create, update, move, delete, reorder registered",
+				"Milestone: pm.milestone.list, get, create, update, delete registered",
+				"All methods call the PM data layer correctly",
+				"Typecheck passes"
+			],
+			"priority": 57,
+			"passes": false,
+			"notes": "PRD: P4A-03a. Split from P4A-03 (~45 methods across 13 groups)."
+		},
+		{
+			"id": "US-058",
+			"title": "Implement PM WS methods: Project, Task",
+			"description": "As a developer, I want Project/Task methods registered with the gateway so that the dashboard can manage work items.",
+			"acceptanceCriteria": [
+				"Project: pm.project.list, get, create, update, delete registered",
+				"Task: pm.task.list, get, create, update, move, reorder, delete registered",
+				"All methods call the PM data layer correctly",
+				"Typecheck passes"
+			],
+			"priority": 58,
+			"passes": false,
+			"notes": "PRD: P4A-03b. Split from P4A-03."
+		},
+		{
+			"id": "US-059",
+			"title": "Implement PM WS methods: Comment, Block, Attachment, Activity, Context, Search, Bulk, Stats",
+			"description": "As a developer, I want remaining PM methods registered so that all PM operations are available over WebSocket.",
+			"acceptanceCriteria": [
+				"Comment: pm.comment.list, create, update, delete registered",
+				"Block: pm.block.list, create, delete registered",
+				"Attachment: pm.attachment.list, create, delete registered",
+				"Activity: pm.activity.list registered",
+				"Context: pm.context.dashboard, domain, project registered",
+				"Search: pm.search registered",
+				"Bulk: pm.bulk.update, move registered",
+				"Stats: pm.stats registered",
+				"Typecheck passes"
+			],
+			"priority": 59,
+			"passes": false,
+			"notes": "PRD: P4A-03c. Split from P4A-03."
+		},
+		{
+			"id": "US-060",
+			"title": "Implement PM request validation",
+			"description": "As a developer, I want request/response validation so that invalid data is rejected early.",
+			"acceptanceCriteria": [
+				"TypeBox schemas for all pm.* method params and responses",
+				"Validation on all incoming requests",
+				"PM-specific error codes: PM_NOT_FOUND, PM_CONSTRAINT, PM_INVALID_PARENT, PM_CIRCULAR_BLOCK, PM_DUPLICATE",
+				"Mutating methods require idempotencyKey",
+				"ID format: accepts both raw integers and prefixed IDs (e.g., 42 or P-42)",
+				"Cursor-based pagination on all list methods (default 50, max 200)",
+				"Typecheck passes"
+			],
+			"priority": 60,
+			"passes": false,
+			"notes": "PRD: P4A-04."
+		},
+		{
+			"id": "US-061",
+			"title": "Implement PM real-time events",
+			"description": "As a developer, I want PM mutation events broadcast to all clients so that the UI stays in sync.",
+			"acceptanceCriteria": [
+				"event:pm broadcast on all mutations",
+				"Payload: action (created/updated/deleted/moved/reordered), entityType, entityId, projectId, actor, data, timestamp",
+				"stateVersion increments monotonically",
+				"Data varies by action: full entity on create, changed fields on update, id on delete",
+				"All operator clients receive PM events automatically (no subscription)",
+				"Typecheck passes"
+			],
+			"priority": 61,
+			"passes": false,
+			"notes": "PRD: P4A-05."
+		},
+		{
+			"id": "US-062",
+			"title": "Implement PM context generation",
+			"description": "As a developer, I want AI-optimized context summaries so that the dashboard can show what the agent sees.",
+			"acceptanceCriteria": [
+				"pm.context.dashboard returns overview markdown (~1-2k tokens): due soon, in progress, blocked, recent activity",
+				"pm.context.domain returns domain deep dive (~3-5k tokens)",
+				"pm.context.project returns full project context (~5-10k tokens): tasks, comments, activity, blocks",
+				"Markdown output suitable for both AI consumption and dashboard rendering",
+				"Response includes generated_at timestamp and aggregate stats",
+				"Typecheck passes"
+			],
+			"priority": 62,
+			"passes": false,
+			"notes": "PRD: P4A-06."
+		},
+		{
+			"id": "US-063",
+			"title": "Implement PM stats aggregates",
+			"description": "As a developer, I want quick aggregate stats so that the dashboard header can render summaries.",
+			"acceptanceCriteria": [
+				"pm.stats returns: project counts by status, task counts by status, blocked count, overdue count, recent activity count (24h), due soon count (7 days)",
+				"Typecheck passes"
+			],
+			"priority": 63,
+			"passes": false,
+			"notes": "PRD: P4A-07."
+		},
+		{
+			"id": "US-064",
+			"title": "Implement PM bulk operations backend",
+			"description": "As a developer, I want bulk mutation methods so that the UI can perform multi-select operations.",
+			"acceptanceCriteria": [
+				"pm.bulk.update updates status, priority, milestone, due date on multiple targets",
+				"pm.bulk.move moves multiple tasks to a new parent (project or task)",
+				"Returns updated count and per-item errors",
+				"Circular dependency check on bulk move",
+				"Typecheck passes"
+			],
+			"priority": 64,
+			"passes": false,
+			"notes": "PRD: P4A-08. End of Phase 4A."
+		},
+		{
+			"id": "US-065",
+			"title": "Implement PM store layer",
+			"description": "As a developer, I want reactive PM stores so that the UI stays in sync with PM data.",
+			"acceptanceCriteria": [
+				"Cached entity stores (domains, focuses, projects, tasks) hydrated on module mount",
+				"Optimistic updates: mutations applied locally before server confirms, rollback on error",
+				"event:pm events update cache incrementally",
+				"stateVersion gap detection triggers refetch of affected entities",
+				"Derived stores for kanban, list, and tree views",
+				"Feature detection: PM methods only available when pm-skill installed (check features.methods)",
+				"Typecheck passes"
+			],
+			"priority": 65,
+			"passes": false,
+			"notes": "PRD: P4B-01. Phase 4B: PM Dashboard UI."
+		},
+		{
+			"id": "US-066",
+			"title": "Implement PM dashboard view",
+			"description": "As a user, I want a project dashboard so that I see the big picture at a glance.",
+			"acceptanceCriteria": [
+				"pm.stats header: total projects, active, due soon, blocked, overdue",
+				"Due soon section (next 7 days)",
+				"In progress projects with task progress bars",
+				"Blocked items section",
+				"Recent activity feed",
+				"Default landing view for the Projects app",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 66,
+			"passes": false,
+			"notes": "PRD: P4B-02."
+		},
+		{
+			"id": "US-067",
+			"title": "Implement domain/focus navigation",
+			"description": "As a user, I want hierarchical navigation so that I can scope my view to a domain or focus area.",
+			"acceptanceCriteria": [
+				"Tree sidebar: Domain -> Focus hierarchy via pm.domain.list + pm.focus.list",
+				"Click domain to filter projects",
+				"Click focus to filter further",
+				"Project and task counts per node",
+				"Drag-and-drop reorder domains and focuses",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 67,
+			"passes": false,
+			"notes": "PRD: P4B-03."
+		},
+		{
+			"id": "US-068",
+			"title": "Implement project list view",
+			"description": "As a user, I want a filterable project list so that I can find and manage projects.",
+			"acceptanceCriteria": [
+				"Sortable table: title, status, priority, due date, focus, task progress",
+				"Filters: status, priority, domain, focus, milestone, due date range, overdue",
+				"Pagination (cursor-based, 50 per page)",
+				"Click project to open detail view",
+				"Create new project button",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 68,
+			"passes": false,
+			"notes": "PRD: P4B-04."
+		},
+		{
+			"id": "US-069",
+			"title": "Implement kanban board",
+			"description": "As a user, I want a kanban board so that I can visualize and change task status by dragging.",
+			"acceptanceCriteria": [
+				"Columns by status (todo, in_progress, review, done)",
+				"Drag tasks between columns to change status (calls pm.task.update)",
+				"Drag to reorder within column (calls pm.task.reorder)",
+				"Cards show: title, priority badge, due date, subtask count, blocked indicator",
+				"Filterable by project, priority, assignee",
+				"Scoped to a single project or across all projects",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 69,
+			"passes": false,
+			"notes": "PRD: P4B-05."
+		},
+		{
+			"id": "US-070",
+			"title": "Implement project detail view",
+			"description": "As a user, I want a comprehensive project detail page so that I can manage all aspects of a project.",
+			"acceptanceCriteria": [
+				"Header: title, status, priority, due date, focus breadcrumb",
+				"Task tree (recursive subtasks) via pm.project.get with includeTasks: true",
+				"Comments section with add/edit/delete",
+				"Attachments section with add/remove",
+				"Activity feed (most recent N entries)",
+				"Blocking/blocked-by relationships displayed",
+				"Edit all project fields inline",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 70,
+			"passes": false,
+			"notes": "PRD: P4B-06."
+		},
+		{
+			"id": "US-071",
+			"title": "Implement task detail panel",
+			"description": "As a user, I want a task detail panel so that I can view and edit task information.",
+			"acceptanceCriteria": [
+				"Slide-out panel or modal with full task details",
+				"Ancestry breadcrumb (project -> parent task -> current task)",
+				"Edit: title, body, status, priority, due date, milestone",
+				"Subtask list with create/reorder",
+				"Comments with add/edit/delete",
+				"Attachments with add/remove",
+				"Blocking/blocked-by with add/remove dependencies",
+				"Delete task with mode choice (cascade subtasks or promote to parent)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 71,
+			"passes": false,
+			"notes": "PRD: P4B-07."
+		},
+		{
+			"id": "US-072",
+			"title": "Implement AI context panel",
+			"description": "As a user, I want to see what context the agent receives so that I can verify AI context quality.",
+			"acceptanceCriteria": [
+				"'AI Context' panel/tab in project view",
+				"Calls pm.context.project and renders the markdown",
+				"Dashboard-level context via pm.context.dashboard",
+				"Styled panel showing the same summaries the agent uses",
+				"Refresh button to regenerate",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 72,
+			"passes": false,
+			"notes": "PRD: P4B-08."
+		},
+		{
+			"id": "US-073",
+			"title": "Implement PM bulk operations UI",
+			"description": "As a user, I want to perform bulk actions so that I can manage multiple tasks at once.",
+			"acceptanceCriteria": [
+				"Multi-select tasks (checkbox column)",
+				"Bulk toolbar: change status, change priority, assign milestone, move to project",
+				"Calls pm.bulk.update / pm.bulk.move",
+				"Shows per-item errors if any fail",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 73,
+			"passes": false,
+			"notes": "PRD: P4B-09."
+		},
+		{
+			"id": "US-074",
+			"title": "Implement PM search UI",
+			"description": "As a user, I want to search across all PM entities so that I can find anything quickly.",
+			"acceptanceCriteria": [
+				"Search bar in PM module header",
+				"Calls pm.search with query",
+				"Results grouped by type (project, task, comment)",
+				"Shows match context snippet and relevance score",
+				"Click result navigates to entity detail",
+				"Filter results by type and status",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 74,
+			"passes": false,
+			"notes": "PRD: P4B-10."
+		},
+		{
+			"id": "US-075",
+			"title": "Implement PM create flows",
+			"description": "As a user, I want to create domains, focuses, milestones, projects, and tasks so that I can organize my work.",
+			"acceptanceCriteria": [
+				"Create domain: slug, name, description",
+				"Create focus: slug, domain, name, description",
+				"Create milestone: name, due date, description",
+				"Create project: focus, title, description, status, priority, due date, milestone",
+				"Create task: parent (project or task), title, body, status, priority, due date, milestone",
+				"All create forms validate required fields",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 75,
+			"passes": false,
+			"notes": "PRD: P4B-11."
+		},
+		{
+			"id": "US-076",
+			"title": "Implement dependency graph",
+			"description": "As a user, I want a visual dependency graph so that I can understand blocking relationships.",
+			"acceptanceCriteria": [
+				"Visual representation of task blocking relationships",
+				"Calls pm.block.list for project scope",
+				"Node = task, edge = blocks relationship",
+				"Color coding: blocked (red), blocking (orange), clear (green)",
+				"Click node to navigate to task detail",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 76,
+			"passes": false,
+			"notes": "PRD: P4B-12. End of Phase 4B."
+		},
+		{
+			"id": "US-077",
+			"title": "Implement workspace files tab",
+			"description": "As a user, I want to edit agent workspace files so that I can customize agent behavior.",
+			"acceptanceCriteria": [
+				"Loads via agents-files.list to discover all files",
+				"Known files pinned at top: SOUL.md, AGENTS.md, TOOLS.md, USER.md, IDENTITY.md, HEARTBEAT.md, BOOTSTRAP.md, MEMORY.md",
+				"Missing known files show 'Create' button",
+				"Additional files/folders (memory/, scripts/) shown below",
+				"Click file -> preview rendered markdown; Edit button -> in-browser markdown editor",
+				"Save via agents-files.set with hash-based concurrency",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 77,
+			"passes": false,
+			"notes": "PRD: P5A-01. Phase 5A: Settings."
+		},
+		{
+			"id": "US-078",
+			"title": "Implement information tab",
+			"description": "As a user, I want system information so that I can monitor gateway health and usage.",
+			"acceptanceCriteria": [
+				"Gateway status: connection, URL, uptime, current model, session count",
+				"Usage and costs: token usage per provider, estimated costs, usage by session",
+				"Node list: paired nodes with status, capabilities, device type",
+				"Sub-agents: active runs, history, details (task, model, tokens, cost), stop/log actions",
+				"Restart gateway button via update.run",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 78,
+			"passes": false,
+			"notes": "PRD: P5A-02."
+		},
+		{
+			"id": "US-079",
+			"title": "Implement skills tab",
+			"description": "As a user, I want to manage agent skills so that I can enable or disable capabilities.",
+			"acceptanceCriteria": [
+				"List all skills via skills.status",
+				"Enable/disable toggle via skills.update({ skillKey, enabled })",
+				"API key management via skills.update({ skillKey, apiKey })",
+				"Install new skill via skills.install({ name, installId, timeoutMs: 120000 })",
+				"Skill details: description, version, documentation",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 79,
+			"passes": false,
+			"notes": "PRD: P5A-03."
+		},
+		{
+			"id": "US-080",
+			"title": "Implement Discord integration setup",
+			"description": "As a user, I want to connect Discord so that my chats sync with Discord channels.",
+			"acceptanceCriteria": [
+				"Step-by-step setup guide: create Discord Application, enable bot, copy token, enable Message Content intent",
+				"Input fields for client_id and bot_token",
+				"'Add to Discord Server' button generates OAuth2 URL with required permissions",
+				"OAuth2 callback handler (GET /api/discord/callback)",
+				"Status display: not configured / configured / connected / error",
+				"Server name, channel count, disconnect button",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 80,
+			"passes": false,
+			"notes": "PRD: P5A-04."
+		},
+		{
+			"id": "US-081",
+			"title": "Implement device management",
+			"description": "As a user, I want to manage paired devices so that I control access to my gateway.",
+			"acceptanceCriteria": [
+				"Pending pairing requests via device-pair.list",
+				"Approve/Reject buttons via device-pair.approve/reject",
+				"Paired devices list",
+				"Token rotation via device-token.rotate",
+				"Token revocation via device-token.revoke",
+				"Live updates from device-pair.requested/resolved events",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 81,
+			"passes": false,
+			"notes": "PRD: P5A-05."
+		},
+		{
+			"id": "US-082",
+			"title": "Implement exec approvals tab",
+			"description": "As a user, I want to manage command execution approvals so that I control what the agent can run.",
+			"acceptanceCriteria": [
+				"View allowlist via exec-approvals.get",
+				"Add/remove command patterns to allowlist",
+				"Ask policy configuration (off, on-miss, always)",
+				"Per-node allowlists via exec-approvals-node.get/set",
+				"Pending approval queue from exec-approval.requested events",
+				"Approve/deny via exec-approval.resolve with decisions: allow-once, allow-always, deny",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 82,
+			"passes": false,
+			"notes": "PRD: P5A-06."
+		},
+		{
+			"id": "US-083",
+			"title": "Implement gateway configuration editor",
+			"description": "As a user, I want to edit gateway configuration so that I can tune system behavior.",
+			"acceptanceCriteria": [
+				"View current config via config.get",
+				"Raw JSON editor with syntax highlighting",
+				"Schema validation from config.schema",
+				"Hash-based optimistic concurrency (sends baseHash)",
+				"Save via config.set (no restart) or Apply + Restart via config.apply",
+				"Warning on Apply that gateway will restart",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 83,
+			"passes": false,
+			"notes": "PRD: P5A-07."
+		},
+		{
+			"id": "US-084",
+			"title": "Implement live logs viewer",
+			"description": "As a user, I want to view live gateway logs so that I can debug issues.",
+			"acceptanceCriteria": [
+				"Log tail via logs.tail({ cursor, limit: 500, maxBytes: 250000 })",
+				"Cursor-based polling (not streaming)",
+				"Filter by text and log level",
+				"Auto-follow mode (scroll to bottom on new entries)",
+				"Pause/Resume live tail",
+				"Sliding window (old entries trimmed)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 84,
+			"passes": false,
+			"notes": "PRD: P5A-08."
+		},
+		{
+			"id": "US-085",
+			"title": "Implement models list",
+			"description": "As a user, I want to see available models so that I know what I can use.",
+			"acceptanceCriteria": [
+				"Load via models.list",
+				"Shows all models across all providers",
+				"Model selector in chat settings references this list",
+				"Refresh button",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 85,
+			"passes": false,
+			"notes": "PRD: P5A-09."
+		},
+		{
+			"id": "US-086",
+			"title": "Implement dashboard preferences tab",
+			"description": "As a user, I want to configure dashboard appearance so that I can personalize my experience.",
+			"acceptanceCriteria": [
+				"Theme: dark mode / light mode / system toggle",
+				"Notifications: enable/disable browser notifications",
+				"Notification sound: enable/disable",
+				"Compact mode: denser UI layout",
+				"Default PM view: dashboard / kanban / list / tree",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 86,
+			"passes": false,
+			"notes": "PRD: P5A-10."
+		},
+		{
+			"id": "US-087",
+			"title": "Implement about tab",
+			"description": "As a user, I want version and system info so that I know what's running.",
+			"acceptanceCriteria": [
+				"Agent name from IDENTITY.md (via agent-identity)",
+				"OpenClaw version from hello-ok.server.version",
+				"Dashboard version (from package.json)",
+				"Gateway uptime",
+				"Active session count",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 87,
+			"passes": false,
+			"notes": "PRD: P5A-11. End of Phase 5A."
+		},
+		{
+			"id": "US-088",
+			"title": "Implement A2UI web component integration",
+			"description": "As a developer, I want the A2UI web component embedded in falcon-dash so that agent-generated UIs render natively.",
+			"acceptanceCriteria": [
+				"Import a2ui.bundle.js (Lit web component)",
+				"<openclaw-a2ui-host> custom element available",
+				".applyMessages(messages) pushes A2UI JSONL payloads",
+				".reset() clears state",
+				"Web action bridge: globalThis.openclawCanvasA2UIAction.postMessage wired to send actions via WS",
+				"Typecheck passes"
+			],
+			"priority": 88,
+			"passes": false,
+			"notes": "PRD: P5B-01. Phase 5B: Canvas/A2UI."
+		},
+		{
+			"id": "US-089",
+			"title": "Implement inline A2UI in chat",
+			"description": "As a user, I want agent-generated UI inline in chat so that I can interact with rich content.",
+			"acceptanceCriteria": [
+				"When agent event stream contains A2UI payloads, render <openclaw-a2ui-host> inline in the message",
+				"A2UI components render directly in the DOM (not iframe)",
+				"Supports all A2UI components: layout (Row, Column, List, Card, Tabs), content (Text, Image, Icon), input (Button, CheckBox, TextField)",
+				"Data binding and template children work correctly",
+				"User actions dispatched back to agent via gateway WS",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 89,
+			"passes": false,
+			"notes": "PRD: P5B-02."
+		},
+		{
+			"id": "US-090",
+			"title": "Implement custom app panel",
+			"description": "As a user, I want to pin canvases as persistent sidebar apps so that I can access agent-created tools easily.",
+			"acceptanceCriteria": [
+				"'Pin as App' action on canvas content",
+				"Pinned canvas appears in sidebar under Custom Apps",
+				"Named (agent-provided or user-editable)",
+				"Agent can push live updates to pinned canvases",
+				"Reorderable via drag-and-drop",
+				"Remove from sidebar (canvas still exists in original context)",
+				"Surface registry: track active surfaces (ID -> A2UI state)",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 90,
+			"passes": false,
+			"notes": "PRD: P5B-03."
+		},
+		{
+			"id": "US-091",
+			"title": "Implement HTML canvas iframe",
+			"description": "As a user, I want agent-generated HTML pages rendered safely so that arbitrary HTML doesn't compromise the dashboard.",
+			"acceptanceCriteria": [
+				"Sandboxed iframe: <iframe sandbox='allow-scripts'> (no allow-same-origin)",
+				"Canvas host URL derived from gateway config (not hardcoded port)",
+				"Serves from http://<host>:<canvasPort>/__openclaw__/canvas/...",
+				"postMessage bridge for action callbacks between iframe and dashboard",
+				"Size auto-detection via ResizeObserver or postMessage",
+				"Content-Security-Policy headers on iframe",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 91,
+			"passes": false,
+			"notes": "PRD: P5B-04."
+		},
+		{
+			"id": "US-092",
+			"title": "Implement canvas delivery pipeline",
+			"description": "As a developer, I want a delivery mechanism for A2UI payloads so that agent-generated canvases reach the dashboard.",
+			"acceptanceCriteria": [
+				"Mechanism for A2UI payloads to reach the dashboard implemented (virtual node, new WS event type, or target: 'web')",
+				"A2UI messages from agent runs trigger inline rendering",
+				"Selected approach documented and tested",
+				"Typecheck passes"
+			],
+			"priority": 92,
+			"passes": false,
+			"notes": "PRD: P5B-05. End of Phase 5B. Open question OQ-1 must be resolved."
+		},
+		{
+			"id": "US-093",
+			"title": "Implement mobile layout",
+			"description": "As a mobile user, I want a touch-friendly layout so that I can use the dashboard on my phone.",
+			"acceptanceCriteria": [
+				"Bottom tab bar replacing sidebar: Chat, Projects, Docs, Jobs, More",
+				"Single-pane navigation (tap to drill down, back to return)",
+				"Active tab visually highlighted",
+				"Unread badge on Chat tab",
+				"Tab bar always visible (except when keyboard is open)",
+				"'More' tab: Settings, Passwords, Custom Apps overflow",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 93,
+			"passes": false,
+			"notes": "PRD: P6-01. Phase 6: Mobile & Polish."
+		},
+		{
+			"id": "US-094",
+			"title": "Implement touch gestures",
+			"description": "As a mobile user, I want touch gestures so that navigation feels native.",
+			"acceptanceCriteria": [
+				"Swipe back to return to previous view",
+				"Pull-to-refresh on chat list, project views",
+				"Long press for context menus (chats, tasks, messages)",
+				"Bottom sheet for modal actions (create task, add comment)",
+				"Minimum 44x44px tap targets for all interactive elements",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 94,
+			"passes": false,
+			"notes": "PRD: P6-02."
+		},
+		{
+			"id": "US-095",
+			"title": "Implement PWA service worker",
+			"description": "As a user, I want offline support and push notifications so that the dashboard works even without connectivity.",
+			"acceptanceCriteria": [
+				"Service worker via vite-plugin-pwa",
+				"Offline caching strategy (read-only mode for cached data)",
+				"Background sync: queue actions when offline, send on reconnect",
+				"Push notifications: native notifications when tab is closed",
+				"Install prompt: banner/button prompting PWA installation",
+				"Typecheck passes"
+			],
+			"priority": 95,
+			"passes": false,
+			"notes": "PRD: P6-03."
+		},
+		{
+			"id": "US-096",
+			"title": "Implement accessibility",
+			"description": "As a user with accessibility needs, I want proper ARIA support so that I can use the dashboard with assistive technology.",
+			"acceptanceCriteria": [
+				"ARIA labels on all interactive elements",
+				"Full keyboard navigation without mouse",
+				"Screen reader tested (VoiceOver, NVDA)",
+				"Logical focus flow with visible focus indicators",
+				"Focus management on route changes and modal open/close",
+				"Color contrast meets WCAG AA standards",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 96,
+			"passes": false,
+			"notes": "PRD: P6-04."
+		},
+		{
+			"id": "US-097",
+			"title": "Implement performance optimization",
+			"description": "As a user, I want fast page loads so that the dashboard feels responsive.",
+			"acceptanceCriteria": [
+				"Virtual scrolling for long chat message lists and task lists",
+				"Lazy module loading (routes and heavy components on demand)",
+				"Code splitting and tree shaking",
+				"Core Web Vitals meet 'Good' thresholds (LCP < 2.5s, FID < 100ms, CLS < 0.1)",
+				"Bundle size: initial load < 200KB gzipped",
+				"Typecheck passes"
+			],
+			"priority": 97,
+			"passes": false,
+			"notes": "PRD: P6-05."
+		},
+		{
+			"id": "US-098",
+			"title": "Implement themes",
+			"description": "As a user, I want dark and light modes so that I can use the dashboard in any lighting condition.",
+			"acceptanceCriteria": [
+				"Dark mode / light mode / system-auto toggle",
+				"Accent color customization",
+				"Tailwind CSS custom properties for theming",
+				"Theme preference persisted in localStorage",
+				"Smooth transition between themes",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 98,
+			"passes": false,
+			"notes": "PRD: P6-06."
+		},
+		{
+			"id": "US-099",
+			"title": "Implement onboarding wizard",
+			"description": "As a new user, I want a guided setup so that I can connect to my gateway quickly.",
+			"acceptanceCriteria": [
+				"First-run wizard: gateway URL entry, token paste, connection test",
+				"Device pairing flow: show pairing request ID, guide user through CLI approval",
+				"Optional Discord setup prompt",
+				"Optional password vault creation",
+				"Success confirmation with dashboard tour highlights",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 99,
+			"passes": false,
+			"notes": "PRD: P6-07."
+		},
+		{
+			"id": "US-100",
+			"title": "Implement mobile-specific adaptations",
+			"description": "As a mobile user, I want optimized layouts per module so that each module works well on small screens.",
+			"acceptanceCriteria": [
+				"Chat: full-screen list view -> tap -> conversation (no sidebar)",
+				"Projects: kanban vertical scroll with swipeable columns; card list instead of table",
+				"Documents: full-screen list -> tap to preview (no split pane)",
+				"Settings: full-screen overlay instead of inline panel",
+				"Modals: bottom sheet instead of centered dialog",
+				"Slash commands: full-screen command palette instead of dropdown",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 100,
+			"passes": false,
+			"notes": "PRD: P6-08."
+		},
+		{
+			"id": "US-101",
+			"title": "Implement error handling",
+			"description": "As a user, I want graceful error handling so that failures don't break the app.",
+			"acceptanceCriteria": [
+				"Global error boundary with fallback UI",
+				"Friendly error messages for common failures (connection lost, auth failed, method not found)",
+				"Error reporting/logging for debugging",
+				"Toast notifications for transient errors",
+				"Retry affordances where appropriate",
+				"Typecheck passes",
+				"Verify in browser using dev-browser skill"
+			],
+			"priority": 101,
+			"passes": false,
+			"notes": "PRD: P6-09."
+		},
+		{
+			"id": "US-102",
+			"title": "Implement Ed25519 device identity (production auth)",
+			"description": "As a user deploying in production, I want secure device identity so that my gateway is protected.",
+			"acceptanceCriteria": [
+				"Generate Ed25519 keypair via WebCrypto API",
+				"Derive device.id from public key fingerprint",
+				"Store keypair + device ID in IndexedDB (persistent)",
+				"Sign connect.challenge nonce with private key",
+				"Handle pairing required flow (show request ID, guide through approval)",
+				"Persist deviceToken from hello-ok in IndexedDB",
+				"Requires HTTPS or localhost (secure context for WebCrypto)",
+				"Typecheck passes"
+			],
+			"priority": 102,
+			"passes": false,
+			"notes": "PRD: P6-10. End of Phase 6. Final story."
+		}
+	]
+}
