@@ -1,0 +1,347 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1770695673018,
+  "projectRoot": "/home/fredbot/falcon-dash",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "builddocs": {
+      "path": "builddocs",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1770695673013,
+      "keyFiles": [
+        "falcon-dash-architecture-v02.md",
+        "pm-spec.md",
+        "ws-protocol.md"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "tasks/prd.json",
+      "accessCount": 66,
+      "lastAccessed": 1770711815270,
+      "type": "file"
+    },
+    {
+      "path": "tasks/progress.txt",
+      "accessCount": 54,
+      "lastAccessed": 1770711819436,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/Sidebar.svelte",
+      "accessCount": 46,
+      "lastAccessed": 1770711755896,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/connection.ts",
+      "accessCount": 16,
+      "lastAccessed": 1770711617433,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/MarkdownRenderer.svelte",
+      "accessCount": 13,
+      "lastAccessed": 1770710555663,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/+layout.svelte",
+      "accessCount": 12,
+      "lastAccessed": 1770711664794,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/stores/sessions.ts",
+      "accessCount": 12,
+      "lastAccessed": 1770711750158,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/index.ts",
+      "accessCount": 11,
+      "lastAccessed": 1770709756175,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/ChatList.svelte",
+      "accessCount": 11,
+      "lastAccessed": 1770711512466,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/stores/gateway.ts",
+      "accessCount": 9,
+      "lastAccessed": 1770711749719,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/chat/markdown.ts",
+      "accessCount": 8,
+      "lastAccessed": 1770710514522,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/types.ts",
+      "accessCount": 7,
+      "lastAccessed": 1770709708281,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/+page.svelte",
+      "accessCount": 6,
+      "lastAccessed": 1770709477558,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/stream.ts",
+      "accessCount": 6,
+      "lastAccessed": 1770709944166,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 5,
+      "lastAccessed": 1770710874878,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/snapshot-store.ts",
+      "accessCount": 5,
+      "lastAccessed": 1770711755223,
+      "type": "file"
+    },
+    {
+      "path": "src/app.html",
+      "accessCount": 4,
+      "lastAccessed": 1770709589534,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/event-bus.ts",
+      "accessCount": 4,
+      "lastAccessed": 1770709709273,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/MermaidDiagram.svelte",
+      "accessCount": 4,
+      "lastAccessed": 1770710329782,
+      "type": "file"
+    },
+    {
+      "path": "tasks/prd-falcon-dash.md",
+      "accessCount": 3,
+      "lastAccessed": 1770704994175,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/correlator.ts",
+      "accessCount": 3,
+      "lastAccessed": 1770707876476,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 3,
+      "lastAccessed": 1770708002491,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/AppShell.svelte",
+      "accessCount": 3,
+      "lastAccessed": 1770709229175,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/ToolCallCard.svelte",
+      "accessCount": 3,
+      "lastAccessed": 1770710786310,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/MessageComposer.svelte",
+      "accessCount": 3,
+      "lastAccessed": 1770710933911,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 3,
+      "lastAccessed": 1770711750723,
+      "type": "directory"
+    },
+    {
+      "path": "vite.config.ts",
+      "accessCount": 2,
+      "lastAccessed": 1770707498138,
+      "type": "file"
+    },
+    {
+      "path": ".prettierrc",
+      "accessCount": 2,
+      "lastAccessed": 1770707498957,
+      "type": "file"
+    },
+    {
+      "path": "eslint.config.js",
+      "accessCount": 2,
+      "lastAccessed": 1770707499278,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/stores/chat.ts",
+      "accessCount": 2,
+      "lastAccessed": 1770709994535,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/CodeBlock.svelte",
+      "accessCount": 2,
+      "lastAccessed": 1770710467347,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/chat/commands.ts",
+      "accessCount": 2,
+      "lastAccessed": 1770711081417,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/SlashCommandMenu.svelte",
+      "accessCount": 2,
+      "lastAccessed": 1770711092957,
+      "type": "file"
+    },
+    {
+      "path": "tasks/CLAUDE.md",
+      "accessCount": 1,
+      "lastAccessed": 1770707229577,
+      "type": "file"
+    },
+    {
+      "path": "svelte.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1770707294604,
+      "type": "file"
+    },
+    {
+      "path": ".prettierignore",
+      "accessCount": 1,
+      "lastAccessed": 1770707299438,
+      "type": "file"
+    },
+    {
+      "path": "src/app.css",
+      "accessCount": 1,
+      "lastAccessed": 1770707309805,
+      "type": "file"
+    },
+    {
+      "path": "src/app.d.ts",
+      "accessCount": 1,
+      "lastAccessed": 1770707311120,
+      "type": "file"
+    },
+    {
+      "path": ".svelte-kit/tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1770708006321,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/gateway/reconnector.ts",
+      "accessCount": 1,
+      "lastAccessed": 1770708418455,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/stores/token.ts",
+      "accessCount": 1,
+      "lastAccessed": 1770708555839,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/TokenEntry.svelte",
+      "accessCount": 1,
+      "lastAccessed": 1770708563277,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/ConnectionStatus.svelte",
+      "accessCount": 1,
+      "lastAccessed": 1770709345922,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/PresenceList.svelte",
+      "accessCount": 1,
+      "lastAccessed": 1770709473177,
+      "type": "file"
+    },
+    {
+      "path": "static/manifest.json",
+      "accessCount": 1,
+      "lastAccessed": 1770709561181,
+      "type": "file"
+    },
+    {
+      "path": "static/icon-192.svg",
+      "accessCount": 1,
+      "lastAccessed": 1770709566779,
+      "type": "file"
+    },
+    {
+      "path": "static/icon-512.svg",
+      "accessCount": 1,
+      "lastAccessed": 1770709569761,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/chat/highlighter.ts",
+      "accessCount": 1,
+      "lastAccessed": 1770710452404,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/Admonition.svelte",
+      "accessCount": 1,
+      "lastAccessed": 1770710478508,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/components/ThinkingBlock.svelte",
+      "accessCount": 1,
+      "lastAccessed": 1770710663588,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
