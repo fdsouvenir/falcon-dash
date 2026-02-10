@@ -148,7 +148,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 9,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P1-09. Chats section populated in Phase 2."
 		},
 		{
@@ -163,7 +163,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 10,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P1-10."
 		},
 		{
@@ -179,7 +179,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 11,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P1-11."
 		},
 		{
@@ -195,7 +195,7 @@
 				"Typecheck passes"
 			],
 			"priority": 12,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P1-12. End of Phase 1."
 		},
 		{
@@ -212,7 +212,7 @@
 				"Typecheck passes"
 			],
 			"priority": 13,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-01. Phase 2: Chat Module."
 		},
 		{
@@ -230,7 +230,7 @@
 				"Typecheck passes"
 			],
 			"priority": 14,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-02."
 		},
 		{
@@ -248,7 +248,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 15,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-03a. Split from P2-03 (Markdown Rendering Pipeline)."
 		},
 		{
@@ -264,7 +264,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 16,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-03b. Split from P2-03."
 		},
 		{
@@ -279,7 +279,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 17,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-03c. Split from P2-03."
 		},
 		{
@@ -296,7 +296,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 18,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-04. Thinking levels are NOT off/on/stream."
 		},
 		{
@@ -313,7 +313,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 19,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-05."
 		},
 		{
@@ -331,7 +331,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 20,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-06."
 		},
 		{
@@ -350,7 +350,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 21,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-07."
 		},
 		{
@@ -386,7 +386,7 @@
 				"Verify in browser using dev-browser skill"
 			],
 			"priority": 23,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P2-09."
 		},
 		{

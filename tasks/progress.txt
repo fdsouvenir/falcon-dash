@@ -13,6 +13,8 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
 - Gateway connection: client.id must be "openclaw-control-ui", client.mode must be "webchat" (gateway validates)
 - Prettier adds semicolons on format — don't write them manually, let Prettier handle it
 - Use `.js` extension in TypeScript imports (e.g., `from './types.js'`) for ESM compatibility
+- `svelte/no-navigation-without-resolve` ESLint rule: use `<!-- eslint-disable svelte/no-navigation-without-resolve -->` for placeholder routes not yet created
+- Svelte 5 children prop type: `{ children }: { children: import('svelte').Snippet }`
 
 ---
 
@@ -131,4 +133,230 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Token stored at localStorage key "falcon-dash:gateway-token"
   - Gateway URL stored at localStorage key "falcon-dash:gateway-url"
   - Manual browser verification needed (no dev-browser skill available)
+---
+
+## 2026-02-10 01:55 CST - US-009
+- Implemented app shell layout with Sidebar + AppShell components
+- Sidebar: Chats section (placeholder), Apps section (Projects, Documents, Agent Jobs), Settings/Passwords at bottom
+- Connection status dot in sidebar header (green=READY, yellow=CONNECTING/RECONNECTING, red=DISCONNECTED)
+- Mobile responsive: sidebar collapses with hamburger menu, overlay on mobile
+- AppShell wraps content area with Svelte 5 snippet pattern ({@render children()})
+- Updated +layout.svelte to show TokenEntry or AppShell based on token state
+- Updated +page.svelte with welcome placeholder
+- Files changed: src/lib/components/Sidebar.svelte, src/lib/components/AppShell.svelte, src/routes/+layout.svelte, src/routes/+page.svelte
+- **Learnings for future iterations:**
+  - `svelte/no-navigation-without-resolve` ESLint rule requires `resolveRoute()` for hrefs, but `resolveRoute` is typed against actual SvelteKit routes — use `<!-- eslint-disable -->` comment for placeholder routes that don't exist yet
+  - Svelte 5 Snippet type import: `import('svelte').Snippet` for typing children prop
+  - Mobile sidebar pattern: fixed positioning + z-index overlay, md:relative for desktop
+  - `resolve` from `$app/paths` is NOT the same as `resolveRoute` — use `resolveRoute` for the ESLint rule
+---
+
+## 2026-02-10 02:00 CST - US-010
+- Created ConnectionStatus.svelte component with color-coded status dot and text
+- Green dot = READY ("Connected"), yellow = CONNECTING/AUTHENTICATING/RECONNECTING, red = DISCONNECTED
+- Displays gateway hostname from snapshot.server.host
+- Clickable to toggle details panel showing: connId, uptime, protocol version (3), server version
+- Click-outside handler to close details panel
+- Uptime tracked from READY state with timer
+- Updated Sidebar.svelte to use ConnectionStatus component instead of inline dot
+- Files changed: src/lib/components/ConnectionStatus.svelte (new), src/lib/components/Sidebar.svelte
+- **Learnings for future iterations:**
+  - Click-outside pattern in Svelte 5: use window click handler and check if event target is within component element
+  - Uptime tracking: setInterval in $effect, clear on state change or unmount
+  - snapshot.server is a readable store of `{ version, host, connId } | null` — always null-check
+---
+
+## 2026-02-10 02:05 CST - US-011
+- Created PresenceList.svelte component showing connected clients from snapshot.presence store
+- Displays device type badge, display name (fallback to truncated instanceId), connection duration
+- Duration updates every 30s via setInterval in $effect
+- Empty state: "No other connections" placeholder
+- Added PresenceList to +page.svelte under "Connected Clients" heading
+- Files changed: src/lib/components/PresenceList.svelte (new), src/routes/+page.svelte
+- **Learnings for future iterations:**
+  - PresenceEntry.connectedAt is a timestamp in ms — use Date.now() - connectedAt for duration
+  - Deduplication by instanceId is handled by SnapshotStore, not the component
+  - Device type values come from gateway: "browser", "api", "agent" etc.
+---
+
+## 2026-02-10 02:10 CST - US-012
+- Created PWA manifest at static/manifest.json (name, icons, theme, display: standalone)
+- Created SVG app icons: static/icon-192.svg and static/icon-512.svg (falcon "F" lettermark)
+- Updated src/app.html with manifest link and theme-color meta tag
+- Theme color: #030712 (gray-950, matches app background)
+- Files changed: static/manifest.json (new), static/icon-192.svg (new), static/icon-512.svg (new), src/app.html
+- **Learnings for future iterations:**
+  - Static files in SvelteKit go in `static/` dir, served at root path
+  - Use `%sveltekit.assets%/manifest.json` in app.html for proper path resolution
+  - SVG icons work well for PWA — scalable, no need for raster at multiple sizes
+  - Phase 1 complete with US-012
+---
+
+## 2026-02-10 02:15 CST - US-013
+- Created AgentStreamManager in src/lib/gateway/stream.ts
+- Tracks active runs by runId with two-stage response handling (ack → stream → final)
+- Accumulates text deltas using full-text comparison (length check for out-of-order)
+- Emits higher-level events: messageStart, delta, toolCall, toolResult, messageEnd
+- Seq gap detection per run (tracks missing sequence numbers)
+- Auto-creates run if agent events arrive before ack
+- Handles chat event states: delta, final, aborted, error
+- Updated index.ts with AgentStreamManager and type exports
+- Files changed: src/lib/gateway/stream.ts (new), src/lib/gateway/index.ts
+- **Learnings for future iterations:**
+  - Agent events use `stream` field: "assistant", "tool", "lifecycle", "error", "compaction"
+  - Chat deltas contain FULL accumulated text — compare length to avoid regression
+  - Agent seq is per-run, not global — gap detection is per-run tracking
+  - onAck() and onFinal() are called externally by the gateway store when handling response frames
+  - Tool events may use toolCallId or id, args or input — handle both field names
+---
+
+## 2026-02-10 02:20 CST - US-014
+- Created per-session chat store in src/lib/stores/chat.ts
+- createChatSession(sessionKey) returns reactive stores: messages, activeRunId, isStreaming, hasActiveRun
+- Optimistic send: user message appears immediately with status "sending", confirmed on ack
+- AgentStreamManager integration: delta/toolCall/toolResult/messageEnd events update message store
+- send() calls chat.send with idempotencyKey, creates assistant placeholder on ack
+- abort() calls chat.abort and finalizes the stream
+- loadHistory() fetches chat.history and deduplicates by message ID (for reconnect)
+- Files changed: src/lib/stores/chat.ts (new)
+- **Learnings for future iterations:**
+  - chat.send needs deliver: false for webchat mode (don't forward to external channels)
+  - idempotencyKey doubles as the user message ID for dedup
+  - streamManager.onAck/onFinal must be called from the store when handling response frames
+  - Message status flow: sending → sent → streaming → complete/error
+  - ChatSessionStore type exported as ReturnType<typeof createChatSession>
+---
+
+## 2026-02-10 02:25 CST - US-015
+- Created markdown pipeline in src/lib/chat/markdown.ts using unified/remark/rehype
+- Installed: unified, remark-parse, remark-gfm, remark-rehype, rehype-stringify, rehype-sanitize, rehype-raw
+- Supports CommonMark + GFM (tables, strikethrough, task lists)
+- Custom sanitize schema allows details/summary/hr elements
+- Compaction divider (---) rendered as dashed visual separator
+- Created MarkdownRenderer.svelte component with dark-themed CSS
+- Both async (renderMarkdown) and sync (renderMarkdownSync) rendering
+- Files changed: src/lib/chat/markdown.ts (new), src/lib/components/MarkdownRenderer.svelte (new), package.json
+- **Learnings for future iterations:**
+  - rehype-raw needed to parse HTML elements (details/summary) that pass through remark
+  - rehype-sanitize defaultSchema must be extended for custom elements
+  - processSync() for reactive $derived contexts, async process() for one-off renders
+  - @html directive needs eslint-disable svelte/no-at-html-tags comment
+  - Scoped styles in Svelte need :global() for dynamically generated HTML content
+---
+
+## 2026-02-10 02:30 CST - US-016
+- Added KaTeX support via remark-math + rehype-katex to markdown pipeline
+- Extended sanitize schema for KaTeX-generated math elements (span, div, math, semantics, etc.)
+- Created MermaidDiagram.svelte with lazy-loaded mermaid.js (dynamic import)
+- Updated MarkdownRenderer to extract mermaid blocks and render separately
+- KaTeX CSS loaded via CDN in svelte:head
+- Graceful error fallback for malformed math/diagrams
+- Installed: katex, remark-math, rehype-katex, mermaid, @types/katex
+- Files changed: src/lib/chat/markdown.ts, src/lib/components/MarkdownRenderer.svelte, src/lib/components/MermaidDiagram.svelte (new), package.json
+- **Learnings for future iterations:**
+  - Mermaid must be lazy-loaded (large bundle) with dynamic import in onMount
+  - KaTeX generates complex HTML with math/semantics/mrow elements — sanitize schema must allow them
+  - Mermaid blocks extracted via regex before markdown processing, rendered as separate components
+  - mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' })
+  - crypto.randomUUID() for unique mermaid element IDs
+---
+
+## 2026-02-10 02:35 CST - US-017
+- Created Shiki highlighter in src/lib/chat/highlighter.ts (23 common languages, github-dark theme)
+- Created CodeBlock.svelte with language label, copy button, and async Shiki highlighting
+- Created Admonition.svelte for NOTE/TIP/WARNING/CAUTION/IMPORTANT callouts
+- Updated MarkdownRenderer to extract fenced code blocks and render via CodeBlock component
+- Added admonition preprocessing: GFM `> [!NOTE]` syntax → HTML admonition divs
+- Updated markdown.ts sanitize schema to allow data-type attribute on divs
+- Installed: shiki
+- Files changed: src/lib/chat/highlighter.ts (new), src/lib/components/CodeBlock.svelte (new), src/lib/components/Admonition.svelte (new), src/lib/components/MarkdownRenderer.svelte, src/lib/chat/markdown.ts, package.json
+- **Learnings for future iterations:**
+  - Shiki createHighlighter is async — use singleton pattern with initPromise
+  - Code blocks extracted before markdown processing (same pattern as mermaid)
+  - GFM admonitions: `> [!TYPE]` syntax, preprocessed to HTML before remark
+  - navigator.clipboard.writeText for copy button
+  - Shiki codeToHtml returns full HTML — style pre/code to transparent bg
+---
+
+## 2026-02-10 02:40 CST - US-018
+- Created ThinkingBlock.svelte with collapsible thinking section
+- Default collapsed, user can expand to watch thinking in progress
+- Label: "Thinking..." with spinner while streaming, "Thought for Xs" when complete
+- Elapsed time tracked via setInterval in $effect, cleared on unmount
+- Monospace text display with max-height and scrollable overflow
+- Works for all thinking levels (renders based on thinkingText presence)
+- Files changed: src/lib/components/ThinkingBlock.svelte (new)
+- **Learnings for future iterations:**
+  - ThinkingBlock takes thinkingText, isStreaming, startedAt props
+  - Component renders nothing when thinkingText is empty (thinking level "off")
+  - Collapse state persists across re-renders via $state
+  - Duration formatting: seconds < 60 → "Xs", otherwise "Xm Ys"
+---
+
+## 2026-02-10 02:45 CST - US-019
+- Created ToolCallCard.svelte with expandable tool call display
+- Shows tool name, status indicator (spinner=running, checkmark=complete)
+- Collapsible JSON display for arguments and results
+- Shell/runtime info badge when available in args
+- Blue border for running, green for completed
+- Files changed: src/lib/components/ToolCallCard.svelte (new)
+- **Learnings for future iterations:**
+  - Tool call args may contain shell/runtime info — display as badge
+  - JSON.stringify with try/catch for safe formatting of unknown values
+  - Status distinction: 'running' (blue, spinner) vs 'complete' (green, checkmark)
+---
+
+## 2026-02-10 02:50 CST - US-020
+- Created MessageComposer.svelte with rich message input
+- SHIFT+ENTER for newlines, ENTER to send
+- File upload button, drag-and-drop, clipboard paste support
+- Auto-resize textarea (max 200px), attachment previews with remove
+- Disabled state while streaming, abort button shown during active run
+- Files changed: src/lib/components/MessageComposer.svelte (new)
+- **Learnings for future iterations:**
+  - Auto-resize: set height='auto' then scrollHeight (capped at max)
+  - Drag-and-drop: ondrop/ondragover/ondragleave on container div
+  - Clipboard paste: check clipboardData.items for file kind
+  - Hidden file input triggered by button click
+---
+
+## 2026-02-10 02:55 CST - US-021
+- Created slash command registry in src/lib/chat/commands.ts (10 commands)
+- Created SlashCommandMenu.svelte Discord-style autocomplete dropdown
+- Commands: /new, /stop, /reasoning, /compact, /status, /usage, /verbose, /context, /subagents, /send
+- Fuzzy filtering via name.includes(query)
+- Parent manages selectedIndex and keyboard navigation (Svelte 5 no export function)
+- Files changed: src/lib/chat/commands.ts (new), src/lib/components/SlashCommandMenu.svelte (new)
+- **Learnings for future iterations:**
+  - Svelte 5 does NOT support `export function` in components — use props for parent control
+  - Thinking levels: off/minimal/low/medium/high/xhigh (NOT off/on/stream)
+  - /send command needs sessionKey + message args parsed from space-separated input
+  - Some commands (/status, /usage, /context) are UI-only — handler is no-op, UI reads state
+---
+
+## 2026-02-10 03:00 CST - US-022
+- Created session list store in src/lib/stores/sessions.ts
+- Created ChatList.svelte with search, rename (dblclick), delete, unread badges
+- Store: loadSessions, setActiveSession, renameSession, deleteSession, live event subscription
+- General session pinned to top, sorted by updatedAt descending
+- Derived filteredSessions store for search filtering
+- Files changed: src/lib/stores/sessions.ts (new), src/lib/components/ChatList.svelte (new)
+- **Learnings for future iterations:**
+  - Use `get()` from svelte/store for synchronous store reads in non-reactive contexts
+  - Gateway `sessions.list` returns `sessions` array with sessionKey, displayName, etc.
+  - Gateway `sessions.patch` for create/update, `sessions.delete` for removal
+  - EventBus 'session' events have action: created/updated/deleted
+---
+
+## 2026-02-10 03:10 CST - US-023
+- Added createSession function to sessions store
+- Generates key: agent:<agentId>:webchat:group:<uuid> using defaultAgentId from snapshot
+- Optimistic update: adds session to list immediately, sets as active
+- Creates on server via sessions.patch
+- Added "+ New Chat" button to ChatList.svelte (blue, with plus icon)
+- Files changed: src/lib/stores/sessions.ts (modified), src/lib/components/ChatList.svelte (modified)
+- **Learnings for future iterations:**
+  - Use `get(snapshot.sessionDefaults)` to read defaultAgentId synchronously
+  - Session key format: agent:<agentId>:webchat:group:<uuid>
+  - Optimistic updates should add to list AND set active before server call
 ---
