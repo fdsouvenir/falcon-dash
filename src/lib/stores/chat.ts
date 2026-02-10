@@ -1,4 +1,4 @@
-import { writable, readonly, derived, type Readable, type Writable } from 'svelte/store';
+import { writable, readonly, derived, get, type Readable, type Writable } from 'svelte/store';
 import { AgentStreamManager } from '$lib/gateway/stream.js';
 import type {
 	AnyStreamEvent,
@@ -6,7 +6,7 @@ import type {
 	ToolCallEvent,
 	ToolResultEvent
 } from '$lib/gateway/stream.js';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { call, eventBus, connection } from '$lib/stores/gateway.js';
 
 // Message types
 export interface ChatMessage {
@@ -45,6 +45,7 @@ export function createChatSession(sessionKey: string) {
 	const _messages: Writable<ChatMessage[]> = writable([]);
 	const _activeRunId: Writable<string | null> = writable(null);
 	const _isStreaming: Writable<boolean> = writable(false);
+	const _pendingQueue: Writable<string[]> = writable([]);
 
 	// Public readable stores
 	const messages: Readable<ChatMessage[]> = readonly(_messages);
@@ -164,6 +165,15 @@ export function createChatSession(sessionKey: string) {
 		// Optimistic: add user message immediately
 		_messages.update((msgs) => [...msgs, userMessage]);
 
+		// Check connection state — queue if not ready
+		const state = get(connection.state);
+		if (state !== 'READY') {
+			// Queue for later
+			_pendingQueue.update((q) => [...q, message]);
+			// Still show user message optimistically
+			return;
+		}
+
 		try {
 			const result = await call<{ runId: string; status: string }>('chat.send', {
 				sessionKey,
@@ -252,6 +262,30 @@ export function createChatSession(sessionKey: string) {
 	}
 
 	/**
+	 * Reconcile state after reconnection.
+	 * Loads history, flushes queued messages, resumes active runs.
+	 */
+	async function reconcile(): Promise<void> {
+		// 1. Load history to fill gaps
+		await loadHistory();
+
+		// 2. Flush queued messages
+		const queued = get(_pendingQueue);
+		_pendingQueue.set([]);
+		for (const msg of queued) {
+			await send(msg);
+		}
+
+		// 3. Check if there was an active run that needs resuming
+		const runId = get(_activeRunId);
+		if (runId) {
+			// Re-subscribe stream manager — events will resume from gateway
+			streamManager.onAck(runId, sessionKey);
+			_isStreaming.set(true);
+		}
+	}
+
+	/**
 	 * Clean up the session store.
 	 */
 	function destroy(): void {
@@ -264,9 +298,11 @@ export function createChatSession(sessionKey: string) {
 		activeRunId,
 		isStreaming,
 		hasActiveRun,
+		pendingQueue: readonly(_pendingQueue) as Readable<string[]>,
 		send,
 		abort,
 		loadHistory,
+		reconcile,
 		destroy,
 		// Expose stream manager for external wiring (response frame handling)
 		streamManager
