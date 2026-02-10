@@ -1,24 +1,7 @@
 <script lang="ts">
-	import { connection } from '$lib/stores/gateway.js';
-	import type { ConnectionState } from '$lib/gateway/types.js';
+	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
 
 	let { collapsed = false, onToggle }: { collapsed: boolean; onToggle: () => void } = $props();
-
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
-
-	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
-			connectionState = s;
-		});
-		return unsub;
-	});
-
-	function statusColor(state: ConnectionState): string {
-		if (state === 'READY') return 'bg-green-500';
-		if (state === 'RECONNECTING' || state === 'CONNECTING' || state === 'AUTHENTICATING')
-			return 'bg-yellow-500';
-		return 'bg-red-500';
-	}
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- routes will be created in later stories -->
@@ -29,7 +12,7 @@
 >
 	<!-- Header -->
 	<div class="flex items-center gap-2 border-b border-gray-800 px-4 py-3">
-		<span class="h-2.5 w-2.5 rounded-full {statusColor(connectionState)}"></span>
+		<ConnectionStatus />
 		<span class="text-sm font-semibold text-white">Falcon Dashboard</span>
 		<button
 			class="ml-auto text-gray-400 hover:text-white md:hidden"
