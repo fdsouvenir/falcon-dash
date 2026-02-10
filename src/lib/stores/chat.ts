@@ -76,6 +76,11 @@ export function createChatSession(sessionKey: string) {
 		}
 	});
 
+	// Handle incoming message events (from other users or Discord)
+	const unsubChatEvent = eventBus.on('chat.message', (payload) => {
+		handleIncomingMessage(payload);
+	});
+
 	function handleDelta(event: DeltaEvent): void {
 		_messages.update((msgs) => {
 			const idx = msgs.findIndex((m) => m.runId === event.runId && m.role === 'assistant');
@@ -150,6 +155,27 @@ export function createChatSession(sessionKey: string) {
 		});
 		_activeRunId.set(null);
 		_isStreaming.set(false);
+	}
+
+	/** Handle incoming message event (from other users or Discord) */
+	function handleIncomingMessage(payload: Record<string, unknown>): void {
+		const msgSessionKey = payload.sessionKey as string;
+		if (msgSessionKey !== sessionKey) return;
+
+		const message: ChatMessage = {
+			id: (payload.messageId ?? payload.id ?? crypto.randomUUID()) as string,
+			role: (payload.role ?? 'user') as 'user' | 'assistant',
+			content: (payload.content ?? payload.text ?? '') as string,
+			timestamp: (payload.timestamp ?? Date.now()) as number,
+			status: 'complete',
+			replyToMessageId: payload.replyToMessageId as string | undefined
+		};
+
+		// Deduplicate by ID
+		_messages.update((msgs) => {
+			if (msgs.some((m) => m.id === message.id)) return msgs;
+			return [...msgs, message];
+		});
 	}
 
 	/**
@@ -306,6 +332,7 @@ export function createChatSession(sessionKey: string) {
 	 */
 	function destroy(): void {
 		unsubStream();
+		unsubChatEvent();
 		streamManager.clear();
 	}
 
