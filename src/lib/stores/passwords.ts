@@ -75,6 +75,7 @@ export async function unlockVault(password: string): Promise<boolean> {
 		const data = await res.json();
 		_sessionToken.set(data.token);
 		_vaultState.set('unlocked');
+		resetAutoLockTimer();
 		return true;
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -112,4 +113,45 @@ export function validatePasswordStrength(password: string): { valid: boolean; er
 	if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
 	if (!/[0-9]/.test(password)) errors.push('At least one number');
 	return { valid: errors.length === 0, errors };
+}
+
+let autoLockTimer: ReturnType<typeof setTimeout> | null = null;
+let autoLockTimeoutMs = 5 * 60 * 1000; // 5 minutes default
+
+export function setAutoLockTimeout(ms: number): void {
+	autoLockTimeoutMs = ms;
+	resetAutoLockTimer();
+}
+
+function getCurrentState(): VaultState {
+	let state: VaultState = 'checking';
+	_vaultState.subscribe((v) => {
+		state = v;
+	})();
+	return state;
+}
+
+export function resetAutoLockTimer(): void {
+	if (autoLockTimer) clearTimeout(autoLockTimer);
+	if (getCurrentState() === 'unlocked') {
+		autoLockTimer = setTimeout(() => {
+			lockVault();
+		}, autoLockTimeoutMs);
+	}
+}
+
+export function startActivityMonitor(): () => void {
+	function onActivity() {
+		resetAutoLockTimer();
+	}
+	document.addEventListener('click', onActivity);
+	document.addEventListener('keydown', onActivity);
+	document.addEventListener('mousemove', onActivity);
+	resetAutoLockTimer();
+	return () => {
+		document.removeEventListener('click', onActivity);
+		document.removeEventListener('keydown', onActivity);
+		document.removeEventListener('mousemove', onActivity);
+		if (autoLockTimer) clearTimeout(autoLockTimer);
+	};
 }

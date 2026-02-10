@@ -30,3 +30,10 @@ export function clearSession(token: string): void {
 export function clearAllSessions(): void {
 	sessions.clear();
 }
+
+export function refreshSession(token: string): void {
+	const session = sessions.get(token);
+	if (session) {
+		session.expires = Date.now() + 30 * 60 * 1000;
+	}
+}
