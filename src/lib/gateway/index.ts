@@ -4,8 +4,12 @@ export { EventBus } from './event-bus.js';
 export { SnapshotStore } from './snapshot-store.js';
 export { Reconnector } from './reconnector.js';
 export { AgentStreamManager } from './stream.js';
+export { DiagnosticLog, diagnosticLog } from './diagnostic-log.js';
 export type { PresenceEntry, SessionDefaults } from './snapshot-store.js';
-export type { GatewayError } from './correlator.js';
+export type { GatewayError, CorrelatorMetrics } from './correlator.js';
+export type { ReconnectorMetrics } from './reconnector.js';
+export type { DiagnosticEvent, DiagnosticCategory, DiagnosticLevel } from './diagnostic-log.js';
+export type { DiagnosticCallback } from './connection.js';
 export type {
 	StreamEvent,
 	AnyStreamEvent,

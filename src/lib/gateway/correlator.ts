@@ -1,3 +1,4 @@
+import { writable, readonly, type Readable } from 'svelte/store';
 import type { ResponseFrame, Frame } from './types.js';
 
 export interface GatewayError {
@@ -24,6 +25,14 @@ export class GatewayRequestError extends Error {
 	}
 }
 
+export interface CorrelatorMetrics {
+	pendingCount: number;
+	totalRequests: number;
+	totalTimeouts: number;
+	totalErrors: number;
+	lastErrorAt: number | null;
+}
+
 interface PendingRequest {
 	resolve: (payload: unknown) => void;
 	reject: (error: Error) => void;
@@ -34,6 +43,22 @@ export class RequestCorrelator {
 	private pending = new Map<string, PendingRequest>();
 	private counter = 0;
 	private defaultTimeout: number;
+
+	private _totalRequests = 0;
+	private _totalTimeouts = 0;
+	private _totalErrors = 0;
+	private _lastErrorAt: number | null = null;
+
+	private _metrics = writable<CorrelatorMetrics>({
+		pendingCount: 0,
+		totalRequests: 0,
+		totalTimeouts: 0,
+		totalErrors: 0,
+		lastErrorAt: null
+	});
+
+	/** Request metrics as a Svelte readable store */
+	readonly metrics: Readable<CorrelatorMetrics> = readonly(this._metrics);
 
 	constructor(defaultTimeout = 30_000) {
 		this.defaultTimeout = defaultTimeout;
@@ -54,9 +79,13 @@ export class RequestCorrelator {
 	 * when the matching response arrives.
 	 */
 	track<T = unknown>(id: string, timeout?: number): Promise<T> {
+		this._totalRequests++;
 		return new Promise<T>((resolve, reject) => {
 			const timer = setTimeout(() => {
 				this.pending.delete(id);
+				this._totalTimeouts++;
+				this._lastErrorAt = Date.now();
+				this.updateMetrics();
 				reject(new Error(`Request ${id} timed out after ${timeout ?? this.defaultTimeout}ms`));
 			}, timeout ?? this.defaultTimeout);
 
@@ -65,6 +94,7 @@ export class RequestCorrelator {
 				reject,
 				timer
 			});
+			this.updateMetrics();
 		});
 	}
 
@@ -85,11 +115,14 @@ export class RequestCorrelator {
 		if (res.ok) {
 			pending.resolve(res.payload ?? {});
 		} else {
+			this._totalErrors++;
+			this._lastErrorAt = Date.now();
 			pending.reject(
 				new GatewayRequestError(res.error ?? { code: 'UNKNOWN', message: 'Unknown error' })
 			);
 		}
 
+		this.updateMetrics();
 		return true;
 	}
 
@@ -100,10 +133,21 @@ export class RequestCorrelator {
 			pending.reject(new Error(reason));
 			this.pending.delete(id);
 		}
+		this.updateMetrics();
 	}
 
 	/** Number of currently pending requests */
 	get size(): number {
 		return this.pending.size;
+	}
+
+	private updateMetrics(): void {
+		this._metrics.set({
+			pendingCount: this.pending.size,
+			totalRequests: this._totalRequests,
+			totalTimeouts: this._totalTimeouts,
+			totalErrors: this._totalErrors,
+			lastErrorAt: this._lastErrorAt
+		});
 	}
 }

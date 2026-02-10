@@ -10,6 +10,7 @@
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
+	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
 
 	let { children } = $props();
 
@@ -52,6 +53,7 @@
 
 {#if hasToken}
 	<AppShell>
+		<ConnectionErrorBanner />
 		{@render children()}
 	</AppShell>
 {:else}

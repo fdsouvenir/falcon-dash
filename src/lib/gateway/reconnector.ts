@@ -1,3 +1,4 @@
+import { writable, readonly, type Readable } from 'svelte/store';
 import type { GatewayConnection } from './connection.js';
 import type { EventBus } from './event-bus.js';
 import type { ConnectionConfig } from './types.js';
@@ -5,6 +6,14 @@ import type { ConnectionConfig } from './types.js';
 const BACKOFF_BASE_MS = 800;
 const BACKOFF_MULTIPLIER = 1.7;
 const BACKOFF_CAP_MS = 15_000;
+
+export interface ReconnectorMetrics {
+	attempt: number;
+	nextRetryAt: number | null;
+	nextRetryDelayMs: number | null;
+	lastReconnectAt: number | null;
+	tickIntervalMs: number | null;
+}
 
 export class Reconnector {
 	private connection: GatewayConnection;
@@ -17,6 +26,20 @@ export class Reconnector {
 	private enabled = false;
 	private shutdownDelay: number | null = null;
 	private unsubscribers: Array<() => void> = [];
+
+	private _metrics = writable<ReconnectorMetrics>({
+		attempt: 0,
+		nextRetryAt: null,
+		nextRetryDelayMs: null,
+		lastReconnectAt: null,
+		tickIntervalMs: null
+	});
+
+	/** Reconnection metrics as a Svelte readable store */
+	readonly metrics: Readable<ReconnectorMetrics> = readonly(this._metrics);
+
+	/** Optional callback fired on tick timeout (before reconnect is scheduled) */
+	onTickTimeout: ((timeoutMs: number) => void) | null = null;
 
 	constructor(connection: GatewayConnection, eventBus: EventBus) {
 		this.connection = connection;
@@ -51,6 +74,13 @@ export class Reconnector {
 		this.attempt = 0;
 		this.shutdownDelay = null;
 		this.tickIntervalMs = tickIntervalMs;
+		this._metrics.set({
+			attempt: 0,
+			nextRetryAt: null,
+			nextRetryDelayMs: null,
+			lastReconnectAt: Date.now(),
+			tickIntervalMs
+		});
 		this.resetTickTimer();
 	}
 
@@ -65,6 +95,15 @@ export class Reconnector {
 
 		const delay = this.getDelay();
 		this.attempt++;
+
+		const now = Date.now();
+		this._metrics.set({
+			attempt: this.attempt,
+			nextRetryAt: now + delay,
+			nextRetryDelayMs: delay,
+			lastReconnectAt: now,
+			tickIntervalMs: this.tickIntervalMs
+		});
 
 		this.timer = setTimeout(() => {
 			this.timer = null;
@@ -106,6 +145,10 @@ export class Reconnector {
 		const timeout = this.tickIntervalMs * 2;
 		this.tickTimer = setTimeout(() => {
 			this.tickTimer = null;
+			// Fire callback before scheduling reconnect
+			if (this.onTickTimeout) {
+				this.onTickTimeout(timeout);
+			}
 			// Tick timeout — connection assumed lost
 			this.scheduleReconnect();
 		}, timeout);

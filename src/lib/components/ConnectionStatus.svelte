@@ -1,12 +1,35 @@
 <script lang="ts">
-	import { connection, snapshot } from '$lib/stores/gateway.js';
+	import { connection, snapshot, reconnector, correlator } from '$lib/stores/gateway.js';
+	import { tickHealth } from '$lib/stores/diagnostics.js';
+	import { gatewayToken } from '$lib/stores/token.js';
+	import { connectToGateway } from '$lib/stores/gateway.js';
+	import { gatewayUrl } from '$lib/stores/token.js';
 	import type { ConnectionState } from '$lib/gateway/types.js';
+	import type { ReconnectorMetrics } from '$lib/gateway/reconnector.js';
+	import type { CorrelatorMetrics } from '$lib/gateway/correlator.js';
+	import DiagnosticPanel from './DiagnosticPanel.svelte';
 
 	let connectionState = $state<ConnectionState>('DISCONNECTED');
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
 	let showDetails = $state(false);
+	let showDiagnostics = $state(false);
 	let connectedAt = $state<number | null>(null);
 	let currentTime = $state(Date.now());
+	let reconnectMetrics = $state<ReconnectorMetrics>({
+		attempt: 0,
+		nextRetryAt: null,
+		nextRetryDelayMs: null,
+		lastReconnectAt: null,
+		tickIntervalMs: null
+	});
+	let correlatorMetrics = $state<CorrelatorMetrics>({
+		pendingCount: 0,
+		totalRequests: 0,
+		totalTimeouts: 0,
+		totalErrors: 0,
+		lastErrorAt: null
+	});
+	let lastTickAt = $state<number | null>(null);
 
 	// Subscribe to connection state
 	$effect(() => {
@@ -29,9 +52,33 @@
 		return unsub;
 	});
 
+	// Subscribe to reconnector metrics
+	$effect(() => {
+		const unsub = reconnector.metrics.subscribe((m) => {
+			reconnectMetrics = m;
+		});
+		return unsub;
+	});
+
+	// Subscribe to correlator metrics
+	$effect(() => {
+		const unsub = correlator.metrics.subscribe((m) => {
+			correlatorMetrics = m;
+		});
+		return unsub;
+	});
+
+	// Subscribe to tick health
+	$effect(() => {
+		const unsub = tickHealth.subscribe((h) => {
+			lastTickAt = h.lastTickAt;
+		});
+		return unsub;
+	});
+
 	// Update current time every second for uptime calculation
 	$effect(() => {
-		if (connectionState === 'READY') {
+		if (connectionState === 'READY' || connectionState === 'RECONNECTING') {
 			const interval = setInterval(() => {
 				currentTime = Date.now();
 			}, 1000);
@@ -50,6 +97,8 @@
 		if (state === 'READY') return 'Connected';
 		if (state === 'RECONNECTING') return 'Reconnecting...';
 		if (state === 'CONNECTING' || state === 'AUTHENTICATING') return 'Connecting...';
+		if (state === 'AUTH_FAILED') return 'Auth Failed';
+		if (state === 'PAIRING_REQUIRED') return 'Pairing Required';
 		return 'Disconnected';
 	}
 
@@ -85,10 +134,47 @@
 		}
 	});
 
+	function handleReenterToken() {
+		gatewayToken.clear();
+		showDetails = false;
+	}
+
+	function handleRetryConnection() {
+		let url = 'ws://127.0.0.1:18789';
+		let token: string | null = null;
+		const unsubUrl = gatewayUrl.subscribe((v) => {
+			url = v;
+		});
+		const unsubToken = gatewayToken.subscribe((v) => {
+			token = v;
+		});
+		unsubUrl();
+		unsubToken();
+		if (token) {
+			connectToGateway(url, token);
+		}
+		showDetails = false;
+	}
+
+	function handleOpenDiagnostics() {
+		showDetails = false;
+		showDiagnostics = true;
+	}
+
 	let uptime = $derived(
 		connectionState === 'READY' && connectedAt !== null
 			? formatUptime(currentTime - connectedAt)
 			: 'N/A'
+	);
+
+	let retryCountdown = $derived(
+		reconnectMetrics.nextRetryAt !== null
+			? Math.max(0, Math.ceil((reconnectMetrics.nextRetryAt - currentTime) / 1000))
+			: null
+	);
+
+	let lastTickAgo = $derived(
+		lastTickAt !== null ? Math.floor((currentTime - lastTickAt) / 1000) : null
 	);
 </script>
 
@@ -109,7 +195,7 @@
 
 	{#if showDetails}
 		<div
-			class="absolute left-0 top-full mt-1 w-64 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-xl z-50"
+			class="absolute left-0 top-full mt-1 w-72 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-xl z-50"
 		>
 			<h3 class="mb-3 text-sm font-semibold text-white">Connection Details</h3>
 			<dl class="space-y-2 text-xs">
@@ -137,10 +223,79 @@
 					<dt class="text-gray-400">Server Version</dt>
 					<dd class="text-white">{serverInfo?.version || 'N/A'}</dd>
 				</div>
+
+				<!-- Reconnecting info -->
+				{#if connectionState === 'RECONNECTING'}
+					<div class="border-t border-gray-700 pt-2 mt-2">
+						<div>
+							<dt class="text-gray-400">Attempt</dt>
+							<dd class="text-yellow-400">{reconnectMetrics.attempt}</dd>
+						</div>
+						<div class="mt-1">
+							<dt class="text-gray-400">Next retry in</dt>
+							<dd class="text-yellow-400">
+								{retryCountdown !== null ? `${retryCountdown}s` : 'scheduling...'}
+							</dd>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Ready state info -->
+				{#if connectionState === 'READY'}
+					<div class="border-t border-gray-700 pt-2 mt-2">
+						<div>
+							<dt class="text-gray-400">Last tick</dt>
+							<dd class="text-white">
+								{lastTickAgo !== null ? `${lastTickAgo}s ago` : 'N/A'}
+							</dd>
+						</div>
+						<div class="mt-1">
+							<dt class="text-gray-400">Pending requests</dt>
+							<dd class="text-white">{correlatorMetrics.pendingCount}</dd>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Auth failed recovery -->
+				{#if connectionState === 'AUTH_FAILED'}
+					<div class="border-t border-gray-700 pt-2 mt-2">
+						<button
+							class="w-full rounded bg-red-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+							onclick={handleReenterToken}
+						>
+							Re-enter Token
+						</button>
+					</div>
+				{/if}
+
+				<!-- Pairing required recovery -->
+				{#if connectionState === 'PAIRING_REQUIRED'}
+					<div class="border-t border-gray-700 pt-2 mt-2">
+						<p class="text-gray-400 mb-2">Approve device in gateway admin</p>
+						<button
+							class="w-full rounded bg-yellow-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-yellow-700 transition-colors"
+							onclick={handleRetryConnection}
+						>
+							Retry
+						</button>
+					</div>
+				{/if}
 			</dl>
+
+			<!-- View Diagnostics button -->
+			<div class="mt-3 border-t border-gray-700 pt-3">
+				<button
+					class="w-full rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
+					onclick={handleOpenDiagnostics}
+				>
+					View Diagnostics
+				</button>
+			</div>
 		</div>
 	{/if}
 </div>
+
+<DiagnosticPanel bind:open={showDiagnostics} />
 
 <style>
 	/* Ensure details panel appears above other content */

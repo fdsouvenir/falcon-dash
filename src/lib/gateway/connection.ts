@@ -15,6 +15,8 @@ const CLIENT_ID = 'openclaw-control-ui';
 const CLIENT_MODE = 'webchat';
 const CLIENT_VERSION = '0.1.0';
 
+export type DiagnosticCallback = (event: string, detail?: Record<string, unknown>) => void;
+
 export class GatewayConnection {
 	private ws: WebSocket | null = null;
 	private _state = writable<ConnectionState>('DISCONNECTED');
@@ -24,6 +26,7 @@ export class GatewayConnection {
 	private lastChallenge: ChallengePayload | null = null;
 	private _onHelloOk: ((helloOk: HelloOkPayload) => void) | null = null;
 	private _connId: string | null = null;
+	private _diagnosticCb: DiagnosticCallback | null = null;
 
 	/** Connection state as a Svelte readable store */
 	readonly state: Readable<ConnectionState> = readonly(this._state);
@@ -41,6 +44,11 @@ export class GatewayConnection {
 		this._onHelloOk = callback;
 	}
 
+	/** Set a diagnostic callback for state transitions and protocol events */
+	setDiagnosticCallback(cb: DiagnosticCallback): void {
+		this._diagnosticCb = cb;
+	}
+
 	/** Set connection state (used by reconnection logic) */
 	setConnectionState(state: ConnectionState): void {
 		this._state.set(state);
@@ -51,6 +59,7 @@ export class GatewayConnection {
 		this.config = config;
 		this.cleanup();
 		this._state.set('CONNECTING');
+		this._diagnosticCb?.('connecting', { url: config.url });
 
 		const ws = new WebSocket(config.url);
 		this.ws = ws;
@@ -102,12 +111,14 @@ export class GatewayConnection {
 			frame = JSON.parse(String(event.data)) as Frame;
 		} catch {
 			console.error('[GatewayConnection] Failed to parse frame:', event.data);
+			this._diagnosticCb?.('parse-error');
 			return;
 		}
 
 		// Handle connect.challenge
 		if (frame.type === 'event' && (frame as EventFrame).event === 'connect.challenge') {
 			this._state.set('AUTHENTICATING');
+			this._diagnosticCb?.('challenge');
 			const challenge = (frame as EventFrame).payload as unknown as ChallengePayload;
 			this.sendConnectFrame(challenge);
 			return;
@@ -122,6 +133,10 @@ export class GatewayConnection {
 					this._helloOk.set(helloOk);
 					this._connId = helloOk.server?.connId ?? null;
 					this._state.set('CONNECTED');
+					this._diagnosticCb?.('hello-ok', {
+						connId: helloOk.server?.connId,
+						serverVersion: helloOk.server?.version
+					});
 					// Call onHelloOk callback to hydrate snapshot before setting READY
 					if (this._onHelloOk) {
 						this._onHelloOk(helloOk);
@@ -130,6 +145,7 @@ export class GatewayConnection {
 				}
 			} else if (!res.ok) {
 				this._state.set('AUTH_FAILED');
+				this._diagnosticCb?.('auth-failed');
 			}
 			return;
 		}
@@ -149,8 +165,10 @@ export class GatewayConnection {
 		if (event.code === 1008) {
 			// Pairing required
 			this._state.set('PAIRING_REQUIRED');
+			this._diagnosticCb?.('pairing-required', { code: 1008 });
 		} else {
 			this._state.set('DISCONNECTED');
+			this._diagnosticCb?.('close', { code: event.code, reason: event.reason });
 		}
 	}
 
