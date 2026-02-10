@@ -830,3 +830,34 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - FTS5 stores everything as text — CAST needed for integer columns in results
   - snippet() function takes column index, markers, and word count params
 ---
+
+## 2026-02-10 ~10:35 CST - US-057
+- Implemented PM WS methods for Domain, Focus, Milestone
+- Files created: src/lib/stores/pm-domains.ts
+- Writable/readonly store pattern with loading/error state
+- 18 gateway call wrappers: list/get/create/update/delete/reorder for each entity
+- Event subscriptions for real-time sync (pm.domain.changed, pm.focus.changed, pm.milestone.changed)
+- **Learnings for future iterations:**
+  - PM stores follow same pattern as cron.ts: writable internal, readonly export, call() wrapper
+---
+
+## 2026-02-10 ~10:35 CST - US-058
+- Implemented PM WS methods for Project and Task
+- Files created: src/lib/stores/pm-projects.ts
+- Project: list/get/create/update/delete (5 methods)
+- Task: list/get/create/update/move/reorder/delete (7 methods)
+- currentProject and currentTasks tracking for detail views
+- **Learnings for future iterations:**
+  - Use separate loading states for projects vs tasks
+  - Cast filter objects with `as Record<string, unknown>` for call()
+---
+
+## 2026-02-10 ~10:35 CST - US-059
+- Implemented remaining PM WS methods
+- Files created: src/lib/stores/pm-operations.ts
+- 18 functions: comments(4), blocks(3), attachments(3), activities(1), context(3), search(1), bulk(2), stats(1)
+- Pure functions (no stores needed) — UI calls them directly
+- Context types: DashboardContext, DomainContext, ProjectContext for pre-assembled views
+- **Learnings for future iterations:**
+  - Pure call wrappers don't need stores — only use stores when UI needs reactive updates
+---

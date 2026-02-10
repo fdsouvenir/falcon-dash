@@ -952,7 +952,7 @@
 				"Typecheck passes"
 			],
 			"priority": 57,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-03a. Split from P4A-03 (~45 methods across 13 groups)."
 		},
 		{
@@ -966,7 +966,7 @@
 				"Typecheck passes"
 			],
 			"priority": 58,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-03b. Split from P4A-03."
 		},
 		{
@@ -985,7 +985,7 @@
 				"Typecheck passes"
 			],
 			"priority": 59,
-			"passes": false,
+			"passes": true,
 			"notes": "PRD: P4A-03c. Split from P4A-03."
 		},
 		{
