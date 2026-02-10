@@ -287,13 +287,15 @@ export function createChatSession(sessionKey: string) {
 	 */
 	async function loadHistory(): Promise<void> {
 		try {
-			const result = await call<{ messages: ChatMessage[] }>('chat.history', { sessionKey });
+			const result = await call<{ messages: Record<string, unknown>[] }>('chat.history', {
+				sessionKey
+			});
 			if (result.messages) {
 				_messages.update((current) => {
 					const existingIds = new Set(current.map((m) => m.id));
 					const newMessages = result.messages
-						.filter((m) => !existingIds.has(m.id))
-						.map((m) => ({ ...m, status: 'complete' as const }));
+						.filter((m) => !existingIds.has(m.id as string))
+						.map((m) => normalizeMessage(m));
 					// Merge and sort by timestamp
 					return [...current, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
 				});
@@ -301,6 +303,36 @@ export function createChatSession(sessionKey: string) {
 		} catch {
 			// History load failed — keep existing messages
 		}
+	}
+
+	/** Normalize a raw gateway message into a ChatMessage */
+	function normalizeMessage(raw: Record<string, unknown>): ChatMessage {
+		return {
+			id: (raw.id ?? raw.messageId ?? crypto.randomUUID()) as string,
+			role: (raw.role ?? 'assistant') as 'user' | 'assistant',
+			content: extractTextContent(raw.content),
+			timestamp: (raw.timestamp ?? Date.now()) as number,
+			status: 'complete',
+			runId: raw.runId as string | undefined,
+			replyToMessageId: raw.replyToMessageId as string | undefined
+		};
+	}
+
+	/** Extract plain text from gateway content (may be string, array of blocks, or other) */
+	function extractTextContent(content: unknown): string {
+		if (typeof content === 'string') return content;
+		if (Array.isArray(content)) {
+			return content
+				.map((block) => {
+					if (typeof block === 'string') return block;
+					if (block && typeof block === 'object') {
+						return (block as Record<string, unknown>).text ?? '';
+					}
+					return '';
+				})
+				.join('');
+		}
+		return String(content ?? '');
 	}
 
 	/**

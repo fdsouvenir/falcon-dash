@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import {
 		filteredSessions,
 		activeSessionKey,
@@ -33,6 +34,8 @@
 
 	function selectSession(key: string) {
 		setActiveSession(key);
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- static route
+		goto('/');
 	}
 
 	function startRename(session: ChatSessionInfo) {

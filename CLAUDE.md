@@ -88,7 +88,7 @@ SvelteKit server code using better-sqlite3:
 
 Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no token, otherwise `AppShell` with sidebar navigation. Pages:
 
-- `/` — welcome + presence list
+- `/` — chat view (when session active) or welcome + presence list
 - `/documents` — file browser + editor
 - `/jobs` — cron job management
 - `/heartbeat` — system health monitoring

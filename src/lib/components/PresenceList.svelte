@@ -34,7 +34,8 @@
 		return 'just now';
 	}
 
-	function truncateId(instanceId: string): string {
+	function truncateId(instanceId: string | undefined): string {
+		if (!instanceId) return 'unknown';
 		return instanceId.length > 12 ? `${instanceId.slice(0, 12)}...` : instanceId;
 	}
 
@@ -51,7 +52,7 @@
 		<p class="text-sm text-gray-400 italic">No other connections</p>
 	{:else}
 		<ul class="space-y-2">
-			{#each presenceList as entry (entry.instanceId)}
+			{#each presenceList as entry (entry.instanceId ?? entry.displayName ?? Math.random())}
 				<li class="bg-gray-900 rounded p-3 border border-gray-700">
 					<div class="flex items-start justify-between">
 						<div class="flex-1 min-w-0">
