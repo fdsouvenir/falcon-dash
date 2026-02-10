@@ -128,3 +128,36 @@ export function unsubscribeFromEvents(): void {
 	for (const unsub of unsubscribers) unsub();
 	unsubscribers = [];
 }
+
+export async function ensureGeneralSession(): Promise<string> {
+	await loadSessions();
+	const list = get(_sessions);
+	const general = list.find((s) => s.isGeneral);
+	if (general) {
+		_activeSessionKey.set(general.sessionKey);
+		return general.sessionKey;
+	}
+
+	// Create General session
+	const defaults = get(snapshot.sessionDefaults);
+	const agentId = defaults.defaultAgentId ?? 'default';
+	const sessionKey = `agent:${agentId}:webchat:group:general`;
+	const now = Date.now();
+
+	await call('sessions.patch', { sessionKey, displayName: 'General' });
+
+	_sessions.update((sessions) => [
+		{
+			sessionKey,
+			displayName: 'General',
+			createdAt: now,
+			updatedAt: now,
+			unreadCount: 0,
+			isGeneral: true,
+			kind: 'group'
+		},
+		...sessions
+	]);
+	_activeSessionKey.set(sessionKey);
+	return sessionKey;
+}

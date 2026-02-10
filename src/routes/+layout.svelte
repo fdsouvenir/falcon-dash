@@ -1,7 +1,12 @@
 <script lang="ts">
 	import '../app.css';
 	import { gatewayToken, gatewayUrl } from '$lib/stores/token.js';
-	import { connectToGateway } from '$lib/stores/gateway.js';
+	import { connection, connectToGateway } from '$lib/stores/gateway.js';
+	import {
+		ensureGeneralSession,
+		subscribeToEvents,
+		unsubscribeFromEvents
+	} from '$lib/stores/sessions.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
 
@@ -27,6 +32,20 @@
 			unsub();
 			connectToGateway(url, token);
 		}
+	});
+
+	// Set up general session and event subscriptions when connection is ready
+	$effect(() => {
+		const unsub = connection.state.subscribe((state) => {
+			if (state === 'READY') {
+				ensureGeneralSession();
+				subscribeToEvents();
+			}
+		});
+		return () => {
+			unsub();
+			unsubscribeFromEvents();
+		};
 	});
 </script>
 
