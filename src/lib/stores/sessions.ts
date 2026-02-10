@@ -1,5 +1,5 @@
-import { writable, readonly, derived, type Readable } from 'svelte/store';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { writable, readonly, derived, get, type Readable } from 'svelte/store';
+import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
 
 export interface ChatSessionInfo {
 	sessionKey: string;
@@ -74,6 +74,36 @@ export async function renameSession(sessionKey: string, name: string): Promise<v
 export async function deleteSession(sessionKey: string): Promise<void> {
 	await call('sessions.delete', { sessionKey });
 	_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
+}
+
+export async function createSession(label?: string): Promise<string> {
+	const defaults = get(snapshot.sessionDefaults);
+	const agentId = defaults.defaultAgentId ?? 'default';
+	const sessionKey = `agent:${agentId}:webchat:group:${crypto.randomUUID()}`;
+	const displayName = label || 'New Chat';
+	const now = Date.now();
+
+	// Optimistic update
+	_sessions.update((list) => [
+		...list,
+		{
+			sessionKey,
+			displayName,
+			createdAt: now,
+			updatedAt: now,
+			unreadCount: 0,
+			isGeneral: false,
+			kind: 'group'
+		}
+	]);
+
+	// Set as active
+	_activeSessionKey.set(sessionKey);
+
+	// Create on server
+	await call('sessions.patch', { sessionKey, displayName });
+
+	return sessionKey;
 }
 
 // Subscribe to session events for live updates

@@ -6,6 +6,7 @@
 		setActiveSession,
 		renameSession,
 		deleteSession,
+		createSession,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
 
@@ -65,9 +66,26 @@
 		searchQuery.set(input.value);
 		query = input.value;
 	}
+
+	async function handleNewChat() {
+		await createSession();
+	}
 </script>
 
 <div class="flex flex-col">
+	<!-- New Chat button -->
+	<div class="px-2 pb-2">
+		<button
+			onclick={handleNewChat}
+			class="flex w-full items-center justify-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+		>
+			<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+			</svg>
+			New Chat
+		</button>
+	</div>
+
 	<!-- Search -->
 	<div class="px-2 pb-2">
 		<input
