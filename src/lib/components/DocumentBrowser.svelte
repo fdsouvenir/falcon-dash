@@ -16,6 +16,15 @@
 		deleteEntry,
 		renameEntry,
 		uploadFile,
+		selectedPaths,
+		selectedCount,
+		toggleSelection,
+		selectAll,
+		clearSelection,
+		selectRange,
+		bulkDelete,
+		bulkMove,
+		bulkDownload,
 		type FileEntry,
 		type SortField
 	} from '$lib/stores/files.js';
@@ -42,6 +51,14 @@
 	let renameValue = $state('');
 	let isDragging = $state(false);
 	let contextMenu = $state<{ x: number; y: number; entry: FileEntry } | null>(null);
+
+	// Bulk selection state
+	let selected = $state<Set<string>>(new Set());
+	let selCount = $state(0);
+	let lastSelectedPath = $state<string | null>(null);
+	let showBulkDeleteConfirm = $state(false);
+	let showMoveDialog = $state(false);
+	let moveDestination = $state('');
 
 	let fileInputEl: HTMLInputElement | undefined = $state();
 
@@ -84,6 +101,18 @@
 	$effect(() => {
 		const u = sortDirection.subscribe((v) => {
 			currentDirection = v;
+		});
+		return u;
+	});
+	$effect(() => {
+		const u = selectedPaths.subscribe((v) => {
+			selected = v;
+		});
+		return u;
+	});
+	$effect(() => {
+		const u = selectedCount.subscribe((v) => {
+			selCount = v;
 		});
 		return u;
 	});
@@ -253,6 +282,49 @@
 		e.preventDefault();
 		contextMenu = { x: e.clientX, y: e.clientY, entry };
 	}
+
+	function handleCheckbox(e: Event, entry: FileEntry) {
+		e.stopPropagation();
+		const mouseEvt = e as unknown as MouseEvent;
+		if (mouseEvt.shiftKey && lastSelectedPath) {
+			selectRange(lastSelectedPath, entry.path);
+		} else {
+			toggleSelection(entry.path);
+		}
+		lastSelectedPath = entry.path;
+	}
+
+	async function handleBulkDelete() {
+		const paths = Array.from(selected);
+		await bulkDelete(paths);
+		showBulkDeleteConfirm = false;
+	}
+
+	async function handleBulkMove() {
+		const paths = Array.from(selected);
+		await bulkMove(paths, moveDestination);
+		showMoveDialog = false;
+		moveDestination = '';
+	}
+
+	async function handleBulkDownload() {
+		const paths = Array.from(selected);
+		await bulkDownload(paths);
+	}
+
+	function getAvailableFolders(): Array<{ name: string; path: string }> {
+		const folders = entries.filter((e) => e.type === 'directory' && !selected.has(e.path));
+		const result: Array<{ name: string; path: string }> = [];
+		if (path) {
+			const parts = path.split('/').filter(Boolean);
+			parts.pop();
+			result.push({ name: '.. (parent)', path: parts.join('/') });
+		}
+		for (const f of folders) {
+			result.push({ name: f.name, path: f.path });
+		}
+		return result;
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -313,10 +385,53 @@
 		<input bind:this={fileInputEl} type="file" multiple class="hidden" onchange={handleFileInput} />
 	</div>
 
+	<!-- Bulk action bar -->
+	{#if selCount > 0}
+		<div class="flex items-center gap-2 border-b border-gray-800 bg-gray-800/50 px-4 py-2">
+			<span class="text-xs text-white">{selCount} selected</span>
+			<button onclick={selectAll} class="text-xs text-blue-400 hover:text-blue-300">
+				Select All
+			</button>
+			<button onclick={clearSelection} class="text-xs text-gray-400 hover:text-white">
+				Clear
+			</button>
+			<div class="ml-auto flex gap-2">
+				<button
+					onclick={handleBulkDownload}
+					class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600 hover:text-white"
+				>
+					Download
+				</button>
+				<button
+					onclick={() => {
+						showMoveDialog = true;
+					}}
+					class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600 hover:text-white"
+				>
+					Move
+				</button>
+				<button
+					onclick={() => {
+						showBulkDeleteConfirm = true;
+					}}
+					class="rounded bg-red-600/80 px-2 py-1 text-xs text-white hover:bg-red-600"
+				>
+					Delete
+				</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Column headers -->
 	<div
-		class="grid grid-cols-[1fr_120px_100px] gap-2 border-b border-gray-800 px-4 py-1.5 text-xs text-gray-500"
+		class="grid grid-cols-[24px_1fr_120px_100px] gap-2 border-b border-gray-800 px-4 py-1.5 text-xs text-gray-500"
 	>
+		<input
+			type="checkbox"
+			checked={selCount > 0 && selCount === entries.length}
+			onclick={selCount > 0 ? clearSelection : selectAll}
+			class="h-3 w-3 accent-blue-500"
+		/>
 		<button onclick={() => setSortField('name')} class="text-left hover:text-white">
 			Name{sortIndicator('name')}
 		</button>
@@ -348,8 +463,9 @@
 			{#if path}
 				<button
 					onclick={navigateUp}
-					class="grid w-full grid-cols-[1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs text-gray-400 transition-colors hover:bg-gray-800"
+					class="grid w-full grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs text-gray-400 transition-colors hover:bg-gray-800"
 				>
+					<span></span>
 					<span>📁 ..</span>
 					<span></span>
 					<span></span>
@@ -362,11 +478,17 @@
 				<div
 					onclick={() => handleNavigate(entry)}
 					oncontextmenu={(e) => handleContextMenu(e, entry)}
-					class="group grid w-full cursor-pointer grid-cols-[1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-gray-800 {entry.type ===
+					class="group grid w-full cursor-pointer grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-gray-800 {entry.type ===
 					'directory'
 						? 'text-white'
 						: 'text-gray-300'}"
 				>
+					<input
+						type="checkbox"
+						checked={selected.has(entry.path)}
+						onclick={(e) => handleCheckbox(e, entry)}
+						class="h-3 w-3 accent-blue-500"
+					/>
 					<span class="flex items-center gap-1 truncate">
 						{#if renamingPath === entry.path}
 							<!-- svelte-ignore a11y_autofocus -->
@@ -637,6 +759,102 @@
 						class="rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-500"
 					>
 						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Bulk Delete Confirmation Dialog -->
+	{#if showBulkDeleteConfirm}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			onclick={() => {
+				showBulkDeleteConfirm = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showBulkDeleteConfirm = false;
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h3 class="mb-2 text-sm font-medium text-white">Delete {selCount} Items</h3>
+				<p class="mb-4 text-xs text-gray-400">
+					Are you sure you want to delete {selCount} selected items? This action cannot be undone.
+				</p>
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => {
+							showBulkDeleteConfirm = false;
+						}}
+						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={handleBulkDelete}
+						class="rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-500"
+					>
+						Delete All
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Move Dialog -->
+	{#if showMoveDialog}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			onclick={() => {
+				showMoveDialog = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape') showMoveDialog = false;
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div
+				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<h3 class="mb-3 text-sm font-medium text-white">Move {selCount} Items</h3>
+				<div class="mb-3 max-h-48 overflow-y-auto">
+					{#each getAvailableFolders() as folder (folder.path)}
+						<button
+							onclick={() => {
+								moveDestination = folder.path;
+							}}
+							class="block w-full rounded px-3 py-1.5 text-left text-xs transition-colors {moveDestination ===
+							folder.path
+								? 'bg-blue-600 text-white'
+								: 'text-gray-300 hover:bg-gray-700'}"
+						>
+							📁 {folder.name}
+						</button>
+					{/each}
+				</div>
+				<div class="flex justify-end gap-2">
+					<button
+						onclick={() => {
+							showMoveDialog = false;
+						}}
+						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={handleBulkMove}
+						class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
+					>
+						Move
 					</button>
 				</div>
 			</div>

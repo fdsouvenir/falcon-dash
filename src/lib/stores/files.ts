@@ -61,10 +61,113 @@ export const breadcrumbs: Readable<Array<{ name: string; path: string }>> = deri
 	}
 );
 
+// Selection state
+const _selectedPaths: Writable<Set<string>> = writable(new Set());
+export const selectedPaths: Readable<Set<string>> = readonly(_selectedPaths);
+export const selectedCount: Readable<number> = derived(_selectedPaths, ($s) => $s.size);
+
+export function toggleSelection(path: string): void {
+	_selectedPaths.update((s) => {
+		const next = new Set(s);
+		if (next.has(path)) {
+			next.delete(path);
+		} else {
+			next.add(path);
+		}
+		return next;
+	});
+}
+
+export function selectAll(): void {
+	const entries = get(_entries);
+	_selectedPaths.set(new Set(entries.map((e) => e.path)));
+}
+
+export function clearSelection(): void {
+	_selectedPaths.set(new Set());
+}
+
+export function selectRange(fromPath: string, toPath: string): void {
+	const entries = get(_entries);
+	const fromIdx = entries.findIndex((e) => e.path === fromPath);
+	const toIdx = entries.findIndex((e) => e.path === toPath);
+	if (fromIdx === -1 || toIdx === -1) return;
+	const start = Math.min(fromIdx, toIdx);
+	const end = Math.max(fromIdx, toIdx);
+	_selectedPaths.update((s) => {
+		const next = new Set(s);
+		for (let i = start; i <= end; i++) {
+			next.add(entries[i].path);
+		}
+		return next;
+	});
+}
+
+export async function bulkDelete(paths: string[]): Promise<boolean> {
+	try {
+		const res = await fetch('/api/files-bulk', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'delete', paths })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		clearSelection();
+		await loadDirectory(get(_currentPath));
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function bulkMove(paths: string[], destination: string): Promise<boolean> {
+	try {
+		const res = await fetch('/api/files-bulk', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'move', paths, destination })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		clearSelection();
+		await loadDirectory(get(_currentPath));
+		return true;
+	} catch (err) {
+		_error.set((err as Error).message);
+		return false;
+	}
+}
+
+export async function bulkDownload(paths: string[]): Promise<void> {
+	try {
+		const res = await fetch('/api/files-bulk', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'download', paths })
+		});
+		if (!res.ok) throw new Error((await res.json()).message ?? res.statusText);
+		const data = await res.json();
+		// Download each file
+		for (const file of data.files) {
+			const blob = new Blob([file.content], { type: 'text/plain' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = file.name;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}
+	} catch (err) {
+		_error.set((err as Error).message);
+	}
+}
+
 export async function loadDirectory(path = ''): Promise<void> {
 	_isLoading.set(true);
 	_error.set(null);
 	_currentPath.set(path);
+	_selectedPaths.set(new Set()); // Clear selection when navigating
 	try {
 		const url = path ? `/api/files/${encodeURIComponent(path)}` : '/api/files/';
 		const res = await fetch(url);
