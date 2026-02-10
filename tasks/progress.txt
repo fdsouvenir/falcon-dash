@@ -681,3 +681,27 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - `agents-files.set` writes file content by path (like HEARTBEAT.md)
   - Promise.all for parallel loading of config, status, and template
 ---
+
+## 2026-02-10 — US-045: Heartbeat history
+- Added HeartbeatExecution interface, loadHeartbeatHistory to `src/lib/stores/heartbeat.ts`
+- Created `src/lib/components/HeartbeatHistory.svelte` with expandable execution rows
+- Added HeartbeatHistory section to HeartbeatPanel
+- Shows checked items and surfaced items with expandable details
+- **Learnings for future iterations:**
+  - `last-heartbeat` method returns recent heartbeat executions
+  - Expandable detail pattern reused from CronRunHistory
+---
+
+## 2026-02-10 — US-046: Cron event integration with toasts
+- Created `src/lib/stores/toast.ts` with addToast, removeToast, auto-dismiss
+- Created `src/lib/components/ToastContainer.svelte` with bottom-right positioning
+- Updated cron.ts subscribeToCronEvents to show toast notifications on events
+- Added ToastContainer to root +layout.svelte
+- Toast types: success (green), error (red), info (gray)
+- End of Phase 3B
+- **Learnings for future iterations:**
+  - Toast store uses setTimeout for auto-dismiss with configurable duration
+  - ToastContainer mounted in root layout for global visibility
+  - crypto.randomUUID() for unique toast IDs
+  - Toast pattern reusable for other event-driven notifications
+---
