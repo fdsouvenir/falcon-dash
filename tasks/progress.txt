@@ -720,3 +720,27 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - `show -s` skips password display, `show` includes password
   - In-memory session store maps token -> { password, expires }
 ---
+
+## 2026-02-10 — US-048: Vault creation flow
+- Created `src/lib/stores/passwords.ts` with checkVaultStatus, initVault, unlockVault, lockVault, validatePasswordStrength
+- Created `src/lib/components/VaultSetup.svelte` with password + confirm inputs, strength meter
+- Created `src/lib/components/VaultUnlock.svelte` with simple unlock form
+- Created `src/routes/passwords/+page.svelte` with conditional state routing
+- VaultState: checking -> no-vault | locked | unlocked
+- **Learnings for future iterations:**
+  - Password strength validation: 8+ chars, uppercase, lowercase, number
+  - $derived() for computed validation state reacts to input changes
+  - Vault status check uses GET /api/passwords with empty token to detect 404 vs 401
+---
+
+## 2026-02-10 — US-049: Password list UI
+- Created `src/lib/components/PasswordList.svelte` with grid columns: title, username, URL
+- Group/folder navigation with breadcrumbs
+- Search by title/username/URL (case-insensitive)
+- Sort by title with toggle direction
+- Self-contained component with sessionToken prop
+- **Learnings for future iterations:**
+  - PasswordList takes sessionToken as prop for API auth (x-session-token header)
+  - Group hierarchy extracted from entry paths (split on /)
+  - Passwords never shown in list view — only in detail view
+---
