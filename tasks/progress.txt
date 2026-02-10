@@ -861,3 +861,38 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
 - **Learnings for future iterations:**
   - Pure call wrappers don't need stores — only use stores when UI needs reactive updates
 ---
+
+## 2026-02-10 ~10:50 CST - US-060
+- Implemented PM request validation
+- Files created: src/lib/server/pm/validation.ts
+- PMError class with PM_NOT_FOUND, PM_CONSTRAINT, PM_INVALID_PARENT, PM_CIRCULAR_BLOCK, PM_DUPLICATE
+- parseId() handles raw integers and prefixed IDs (P-42 -> 42)
+- Cursor-based pagination: parsePagination(), paginate() with default 50, max 200
+- Idempotency cache with 5-minute expiry
+- Field validators: requireString, requireNumber, validateStatus, validatePriority
+- Circular block detection via BFS
+---
+
+## 2026-02-10 ~10:50 CST - US-061
+- Implemented PM real-time events
+- Files created: src/lib/server/pm/events.ts, src/lib/stores/pm-events.ts
+- Server: emitPMEvent with monotonic stateVersion, listener pattern, 100-event buffer
+- Client: subscribeToPMEvents listens to event:pm and auto-refreshes relevant stores
+- PMAction types: created/updated/deleted/moved/reordered/status_changed
+---
+
+## 2026-02-10 ~10:50 CST - US-062
+- Implemented PM context generation
+- Files created: src/lib/server/pm/context.ts
+- Dashboard: active projects, due soon, blocked, recent activity (~1-2k tokens)
+- Domain: focuses with project summaries and progress (~3-5k tokens)
+- Project: full detail with tasks, subtasks, blocks, comments, activity (~5-10k tokens)
+- Each returns { markdown, generated_at, stats }
+---
+
+## 2026-02-10 ~10:50 CST - US-063
+- Implemented PM stats aggregates
+- Files created: src/lib/server/pm/stats.ts
+- Returns: project/task counts by status, blocked, overdue, recentActivity (24h), dueSoon (7d)
+- Uses ISO date strings for SQLite date comparisons
+---
