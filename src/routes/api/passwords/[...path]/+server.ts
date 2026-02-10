@@ -26,7 +26,11 @@ export const GET: RequestHandler = async ({ params, request }) => {
 
 	try {
 		const entry = await getEntry(password, path);
-		return json(entry);
+		return json(entry, {
+			headers: {
+				'X-Secret-Content': 'true'
+			}
+		});
 	} catch (err) {
 		return error(500, (err as Error).message);
 	}
