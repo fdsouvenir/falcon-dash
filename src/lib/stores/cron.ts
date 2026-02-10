@@ -122,3 +122,39 @@ export async function runCronJob(id: string): Promise<boolean> {
 export async function toggleCronJob(id: string, enabled: boolean): Promise<boolean> {
 	return updateCronJob(id, { enabled });
 }
+
+export interface CronRun {
+	id: string;
+	jobId: string;
+	timestamp: number;
+	status: 'success' | 'error';
+	output: string;
+	durationMs?: number;
+}
+
+const _runs: Writable<CronRun[]> = writable([]);
+const _runsLoading: Writable<boolean> = writable(false);
+const _selectedJobId: Writable<string | null> = writable(null);
+
+export const cronRuns: Readable<CronRun[]> = readonly(_runs);
+export const cronRunsLoading: Readable<boolean> = readonly(_runsLoading);
+export const selectedJobId: Readable<string | null> = readonly(_selectedJobId);
+
+export async function loadCronRuns(jobId: string): Promise<void> {
+	_selectedJobId.set(jobId);
+	_runsLoading.set(true);
+	try {
+		const result = await call<{ runs: CronRun[] }>('cron.runs', { id: jobId, limit: 50 });
+		_runs.set(result.runs ?? []);
+	} catch (err) {
+		_error.set((err as Error).message);
+		_runs.set([]);
+	} finally {
+		_runsLoading.set(false);
+	}
+}
+
+export function clearCronRuns(): void {
+	_selectedJobId.set(null);
+	_runs.set([]);
+}
