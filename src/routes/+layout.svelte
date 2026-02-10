@@ -15,6 +15,7 @@
 	let { children } = $props();
 
 	let token: string | null = $state(null);
+	let loading = $state(true);
 	let hasToken = $derived(token !== null);
 
 	$effect(() => {
@@ -22,6 +23,29 @@
 			token = v;
 		});
 		return unsub;
+	});
+
+	// Auto-read token from server config on startup
+	$effect(() => {
+		fetch('/api/gateway-config')
+			.then((res) => {
+				if (!res.ok) return null;
+				return res.json();
+			})
+			.then((data) => {
+				if (data?.token) {
+					gatewayToken.set(data.token);
+					if (data.url) {
+						gatewayUrl.set(data.url);
+					}
+				}
+			})
+			.catch(() => {
+				// Config file unavailable — fall through to manual entry
+			})
+			.finally(() => {
+				loading = false;
+			});
 	});
 
 	// Auto-connect when token becomes available
@@ -51,7 +75,11 @@
 	});
 </script>
 
-{#if hasToken}
+{#if loading}
+	<div class="flex h-screen items-center justify-center bg-gray-950">
+		<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"></div>
+	</div>
+{:else if hasToken}
 	<AppShell>
 		<ConnectionErrorBanner />
 		{@render children()}

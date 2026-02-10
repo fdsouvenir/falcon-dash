@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
-	import { onMount } from 'svelte';
+	import { call, connection } from '$lib/stores/gateway.js';
 
 	type LogEntry = {
 		ts: number;
@@ -115,8 +114,13 @@
 		});
 	}
 
-	onMount(() => {
+	let connectionState = $state('DISCONNECTED');
+	$effect(() => {
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
 		return () => {
+			unsub();
 			stopPolling();
 		};
 	});

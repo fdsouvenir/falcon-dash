@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
-	import { onMount } from 'svelte';
+	import { call, connection } from '$lib/stores/gateway.js';
 
 	let config = $state('');
 	let baseHash = $state('');
@@ -12,8 +11,16 @@
 	let showSchema = $state(false);
 	let showApplyConfirm = $state(false);
 
-	onMount(() => {
-		loadConfig();
+	let connectionState = $state('DISCONNECTED');
+	$effect(() => {
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadConfig();
 	});
 
 	async function loadConfig() {

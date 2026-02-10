@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { call, eventBus } from '$lib/stores/gateway.js';
+	import { call, eventBus, connection } from '$lib/stores/gateway.js';
 
 	interface PairingRequest {
 		requestId: string;
@@ -122,24 +121,29 @@
 		return date.toLocaleDateString();
 	}
 
-	let unsubscribeRequested: (() => void) | undefined;
-	let unsubscribeResolved: (() => void) | undefined;
-
-	onMount(() => {
-		loadAll();
-
-		unsubscribeRequested = eventBus.on('device-pair.requested', () => {
-			loadPendingRequests();
+	let connectionState = $state('DISCONNECTED');
+	$effect(() => {
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
 		});
-
-		unsubscribeResolved = eventBus.on('device-pair.resolved', () => {
-			loadAll();
-		});
+		return unsub;
 	});
 
-	onDestroy(() => {
-		if (unsubscribeRequested) unsubscribeRequested();
-		if (unsubscribeResolved) unsubscribeResolved();
+	$effect(() => {
+		if (connectionState === 'READY') loadAll();
+	});
+
+	$effect(() => {
+		const unsubRequested = eventBus.on('device-pair.requested', () => {
+			loadPendingRequests();
+		});
+		const unsubResolved = eventBus.on('device-pair.resolved', () => {
+			loadAll();
+		});
+		return () => {
+			unsubRequested();
+			unsubResolved();
+		};
 	});
 </script>
 

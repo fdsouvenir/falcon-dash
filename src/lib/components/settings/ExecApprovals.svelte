@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { call, eventBus } from '$lib/stores/gateway.js';
-	import { onMount } from 'svelte';
+	import { call, eventBus, connection } from '$lib/stores/gateway.js';
 
 	let allowlist = $state<string[]>([]);
 	let policy = $state<'off' | 'on-miss' | 'always'>('off');
@@ -20,8 +19,19 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
-	onMount(() => {
-		loadAllowlist();
+	let connectionState = $state('DISCONNECTED');
+	$effect(() => {
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadAllowlist();
+	});
+
+	$effect(() => {
 		const unsubscribe = eventBus.on('exec-approval.requested', (data: Record<string, unknown>) => {
 			pendingApprovals.push({
 				requestId: data.requestId as string,

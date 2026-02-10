@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
+	import { call, connection } from '$lib/stores/gateway.js';
 
 	type Skill = {
 		key: string;
@@ -125,8 +125,16 @@
 		expandedSkill = expandedSkill === skillKey ? null : skillKey;
 	}
 
+	let connectionState = $state('DISCONNECTED');
 	$effect(() => {
-		loadSkills();
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadSkills();
 	});
 </script>
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
+	import { call, connection } from '$lib/stores/gateway.js';
 	import MarkdownRenderer from '../MarkdownRenderer.svelte';
 
 	type FileInfo = {
@@ -129,8 +129,16 @@
 		conflictError = false;
 	}
 
+	let connectionState = $state('DISCONNECTED');
 	$effect(() => {
-		loadFileList();
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadFileList();
 	});
 
 	const knownFilesSet = new Set(KNOWN_FILES.map((f) => f.path));

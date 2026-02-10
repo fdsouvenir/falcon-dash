@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
+	import { call, connection } from '$lib/stores/gateway.js';
 
 	type Model = {
 		id: string;
@@ -45,8 +45,16 @@
 
 	const providers = $derived(Object.keys(modelsByProvider).sort());
 
+	let connectionState = $state('DISCONNECTED');
 	$effect(() => {
-		loadModels();
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadModels();
 	});
 </script>
 

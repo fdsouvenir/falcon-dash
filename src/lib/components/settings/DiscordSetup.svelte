@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { call } from '$lib/stores/gateway.js';
+	import { call, connection } from '$lib/stores/gateway.js';
 
 	interface DiscordStatus {
 		state: 'not_configured' | 'configured' | 'connected' | 'error';
@@ -66,8 +65,16 @@
 		return `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2048&scope=bot`;
 	}
 
-	onMount(() => {
-		loadStatus();
+	let connectionState = $state('DISCONNECTED');
+	$effect(() => {
+		const unsub = connection.state.subscribe((s) => {
+			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (connectionState === 'READY') loadStatus();
 	});
 </script>
 
