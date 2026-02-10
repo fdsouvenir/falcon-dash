@@ -73,3 +73,18 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - EventBus.clear() must be called on disconnect to prevent stale handler references
   - Handlers receive both payload and full EventFrame (for seq/stateVersion access)
 ---
+
+## 2026-02-10 01:35 CST - US-005
+- Implemented SnapshotStore class in src/lib/gateway/snapshot-store.ts
+- Seven readable stores: presence, health, stateVersion, sessionDefaults, features, server, policy
+- hydrate() initializes from hello-ok payload, subscribe() connects to EventBus for incremental updates
+- Presence events: add/update/remove entries by instanceId, tracks stateVersion
+- Health events: merge payload into health store, tracks stateVersion
+- hasMethod() derived store for runtime feature detection (e.g., check pm.* availability)
+- Files changed: src/lib/gateway/snapshot-store.ts, src/lib/gateway/index.ts
+- **Learnings for future iterations:**
+  - SnapshotStore.subscribe(eventBus) must be called after hydrate() for incremental updates
+  - Presence dedup is by instanceId (unique per tab)
+  - stateVersion is per-domain object { presence: N, health: N }, not a single number
+  - features.methods list determines which UI features to enable (feature detection pattern)
+---
