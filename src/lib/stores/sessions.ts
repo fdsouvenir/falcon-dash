@@ -74,15 +74,23 @@ export async function renameSession(sessionKey: string, name: string): Promise<v
 }
 
 export async function deleteSession(sessionKey: string): Promise<void> {
-	await call('sessions.delete', { sessionKey });
+	await call('sessions.delete', { key: sessionKey, deleteTranscript: true });
 	_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
+}
+
+function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
+	const names = new Set(existing.map((s) => s.displayName));
+	if (!names.has(base)) return base;
+	let n = 2;
+	while (names.has(`${base} ${n}`)) n++;
+	return `${base} ${n}`;
 }
 
 export async function createSession(label?: string, channel?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:group:${crypto.randomUUID()}`;
-	const displayName = label || 'New Chat';
+	const displayName = label || uniqueLabel('New Chat', get(_sessions));
 	const now = Date.now();
 
 	// Optimistic update

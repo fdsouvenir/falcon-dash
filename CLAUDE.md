@@ -117,6 +117,7 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **Scopes:** `operator.read`, `operator.write`, `operator.admin`, `operator.approvals`, `operator.pairing`
 - **Thinking levels:** off/minimal/low/medium/high/xhigh (NOT off/on/stream)
 - **`sessions.patch` params:** `key` (required, NOT `sessionKey`), `label` (optional, NOT `displayName`)
+- **`sessions.delete` params:** `key` (required, NOT `sessionKey`), `deleteTranscript` (optional boolean)
 - **Dev auth:** set `gateway.controlUi.allowInsecureAuth: true` for token-only
 
 ## Reference Docs
