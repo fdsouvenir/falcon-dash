@@ -572,3 +572,17 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - breadcrumbs derived store splits path and accumulates segments
   - setSortField toggles direction if same field clicked again
 ---
+
+## 2026-02-10 — US-038: Document editor with preview and save
+- Created `src/lib/stores/editor.ts` with openFile, saveFile, updateContent, closeFile
+- Created `src/lib/components/DocumentEditor.svelte` with textarea editing, markdown side-by-side preview, JSON formatting
+- Modified DocumentBrowser.svelte to open files in the editor panel
+- Hash-based optimistic concurrency (X-Base-Hash header) for conflict detection on save
+- File type detection: markdown, json, code, image, text
+- Ctrl+S keyboard shortcut for save
+- **Learnings for future iterations:**
+  - editor.ts uses synchronous `subscribe()/unsubscribe()` pattern to read current state in async functions
+  - Image files store blob URL in content field, not raw data
+  - formatJson() in editor component handles display formatting without modifying stored content
+  - 409 status from PUT indicates external modification — show reload prompt
+---
