@@ -37,7 +37,7 @@ const sanitizeSchema = {
 		...defaultSchema.attributes,
 		details: ['open'],
 		span: ['class', 'style', 'aria-hidden'],
-		div: ['class', 'style'],
+		div: ['class', 'style', 'data-type'],
 		annotation: ['encoding'],
 		math: ['xmlns'],
 		'*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'class']

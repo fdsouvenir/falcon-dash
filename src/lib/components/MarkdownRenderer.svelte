@@ -1,37 +1,67 @@
 <script lang="ts">
 	import { renderMarkdownSync } from '$lib/chat/markdown.js';
 	import MermaidDiagram from './MermaidDiagram.svelte';
+	import CodeBlock from './CodeBlock.svelte';
 
 	let { content = '' }: { content: string } = $props();
 
-	// Split content into segments: markdown text and mermaid blocks
-	interface Segment {
-		type: 'markdown' | 'mermaid';
+	// Split content into segments: markdown text, mermaid blocks, and code blocks
+	interface BaseSegment {
+		id: string;
+	}
+
+	interface MarkdownSegment extends BaseSegment {
+		type: 'markdown';
 		content: string;
 	}
 
+	interface MermaidSegment extends BaseSegment {
+		type: 'mermaid';
+		content: string;
+	}
+
+	interface CodeSegment extends BaseSegment {
+		type: 'code';
+		content: string;
+		lang: string;
+	}
+
+	type Segment = MarkdownSegment | MermaidSegment | CodeSegment;
+
 	let segments = $derived.by(() => {
-		const result: Array<Segment & { id: string }> = [];
-		const regex = /```mermaid\n([\s\S]*?)```/g;
+		const result: Segment[] = [];
+		// Match all fenced code blocks (mermaid and regular)
+		const regex = /```(\w*)\n([\s\S]*?)```/g;
 		let lastIndex = 0;
 		let match;
 		let segmentIndex = 0;
 
 		while ((match = regex.exec(content)) !== null) {
-			// Add markdown before mermaid block
+			// Add markdown before code block
 			if (match.index > lastIndex) {
+				const markdownContent = content.slice(lastIndex, match.index);
 				result.push({
 					type: 'markdown',
-					content: content.slice(lastIndex, match.index),
+					content: markdownContent,
 					id: `segment-${segmentIndex++}`
 				});
 			}
-			// Add mermaid block
-			result.push({
-				type: 'mermaid',
-				content: match[1].trim(),
-				id: `segment-${segmentIndex++}`
-			});
+			// Add code block (mermaid or regular)
+			const lang = match[1] || 'text';
+			if (lang === 'mermaid') {
+				result.push({
+					type: 'mermaid',
+					content: match[2].trim(),
+					id: `segment-${segmentIndex++}`
+				});
+			} else {
+				result.push({
+					type: 'code',
+					content: match[2].trim(),
+					lang: lang,
+					id: `segment-${segmentIndex++}`
+				});
+			}
 			lastIndex = match.index + match[0].length;
 		}
 
@@ -50,6 +80,18 @@
 
 		return result;
 	});
+
+	// Pre-process markdown to handle admonitions
+	function preprocessMarkdown(markdown: string): string {
+		// Convert GFM admonitions to HTML divs
+		return markdown.replace(
+			/^>\s*\[!(NOTE|TIP|WARNING|CAUTION|IMPORTANT)\]\s*\n((?:>.*\n?)*)/gm,
+			(_, type, body) => {
+				const text = body.replace(/^>\s?/gm, '').trim();
+				return `<div class="admonition" data-type="${type}">\n\n${text}\n\n</div>`;
+			}
+		);
+	}
 </script>
 
 <svelte:head>
@@ -60,9 +102,11 @@
 	{#each segments as segment (segment.id)}
 		{#if segment.type === 'mermaid'}
 			<MermaidDiagram code={segment.content} />
+		{:else if segment.type === 'code'}
+			<CodeBlock code={segment.content} lang={segment.lang} />
 		{:else}
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-			{@html renderMarkdownSync(segment.content)}
+			{@html renderMarkdownSync(preprocessMarkdown(segment.content))}
 		{/if}
 	{/each}
 </div>
@@ -140,5 +184,41 @@
 	}
 	.markdown-content :global(input[type='checkbox']) {
 		margin-right: 0.5em;
+	}
+	/* Admonition styles */
+	.markdown-content :global(.admonition[data-type='NOTE']) {
+		border-left: 4px solid rgb(37 99 235);
+		background: rgb(23 37 84);
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin: 0.75rem 0;
+	}
+	.markdown-content :global(.admonition[data-type='TIP']) {
+		border-left: 4px solid rgb(22 163 74);
+		background: rgb(20 83 45);
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin: 0.75rem 0;
+	}
+	.markdown-content :global(.admonition[data-type='WARNING']) {
+		border-left: 4px solid rgb(202 138 4);
+		background: rgb(66 56 18);
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin: 0.75rem 0;
+	}
+	.markdown-content :global(.admonition[data-type='CAUTION']) {
+		border-left: 4px solid rgb(220 38 38);
+		background: rgb(69 10 10);
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin: 0.75rem 0;
+	}
+	.markdown-content :global(.admonition[data-type='IMPORTANT']) {
+		border-left: 4px solid rgb(147 51 234);
+		background: rgb(59 7 100);
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin: 0.75rem 0;
 	}
 </style>
