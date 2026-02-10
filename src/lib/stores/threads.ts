@@ -1,5 +1,5 @@
 import { writable, readonly, get, type Readable, type Writable } from 'svelte/store';
-import { call, snapshot } from '$lib/stores/gateway.js';
+import { call, snapshot, eventBus } from '$lib/stores/gateway.js';
 import { createChatSession, type ChatSessionStore } from '$lib/stores/chat.js';
 
 export type ThreadState = 'active' | 'archived' | 'locked';
@@ -12,6 +12,7 @@ export interface ThreadInfo {
 	replyCount: number;
 	state: ThreadState;
 	lastActivity: number;
+	channel?: string;
 }
 
 const _activeThread: Writable<ThreadInfo | null> = writable(null);
@@ -37,7 +38,8 @@ export function getThreadForMessage(messageId: string): Readable<ThreadInfo | un
 export async function openThread(
 	parentSessionKey: string,
 	originMessageId: string,
-	displayName?: string
+	displayName?: string,
+	channel?: string
 ): Promise<void> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
@@ -47,12 +49,14 @@ export async function openThread(
 	const name = displayName ?? 'Thread';
 
 	// Create thread session on server
-	await call('sessions.patch', {
+	const patchParams: Record<string, unknown> = {
 		sessionKey: threadKey,
 		displayName: name,
 		parentSessionId: parentSessionKey,
 		originMessageId
-	});
+	};
+	if (channel) patchParams.channel = channel;
+	await call('sessions.patch', patchParams);
 
 	const threadInfo: ThreadInfo = {
 		threadKey,
@@ -61,7 +65,8 @@ export async function openThread(
 		displayName: name,
 		replyCount: 0,
 		state: 'active',
-		lastActivity: Date.now()
+		lastActivity: Date.now(),
+		channel
 	};
 
 	// Store thread info
@@ -156,7 +161,8 @@ export async function loadThreads(parentSessionKey: string): Promise<void> {
 					displayName: (t.displayName ?? 'Thread') as string,
 					replyCount: (t.messageCount ?? t.replyCount ?? 0) as number,
 					state: (t.state ?? 'active') as ThreadState,
-					lastActivity: (t.updatedAt ?? t.lastActivity ?? Date.now()) as number
+					lastActivity: (t.updatedAt ?? t.lastActivity ?? Date.now()) as number,
+					channel: t.channel as string | undefined
 				});
 			}
 			return updated;
@@ -197,4 +203,65 @@ export function checkAutoArchive(): void {
 		}
 		return updated;
 	});
+}
+
+/** Subscribe to thread events for live updates (including Discord sync) */
+let threadEventUnsubs: Array<() => void> = [];
+
+export function subscribeToThreadEvents(): void {
+	unsubscribeFromThreadEvents();
+	threadEventUnsubs.push(
+		eventBus.on('session', (payload) => {
+			const action = payload.action as string;
+			const sessionKey = payload.sessionKey as string;
+			const parentSessionId = payload.parentSessionId as string | undefined;
+
+			// Only handle thread sessions (those with a parent)
+			if (!parentSessionId) return;
+
+			if (action === 'created' || action === 'updated') {
+				// Thread created or updated (possibly from Discord)
+				_threads.update((map) => {
+					const updated = new Map(map);
+					const existing = updated.get(sessionKey);
+					updated.set(sessionKey, {
+						threadKey: sessionKey,
+						parentSessionKey: parentSessionId,
+						originMessageId: (payload.originMessageId as string) ?? existing?.originMessageId ?? '',
+						displayName: (payload.displayName as string) ?? existing?.displayName ?? 'Thread',
+						replyCount: (payload.messageCount as number) ?? existing?.replyCount ?? 0,
+						state: (payload.state as ThreadState) ?? existing?.state ?? 'active',
+						lastActivity: (payload.updatedAt as number) ?? Date.now(),
+						channel: (payload.channel as string) ?? existing?.channel
+					});
+					return updated;
+				});
+			} else if (action === 'deleted') {
+				_threads.update((map) => {
+					const updated = new Map(map);
+					updated.delete(sessionKey);
+					return updated;
+				});
+			} else if (action === 'archived') {
+				_threads.update((map) => {
+					const updated = new Map(map);
+					const info = updated.get(sessionKey);
+					if (info) updated.set(sessionKey, { ...info, state: 'archived' });
+					return updated;
+				});
+			} else if (action === 'unarchived') {
+				_threads.update((map) => {
+					const updated = new Map(map);
+					const info = updated.get(sessionKey);
+					if (info) updated.set(sessionKey, { ...info, state: 'active' });
+					return updated;
+				});
+			}
+		})
+	);
+}
+
+export function unsubscribeFromThreadEvents(): void {
+	for (const unsub of threadEventUnsubs) unsub();
+	threadEventUnsubs = [];
 }
