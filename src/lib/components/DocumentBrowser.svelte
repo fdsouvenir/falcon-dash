@@ -15,6 +15,7 @@
 		type SortField
 	} from '$lib/stores/files.js';
 	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { openFile } from '$lib/stores/editor.js';
 
 	let entries = $state<FileEntry[]>([]);
 	let path = $state('');
@@ -76,6 +77,8 @@
 	function handleNavigate(entry: FileEntry) {
 		if (entry.type === 'directory') {
 			loadDirectory(entry.path);
+		} else {
+			openFile(entry.path);
 		}
 	}
 
