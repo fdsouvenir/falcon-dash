@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { snapshot, call } from '$lib/stores/gateway.js';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
+	import { loadThreads } from '$lib/stores/threads.js';
+	import ThreadList from '$lib/components/ThreadList.svelte';
 
 	let showSettings = $state(false);
+	let showThreads = $state(false);
 	let model = $state('');
 	let thinkingLevel = $state('off');
 	let verbose = $state(false);
@@ -68,6 +71,23 @@
 			<span class="text-xs text-gray-400">{model}</span>
 		{/if}
 		<button
+			onclick={() => {
+				showThreads = !showThreads;
+				if (showThreads && currentSessionKey) loadThreads(currentSessionKey);
+			}}
+			class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			aria-label="View threads"
+		>
+			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+				/>
+			</svg>
+		</button>
+		<button
 			onclick={toggleSettings}
 			class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
 			aria-label="Chat settings"
@@ -89,6 +109,12 @@
 		</button>
 	</div>
 </div>
+
+{#if showThreads}
+	<div class="border-b border-gray-800 bg-gray-900">
+		<ThreadList />
+	</div>
+{/if}
 
 {#if showSettings}
 	<div class="border-b border-gray-800 bg-gray-900 px-4 py-3">
