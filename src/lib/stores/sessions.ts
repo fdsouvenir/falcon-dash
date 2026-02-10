@@ -134,6 +134,26 @@ export function unsubscribeFromEvents(): void {
 	unsubscribers = [];
 }
 
+export async function reorderSessions(sessionKeys: string[]): Promise<void> {
+	await call('sessions.reorder', { sessionKeys });
+	_sessions.update((list) => {
+		const ordered: ChatSessionInfo[] = [];
+		// General always first
+		const general = list.find((s) => s.isGeneral);
+		if (general) ordered.push(general);
+		// Then in requested order
+		for (const key of sessionKeys) {
+			const found = list.find((s) => s.sessionKey === key && !s.isGeneral);
+			if (found) ordered.push(found);
+		}
+		// Any remaining
+		for (const s of list) {
+			if (!ordered.includes(s)) ordered.push(s);
+		}
+		return ordered;
+	});
+}
+
 export async function ensureGeneralSession(): Promise<string> {
 	await loadSessions();
 	const list = get(_sessions);

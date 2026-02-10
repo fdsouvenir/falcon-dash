@@ -7,6 +7,7 @@
 		renameSession,
 		deleteSession,
 		createSession,
+		reorderSessions,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
 
@@ -15,6 +16,7 @@
 	let query = $state('');
 	let editingKey = $state<string | null>(null);
 	let editName = $state('');
+	let draggedKey = $state<string | null>(null);
 
 	$effect(() => {
 		const unsub = filteredSessions.subscribe((v) => {
@@ -70,6 +72,38 @@
 	async function handleNewChat() {
 		await createSession();
 	}
+
+	function dragStart(key: string) {
+		draggedKey = key;
+	}
+
+	function dragOver(e: DragEvent, key: string) {
+		if (!draggedKey || draggedKey === key) return;
+		e.preventDefault();
+	}
+
+	async function drop(targetKey: string) {
+		if (!draggedKey || draggedKey === targetKey) {
+			draggedKey = null;
+			return;
+		}
+
+		const nonGeneralSessions = sessionList.filter((s) => !s.isGeneral);
+		const draggedIndex = nonGeneralSessions.findIndex((s) => s.sessionKey === draggedKey);
+		const targetIndex = nonGeneralSessions.findIndex((s) => s.sessionKey === targetKey);
+
+		if (draggedIndex === -1 || targetIndex === -1) {
+			draggedKey = null;
+			return;
+		}
+
+		const reordered = [...nonGeneralSessions];
+		const [dragged] = reordered.splice(draggedIndex, 1);
+		reordered.splice(targetIndex, 0, dragged);
+
+		await reorderSessions(reordered.map((s) => s.sessionKey));
+		draggedKey = null;
+	}
 </script>
 
 <div class="flex flex-col">
@@ -101,12 +135,33 @@
 	<div class="flex-1 overflow-y-auto">
 		{#each sessionList as session (session.sessionKey)}
 			<button
+				draggable={!session.isGeneral}
+				ondragstart={() => dragStart(session.sessionKey)}
+				ondragover={(e) => dragOver(e, session.sessionKey)}
+				ondrop={() => drop(session.sessionKey)}
 				onclick={() => selectSession(session.sessionKey)}
 				class="group flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {activeKey ===
 				session.sessionKey
 					? 'bg-gray-800 text-white'
-					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+					: 'text-gray-300 hover:bg-gray-800 hover:text-white'} {draggedKey === session.sessionKey
+					? 'opacity-50'
+					: ''}"
 			>
+				{#if !session.isGeneral}
+					<svg
+						class="h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 8h16M4 16h16"
+						/>
+					</svg>
+				{/if}
 				{#if editingKey === session.sessionKey}
 					<input
 						type="text"

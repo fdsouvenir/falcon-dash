@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
+	import ChatList from './ChatList.svelte';
 
 	let { collapsed = false, onToggle }: { collapsed: boolean; onToggle: () => void } = $props();
 </script>
@@ -35,7 +36,7 @@
 		<!-- Chats section -->
 		<div class="px-3 py-3">
 			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Chats</h2>
-			<div class="px-2 py-1 text-sm text-gray-500 italic">No chats yet</div>
+			<ChatList />
 		</div>
 
 		<!-- Apps section -->
