@@ -1025,3 +1025,40 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - prose-invert class for dark theme markdown rendering
   - AI context endpoints return { markdown, generated_at, stats }
 ---
+
+## 2026-02-10 ~13:00 CST - US-073
+- Created BulkActions.svelte (358 lines)
+- Multi-select with select-all checkbox, selection count badge
+- Bulk toolbar: status, priority, milestone dropdowns + move to project
+- Calls pm.bulk.update/pm.bulk.move, shows per-item errors
+- Files created: src/lib/components/pm/BulkActions.svelte
+---
+
+## 2026-02-10 ~13:00 CST - US-074
+- Created PMSearch.svelte (208 lines)
+- Debounced search input (300ms), type/status filter dropdowns
+- Results grouped by entity_type with section headers
+- Relevance score bars, snippet display, click navigation
+- Files created: src/lib/components/pm/PMSearch.svelte
+---
+
+## 2026-02-10 ~13:00 CST - US-075
+- Created CreateEntityDialog.svelte (565 lines)
+- Single unified component for all PM entity creation
+- Dynamic form based on entityType: domain, focus, milestone, project, task
+- Validation, loading states, error handling, Escape to close
+- Files created: src/lib/components/pm/CreateEntityDialog.svelte
+---
+
+## 2026-02-10 ~13:00 CST - US-076
+- Created DependencyGraph.svelte (431 lines)
+- SVG-based graph with topological layout algorithm
+- Color-coded nodes: red (blocked), orange (blocking), green (clear)
+- Curved directed arrows between nodes, click to navigate
+- Legend, empty states, responsive SVG dimensions
+- Files created: src/lib/components/pm/DependencyGraph.svelte
+- **Learnings for future iterations:**
+  - SVG dependency graph: topological depth computation for column layout
+  - Task type uses `id` not `number` field
+  - End of Phase 4B (PM module complete)
+---
