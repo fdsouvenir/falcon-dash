@@ -984,3 +984,44 @@ Started: Tue Feb 10 01:06:48 AM CST 2026
   - Drag state: draggedTaskId, dragOverColumn, dragOverTaskId for visual feedback
   - Column tasks sorted by sort_order for consistent ordering
 ---
+
+## 2026-02-10 ~12:30 CST - US-070
+- Created ProjectDetail.svelte (787 lines)
+- Header with breadcrumb (domain>focus>project), inline-editable title
+- Status/priority dropdowns, due date, collapsible description
+- 5 tabs: Tasks (recursive tree + add), Comments (CRUD), Attachments (CRUD), Activity (feed), Blocks
+- Inline editing for all project fields
+- Files created: src/lib/components/pm/ProjectDetail.svelte
+- **Learnings for future iterations:**
+  - Tabbed interface pattern: activeTab state + conditional rendering
+  - Recursive task tree: filter by parent_task_id, render nested
+  - Inline edit pattern: editingField state, click to enter, Enter/Escape to save/cancel
+---
+
+## 2026-02-10 ~12:30 CST - US-071
+- Created TaskDetailPanel.svelte (702 lines)
+- Slide-out panel from right (500px wide, backdrop, Escape to close)
+- Ancestry breadcrumb walking parent chain to project
+- Inline editing: title, body, status, priority, due date, milestone
+- Subtask list with drag-to-reorder and add form
+- Comments, attachments, blocks sections with CRUD
+- Delete with mode choice (cascade vs promote subtasks)
+- Files created: src/lib/components/pm/TaskDetailPanel.svelte
+- **Learnings for future iterations:**
+  - Slide-out panel: fixed position, z-50, translate-x transition
+  - Ancestry: recursive parent lookup until parent_task_id is null
+  - Delete mode choice: cascade vs promote — gateway decides behavior
+---
+
+## 2026-02-10 ~12:30 CST - US-072
+- Created AIContextPanel.svelte component
+- Added AIProjectContext and AIDashboardContext types to pm-operations.ts
+- Added getAIProjectContext() and getAIDashboardContext() functions
+- Simple markdown-to-HTML renderer (headers, bold, lists, code blocks)
+- Stats pills, generated-at timestamp, refresh button with spinner
+- Files changed: src/lib/stores/pm-operations.ts (modified), src/lib/components/pm/AIContextPanel.svelte (new)
+- **Learnings for future iterations:**
+  - Simple markdownToHtml with regex works well for structured PM context
+  - prose-invert class for dark theme markdown rendering
+  - AI context endpoints return { markdown, generated_at, stats }
+---
