@@ -1,8 +1,8 @@
-import { writable, derived, readonly, get, type Readable, type Writable } from 'svelte/store';
-import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
+import { writable, derived, readonly, type Readable, type Writable } from 'svelte/store';
+import { call, snapshot } from '$lib/stores/gateway.js';
 import type { Project } from './pm-projects.js';
 import type { Task } from './pm-projects.js';
-import type { Domain, Focus, Milestone } from './pm-domains.js';
+import type { Domain, Focus } from './pm-domains.js';
 
 // Feature detection
 const _pmAvailable: Writable<boolean> = writable(false);

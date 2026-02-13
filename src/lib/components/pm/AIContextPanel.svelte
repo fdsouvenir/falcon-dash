@@ -113,7 +113,7 @@
 		<div>Generated: {formatTimestamp(generatedAt)}</div>
 		{#if Object.keys(stats).length > 0}
 			<div class="flex gap-2">
-				{#each Object.entries(stats) as [key, value]}
+				{#each Object.entries(stats) as [key, value] (key)}
 					<span class="rounded-full bg-gray-700 px-2 py-1 text-xs text-gray-300">
 						{key}: {value}
 					</span>
@@ -141,6 +141,7 @@
 			</div>
 		{:else if markdown}
 			<div class="prose prose-invert max-w-none p-4">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html markdownToHtml(markdown)}
 			</div>
 		{:else if !loading}

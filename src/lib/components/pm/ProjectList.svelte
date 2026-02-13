@@ -24,6 +24,7 @@
 	let { domainFilter = null, focusFilter = null, onselect }: Props = $props();
 
 	let projectList = $state<Project[]>([]);
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- populated by subscription, used for future domain filtering
 	let domainList = $state<Domain[]>([]);
 	let focusList = $state<Focus[]>([]);
 	let milestoneList = $state<Milestone[]>([]);
@@ -313,7 +314,7 @@
 			}}
 		>
 			<option value="">All Milestones</option>
-			{#each milestoneList as milestone}
+			{#each milestoneList as milestone (milestone.id)}
 				<option value={milestone.id}>{milestone.name}</option>
 			{/each}
 		</select>
@@ -382,7 +383,7 @@
 						bind:value={newFocusId}
 					>
 						<option value="">Select focus</option>
-						{#each focusList as focus}
+						{#each focusList as focus (focus.id)}
 							<option value={focus.id}>{focus.name}</option>
 						{/each}
 					</select>
@@ -468,7 +469,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each paginated as project}
+					{#each paginated as project (project.id)}
 						<tr
 							class="cursor-pointer border-b border-gray-800 hover:bg-gray-800"
 							onclick={() => handleRowClick(project.id)}

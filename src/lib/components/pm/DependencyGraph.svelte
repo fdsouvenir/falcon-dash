@@ -37,7 +37,9 @@
 		if (tasks.length === 0) return { nodes: [], edges: [], width: 400, height: 200 };
 
 		// Build adjacency maps
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		const blockedBy = new Map<number, number[]>();
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		const blocking = new Map<number, number[]>();
 
 		for (const b of blocks) {
@@ -48,7 +50,9 @@
 		}
 
 		// Compute depth (column) based on longest path from roots
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		const depth = new Map<number, number>();
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		function getDepth(id: number, visited = new Set<number>()): number {
 			if (depth.has(id)) return depth.get(id)!;
 			if (visited.has(id)) return 0; // cycle protection
@@ -63,6 +67,7 @@
 		for (const t of tasks) getDepth(t.id);
 
 		// Group by depth
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		const columns = new Map<number, Task[]>();
 		let maxDepth = 0;
 		for (const t of tasks) {
@@ -74,6 +79,7 @@
 
 		// Assign positions
 		const nodes: NodePosition[] = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 		const taskToNode = new Map<number, NodePosition>();
 
 		for (let col = 0; col <= maxDepth; col++) {
@@ -194,7 +200,7 @@
 					</marker>
 				</defs>
 
-				{#each layout.edges as edge}
+				{#each layout.edges as edge (edge.from.id + '-' + edge.to.id)}
 					<path
 						d={buildEdgePath(edge.from, edge.to)}
 						fill="none"
@@ -205,7 +211,7 @@
 				{/each}
 
 				<!-- Nodes -->
-				{#each layout.nodes as node}
+				{#each layout.nodes as node (node.id)}
 					{@const styles = getColorStyles(node.color)}
 					<g
 						class="node"

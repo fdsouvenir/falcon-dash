@@ -10,7 +10,9 @@
 
 	let { tasks, onRefresh }: Props = $props();
 
-	let selectedIds = $state(new Set<number>());
+	import { SvelteSet } from 'svelte/reactivity';
+
+	let selectedIds = new SvelteSet<number>();
 	let showToolbar = $derived(selectedIds.size > 0);
 	let selectedCount = $derived(selectedIds.size);
 
@@ -29,7 +31,7 @@
 		if (allSelected) {
 			selectedIds.clear();
 		} else {
-			selectedIds = new Set(tasks.map((t) => t.id));
+			selectedIds = new SvelteSet(tasks.map((t) => t.id));
 		}
 	}
 
@@ -182,7 +184,7 @@
 				<span class="font-semibold">Errors occurred:</span>
 				<button onclick={clearMessages} class="text-red-400 hover:text-red-300">×</button>
 			</div>
-			{#each errors as err}
+			{#each errors as err (err.id)}
 				<div class="text-sm">
 					{#if err.id > 0}
 						Task #{err.id}: {err.error}
@@ -238,9 +240,9 @@
 					>
 						<option value="">Change priority...</option>
 						<option value="low">Low</option>
-						<option value="medium">Medium</option>
+						<option value="normal">Normal</option>
 						<option value="high">High</option>
-						<option value="critical">Critical</option>
+						<option value="urgent">Urgent</option>
 					</select>
 					<button
 						onclick={applyPriorityChange}
@@ -260,7 +262,7 @@
 					>
 						<option value="">Change milestone...</option>
 						<option value="null">Clear milestone</option>
-						{#each $milestones as milestone}
+						{#each $milestones as milestone (milestone.id)}
 							<option value={String(milestone.id)}>{milestone.name}</option>
 						{/each}
 					</select>
@@ -313,7 +315,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each tasks as task}
+				{#each tasks as task (task.id)}
 					<tr class="border-b border-gray-800 hover:bg-gray-800/50">
 						<td class="p-3">
 							<input
@@ -338,11 +340,11 @@
 						</td>
 						<td class="p-3">
 							<span
-								class="px-2 py-1 rounded text-xs {task.priority === 'critical'
+								class="px-2 py-1 rounded text-xs {task.priority === 'urgent'
 									? 'bg-red-900/30 text-red-400'
 									: task.priority === 'high'
 										? 'bg-orange-900/30 text-orange-400'
-										: task.priority === 'medium'
+										: task.priority === 'normal'
 											? 'bg-yellow-900/30 text-yellow-400'
 											: 'bg-gray-700 text-gray-300'}"
 							>

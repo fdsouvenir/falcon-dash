@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import {
 		getProject,
 		updateProject,
 		loadTasks,
 		createTask,
 		updateTask,
-		deleteTask,
 		type Project,
 		type Task
 	} from '$lib/stores/pm-projects.js';
@@ -19,7 +17,6 @@
 		createAttachment,
 		deleteAttachment,
 		listActivities,
-		listBlocks,
 		type Comment,
 		type Attachment,
 		type Activity,
@@ -92,7 +89,7 @@
 
 	async function loadTasksData() {
 		try {
-			const res = await loadTasks({ parent_project_id: projectId });
+			await loadTasks({ parent_project_id: projectId });
 			// loadTasks returns void but updates the store, we need to fetch manually
 			// For now, we'll store tasks in local state
 		} catch (err) {
@@ -528,7 +525,7 @@
 			<div class="overflow-y-auto max-h-[calc(90vh-300px)] p-6">
 				{#if activeTab === 'tasks'}
 					<div class="space-y-2">
-						{#each buildTaskTree(tasks) as task}
+						{#each buildTaskTree(tasks) as task (task.id)}
 							<div class="bg-gray-800 rounded p-3">
 								<div class="flex items-center gap-3">
 									<input
@@ -552,7 +549,7 @@
 										{task.status}
 									</span>
 								</div>
-								{#each getSubtasks(task.id, tasks) as subtask}
+								{#each getSubtasks(task.id, tasks) as subtask (subtask.id)}
 									<div class="ml-8 mt-2 bg-gray-700 rounded p-2 flex items-center gap-3">
 										<input
 											type="checkbox"
@@ -599,7 +596,7 @@
 					</div>
 				{:else if activeTab === 'comments'}
 					<div class="space-y-4">
-						{#each comments as comment}
+						{#each comments as comment (comment.id)}
 							<div class="bg-gray-800 rounded p-4">
 								<div class="flex justify-between items-start mb-2">
 									<div>
@@ -670,7 +667,7 @@
 					</div>
 				{:else if activeTab === 'attachments'}
 					<div class="space-y-4">
-						{#each attachments as attachment}
+						{#each attachments as attachment (attachment.id)}
 							<div class="bg-gray-800 rounded p-4 flex justify-between items-start">
 								<div>
 									<div class="text-white font-medium">{attachment.file_name}</div>
@@ -723,7 +720,7 @@
 					</div>
 				{:else if activeTab === 'activity'}
 					<div class="space-y-2">
-						{#each activities as activity}
+						{#each activities as activity (activity.id)}
 							<div class="bg-gray-800 rounded p-3">
 								<div class="text-sm">
 									<span class="text-white font-medium">{activity.actor}</span>
@@ -748,7 +745,7 @@
 							<h3 class="text-white font-medium mb-3">Blocking</h3>
 							{#if blocks.blocking.length > 0}
 								<div class="space-y-2">
-									{#each blocks.blocking as block}
+									{#each blocks.blocking as block (block.blocker_id + '-' + block.blocked_id)}
 										<div class="bg-gray-800 rounded p-3 text-gray-300 text-sm">
 											Task #{block.blocker_id} blocks Task #{block.blocked_id}
 										</div>
@@ -763,7 +760,7 @@
 							<h3 class="text-white font-medium mb-3">Blocked By</h3>
 							{#if blocks.blockedBy.length > 0}
 								<div class="space-y-2">
-									{#each blocks.blockedBy as block}
+									{#each blocks.blockedBy as block (block.blocker_id + '-' + block.blocked_id)}
 										<div class="bg-gray-800 rounded p-3 text-gray-300 text-sm">
 											Task #{block.blocked_id} is blocked by Task #{block.blocker_id}
 										</div>

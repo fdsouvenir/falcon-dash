@@ -65,6 +65,7 @@
 		} else {
 			expandedDomains.add(domainId);
 		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- intentional Set recreation to trigger reactivity
 		expandedDomains = new Set(expandedDomains);
 	}
 

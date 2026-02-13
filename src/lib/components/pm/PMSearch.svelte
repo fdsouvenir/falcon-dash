@@ -168,7 +168,7 @@
 			<div class="py-8 text-center text-sm text-gray-500">No results found</div>
 		{:else}
 			<div class="space-y-4">
-				{#each Object.entries(grouped) as [entityType, groupResults]}
+				{#each Object.entries(grouped) as [entityType, groupResults] (entityType)}
 					<div>
 						<div class="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-400">
 							<span>{getEntityIcon(entityType)}</span>
@@ -176,7 +176,7 @@
 							<span class="text-gray-600">({groupResults.length})</span>
 						</div>
 						<div class="space-y-1">
-							{#each groupResults as result}
+							{#each groupResults as result (result.entity_id)}
 								<button
 									type="button"
 									onclick={() => handleResultClick(result)}

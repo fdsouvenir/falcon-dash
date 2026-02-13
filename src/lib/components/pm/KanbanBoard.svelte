@@ -1,11 +1,7 @@
 <script lang="ts">
-	import { updateTask, reorderTasks, loadTasks, type Task } from '$lib/stores/pm-projects.js';
+	import { updateTask, reorderTasks, type Task } from '$lib/stores/pm-projects.js';
 
-	let {
-		tasks = [],
-		projectId = null as number | null,
-		onTaskClick = null as ((task: Task) => void) | null
-	} = $props();
+	let { tasks = [], onTaskClick = null as ((task: Task) => void) | null } = $props();
 
 	const COLUMNS = [
 		{ key: 'todo', label: 'To Do', color: 'border-gray-600' },
@@ -112,12 +108,12 @@
 
 	function priorityBadge(priority: string | null): { text: string; class: string } {
 		switch (priority) {
-			case 'critical':
-				return { text: 'Critical', class: 'bg-red-600 text-white' };
+			case 'urgent':
+				return { text: 'Urgent', class: 'bg-red-600 text-white' };
 			case 'high':
 				return { text: 'High', class: 'bg-orange-600 text-white' };
-			case 'medium':
-				return { text: 'Med', class: 'bg-yellow-600 text-white' };
+			case 'normal':
+				return { text: 'Normal', class: 'bg-yellow-600 text-white' };
 			case 'low':
 				return { text: 'Low', class: 'bg-gray-600 text-white' };
 			default:
@@ -142,6 +138,7 @@
 	}
 
 	// Check if blocked
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	function isBlocked(taskId: number): boolean {
 		// Blocked tasks would have blockers — for now check if any task blocks this one
 		// This is a simplified check; real blocked state comes from blocks table
@@ -165,7 +162,7 @@
 				class="rounded bg-gray-800 px-3 py-1 text-sm text-white"
 			>
 				<option value={null}>All Projects</option>
-				{#each projects as projectId}
+				{#each projects as projectId (projectId)}
 					<option value={projectId}>Project {projectId}</option>
 				{/each}
 			</select>
@@ -179,9 +176,9 @@
 				class="rounded bg-gray-800 px-3 py-1 text-sm text-white"
 			>
 				<option value={null}>All Priorities</option>
-				<option value="critical">Critical</option>
+				<option value="urgent">Urgent</option>
 				<option value="high">High</option>
-				<option value="medium">Medium</option>
+				<option value="normal">Normal</option>
 				<option value="low">Low</option>
 			</select>
 		</div>

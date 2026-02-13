@@ -8,13 +8,11 @@
 		createTask,
 		reorderTasks,
 		loadTasks,
-		type Task,
-		type Project
+		type Task
 	} from '$lib/stores/pm-projects.js';
 	import {
 		listComments,
 		createComment,
-		updateComment,
 		deleteComment,
 		listAttachments,
 		createAttachment,
@@ -26,12 +24,7 @@
 		type Attachment,
 		type Block
 	} from '$lib/stores/pm-operations.js';
-	import {
-		getMilestone,
-		loadMilestones,
-		milestones,
-		type Milestone
-	} from '$lib/stores/pm-domains.js';
+	import { loadMilestones, milestones, type Milestone } from '$lib/stores/pm-domains.js';
 
 	interface Props {
 		taskId: number;
@@ -117,7 +110,7 @@
 
 	async function loadSubtasks() {
 		if (!task) return;
-		const allTasks = await loadTasks({ parent_task_id: task.id });
+		await loadTasks({ parent_task_id: task.id });
 		// loadTasks returns void, need to call it differently
 		// Use the tasks that are loaded into the store
 		// For now, we'll fetch them separately
@@ -172,8 +165,8 @@
 		if (!task) return;
 		const data: Record<string, string | number | null> = {};
 		data[field] = value;
-		await updateTask(task.id, data as any);
-		(task as any)[field] = value;
+		await updateTask(task.id, data);
+		(task as unknown as Record<string, unknown>)[field] = value;
 	}
 
 	async function addSubtask() {
@@ -345,7 +338,7 @@
 			<!-- Ancestry breadcrumb -->
 			{#if ancestry.length > 0}
 				<div class="flex items-center gap-2 text-sm text-gray-400">
-					{#each ancestry as item, i}
+					{#each ancestry as item, i (item.id)}
 						{#if i > 0}
 							<span>/</span>
 						{/if}
@@ -479,7 +472,7 @@
 					class="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-white"
 				>
 					<option value="">None</option>
-					{#each allMilestones as milestone}
+					{#each allMilestones as milestone (milestone.id)}
 						<option value={milestone.id}>{milestone.name}</option>
 					{/each}
 				</select>
@@ -605,7 +598,7 @@
 				<div class="mb-4">
 					<h4 class="text-sm font-medium text-gray-300 mb-1">Blocked By</h4>
 					<div class="space-y-1">
-						{#each blockedBy as block}
+						{#each blockedBy as block (block.blocker_id)}
 							<div
 								class="flex items-center justify-between rounded border border-gray-700 bg-gray-800 p-2"
 							>
@@ -635,7 +628,7 @@
 				<div>
 					<h4 class="text-sm font-medium text-gray-300 mb-1">Blocks</h4>
 					<div class="space-y-1">
-						{#each blocking as block}
+						{#each blocking as block (block.blocked_id)}
 							<div
 								class="flex items-center justify-between rounded border border-gray-700 bg-gray-800 p-2"
 							>

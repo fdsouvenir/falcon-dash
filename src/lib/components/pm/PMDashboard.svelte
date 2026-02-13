@@ -3,8 +3,7 @@
 		getPMStats,
 		getDashboardContext,
 		type PMStats,
-		type DashboardContext,
-		type Activity
+		type DashboardContext
 	} from '$lib/stores/pm-operations.js';
 
 	let stats = $state<PMStats | null>(null);
@@ -95,7 +94,7 @@
 					<div class="py-4 text-sm text-gray-500">No items due soon</div>
 				{:else}
 					<div class="space-y-2">
-						{#each context.dueSoon as item}
+						{#each context.dueSoon as item (item.id)}
 							<div class="rounded border border-gray-700 bg-gray-900 p-3">
 								<div class="flex items-start justify-between">
 									<div class="flex-1">
@@ -154,7 +153,7 @@
 					<div class="py-4 text-sm text-gray-500">No blocked items</div>
 				{:else}
 					<div class="space-y-2">
-						{#each context.blocked as item}
+						{#each context.blocked as item (item.id)}
 							<div class="rounded border border-gray-700 bg-gray-900 p-3">
 								<div class="text-sm text-white">{item.title}</div>
 								<div class="mt-1 text-xs text-gray-500">
@@ -173,7 +172,7 @@
 					<div class="py-4 text-sm text-gray-500">No recent activity</div>
 				{:else}
 					<div class="space-y-2">
-						{#each context.recentActivity as activity}
+						{#each context.recentActivity as activity (activity.id)}
 							<div class="border-b border-gray-700 pb-2 last:border-b-0">
 								<div class="flex items-start justify-between">
 									<div class="flex-1">

@@ -14,7 +14,7 @@
 		type Focus,
 		type Milestone
 	} from '$lib/stores/pm-domains.js';
-	import { createProject, createTask, type Project, type Task } from '$lib/stores/pm-projects.js';
+	import { createProject, createTask } from '$lib/stores/pm-projects.js';
 
 	interface Props {
 		entityType: 'domain' | 'focus' | 'milestone' | 'project' | 'task';
@@ -166,7 +166,7 @@
 					});
 					break;
 
-				case 'task':
+				case 'task': {
 					if (!taskTitle.trim()) {
 						error = 'Title is required';
 						loading = false;
@@ -200,6 +200,7 @@
 
 					entity = await createTask(taskData);
 					break;
+				}
 			}
 
 			if (onCreated) {
@@ -330,7 +331,7 @@
 						required
 					>
 						<option value="">Select domain...</option>
-						{#each allDomains as domain}
+						{#each allDomains as domain (domain.id)}
 							<option value={domain.id}>{domain.name}</option>
 						{/each}
 					</select>
@@ -401,7 +402,7 @@
 						required
 					>
 						<option value="">Select focus...</option>
-						{#each allFocuses as focus}
+						{#each allFocuses as focus (focus.id)}
 							<option value={focus.id}>{focus.name}</option>
 						{/each}
 					</select>
@@ -467,7 +468,7 @@
 						class="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-white"
 					>
 						<option value="">None</option>
-						{#each allMilestones as milestone}
+						{#each allMilestones as milestone (milestone.id)}
 							<option value={milestone.id.toString()}>{milestone.name}</option>
 						{/each}
 					</select>
@@ -536,7 +537,7 @@
 						class="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-white"
 					>
 						<option value="">None</option>
-						{#each allMilestones as milestone}
+						{#each allMilestones as milestone (milestone.id)}
 							<option value={milestone.id.toString()}>{milestone.name}</option>
 						{/each}
 					</select>
