@@ -1,4 +1,4 @@
-import { writable, readonly, derived, type Readable } from 'svelte/store';
+import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import type { EventBus } from '$lib/gateway/event-bus.js';
 import { sendCanvasAction, pushSurfaceMessage, clearSurface } from '$lib/canvas/delivery.js';
 import { diagnosticLog } from '$lib/gateway/diagnostic-log.js';
@@ -8,6 +8,7 @@ export interface CanvasSurface {
 	title?: string;
 	sessionKey?: string;
 	runId?: string;
+	url?: string;
 	messages: unknown[];
 	visible: boolean;
 	createdAt: number;
@@ -21,6 +22,18 @@ export class CanvasStore {
 	private _currentSurfaceId = writable<string | null>(null);
 	private unsubscribers: Array<() => void> = [];
 	private callFn: CallFn | null = null;
+	private _activeRunId: string | null = null;
+	private _canvasHostBaseUrl: string | null = null;
+
+	/** Set the active chat run ID so canvas surfaces can auto-associate */
+	setActiveRunId(runId: string | null): void {
+		this._activeRunId = runId;
+	}
+
+	/** Set the canvas host base URL (derived from gateway hello-ok) */
+	setCanvasHostBaseUrl(url: string): void {
+		this._canvasHostBaseUrl = url;
+	}
 
 	/** All active canvas surfaces */
 	readonly surfaces: Readable<Map<string, CanvasSurface>> = readonly(this._surfaces);
@@ -56,9 +69,30 @@ export class CanvasStore {
 		// Primary path: node.invoke.request — gateway routes canvas commands to us
 		this.unsubscribers.push(
 			eventBus.on('node.invoke.request', (payload) => {
-				const requestId = payload.requestId as string;
+				const requestId = (payload.id ?? payload.requestId) as string;
 				const command = payload.command as string;
-				const params = (payload.params ?? {}) as Record<string, unknown>;
+
+				let params: Record<string, unknown>;
+				try {
+					const rawParams = payload.paramsJSON as string | null;
+					if (rawParams && typeof rawParams === 'string') {
+						params = JSON.parse(rawParams);
+					} else if (
+						payload.params &&
+						typeof payload.params === 'object' &&
+						Object.keys(payload.params as object).length > 0
+					) {
+						params = payload.params as Record<string, unknown>;
+					} else if (typeof payload.params === 'string') {
+						params = JSON.parse(payload.params as string);
+					} else {
+						params = {};
+					}
+				} catch {
+					params = (payload.params ?? {}) as Record<string, unknown>;
+				}
+
+				console.log('[canvas] invoke.request received:', { requestId, command, params });
 				diagnosticLog.log('canvas', 'info', `Invoke request: ${command}`, { requestId });
 				this.handleCommand(command, params, requestId);
 			})
@@ -105,9 +139,13 @@ export class CanvasStore {
 	): void {
 		try {
 			switch (command) {
-				case 'canvas.present':
-					this.handlePresent(params);
-					break;
+				case 'canvas.present': {
+					const surfaceId = this.handlePresent(params);
+					if (requestId) {
+						this.respondOk(requestId, { surfaceId });
+					}
+					return;
+				}
 				case 'canvas.hide':
 					this.handleHide(params);
 					break;
@@ -140,10 +178,17 @@ export class CanvasStore {
 		}
 	}
 
+	/** Resolve the default URL for a canvas surface when none is provided */
+	private getDefaultCanvasUrl(): string | undefined {
+		if (!this._canvasHostBaseUrl) return undefined;
+		return `${this._canvasHostBaseUrl}/a2ui/`;
+	}
+
 	/** canvas.present — create or show a surface */
-	private handlePresent(params: Record<string, unknown>): void {
-		const surfaceId = params.surfaceId as string;
-		if (!surfaceId) return;
+	private handlePresent(params: Record<string, unknown>): string {
+		const surfaceId = (params.surfaceId as string) || `surface-${crypto.randomUUID()}`;
+		const title = (params.title as string) || 'Canvas';
+		const url = (params.url as string) || this.getDefaultCanvasUrl();
 
 		this._surfaces.update((map) => {
 			const existing = map.get(surfaceId);
@@ -151,14 +196,17 @@ export class CanvasStore {
 				existing.visible = true;
 				existing.title = (params.title as string) ?? existing.title;
 				existing.sessionKey = (params.sessionKey as string) ?? existing.sessionKey;
-				existing.runId = (params.runId as string) ?? existing.runId;
+				existing.runId =
+					(params.runId as string) ?? existing.runId ?? this._activeRunId ?? undefined;
+				existing.url = (params.url as string) ?? existing.url ?? url;
 				existing.updatedAt = Date.now();
 			} else {
 				map.set(surfaceId, {
 					surfaceId,
-					title: params.title as string | undefined,
+					title,
 					sessionKey: params.sessionKey as string | undefined,
-					runId: params.runId as string | undefined,
+					runId: (params.runId as string) ?? this._activeRunId ?? undefined,
+					url,
 					messages: [],
 					visible: true,
 					createdAt: Date.now(),
@@ -169,12 +217,29 @@ export class CanvasStore {
 		});
 
 		this._currentSurfaceId.set(surfaceId);
-		diagnosticLog.log('canvas', 'info', `Surface presented: ${surfaceId}`);
+		console.log('[canvas] handlePresent:', { surfaceId, title, url });
+		diagnosticLog.log('canvas', 'info', `Surface presented: ${surfaceId}`, { url });
+		return surfaceId;
+	}
+
+	/** Resolve surfaceId from params, falling back to current surface (matches native node behavior) */
+	private resolveSurfaceId(params: Record<string, unknown>, command: string): string | null {
+		const explicit = params.surfaceId as string;
+		if (explicit) return explicit;
+
+		const current = get(this._currentSurfaceId);
+		if (current) {
+			console.log(`[canvas] ${command}: no surfaceId in params, using current: ${current}`);
+			return current;
+		}
+
+		console.warn(`[canvas] ${command}: no surfaceId in params and no current surface`);
+		return null;
 	}
 
 	/** canvas.hide — hide a surface */
 	private handleHide(params: Record<string, unknown>): void {
-		const surfaceId = params.surfaceId as string;
+		const surfaceId = this.resolveSurfaceId(params, 'handleHide');
 		if (!surfaceId) return;
 
 		this._surfaces.update((map) => {
@@ -191,18 +256,32 @@ export class CanvasStore {
 		diagnosticLog.log('canvas', 'info', `Surface hidden: ${surfaceId}`);
 	}
 
-	/** canvas.navigate — navigate within a surface (currently a no-op placeholder) */
+	/** canvas.navigate — navigate a surface's webview to a new URL */
 	private handleNavigate(params: Record<string, unknown>): void {
-		const surfaceId = params.surfaceId as string;
+		const surfaceId = this.resolveSurfaceId(params, 'handleNavigate');
 		if (!surfaceId) return;
 
-		// Navigation is handled by the A2UI component itself
-		diagnosticLog.log('canvas', 'info', `Surface navigate: ${surfaceId}`, params);
+		const url = typeof params.url === 'string' ? params.url : null;
+		if (!url) {
+			diagnosticLog.log('canvas', 'warn', `handleNavigate: missing url for ${surfaceId}`);
+			return;
+		}
+
+		this._surfaces.update((map) => {
+			const surface = map.get(surfaceId);
+			if (surface) {
+				surface.url = url;
+				surface.updatedAt = Date.now();
+			}
+			return new Map(map);
+		});
+
+		diagnosticLog.log('canvas', 'info', `Surface navigated: ${surfaceId} → ${url}`);
 	}
 
 	/** canvas.a2ui.pushJSONL — push A2UI messages to a surface */
 	private handlePushJSONL(params: Record<string, unknown>): void {
-		const surfaceId = params.surfaceId as string;
+		const surfaceId = this.resolveSurfaceId(params, 'handlePushJSONL');
 		if (!surfaceId) return;
 
 		// Messages can come as array or single JSONL string
@@ -234,7 +313,7 @@ export class CanvasStore {
 
 	/** canvas.a2ui.reset — clear a surface's A2UI state */
 	private handleReset(params: Record<string, unknown>): void {
-		const surfaceId = params.surfaceId as string;
+		const surfaceId = this.resolveSurfaceId(params, 'handleReset');
 		if (!surfaceId) return;
 
 		this._surfaces.update((map) => {
@@ -280,11 +359,13 @@ export class CanvasStore {
 	}
 
 	/** Respond OK to a canvas bridge invoke request */
-	private respondOk(requestId: string): void {
+	private respondOk(requestId: string, payload?: Record<string, unknown>): void {
 		if (!this.callFn) return;
+		console.log('[canvas] respondOk:', { requestId, payload });
 		this.callFn('canvas.bridge.invokeResult', {
 			id: requestId,
-			ok: true
+			ok: true,
+			payload
 		}).catch((err) => {
 			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
 		});
@@ -293,10 +374,11 @@ export class CanvasStore {
 	/** Respond with error to a canvas bridge invoke request */
 	private respondError(requestId: string, message: string): void {
 		if (!this.callFn) return;
+		console.log('[canvas] respondError:', { requestId, message });
 		this.callFn('canvas.bridge.invokeResult', {
 			id: requestId,
 			ok: false,
-			error: { code: 'CANVAS_ERROR', message }
+			error: message
 		}).catch((err) => {
 			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
 		});

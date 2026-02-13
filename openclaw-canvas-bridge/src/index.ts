@@ -73,6 +73,28 @@ const plugin: OpenClawPluginDefinition = {
 				const instanceId = client.connect?.client?.instanceId || client.connId;
 				const virtualNodeId = `virtual-canvas-${instanceId}`;
 
+				// Clean stale mapping if this virtualNodeId exists under a different connId
+				for (const [existingConnId, existingNodeId] of virtualNodes.entries()) {
+					if (existingNodeId === virtualNodeId && existingConnId !== client.connId) {
+						context.nodeRegistry.unregister(existingConnId);
+						virtualNodes.delete(existingConnId);
+						api.logger.info(
+							`Cleaned stale virtual node mapping: ${existingConnId} -> ${existingNodeId}`
+						);
+					}
+				}
+
+				// Broad sweep: remove ALL other virtual nodes — only one canvas dashboard
+				// should be active at a time. This cleans up stale nodes with random UUIDs
+				// from before the stable-ID fix was applied.
+				for (const [existingConnId, existingNodeId] of virtualNodes.entries()) {
+					if (existingConnId !== client.connId) {
+						context.nodeRegistry.unregister(existingConnId);
+						virtualNodes.delete(existingConnId);
+						api.logger.info(`Swept stale virtual node: ${existingConnId} -> ${existingNodeId}`);
+					}
+				}
+
 				// Create synthetic client that looks like a node to the registry
 				const syntheticClient = {
 					...client,
@@ -89,12 +111,27 @@ const plugin: OpenClawPluginDefinition = {
 					}
 				};
 
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- synthetic client matches runtime shape
 				context.nodeRegistry.register(syntheticClient as any, { remoteIp: undefined });
 				virtualNodes.set(client.connId, virtualNodeId);
 
 				// Auto-pair the virtual node so agent discovers it via node.list
 				try {
 					const store = await readPairedStore();
+
+					// Sweep stale virtual-canvas-* entries from paired store
+					const activeNodeIds = new Set(virtualNodes.values());
+					for (const key of Object.keys(store)) {
+						if (
+							key.startsWith('virtual-canvas-') &&
+							key !== virtualNodeId &&
+							!activeNodeIds.has(key)
+						) {
+							delete store[key];
+							api.logger.info(`Cleaned stale paired entry: ${key}`);
+						}
+					}
+
 					store[virtualNodeId] = {
 						deviceId: virtualNodeId,
 						platform: 'virtual',
@@ -156,13 +193,22 @@ const plugin: OpenClawPluginDefinition = {
 					return;
 				}
 
+				// Normalize error — dashboard may send string or object { code, message }
+				const errorValue = p.error;
+				const errorObj: { code?: string; message?: string } | null =
+					typeof errorValue === 'string'
+						? { code: 'CANVAS_ERROR', message: errorValue }
+						: errorValue && typeof errorValue === 'object'
+							? (errorValue as { code?: string; message?: string })
+							: null;
+
 				const handled = context.nodeRegistry.handleInvokeResult({
 					id: p.id as string,
 					nodeId: virtualNodeId,
 					ok: p.ok !== false,
 					payload: p.payload,
 					payloadJSON: null,
-					error: (p.error as any) ?? null
+					error: errorObj
 				});
 
 				if (handled) {

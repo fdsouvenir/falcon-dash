@@ -1,80 +1,73 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { snapshot } from '$lib/stores/gateway.js';
 
 	interface Props {
-		canvasId: string;
-		canvasPort?: number;
+		url: string;
+		onfailure?: () => void;
 	}
 
-	let { canvasId, canvasPort }: Props = $props();
+	let { url, onfailure }: Props = $props();
 
 	let iframeElement: HTMLIFrameElement | null = $state(null);
-	let frameHeight = $state(400);
+	let loaded = $state(false);
+	let loadFailed = $state(false);
 
-	let serverInfo = $derived(snapshot.server);
+	function handleLoad() {
+		loaded = true;
+	}
 
-	let canvasUrl = $derived(() => {
-		const host = $serverInfo?.host ?? '127.0.0.1';
-		const port = canvasPort ?? 18790;
-		return `http://${host}:${port}/__openclaw__/canvas/${canvasId}`;
-	});
+	function handleError() {
+		loadFailed = true;
+		onfailure?.();
+	}
 
 	onMount(() => {
-		// Set up postMessage bridge for action callbacks
+		// PostMessage bridge for canvas action callbacks
 		function handleMessage(event: MessageEvent) {
-			const host = $serverInfo?.host ?? '127.0.0.1';
-			const port = canvasPort ?? 18790;
-			if (event.origin !== `http://${host}:${port}`) {
+			try {
+				const urlOrigin = new URL(url).origin;
+				if (event.origin !== urlOrigin) return;
+			} catch {
 				return;
 			}
-			// Handle canvas action messages
 			if (event.data?.type === 'canvas-action') {
-				// Forward to gateway via canvas.action call
-				console.log('Canvas action received:', event.data);
+				console.log('[HTMLCanvasFrame] Canvas action received:', event.data);
 			}
 		}
 
 		window.addEventListener('message', handleMessage);
-
-		// Set up ResizeObserver for auto-sizing
-		let resizeObserver: ResizeObserver | null = null;
-		if (iframeElement) {
-			resizeObserver = new ResizeObserver((entries) => {
-				for (const entry of entries) {
-					if (entry.contentRect.height > 0) {
-						frameHeight = entry.contentRect.height;
-					}
-				}
-			});
-			resizeObserver.observe(iframeElement);
-		}
-
-		return () => {
-			window.removeEventListener('message', handleMessage);
-			if (resizeObserver) {
-				resizeObserver.disconnect();
-			}
-		};
+		return () => window.removeEventListener('message', handleMessage);
 	});
 </script>
 
 <div class="html-canvas-frame">
-	<iframe
-		bind:this={iframeElement}
-		src={canvasUrl()}
-		sandbox="allow-scripts"
-		title="HTML Canvas: {canvasId}"
-		style="height: {frameHeight}px"
-	>
-		<!-- CSP will be set by the gateway server -->
-	</iframe>
+	{#if loadFailed}
+		<div class="canvas-error">
+			<span>Failed to load canvas content.</span>
+			<span class="canvas-error-hint">URL: {url}</span>
+		</div>
+	{:else}
+		{#if !loaded}
+			<div class="canvas-frame-loading">
+				<div class="spinner"></div>
+				<span>Loading...</span>
+			</div>
+		{/if}
+		<iframe
+			bind:this={iframeElement}
+			src={url}
+			sandbox="allow-scripts allow-same-origin"
+			title="HTML Canvas"
+			class:hidden={!loaded}
+			onload={handleLoad}
+			onerror={handleError}
+		></iframe>
+	{/if}
 </div>
 
 <style>
 	.html-canvas-frame {
 		width: 100%;
-		margin: 0.5rem 0;
 		border-radius: 0.375rem;
 		overflow: hidden;
 		background: var(--color-bg-secondary);
@@ -82,9 +75,55 @@
 
 	iframe {
 		width: 100%;
+		height: 400px;
 		border: none;
 		display: block;
 		min-height: 200px;
 		background: white;
+	}
+
+	iframe.hidden {
+		display: none;
+	}
+
+	.canvas-frame-loading {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 1.5rem;
+		color: var(--color-text-secondary, #a6adc8);
+		font-size: 0.8125rem;
+	}
+
+	.canvas-error {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 1.5rem;
+		color: var(--color-text-secondary, #a6adc8);
+		font-size: 0.8125rem;
+	}
+
+	.canvas-error-hint {
+		color: var(--color-text-tertiary, #6c7086);
+		font-size: 0.75rem;
+		word-break: break-all;
+	}
+
+	.spinner {
+		width: 1rem;
+		height: 1rem;
+		border: 2px solid var(--color-border, #313244);
+		border-top-color: var(--color-text-secondary, #a6adc8);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

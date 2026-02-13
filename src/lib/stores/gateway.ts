@@ -9,7 +9,24 @@ import { tickHealth } from '$lib/stores/diagnostics.js';
 import { addToast } from '$lib/stores/toast.js';
 import type { Frame, ConnectionState } from '$lib/gateway/types.js';
 import { CanvasStore } from '$lib/stores/canvas.js';
-import { initA2UIBridge } from '$lib/canvas/a2ui-bridge.js';
+import { initA2UIBridge, getCanvasHostUrl } from '$lib/canvas/a2ui-bridge.js';
+import { gatewayUrl } from '$lib/stores/token.js';
+
+// Stable per-tab instance ID — survives reconnects and HMR within the same tab,
+// but each new tab gets its own ID. Prevents stale virtual canvas node accumulation.
+function getStableTabInstanceId(): string {
+	if (typeof sessionStorage !== 'undefined') {
+		const key = 'openclaw-tab-instance-id';
+		let id = sessionStorage.getItem(key);
+		if (!id) {
+			id = crypto.randomUUID();
+			sessionStorage.setItem(key, id);
+		}
+		return id;
+	}
+	return crypto.randomUUID();
+}
+const tabInstanceId = getStableTabInstanceId();
 
 export const connection = new GatewayConnection();
 export const correlator = new RequestCorrelator();
@@ -59,6 +76,8 @@ connection.setDiagnosticCallback((event, detail) => {
 // --- Wire unexpected close to reconnector and correlator ---
 connection.setOnClose((code, reason) => {
 	diagnosticLog.log('connection', 'warn', `Unexpected close: code=${code}`, { code, reason });
+	// Best-effort unregister — may fail if WS already closed, that's expected
+	call('canvas.bridge.unregister', {}).catch(() => {});
 	correlator.cancelAll('Connection lost unexpectedly');
 	reconnector.onDisconnect();
 });
@@ -124,6 +143,15 @@ connection.setOnHelloOk((helloOk) => {
 	snapshot.hydrate(helloOk);
 	snapshot.subscribe(eventBus);
 	canvasStore.subscribe(eventBus, call);
+	const browserHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+	const gwPort = (() => {
+		try {
+			return parseInt(new URL(get(gatewayUrl)).port, 10) || 18789;
+		} catch {
+			return 18789;
+		}
+	})();
+	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(browserHost, gwPort));
 	call('canvas.bridge.register', {}).catch(() => {
 		diagnosticLog.log(
 			'canvas',
@@ -143,11 +171,25 @@ initA2UIBridge((action) => {
 	canvasStore.sendAction(action.surfaceId, action.actionId, action.payload);
 });
 
+// --- Best-effort cleanup on tab close ---
+if (typeof window !== 'undefined') {
+	window.addEventListener('beforeunload', () => {
+		call('canvas.bridge.unregister', {}).catch(() => {});
+	});
+}
+
+/**
+ * Set the active chat run ID on the canvas store so surfaces auto-associate.
+ */
+export function setCanvasActiveRunId(runId: string | null): void {
+	canvasStore.setActiveRunId(runId);
+}
+
 /**
  * Connect to the gateway with the given URL and token.
  */
 export function connectToGateway(url: string, token: string): void {
-	const config = { url, token, instanceId: crypto.randomUUID() };
+	const config = { url, token, instanceId: tabInstanceId };
 	reconnector.enable(config);
 	connection.connect(config);
 }
@@ -156,6 +198,7 @@ export function connectToGateway(url: string, token: string): void {
  * Disconnect from the gateway.
  */
 export function disconnectFromGateway(): void {
+	call('canvas.bridge.unregister', {}).catch(() => {});
 	reconnector.disable();
 	connection.disconnect();
 	correlator.cancelAll();
@@ -176,6 +219,11 @@ export function call<T = unknown>(method: string, params?: Record<string, unknow
 		correlator.cancel(id, err instanceof Error ? err : new Error(String(err)));
 	}
 	return promise;
+}
+
+// Expose gateway internals on window for dev debugging (e.g. __oc.call('pm.domain.list'))
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+	(window as any).__oc = { call, connection, snapshot, eventBus, canvasStore };
 }
 
 /**

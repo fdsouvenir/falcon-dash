@@ -1,37 +1,43 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
-	import { call, snapshot } from '$lib/stores/gateway.js';
+	import { gatewayUrl } from '$lib/stores/token.js';
 
 	interface Props {
 		messages: unknown[];
-		surfaceId: string;
 	}
 
-	let { messages = $bindable(), surfaceId }: Props = $props();
+	let { messages = $bindable() }: Props = $props();
 
 	let hostElement: A2UIHostElement | null = $state(null);
-	let serverInfo = $derived(snapshot.server);
+	let a2uiReady = $state(false);
 
 	onMount(async () => {
-		// Get server info from snapshot to construct canvas host URL
-		const serverHost = $serverInfo?.host;
-		// Gateway port is always 18789 for now (no config API for this yet)
-		await ensureA2UILoaded(serverHost, 18789);
-		if (hostElement) {
-			hostElement.applyMessages(messages);
+		try {
+			const host = window.location.hostname;
+			let gwPort = 18789;
+			try {
+				gwPort = parseInt(new URL(get(gatewayUrl)).port, 10) || 18789;
+			} catch {}
+			console.log('[InlineA2UI] loading A2UI bundle, host:', host);
+			await ensureA2UILoaded(host, gwPort);
+			a2uiReady = true;
+			console.log('[InlineA2UI] A2UI ready, messages:', messages.length);
+			if (hostElement) {
+				hostElement.applyMessages(messages);
+			}
+		} catch (err) {
+			console.error('[InlineA2UI] Failed to load A2UI bundle:', err);
+			a2uiReady = false;
 		}
 	});
 
 	$effect(() => {
-		if (hostElement && messages) {
+		if (a2uiReady && hostElement && messages) {
 			hostElement.applyMessages(messages);
 		}
 	});
-
-	async function handleAction(actionId: string, payload: Record<string, unknown>) {
-		await call('canvas.action', { surfaceId, actionId, payload });
-	}
 </script>
 
 <div class="inline-a2ui-wrapper">

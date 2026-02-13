@@ -35,11 +35,11 @@ let loadPromise: Promise<void> | null = null;
 
 /**
  * Resolve the A2UI bundle URL from gateway server info.
- * Canvas host runs on gatewayPort + 4 (default 18789 + 4 = 18793).
+ * Canvas host runs on the gateway port (default 18789).
  */
 export function getCanvasHostUrl(serverHost?: string, gatewayPort?: number): string {
 	const host = serverHost ?? '127.0.0.1';
-	const port = (gatewayPort ?? 18789) + 4;
+	const port = gatewayPort ?? 18789;
 	return `http://${host}:${port}/__openclaw__`;
 }
 

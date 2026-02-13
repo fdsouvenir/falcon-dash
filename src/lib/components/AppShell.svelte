@@ -1,12 +1,26 @@
 <script lang="ts">
 	import Sidebar from './Sidebar.svelte';
+	import CanvasBlock from './canvas/CanvasBlock.svelte';
+	import { canvasStore } from '$lib/stores/gateway.js';
+	import type { CanvasSurface } from '$lib/stores/canvas.js';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
 	let sidebarCollapsed = $state(false);
+	let currentSurface = $state<CanvasSurface | null>(null);
+	let canvasPanelMinimized = $state(false);
 
 	function toggleSidebar() {
 		sidebarCollapsed = !sidebarCollapsed;
 	}
+
+	// Track current canvas surface at the shell level
+	$effect(() => {
+		const unsub = canvasStore.currentSurface.subscribe((v) => {
+			currentSurface = v;
+			console.log('[AppShell] currentSurface updated:', v?.surfaceId, 'visible:', v?.visible);
+		});
+		return unsub;
+	});
 </script>
 
 <div class="flex h-screen bg-gray-950 text-white">
@@ -42,8 +56,31 @@
 			<span class="ml-3 text-sm font-semibold">Falcon Dashboard</span>
 		</header>
 
-		<div class="flex-1 overflow-y-auto">
+		<div class="relative flex-1 overflow-y-auto">
 			{@render children()}
 		</div>
+
+		<!-- Floating canvas panel: visible on ALL pages when a surface is active -->
+		{#if currentSurface && currentSurface.visible}
+			<div class="canvas-float-panel border-t border-gray-800">
+				<div class="flex items-center justify-between px-3 py-1.5">
+					<span class="text-xs font-medium text-gray-400">
+						Canvas: {currentSurface.title}
+					</span>
+					<button
+						onclick={() => (canvasPanelMinimized = !canvasPanelMinimized)}
+						class="text-xs text-gray-500 hover:text-gray-300"
+						aria-label={canvasPanelMinimized ? 'Expand canvas' : 'Minimize canvas'}
+					>
+						{canvasPanelMinimized ? 'Expand' : 'Minimize'}
+					</button>
+				</div>
+				{#if !canvasPanelMinimized}
+					<div class="px-4 pb-3">
+						<CanvasBlock surfaceId={currentSurface.surfaceId} />
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</main>
 </div>
