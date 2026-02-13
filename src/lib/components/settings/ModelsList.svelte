@@ -96,7 +96,7 @@
 			<div class="p-4 text-center text-sm text-gray-500">No models available</div>
 		{:else}
 			<div class="divide-y divide-gray-800">
-				{#each providers as provider}
+				{#each providers as provider (provider)}
 					<div class="px-4 py-3">
 						<h3 class="mb-3 text-sm font-semibold uppercase text-gray-400">{provider}</h3>
 						<div class="overflow-x-auto">
@@ -110,7 +110,7 @@
 									</tr>
 								</thead>
 								<tbody class="divide-y divide-gray-800/50">
-									{#each modelsByProvider[provider] as model}
+									{#each modelsByProvider[provider] as model (model.id)}
 										<tr class="text-gray-300">
 											<td class="py-2 pr-4 font-mono text-xs">{model.id}</td>
 											<td class="py-2 pr-4">{model.name || '-'}</td>
@@ -124,7 +124,7 @@
 											<td class="py-2">
 												{#if model.capabilities && model.capabilities.length > 0}
 													<div class="flex flex-wrap gap-1">
-														{#each model.capabilities as capability}
+														{#each model.capabilities as capability (capability)}
 															<span class="rounded bg-gray-800 px-2 py-0.5 text-xs text-gray-400">
 																{capability}
 															</span>

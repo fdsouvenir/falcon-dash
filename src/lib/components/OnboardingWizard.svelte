@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	interface Props {
 		onComplete: () => void;
 	}
@@ -203,7 +201,7 @@
 		{/if}
 
 		<div class="mt-8 flex justify-center gap-2">
-			{#each [1, 2, 3, 4, 5, 6] as step}
+			{#each [1, 2, 3, 4, 5, 6] as step (step)}
 				<div
 					class="w-2 h-2 rounded-full {step === currentStep
 						? 'bg-blue-600'

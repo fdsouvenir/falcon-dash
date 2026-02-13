@@ -178,7 +178,7 @@
 			<div class="text-gray-400">No patterns in allowlist</div>
 		{:else}
 			<ul class="space-y-2">
-				{#each allowlist as pattern}
+				{#each allowlist as pattern (pattern)}
 					<li class="flex justify-between items-center bg-gray-700 px-3 py-2 rounded">
 						<code class="text-gray-100">{pattern}</code>
 						<button onclick={() => removePattern(pattern)} class="text-red-400 hover:text-red-300">
@@ -202,7 +202,7 @@
 				class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2 mb-4"
 			>
 				<option value="">Select a node</option>
-				{#each nodes as node}
+				{#each nodes as node (node)}
 					<option value={node}>{node}</option>
 				{/each}
 			</select>
@@ -233,7 +233,7 @@
 			<div class="text-gray-400">No pending approvals</div>
 		{:else}
 			<ul class="space-y-3">
-				{#each pendingApprovals as approval}
+				{#each pendingApprovals as approval (approval.requestId)}
 					<li class="bg-gray-700 p-3 rounded">
 						<div class="mb-2">
 							<div class="text-gray-100 font-mono text-sm">

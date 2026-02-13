@@ -30,7 +30,7 @@
 		class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
 	>
 		<div class="flex h-16 items-center justify-around">
-			{#each tabs as tab}
+			{#each tabs as tab (tab.id)}
 				<button
 					class="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 px-3 py-2"
 					class:text-blue-600={activeTab === tab.id}

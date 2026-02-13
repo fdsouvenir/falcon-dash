@@ -47,6 +47,7 @@
 			entries = data.entries ?? [];
 
 			// Extract unique groups
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local computation, not reactive state
 			const groupSet = new Set<string>();
 			for (const e of entries) {
 				if (e.group) groupSet.add(e.group);
@@ -142,7 +143,7 @@
 			>
 				Root
 			</button>
-			{#each currentGroup.split('/').filter(Boolean) as part, i}
+			{#each currentGroup.split('/').filter(Boolean) as part, i (i)}
 				<span class="text-xs text-gray-600">/</span>
 				<button
 					onclick={() =>
@@ -187,7 +188,7 @@
 				return g.startsWith(currentGroup + '/') && !g
 						.substring(currentGroup.length + 1)
 						.includes('/');
-			}) as group}
+			}) as group (group)}
 				<button
 					onclick={() => navigateToGroup(group)}
 					class="w-full px-4 py-1.5 text-left text-xs text-white hover:bg-gray-800"

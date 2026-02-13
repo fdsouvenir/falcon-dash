@@ -6,7 +6,7 @@ import type {
 	ToolCallEvent,
 	ToolResultEvent
 } from '$lib/gateway/stream.js';
-import { call, eventBus, connection } from '$lib/stores/gateway.js';
+import { call, eventBus, connection, setCanvasActiveRunId } from '$lib/stores/gateway.js';
 
 // Message types
 export interface ChatMessage {
@@ -154,6 +154,7 @@ export function createChatSession(sessionKey: string) {
 			return msgs;
 		});
 		_activeRunId.set(null);
+		setCanvasActiveRunId(null);
 		_isStreaming.set(false);
 	}
 
@@ -245,6 +246,7 @@ export function createChatSession(sessionKey: string) {
 			};
 			_messages.update((msgs) => [...msgs, assistantMessage]);
 			_activeRunId.set(runId);
+			setCanvasActiveRunId(runId);
 			_isStreaming.set(true);
 
 			// The response frame handler needs to be wired to call streamManager.onFinal

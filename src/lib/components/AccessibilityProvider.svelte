@@ -73,18 +73,20 @@
 
 	// Expose utilities globally
 	if (typeof window !== 'undefined') {
-		(window as unknown as { a11y: typeof a11yUtils }).a11y = {
+		(
+			window as unknown as {
+				a11y: {
+					announce: typeof announce;
+					enableFocusTrap: typeof enableFocusTrap;
+					disableFocusTrap: typeof disableFocusTrap;
+				};
+			}
+		).a11y = {
 			announce,
 			enableFocusTrap,
 			disableFocusTrap
 		};
 	}
-
-	const a11yUtils = {
-		announce,
-		enableFocusTrap,
-		disableFocusTrap
-	};
 </script>
 
 <div class="accessibility-provider">

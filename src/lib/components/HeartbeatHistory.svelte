@@ -74,7 +74,7 @@
 									>Checked</span
 								>
 								<ul class="mt-1 space-y-0.5">
-									{#each exec.checked as item}
+									{#each exec.checked as item, i (i)}
 										<li class="text-xs text-gray-400">- {item}</li>
 									{/each}
 								</ul>
@@ -86,7 +86,7 @@
 									>Surfaced</span
 								>
 								<ul class="mt-1 space-y-0.5">
-									{#each exec.surfaced as item}
+									{#each exec.surfaced as item, i (i)}
 										<li class="text-xs text-yellow-400">- {item}</li>
 									{/each}
 								</ul>

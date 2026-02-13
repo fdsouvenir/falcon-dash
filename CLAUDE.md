@@ -127,7 +127,7 @@ Install: `openclaw plugins install ./openclaw-canvas-bridge` (then restart gatew
 - **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request (id `__connect`) → gateway responds with `hello-ok`
 - **Connect frame ID:** uses `'__connect'` (non-numeric) to avoid collision with `RequestCorrelator`'s monotonic counter — do NOT change to a numeric ID
 - **Canvas caps:** connect frame declares `caps: ['canvas', 'canvas.a2ui']` and `commands: ['canvas.present', 'canvas.hide', 'canvas.navigate', 'canvas.a2ui.pushJSONL', 'canvas.a2ui.reset']`
-- **Canvas host:** A2UI bundle served at `http://<host>:<gatewayPort+4>/__openclaw__/a2ui/a2ui.bundle.js` (default port 18793)
+- **Canvas host:** A2UI bundle served at `http://<host>:<gatewayPort>/__openclaw__/a2ui/a2ui.bundle.js` (default port 18789)
 - **Scopes:** `operator.read`, `operator.write`, `operator.admin`, `operator.approvals`, `operator.pairing`
 - **Thinking levels:** off/minimal/low/medium/high/xhigh (NOT off/on/stream)
 - **`sessions.patch` params:** `key` (required, NOT `sessionKey`), `label` (optional, NOT `displayName`)

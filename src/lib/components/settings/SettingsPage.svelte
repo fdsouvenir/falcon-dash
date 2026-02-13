@@ -38,7 +38,7 @@
 	<!-- Tab bar -->
 	<div class="border-b border-gray-700 bg-gray-900">
 		<div class="flex overflow-x-auto px-4">
-			{#each tabs as tab}
+			{#each tabs as tab (tab.id)}
 				<button
 					onclick={() => selectTab(tab.id)}
 					class="whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab ===

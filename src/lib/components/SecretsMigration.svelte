@@ -140,7 +140,7 @@
 		<div class="mb-4 rounded border border-yellow-700 bg-yellow-900/20 p-3">
 			<div class="mb-2 text-sm font-medium text-yellow-400">Import Errors:</div>
 			<ul class="list-inside list-disc space-y-1 text-xs text-yellow-300">
-				{#each importResult.errors as error}
+				{#each importResult.errors as error, i (i)}
 					<li>{error}</li>
 				{/each}
 			</ul>
@@ -158,7 +158,7 @@
 					</tr>
 				</thead>
 				<tbody class="text-gray-200">
-					{#each files as file}
+					{#each files as file (file.name)}
 						<tr class="border-t border-gray-700">
 							<td class="px-4 py-2 font-mono text-xs">{file.name}</td>
 							<td class="px-4 py-2 text-xs text-gray-400">{formatBytes(file.size)}</td>

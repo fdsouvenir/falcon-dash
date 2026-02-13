@@ -293,7 +293,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each usageData.providers as provider}
+						{#each usageData.providers as provider (provider.name)}
 							<tr class="border-b border-gray-700/50">
 								<td class="py-2 text-white">{provider.name}</td>
 								<td class="py-2 text-right font-mono text-white">{formatTokens(provider.tokens)}</td
@@ -339,7 +339,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each nodesData as node}
+						{#each nodesData as node (node.id)}
 							<tr class="border-b border-gray-700/50">
 								<td class="py-2 text-white">{node.name}</td>
 								<td class="py-2">
@@ -378,7 +378,7 @@
 				<div class="mb-4">
 					<h4 class="mb-2 text-sm font-medium text-gray-300">Active Runs</h4>
 					<div class="space-y-2">
-						{#each agentsData.active as agent}
+						{#each agentsData.active as agent (agent.runId)}
 							<div class="rounded border border-gray-700 bg-gray-900 p-3">
 								<div class="flex items-start justify-between">
 									<div class="flex-1 min-w-0">
@@ -413,7 +413,7 @@
 				<div>
 					<h4 class="mb-2 text-sm font-medium text-gray-300">Recent History</h4>
 					<div class="space-y-2">
-						{#each agentsData.history.slice(0, 5) as agent}
+						{#each agentsData.history.slice(0, 5) as agent (agent.runId)}
 							<div class="rounded border border-gray-700/50 bg-gray-900/50 p-3">
 								<div class="text-sm text-white">{agent.task}</div>
 								<div class="mt-1 flex flex-wrap gap-2 text-xs text-gray-400">

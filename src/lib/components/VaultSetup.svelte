@@ -74,7 +74,7 @@
 
 			{#if showValidation && !strength.valid}
 				<ul class="space-y-0.5">
-					{#each strength.errors as err}
+					{#each strength.errors as err, i (i)}
 						<li class="text-[10px] text-red-400">- {err}</li>
 					{/each}
 				</ul>
@@ -82,7 +82,7 @@
 
 			{#if password.length > 0}
 				<div class="flex gap-1">
-					{#each [0, 1, 2, 3] as i}
+					{#each [0, 1, 2, 3] as i (i)}
 						<div
 							class="h-1 flex-1 rounded-full {i <
 							(strength.valid

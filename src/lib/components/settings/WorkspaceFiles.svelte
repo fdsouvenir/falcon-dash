@@ -181,7 +181,7 @@
 				<div class="border-b border-gray-800 px-4 py-3">
 					<h3 class="mb-2 text-xs font-semibold uppercase text-gray-500">Known Files</h3>
 					<div class="space-y-1">
-						{#each existingKnownFiles as knownFile}
+						{#each existingKnownFiles as knownFile (knownFile.path)}
 							{@const fileInfo = files.find((f) => f.path === knownFile.path)}
 							{#if fileInfo}
 								<button
@@ -197,7 +197,7 @@
 								</button>
 							{/if}
 						{/each}
-						{#each missingKnownFiles as knownFile}
+						{#each missingKnownFiles as knownFile (knownFile.path)}
 							<div class="flex items-center gap-2 px-2 py-2">
 								<span class="text-lg opacity-50">{knownFile.icon}</span>
 								<span class="flex-1 text-sm text-gray-500">{knownFile.path}</span>
@@ -218,7 +218,7 @@
 					<div class="px-4 py-3">
 						<h3 class="mb-2 text-xs font-semibold uppercase text-gray-500">Additional Files</h3>
 						<div class="space-y-1">
-							{#each additionalFiles as file}
+							{#each additionalFiles as file (file.path)}
 								<button
 									onclick={() => loadFileContent(file)}
 									class="flex w-full items-center gap-2 rounded px-2 py-2 text-left transition-colors {selectedFile?.path ===

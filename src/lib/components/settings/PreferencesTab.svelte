@@ -208,7 +208,8 @@
 			<label class="mb-2 block text-sm font-medium text-gray-300">Default View</label>
 			<select
 				value={preferences.defaultPmView}
-				onchange={(e) => updateDefaultPmView(e.currentTarget.value as any)}
+				onchange={(e) =>
+					updateDefaultPmView(e.currentTarget.value as 'dashboard' | 'kanban' | 'list' | 'tree')}
 				class="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 			>
 				<option value="dashboard">Dashboard</option>

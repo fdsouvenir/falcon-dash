@@ -114,11 +114,8 @@
 		});
 	}
 
-	let connectionState = $state('DISCONNECTED');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
-			connectionState = s;
-		});
+		const unsub = connection.state.subscribe(() => {});
 		return () => {
 			unsub();
 			stopPolling();

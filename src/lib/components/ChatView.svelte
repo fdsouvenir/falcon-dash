@@ -3,7 +3,8 @@
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread } from '$lib/stores/threads.js';
-	import { connection } from '$lib/stores/gateway.js';
+	import { connection, canvasStore } from '$lib/stores/gateway.js';
+	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { renderMarkdownSync } from '$lib/chat/markdown.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
 	import ChatHeader from './ChatHeader.svelte';
@@ -23,6 +24,7 @@
 	let replyToMessage = $state<ChatMessage | null>(null);
 	let thread = $state<ThreadInfo | null>(null);
 	let connState = $state<ConnectionState>('DISCONNECTED');
+	let currentSurface = $state<CanvasSurface | null>(null);
 
 	// Plain Map for rendered HTML cache — intentionally non-reactive to avoid effect cycles
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -51,6 +53,15 @@
 	$effect(() => {
 		const unsub = activeThread.subscribe((v) => {
 			thread = v;
+		});
+		return unsub;
+	});
+
+	// Track current canvas surface (for floating canvas panel)
+	$effect(() => {
+		const unsub = canvasStore.currentSurface.subscribe((v) => {
+			currentSurface = v;
+			console.log('[ChatView] currentSurface updated:', v?.surfaceId, 'visible:', v?.visible);
 		});
 		return unsub;
 	});
@@ -156,6 +167,23 @@
 	function findMessageById(id: string): ChatMessage | undefined {
 		return messages.find((m) => m.id === id);
 	}
+
+	// Check if the current surface is already rendered inline by a message's CanvasBlock
+	let surfaceRenderedInline = $derived(
+		currentSurface?.runId
+			? messages.some((m) => m.role === 'assistant' && m.runId === currentSurface?.runId)
+			: false
+	);
+
+	// Debug: trace surfaceRenderedInline gating
+	$effect(() => {
+		console.log(
+			'[ChatView] surfaceRenderedInline:',
+			surfaceRenderedInline,
+			'currentSurface:',
+			currentSurface?.surfaceId
+		);
+	});
 
 	function getRenderedHtml(message: ChatMessage): string {
 		// For complete messages, use cache

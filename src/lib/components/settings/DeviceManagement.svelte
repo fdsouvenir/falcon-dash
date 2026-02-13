@@ -158,7 +158,7 @@
 	{#if pendingRequests.length > 0}
 		<div class="space-y-3">
 			<h4 class="text-sm font-medium text-gray-300">Pending Pairing Requests</h4>
-			{#each pendingRequests as request}
+			{#each pendingRequests as request (request.requestId)}
 				<div class="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
 					<div class="flex items-start justify-between">
 						<div class="flex-1">
@@ -193,7 +193,7 @@
 		{#if pairedDevices.length === 0}
 			<p class="text-sm text-gray-500">No paired devices</p>
 		{:else}
-			{#each pairedDevices as device}
+			{#each pairedDevices as device (device.deviceId)}
 				<div class="rounded-lg border border-gray-700 bg-gray-800/50 p-4">
 					<div class="flex items-start justify-between">
 						<div class="flex-1">
