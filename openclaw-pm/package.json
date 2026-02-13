@@ -1,0 +1,28 @@
+{
+	"name": "openclaw-pm",
+	"version": "0.1.0",
+	"description": "Local project management for OpenClaw with domains, focuses, projects, tasks, and search",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist"
+	},
+	"peerDependencies": {
+		"openclaw": "*"
+	},
+	"dependencies": {
+		"better-sqlite3": "^11.0.0"
+	},
+	"devDependencies": {
+		"openclaw": "*",
+		"@types/better-sqlite3": "^7.6.0",
+		"typescript": "^5.7.0"
+	},
+	"openclaw": {
+		"extensions": [
+			"dist/index.js"
+		]
+	}
+}

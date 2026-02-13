@@ -1,5 +1,4 @@
 import { getDb } from './database.js';
-import type { Project, Task } from './database.js';
 import { PMError, PM_ERRORS, parseId } from './validation.js';
 
 export interface BulkResult {

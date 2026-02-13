@@ -723,6 +723,12 @@ export function createComment(data: {
 	return comment;
 }
 
+export function updateComment(id: number, body: string): Comment | undefined {
+	const db = getDb();
+	db.prepare('UPDATE comments SET body = ? WHERE id = ?').run(body, id);
+	return getComment(id);
+}
+
 export function deleteComment(id: number): boolean {
 	const db = getDb();
 	const result = db.prepare('DELETE FROM comments WHERE id = ?').run(id);

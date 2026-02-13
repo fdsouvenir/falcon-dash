@@ -1,0 +1,10 @@
+{
+	"id": "openclaw-pm",
+	"name": "Project Management",
+	"description": "Local project management with domains, focuses, projects, tasks, and search",
+	"configSchema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {}
+	}
+}
