@@ -10,7 +10,7 @@ import { addToast } from '$lib/stores/toast.js';
 import type { Frame, ConnectionState } from '$lib/gateway/types.js';
 import { CanvasStore } from '$lib/stores/canvas.js';
 import { initA2UIBridge, getCanvasHostUrl } from '$lib/canvas/a2ui-bridge.js';
-import { gatewayUrl } from '$lib/stores/token.js';
+import { gatewayUrl, gatewayToken } from '$lib/stores/token.js';
 
 // Stable per-tab instance ID — survives reconnects and HMR within the same tab,
 // but each new tab gets its own ID. Prevents stale virtual canvas node accumulation.
@@ -105,7 +105,11 @@ connection.state.subscribe((state) => {
 	if (state === 'AUTH_FAILED') {
 		addToast('Authentication failed. Check your gateway token.', 'error', 8000);
 	} else if (state === 'PAIRING_REQUIRED') {
-		addToast('Device pairing required.', 'error', 8000);
+		addToast(
+			'Gateway token mismatch — the token may have been rotated. Reload to re-read from config.',
+			'error',
+			0
+		);
 	} else if (
 		state === 'RECONNECTING' &&
 		(previousState === 'READY' || previousState === 'DISCONNECTED')
@@ -190,6 +194,23 @@ export function setCanvasActiveRunId(runId: string | null): void {
  */
 export function connectToGateway(url: string, token: string): void {
 	const config = { url, token, instanceId: tabInstanceId };
+
+	// Refresh token from server config before each reconnection attempt
+	reconnector.onBeforeReconnect = async () => {
+		try {
+			const res = await fetch('/api/gateway-config');
+			if (!res.ok) return null;
+			const data = await res.json();
+			if (data?.token) {
+				gatewayToken.set(data.token);
+				return { ...config, token: data.token };
+			}
+		} catch {
+			// Fetch failed — proceed with existing token
+		}
+		return null;
+	};
+
 	reconnector.enable(config);
 	connection.connect(config);
 }

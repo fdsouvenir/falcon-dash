@@ -17,7 +17,9 @@
 	let token: string | null = $state(null);
 	let loading = $state(true);
 	let hasToken = $derived(token !== null);
+	let connected = $state(false);
 
+	// Subscribe to token store — picks up changes from config fetch or manual entry
 	$effect(() => {
 		const unsub = gatewayToken.subscribe((v) => {
 			token = v;
@@ -25,7 +27,9 @@
 		return unsub;
 	});
 
-	// Auto-read token from server config on startup
+	// Fetch server config first, then mark loading complete.
+	// This prevents the auto-connect effect from firing with a stale localStorage token
+	// before the server config has been read.
 	$effect(() => {
 		fetch('/api/gateway-config')
 			.then((res) => {
@@ -48,9 +52,12 @@
 			});
 	});
 
-	// Auto-connect when token becomes available
+	// Connect ONLY after config fetch completes (loading === false) and we have a token.
+	// The `connected` guard ensures we call connectToGateway() exactly once per startup.
+	// If the token changes later (e.g. manual re-entry), we reconnect.
 	$effect(() => {
-		if (token) {
+		if (!loading && token && !connected) {
+			connected = true;
 			let url = 'ws://127.0.0.1:18789';
 			const unsub = gatewayUrl.subscribe((v) => {
 				url = v;

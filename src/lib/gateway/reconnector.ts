@@ -52,6 +52,10 @@ export class Reconnector {
 	/** Optional callback fired when max reconnection attempts are exhausted */
 	onMaxAttemptsExhausted: (() => void) | null = null;
 
+	/** Optional async callback invoked before each reconnection attempt.
+	 *  Returns an updated config (e.g. refreshed token) or null to keep current. */
+	onBeforeReconnect: (() => Promise<ConnectionConfig | null>) | null = null;
+
 	constructor(connection: GatewayConnection, eventBus: EventBus) {
 		this.connection = connection;
 		this.eventBus = eventBus;
@@ -158,9 +162,17 @@ export class Reconnector {
 			tickIntervalMs: this.tickIntervalMs
 		});
 
-		this.timer = setTimeout(() => {
+		this.timer = setTimeout(async () => {
 			this.timer = null;
 			if (this.enabled && this.config) {
+				if (this.onBeforeReconnect) {
+					try {
+						const updated = await this.onBeforeReconnect();
+						if (updated) this.config = updated;
+					} catch {
+						// Token refresh failed — proceed with existing config
+					}
+				}
 				this.connection.connect(this.config);
 			}
 		}, delay);
