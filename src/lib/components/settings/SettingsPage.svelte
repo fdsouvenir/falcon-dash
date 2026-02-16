@@ -9,6 +9,7 @@
 	import LiveLogs from './LiveLogs.svelte';
 	import ExecApprovals from './ExecApprovals.svelte';
 	import WorkspaceFiles from './WorkspaceFiles.svelte';
+	import CanvasDiagnosticsTab from './CanvasDiagnosticsTab.svelte';
 
 	const tabs = [
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
@@ -20,6 +21,7 @@
 		{ id: 'logs', label: 'Logs', component: LiveLogs },
 		{ id: 'approvals', label: 'Approvals', component: ExecApprovals },
 		{ id: 'workspace', label: 'Workspace', component: WorkspaceFiles },
+		{ id: 'canvas', label: 'Canvas', component: CanvasDiagnosticsTab },
 		{ id: 'about', label: 'About', component: AboutTab }
 	] as const;
 
