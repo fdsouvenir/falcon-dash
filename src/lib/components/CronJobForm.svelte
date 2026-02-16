@@ -5,6 +5,7 @@
 		type CronJob,
 		type CronJobInput
 	} from '$lib/stores/cron.js';
+	import { describeCron, CRON_PRESETS } from '$lib/cron-utils.js';
 
 	interface Props {
 		job?: CronJob | null;
@@ -24,6 +25,14 @@
 	let isSaving = $state(false);
 
 	const isEdit = !!job;
+
+	let schedulePreview = $derived(
+		scheduleType === 'cron' && schedule.trim() ? describeCron(schedule.trim()) : ''
+	);
+
+	function applyPreset(value: string) {
+		schedule = value;
+	}
 
 	async function handleSubmit() {
 		if (!name.trim() || !schedule.trim()) return;
@@ -113,6 +122,22 @@
 							? 'Interval (e.g. 5m, 1h)'
 							: 'Run At (ISO timestamp)'}
 				</label>
+
+				{#if scheduleType === 'cron'}
+					<!-- Preset buttons -->
+					<div class="mb-2 flex flex-wrap gap-1">
+						{#each CRON_PRESETS as preset (preset.value)}
+							<button
+								type="button"
+								onclick={() => applyPreset(preset.value)}
+								class="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-300 hover:border-blue-500 hover:text-white"
+							>
+								{preset.label}
+							</button>
+						{/each}
+					</div>
+				{/if}
+
 				<input
 					type="text"
 					bind:value={schedule}
@@ -123,6 +148,10 @@
 							: '2026-01-01T00:00:00Z'}
 					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
 				/>
+
+				{#if schedulePreview && schedulePreview !== schedule.trim()}
+					<div class="mt-1 text-[10px] text-gray-500">→ {schedulePreview}</div>
+				{/if}
 			</div>
 
 			<!-- Payload Type -->

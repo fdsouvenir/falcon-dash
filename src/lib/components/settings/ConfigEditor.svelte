@@ -10,6 +10,7 @@
 	let isDirty = $state(false);
 	let showSchema = $state(false);
 	let showApplyConfirm = $state(false);
+	let unavailable = $state(false);
 
 	let connectionState = $state('DISCONNECTED');
 	$effect(() => {
@@ -35,8 +36,10 @@
 			baseHash = result.hash;
 			schema = result.schema || null;
 			isDirty = false;
+			unavailable = false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
+			unavailable = true;
 		} finally {
 			loading = false;
 		}
@@ -118,6 +121,13 @@
 <div class="p-6 space-y-6">
 	<h2 class="text-2xl font-bold text-gray-100">Gateway Configuration Editor</h2>
 
+	<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+		<p class="text-sm text-yellow-400">
+			Warning: Editing gateway configuration can affect system stability. Changes are applied
+			directly to the running gateway.
+		</p>
+	</div>
+
 	{#if error}
 		<div class="bg-red-900/20 border border-red-500 text-red-300 px-4 py-3 rounded">
 			{error}
@@ -132,6 +142,13 @@
 
 	{#if loading}
 		<div class="text-gray-400">Loading configuration...</div>
+	{:else if unavailable}
+		<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+			<p class="text-sm text-yellow-400">
+				Configuration editor requires the config.get gateway method. This feature may not be
+				available in all gateway versions.
+			</p>
+		</div>
 	{:else}
 		<div class="space-y-4">
 			<!-- Editor Toolbar -->

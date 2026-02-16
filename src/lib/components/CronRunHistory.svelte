@@ -8,6 +8,7 @@
 		type CronJob
 	} from '$lib/stores/cron.js';
 	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { describeCron } from '$lib/cron-utils.js';
 
 	interface Props {
 		job: CronJob;
@@ -19,6 +20,8 @@
 	let runs = $state<CronRun[]>([]);
 	let loading = $state(false);
 	let expandedRunId = $state<string | null>(null);
+
+	let humanSchedule = $derived(job.scheduleType === 'cron' ? describeCron(job.schedule) : null);
 
 	$effect(() => {
 		const u = cronRuns.subscribe((v) => {
@@ -58,7 +61,7 @@
 
 <div class="flex h-full flex-col">
 	<!-- Header -->
-	<div class="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+	<div class="border-b border-gray-800 px-4 py-3">
 		<div class="flex items-center gap-2">
 			<button onclick={onclose} class="text-gray-400 hover:text-white" aria-label="Back to jobs">
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -70,7 +73,17 @@
 					/>
 				</svg>
 			</button>
-			<h2 class="text-sm font-medium text-white">Run History: {job.name}</h2>
+			<div>
+				<h2 class="text-sm font-medium text-white">Run History: {job.name}</h2>
+				{#if humanSchedule && humanSchedule !== job.schedule}
+					<div class="mt-0.5 text-[10px] text-gray-500">
+						{humanSchedule}
+						<span class="text-gray-600">({job.schedule})</span>
+					</div>
+				{:else}
+					<div class="mt-0.5 text-[10px] text-gray-500">{job.schedule}</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 

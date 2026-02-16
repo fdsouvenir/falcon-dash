@@ -21,6 +21,7 @@
 	let levelFilter = $state<'all' | 'debug' | 'info' | 'warn' | 'error'>('all');
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let logContainer: HTMLDivElement;
+	let unavailable = $state(false);
 
 	const MAX_ENTRIES = 1000;
 
@@ -61,6 +62,8 @@
 			}
 		} catch (e) {
 			console.error('Failed to fetch logs:', e);
+			unavailable = true;
+			stopPolling();
 		}
 	}
 
@@ -179,7 +182,14 @@
 
 	<!-- Log entries -->
 	<div bind:this={logContainer} class="flex-1 overflow-y-auto bg-gray-950 p-4 font-mono text-sm">
-		{#if filteredEntries.length === 0}
+		{#if unavailable}
+			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+				<p class="text-sm text-yellow-400">
+					Live log streaming requires the logs.tail gateway method. No log source is currently
+					connected.
+				</p>
+			</div>
+		{:else if filteredEntries.length === 0}
 			<div class="text-center text-gray-500">
 				{isRunning ? 'Waiting for logs...' : 'Press Play to start tailing logs'}
 			</div>

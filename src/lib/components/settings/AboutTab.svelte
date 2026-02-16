@@ -131,34 +131,12 @@
 		{/if}
 	</div>
 
-	<!-- Links Card -->
+	<!-- OpenClaw Platform Card -->
 	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
-		<h3 class="mb-4 text-lg font-semibold text-white">Resources</h3>
-		<div class="space-y-2 text-sm">
-			<a
-				href="https://docs.openclaw.ai"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="block text-blue-400 hover:text-blue-300"
-			>
-				📚 Documentation
-			</a>
-			<a
-				href="https://github.com/openclaw"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="block text-blue-400 hover:text-blue-300"
-			>
-				💻 Source Code
-			</a>
-			<a
-				href="https://docs.openclaw.ai/llms.txt"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="block text-blue-400 hover:text-blue-300"
-			>
-				🤖 OpenClaw Platform
-			</a>
-		</div>
+		<h3 class="mb-4 text-lg font-semibold text-white">OpenClaw Platform</h3>
+		<p class="text-sm text-gray-300">
+			Falcon Dash is the control dashboard for the OpenClaw AI platform, providing real-time chat,
+			project management, file browsing, and system monitoring through a unified web interface.
+		</p>
 	</div>
 </div>

@@ -299,7 +299,14 @@
 			{:else}
 				<div class="mx-auto max-w-3xl space-y-4">
 					{#each messages as message, i (message.id ?? `msg-${i}`)}
-						{#if message.role === 'user'}
+						{#if message.role === 'divider'}
+							<!-- Divider message -->
+							<div class="flex items-center gap-3 py-2">
+								<div class="h-px flex-1 bg-gray-700"></div>
+								<span class="text-xs text-gray-500">{message.content}</span>
+								<div class="h-px flex-1 bg-gray-700"></div>
+							</div>
+						{:else if message.role === 'user'}
 							<!-- User message -->
 							<div
 								class="flex justify-end rounded-lg transition-colors duration-700 {highlightedMessageId ===

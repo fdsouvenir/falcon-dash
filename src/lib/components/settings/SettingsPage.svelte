@@ -2,7 +2,6 @@
 	import PreferencesTab from './PreferencesTab.svelte';
 	import InformationTab from './InformationTab.svelte';
 	import AboutTab from './AboutTab.svelte';
-	import SkillsTab from './SkillsTab.svelte';
 	import ModelsList from './ModelsList.svelte';
 	import ConfigEditor from './ConfigEditor.svelte';
 	import DiscordSetup from './DiscordSetup.svelte';
@@ -14,15 +13,14 @@
 	const tabs = [
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
 		{ id: 'information', label: 'Information', component: InformationTab },
-		{ id: 'about', label: 'About', component: AboutTab },
-		{ id: 'skills', label: 'Skills', component: SkillsTab },
 		{ id: 'models', label: 'Models', component: ModelsList },
 		{ id: 'config', label: 'Config', component: ConfigEditor },
 		{ id: 'discord', label: 'Discord', component: DiscordSetup },
 		{ id: 'devices', label: 'Devices', component: DeviceManagement },
 		{ id: 'logs', label: 'Logs', component: LiveLogs },
 		{ id: 'approvals', label: 'Approvals', component: ExecApprovals },
-		{ id: 'workspace', label: 'Workspace', component: WorkspaceFiles }
+		{ id: 'workspace', label: 'Workspace', component: WorkspaceFiles },
+		{ id: 'about', label: 'About', component: AboutTab }
 	] as const;
 
 	let activeTab = $state<string>('preferences');

@@ -63,6 +63,12 @@
 	let loadingAgents = $state(false);
 	let showRestartConfirm = $state(false);
 
+	// Unavailability states
+	let statusUnavailable = $state(false);
+	let usageUnavailable = $state(false);
+	let nodesUnavailable = $state(false);
+	let agentsUnavailable = $state(false);
+
 	// Subscribe to connection state
 	$effect(() => {
 		const unsub = connection.state.subscribe((s) => {
@@ -113,8 +119,10 @@
 				currentModel: result.model,
 				sessionCount: result.sessions
 			};
+			statusUnavailable = false;
 		} catch (err) {
 			console.error('Failed to load status:', err);
+			statusUnavailable = true;
 		} finally {
 			loadingStatus = false;
 		}
@@ -128,8 +136,10 @@
 				total?: { tokens: number; cost?: number };
 			}>('info.usage');
 			usageData = result;
+			usageUnavailable = false;
 		} catch (err) {
 			console.error('Failed to load usage:', err);
+			usageUnavailable = true;
 		} finally {
 			loadingUsage = false;
 		}
@@ -148,8 +158,10 @@
 				}>;
 			}>('nodes.list');
 			nodesData = result.nodes || [];
+			nodesUnavailable = false;
 		} catch (err) {
 			console.error('Failed to load nodes:', err);
+			nodesUnavailable = true;
 		} finally {
 			loadingNodes = false;
 		}
@@ -177,8 +189,10 @@
 				}>;
 			}>('agents.list');
 			agentsData = result;
+			agentsUnavailable = false;
 		} catch (err) {
 			console.error('Failed to load agents:', err);
+			agentsUnavailable = true;
 		} finally {
 			loadingAgents = false;
 		}
@@ -243,6 +257,33 @@
 		<h3 class="mb-4 text-lg font-semibold text-white">Gateway Status</h3>
 		{#if loadingStatus}
 			<div class="text-sm text-gray-400">Loading...</div>
+		{:else if statusUnavailable}
+			<dl class="grid grid-cols-2 gap-4 text-sm mb-4">
+				<div>
+					<dt class="text-gray-400">Connection</dt>
+					<dd class="mt-1 font-medium text-white">
+						{connectionState === 'READY' ? 'Connected' : 'Disconnected'}
+					</dd>
+				</div>
+				<div>
+					<dt class="text-gray-400">URL</dt>
+					<dd class="mt-1 font-mono text-xs text-white">{serverInfo?.host || 'N/A'}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-400">Session Uptime</dt>
+					<dd class="mt-1 font-medium text-white">{sessionUptime}</dd>
+				</div>
+				<div>
+					<dt class="text-gray-400">Server Version</dt>
+					<dd class="mt-1 font-medium text-white">{serverInfo?.version || 'N/A'}</dd>
+				</div>
+			</dl>
+			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+				<p class="text-sm text-yellow-400">
+					Extended gateway status requires gateway methods (info.status, info.usage, etc.) that may
+					not be available in all gateway versions.
+				</p>
+			</div>
 		{:else}
 			<dl class="grid grid-cols-2 gap-4 text-sm">
 				<div>
@@ -282,6 +323,13 @@
 		<h3 class="mb-4 text-lg font-semibold text-white">Usage & Costs</h3>
 		{#if loadingUsage}
 			<div class="text-sm text-gray-400">Loading...</div>
+		{:else if usageUnavailable}
+			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+				<p class="text-sm text-yellow-400">
+					Usage data requires the info.usage gateway method. This feature may not be available in
+					all gateway versions.
+				</p>
+			</div>
 		{:else if usageData?.providers && usageData.providers.length > 0}
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm">
@@ -327,6 +375,13 @@
 		<h3 class="mb-4 text-lg font-semibold text-white">Paired Nodes</h3>
 		{#if loadingNodes}
 			<div class="text-sm text-gray-400">Loading...</div>
+		{:else if nodesUnavailable}
+			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+				<p class="text-sm text-yellow-400">
+					Node data requires the nodes.list gateway method. This feature may not be available in all
+					gateway versions.
+				</p>
+			</div>
 		{:else if nodesData.length > 0}
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm">
@@ -372,6 +427,13 @@
 		<h3 class="mb-4 text-lg font-semibold text-white">Sub-agents</h3>
 		{#if loadingAgents}
 			<div class="text-sm text-gray-400">Loading...</div>
+		{:else if agentsUnavailable}
+			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+				<p class="text-sm text-yellow-400">
+					Agent data requires the agents.list gateway method. This feature may not be available in
+					all gateway versions.
+				</p>
+			</div>
 		{:else}
 			<!-- Active Runs -->
 			{#if agentsData?.active && agentsData.active.length > 0}

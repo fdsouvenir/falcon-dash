@@ -19,6 +19,7 @@
 	let pendingRequests = $state<PairingRequest[]>([]);
 	let pairedDevices = $state<PairedDevice[]>([]);
 	let loading = $state(false);
+	let unavailable = $state(false);
 	let confirmAction = $state<{
 		type: 'rotate' | 'revoke';
 		deviceId: string;
@@ -51,6 +52,10 @@
 		loading = true;
 		try {
 			await Promise.all([loadPendingRequests(), loadPairedDevices()]);
+			unavailable = false;
+		} catch (err) {
+			console.error('Failed to load device data:', err);
+			unavailable = true;
 		} finally {
 			loading = false;
 		}
@@ -155,88 +160,104 @@
 		{/if}
 	</div>
 
-	{#if pendingRequests.length > 0}
-		<div class="space-y-3">
-			<h4 class="text-sm font-medium text-gray-300">Pending Pairing Requests</h4>
-			{#each pendingRequests as request (request.requestId)}
-				<div class="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
-					<div class="flex items-start justify-between">
-						<div class="flex-1">
-							<p class="font-medium text-yellow-400">{request.deviceName}</p>
-							<p class="text-sm text-gray-400">Type: {request.deviceType}</p>
-							<p class="text-xs text-gray-500">Requested {formatTimestamp(request.requestedAt)}</p>
-						</div>
-						<div class="flex gap-2">
-							<button
-								onclick={() => approveRequest(request.requestId)}
-								disabled={loading}
-								class="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
-							>
-								Approve
-							</button>
-							<button
-								onclick={() => rejectRequest(request.requestId)}
-								disabled={loading}
-								class="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/30 disabled:opacity-50"
-							>
-								Reject
-							</button>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
-	{/if}
+	<p class="text-sm text-gray-400">
+		Manage paired devices that can connect to this gateway. Devices use cryptographic pairing for
+		secure authentication.
+	</p>
 
-	<div class="space-y-3">
-		<h4 class="text-sm font-medium text-gray-300">Paired Devices</h4>
-		{#if pairedDevices.length === 0}
-			<p class="text-sm text-gray-500">No paired devices</p>
-		{:else}
-			{#each pairedDevices as device (device.deviceId)}
-				<div class="rounded-lg border border-gray-700 bg-gray-800/50 p-4">
-					<div class="flex items-start justify-between">
-						<div class="flex-1">
-							<p class="font-medium text-white">{device.deviceName}</p>
-							<p class="text-sm text-gray-400">Type: {device.deviceType}</p>
-							<div class="mt-1 flex gap-4 text-xs text-gray-500">
-								<span>Paired {formatTimestamp(device.pairedAt)}</span>
-								{#if device.lastSeen}
-									<span>Last seen {formatTimestamp(device.lastSeen)}</span>
-								{/if}
+	{#if unavailable}
+		<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+			<p class="text-sm text-yellow-400">
+				Device management requires device-pair gateway methods. This feature may not be available in
+				all gateway versions.
+			</p>
+		</div>
+	{:else}
+		{#if pendingRequests.length > 0}
+			<div class="space-y-3">
+				<h4 class="text-sm font-medium text-gray-300">Pending Pairing Requests</h4>
+				{#each pendingRequests as request (request.requestId)}
+					<div class="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+						<div class="flex items-start justify-between">
+							<div class="flex-1">
+								<p class="font-medium text-yellow-400">{request.deviceName}</p>
+								<p class="text-sm text-gray-400">Type: {request.deviceType}</p>
+								<p class="text-xs text-gray-500">
+									Requested {formatTimestamp(request.requestedAt)}
+								</p>
+							</div>
+							<div class="flex gap-2">
+								<button
+									onclick={() => approveRequest(request.requestId)}
+									disabled={loading}
+									class="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
+								>
+									Approve
+								</button>
+								<button
+									onclick={() => rejectRequest(request.requestId)}
+									disabled={loading}
+									class="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/30 disabled:opacity-50"
+								>
+									Reject
+								</button>
 							</div>
 						</div>
-						<div class="flex gap-2">
-							<button
-								onclick={() =>
-									(confirmAction = {
-										type: 'rotate',
-										deviceId: device.deviceId,
-										deviceName: device.deviceName
-									})}
-								disabled={loading}
-								class="rounded-lg bg-blue-500/20 px-3 py-1.5 text-sm font-medium text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
-							>
-								Rotate Token
-							</button>
-							<button
-								onclick={() =>
-									(confirmAction = {
-										type: 'revoke',
-										deviceId: device.deviceId,
-										deviceName: device.deviceName
-									})}
-								disabled={loading}
-								class="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/30 disabled:opacity-50"
-							>
-								Revoke
-							</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		<div class="space-y-3">
+			<h4 class="text-sm font-medium text-gray-300">Paired Devices</h4>
+			{#if pairedDevices.length === 0}
+				<p class="text-sm text-gray-500">No paired devices</p>
+			{:else}
+				{#each pairedDevices as device (device.deviceId)}
+					<div class="rounded-lg border border-gray-700 bg-gray-800/50 p-4">
+						<div class="flex items-start justify-between">
+							<div class="flex-1">
+								<p class="font-medium text-white">{device.deviceName}</p>
+								<p class="text-sm text-gray-400">Type: {device.deviceType}</p>
+								<div class="mt-1 flex gap-4 text-xs text-gray-500">
+									<span>Paired {formatTimestamp(device.pairedAt)}</span>
+									{#if device.lastSeen}
+										<span>Last seen {formatTimestamp(device.lastSeen)}</span>
+									{/if}
+								</div>
+							</div>
+							<div class="flex gap-2">
+								<button
+									onclick={() =>
+										(confirmAction = {
+											type: 'rotate',
+											deviceId: device.deviceId,
+											deviceName: device.deviceName
+										})}
+									disabled={loading}
+									class="rounded-lg bg-blue-500/20 px-3 py-1.5 text-sm font-medium text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
+								>
+									Rotate Token
+								</button>
+								<button
+									onclick={() =>
+										(confirmAction = {
+											type: 'revoke',
+											deviceId: device.deviceId,
+											deviceName: device.deviceName
+										})}
+									disabled={loading}
+									class="rounded-lg bg-red-500/20 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/30 disabled:opacity-50"
+								>
+									Revoke
+								</button>
+							</div>
 						</div>
 					</div>
-				</div>
-			{/each}
-		{/if}
-	</div>
+				{/each}
+			{/if}
+		</div>
+	{/if}
 
 	{#if confirmAction}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

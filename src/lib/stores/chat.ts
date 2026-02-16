@@ -7,11 +7,12 @@ import type {
 	ToolResultEvent
 } from '$lib/gateway/stream.js';
 import { call, eventBus, connection, setCanvasActiveRunId } from '$lib/stores/gateway.js';
+import { renameSession } from '$lib/stores/sessions.js';
 
 // Message types
 export interface ChatMessage {
 	id: string;
-	role: 'user' | 'assistant';
+	role: 'user' | 'assistant' | 'divider';
 	content: string;
 	timestamp: number;
 	status: 'sending' | 'sent' | 'streaming' | 'complete' | 'error';
@@ -443,6 +444,15 @@ export function createChatSession(sessionKey: string) {
 				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
 			);
 
+			// Auto-title session from first message
+			if (
+				!message.startsWith('/') &&
+				get(_messages).filter((m) => m.role === 'user').length === 1
+			) {
+				const title = message.length > 50 ? message.slice(0, 47) + '...' : message;
+				renameSession(sessionKey, title).catch(() => {});
+			}
+
 			// Notify stream manager of ack
 			streamManager.onAck(runId, sessionKey);
 
@@ -603,6 +613,20 @@ export function createChatSession(sessionKey: string) {
 		await send(msg.content);
 	}
 
+	/**
+	 * Insert a divider message into the chat history.
+	 */
+	function insertDivider(content: string = 'New conversation started'): void {
+		const dividerMessage: ChatMessage = {
+			id: crypto.randomUUID(),
+			role: 'divider',
+			content,
+			timestamp: Date.now(),
+			status: 'complete'
+		};
+		_messages.update((msgs) => [...msgs, dividerMessage]);
+	}
+
 	return {
 		messages,
 		activeRunId,
@@ -616,6 +640,7 @@ export function createChatSession(sessionKey: string) {
 		removeReaction,
 		abort,
 		retry,
+		insertDivider,
 		loadHistory,
 		reconcile,
 		destroy,

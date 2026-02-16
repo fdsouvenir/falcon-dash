@@ -80,6 +80,7 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	[_sessions, _searchQuery, _manualOrder],
 	([$sessions, $query, $order]) => {
 		let list = $sessions;
+		list = list.filter((s) => s.kind === 'group' || s.isGeneral);
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
@@ -103,7 +104,9 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 
 export async function loadSessions(): Promise<void> {
 	try {
-		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
+		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {
+			kinds: ['group']
+		});
 		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => ({
 			sessionKey: (s.sessionKey ?? s.key ?? '') as string,
 			displayName: (s.displayName ?? s.name ?? 'Untitled') as string,

@@ -31,6 +31,7 @@
 	let files = $state<FileInfo[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let unavailable = $state(false);
 	let selectedFile = $state<FileInfo | null>(null);
 	let fileContent = $state('');
 	let fileHash = $state('');
@@ -45,8 +46,10 @@
 		try {
 			const response = await call<FileListResponse>('agents-files.list');
 			files = response.files;
+			unavailable = false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load file list';
+			unavailable = true;
 		} finally {
 			loading = false;
 		}
@@ -176,6 +179,15 @@
 		<div class="w-80 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-900">
 			{#if loading}
 				<div class="p-4 text-center text-sm text-gray-500">Loading files...</div>
+			{:else if unavailable}
+				<div class="p-4">
+					<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
+						<p class="text-sm text-yellow-400">
+							Workspace files require the agents-files.list gateway method. This feature may not be
+							available in all gateway versions.
+						</p>
+					</div>
+				</div>
 			{:else}
 				<!-- Known files -->
 				<div class="border-b border-gray-800 px-4 py-3">

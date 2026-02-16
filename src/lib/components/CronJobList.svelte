@@ -13,6 +13,7 @@
 		type CronJob
 	} from '$lib/stores/cron.js';
 	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { describeCron } from '$lib/cron-utils.js';
 	import CronJobForm from './CronJobForm.svelte';
 	import CronRunHistory from './CronRunHistory.svelte';
 
@@ -25,6 +26,42 @@
 	let showDeleteConfirm = $state(false);
 	let deleteTarget = $state<CronJob | null>(null);
 	let historyJob = $state<CronJob | null>(null);
+
+	let searchQuery = $state('');
+	let sortBy = $state<'name' | 'schedule' | 'lastRun'>('name');
+	let sortAsc = $state(true);
+
+	let filteredAndSortedJobs = $derived.by(() => {
+		let result = jobs;
+
+		// Filter by search query
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			result = result.filter(
+				(job) =>
+					job.name.toLowerCase().includes(query) ||
+					job.description?.toLowerCase().includes(query) ||
+					job.schedule.toLowerCase().includes(query)
+			);
+		}
+
+		// Sort
+		result = [...result].sort((a, b) => {
+			let cmp = 0;
+			if (sortBy === 'name') {
+				cmp = a.name.localeCompare(b.name);
+			} else if (sortBy === 'schedule') {
+				cmp = a.schedule.localeCompare(b.schedule);
+			} else if (sortBy === 'lastRun') {
+				const aTime = a.lastRun ?? 0;
+				const bTime = b.lastRun ?? 0;
+				cmp = aTime - bTime;
+			}
+			return sortAsc ? cmp : -cmp;
+		});
+
+		return result;
+	});
 
 	$effect(() => {
 		const u = cronJobs.subscribe((v) => {
@@ -102,6 +139,15 @@
 	async function handleRunNow(job: CronJob) {
 		await runCronJob(job.id);
 	}
+
+	function toggleSort(field: 'name' | 'schedule' | 'lastRun') {
+		if (sortBy === field) {
+			sortAsc = !sortAsc;
+		} else {
+			sortBy = field;
+			sortAsc = true;
+		}
+	}
 </script>
 
 {#if historyJob}
@@ -109,14 +155,26 @@
 {:else}
 	<div class="flex h-full flex-col">
 		<!-- Header -->
-		<div class="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-			<h2 class="text-sm font-medium text-white">Scheduled Jobs</h2>
-			<button
-				onclick={openCreateForm}
-				class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
-			>
-				+ Create Job
-			</button>
+		<div class="border-b border-gray-800 px-4 py-3">
+			<div class="flex items-center justify-between">
+				<h2 class="text-sm font-medium text-white">Scheduled Jobs</h2>
+				<button
+					onclick={openCreateForm}
+					class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
+				>
+					+ Create Job
+				</button>
+			</div>
+			{#if jobs.length > 0}
+				<div class="mt-3">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search jobs..."
+						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					/>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Content -->
@@ -149,18 +207,37 @@
 			<div
 				class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800 px-4 py-2 text-xs text-gray-500"
 			>
-				<span>Name</span>
-				<span>Schedule</span>
+				<button
+					onclick={() => toggleSort('name')}
+					class="text-left hover:text-white"
+					title="Sort by name"
+				>
+					Name {sortBy === 'name' ? (sortAsc ? '▲' : '▼') : ''}
+				</button>
+				<button
+					onclick={() => toggleSort('schedule')}
+					class="text-left hover:text-white"
+					title="Sort by schedule"
+				>
+					Schedule {sortBy === 'schedule' ? (sortAsc ? '▲' : '▼') : ''}
+				</button>
 				<span>Next Run</span>
-				<span>Last Run</span>
+				<button
+					onclick={() => toggleSort('lastRun')}
+					class="text-left hover:text-white"
+					title="Sort by last run"
+				>
+					Last Run {sortBy === 'lastRun' ? (sortAsc ? '▲' : '▼') : ''}
+				</button>
 				<span class="text-right">Status</span>
 				<span class="text-right">Actions</span>
 			</div>
 
 			<!-- Job rows -->
 			<div class="flex-1 overflow-y-auto">
-				{#each jobs as job (job.id)}
+				{#each filteredAndSortedJobs as job (job.id)}
 					{@const badge = statusBadge(job)}
+					{@const humanSchedule = job.scheduleType === 'cron' ? describeCron(job.schedule) : null}
 					<div
 						class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800/50 px-4 py-2 text-xs transition-colors hover:bg-gray-800"
 					>
@@ -170,7 +247,13 @@
 								<span class="ml-1 text-gray-500">— {job.description}</span>
 							{/if}
 						</div>
-						<span class="text-gray-400">{formatSchedule(job)}</span>
+						<div class="truncate">
+							{#if humanSchedule && humanSchedule !== job.schedule}
+								<span class="text-gray-300" title={job.schedule}>{humanSchedule}</span>
+							{:else}
+								<span class="text-gray-400">{formatSchedule(job)}</span>
+							{/if}
+						</div>
 						<span
 							class="text-gray-400"
 							title={job.nextRun ? new Date(job.nextRun).toLocaleString() : ''}

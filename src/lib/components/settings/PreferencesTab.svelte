@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { setThemeConfig, getThemeConfig, applyTheme } from '$lib/theme/theme-manager.js';
+	import type { ThemeMode } from '$lib/theme/theme-manager.js';
+
 	interface Preferences {
-		theme: 'dark' | 'light' | 'system';
+		theme: ThemeMode;
 		notificationsEnabled: boolean;
 		soundEnabled: boolean;
 		compactMode: boolean;
@@ -33,23 +36,14 @@
 		localStorage.setItem('falcon-dash-preferences', JSON.stringify(preferences));
 	}
 
-	function applyTheme(theme: 'dark' | 'light' | 'system') {
-		const html = document.documentElement;
-		if (theme === 'system') {
-			const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-			html.classList.toggle('dark', isDark);
-		} else {
-			html.classList.toggle('dark', theme === 'dark');
-		}
-	}
-
 	function applyCompactMode(compact: boolean) {
 		document.documentElement.classList.toggle('compact', compact);
 	}
 
 	// Apply preferences on mount
 	$effect(() => {
-		applyTheme(preferences.theme);
+		const config = getThemeConfig();
+		applyTheme({ mode: preferences.theme, accent: config.accent });
 		applyCompactMode(preferences.compactMode);
 	});
 
@@ -57,14 +51,18 @@
 	$effect(() => {
 		if (preferences.theme !== 'system') return;
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-		const handler = () => applyTheme('system');
+		const handler = () => {
+			const config = getThemeConfig();
+			applyTheme({ mode: 'system', accent: config.accent });
+		};
 		mediaQuery.addEventListener('change', handler);
 		return () => mediaQuery.removeEventListener('change', handler);
 	});
 
-	function updateTheme(theme: 'dark' | 'light' | 'system') {
+	function updateTheme(theme: ThemeMode) {
 		preferences.theme = theme;
-		applyTheme(theme);
+		const config = getThemeConfig();
+		setThemeConfig({ mode: theme, accent: config.accent });
 		savePreferences();
 	}
 
