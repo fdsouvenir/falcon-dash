@@ -147,15 +147,25 @@ connection.setOnHelloOk((helloOk) => {
 	snapshot.hydrate(helloOk);
 	snapshot.subscribe(eventBus);
 	canvasStore.subscribe(eventBus, call);
-	const browserHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+	const gwUrl = get(gatewayUrl);
+	const gatewayHost = (() => {
+		try {
+			return new URL(gwUrl.startsWith('ws') ? gwUrl.replace(/^ws/, 'http') : gwUrl).hostname;
+		} catch {
+			return '127.0.0.1';
+		}
+	})();
 	const gwPort = (() => {
 		try {
-			return parseInt(new URL(get(gatewayUrl)).port, 10) || 18789;
+			return (
+				parseInt(new URL(gwUrl.startsWith('ws') ? gwUrl.replace(/^ws/, 'http') : gwUrl).port, 10) ||
+				18789
+			);
 		} catch {
 			return 18789;
 		}
 	})();
-	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(browserHost, gwPort));
+	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(gatewayHost, gwPort));
 	call('canvas.bridge.register', {}).catch(() => {
 		diagnosticLog.log(
 			'canvas',

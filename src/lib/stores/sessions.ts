@@ -35,18 +35,50 @@ function persistSessionKey(key: string | null): void {
 	}
 }
 
+const MANUAL_ORDER_STORAGE_KEY = 'falcon-dash:sessionManualOrder';
+
+function loadManualOrder(): string[] {
+	try {
+		if (typeof window === 'undefined') return [];
+		const raw = localStorage.getItem(MANUAL_ORDER_STORAGE_KEY);
+		return raw ? JSON.parse(raw) : [];
+	} catch {
+		return [];
+	}
+}
+
+function persistManualOrder(order: string[]): void {
+	try {
+		if (typeof window === 'undefined') return;
+		if (order.length > 0) {
+			localStorage.setItem(MANUAL_ORDER_STORAGE_KEY, JSON.stringify(order));
+		} else {
+			localStorage.removeItem(MANUAL_ORDER_STORAGE_KEY);
+		}
+	} catch {
+		// Storage unavailable
+	}
+}
+
 const _sessions = writable<ChatSessionInfo[]>([]);
 const _activeSessionKey = writable<string | null>(loadPersistedSessionKey());
 const _searchQuery = writable('');
+const _manualOrder = writable<string[]>(loadManualOrder());
 
 export const sessions: Readable<ChatSessionInfo[]> = readonly(_sessions);
 export const activeSessionKey: Readable<string | null> = readonly(_activeSessionKey);
 export const searchQuery = _searchQuery;
+export const manualOrder: Readable<string[]> = readonly(_manualOrder);
 
-// Derived: filtered and sorted sessions (General first, then by updatedAt)
+export function setManualOrder(order: string[]): void {
+	_manualOrder.set(order);
+	persistManualOrder(order);
+}
+
+// Derived: filtered and sorted sessions (General first, then by manual order or updatedAt)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
-	[_sessions, _searchQuery],
-	([$sessions, $query]) => {
+	[_sessions, _searchQuery, _manualOrder],
+	([$sessions, $query, $order]) => {
 		let list = $sessions;
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
@@ -55,6 +87,15 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 		return list.sort((a, b) => {
 			if (a.isGeneral) return -1;
 			if (b.isGeneral) return 1;
+			if ($order.length > 0) {
+				const ai = $order.indexOf(a.sessionKey);
+				const bi = $order.indexOf(b.sessionKey);
+				// Both in manual order — sort by position
+				if (ai !== -1 && bi !== -1) return ai - bi;
+				// Only one in manual order — it comes first
+				if (ai !== -1) return -1;
+				if (bi !== -1) return 1;
+			}
 			return b.updatedAt - a.updatedAt;
 		});
 	}
@@ -188,22 +229,10 @@ export function unsubscribeFromEvents(): void {
 }
 
 export async function reorderSessions(sessionKeys: string[]): Promise<void> {
-	await call('sessions.reorder', { sessionKeys });
-	_sessions.update((list) => {
-		const ordered: ChatSessionInfo[] = [];
-		// General always first
-		const general = list.find((s) => s.isGeneral);
-		if (general) ordered.push(general);
-		// Then in requested order
-		for (const key of sessionKeys) {
-			const found = list.find((s) => s.sessionKey === key && !s.isGeneral);
-			if (found) ordered.push(found);
-		}
-		// Any remaining
-		for (const s of list) {
-			if (!ordered.includes(s)) ordered.push(s);
-		}
-		return ordered;
+	// Persist manual order locally so filteredSessions uses it
+	setManualOrder(sessionKeys);
+	await call('sessions.reorder', { sessionKeys }).catch(() => {
+		// Gateway may not support reorder — local order still works
 	});
 }
 

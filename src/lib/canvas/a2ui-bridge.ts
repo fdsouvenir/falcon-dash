@@ -79,9 +79,12 @@ async function doLoad(serverHost?: string, gatewayPort?: number): Promise<void> 
 			loaded = true;
 			return;
 		}
-	} catch {
-		// Bundle not available — fall through to placeholder
-		console.warn('[A2UI] Could not load bundle from canvas host, using placeholder');
+	} catch (err) {
+		console.warn(
+			`[A2UI] Could not load bundle from ${bundleUrl} — using placeholder.`,
+			`Ensure the gateway is reachable at ${canvasHostUrl}.`,
+			err
+		);
 	}
 
 	// Register a placeholder element for offline/development

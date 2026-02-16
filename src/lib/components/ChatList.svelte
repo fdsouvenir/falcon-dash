@@ -9,8 +9,10 @@
 		deleteSession,
 		createSession,
 		reorderSessions,
+		setManualOrder,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
+	import CreateChatDialog from './CreateChatDialog.svelte';
 
 	let sessionList = $state<ChatSessionInfo[]>([]);
 	let activeKey = $state<string | null>(null);
@@ -18,6 +20,7 @@
 	let editingKey = $state<string | null>(null);
 	let editName = $state('');
 	let draggedKey = $state<string | null>(null);
+	let showNewChatDialog = $state(false);
 
 	$effect(() => {
 		const unsub = filteredSessions.subscribe((v) => {
@@ -72,8 +75,18 @@
 		query = input.value;
 	}
 
-	async function handleNewChat() {
-		await createSession();
+	function handleNewChat() {
+		showNewChatDialog = true;
+	}
+
+	async function handleCreateConfirm(name: string) {
+		showNewChatDialog = false;
+		const key = await createSession(name || undefined);
+		selectSession(key);
+	}
+
+	function handleCreateCancel() {
+		showNewChatDialog = false;
 	}
 
 	function dragStart(key: string) {
@@ -104,7 +117,9 @@
 		const [dragged] = reordered.splice(draggedIndex, 1);
 		reordered.splice(targetIndex, 0, dragged);
 
-		await reorderSessions(reordered.map((s) => s.sessionKey));
+		const keys = reordered.map((s) => s.sessionKey);
+		setManualOrder(keys);
+		await reorderSessions(keys);
 		draggedKey = null;
 	}
 </script>
@@ -245,4 +260,8 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if showNewChatDialog}
+		<CreateChatDialog onconfirm={handleCreateConfirm} oncancel={handleCreateCancel} />
+	{/if}
 </div>

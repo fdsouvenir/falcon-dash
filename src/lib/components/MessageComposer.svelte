@@ -1,4 +1,14 @@
 <script lang="ts">
+	import SlashCommandMenu from './SlashCommandMenu.svelte';
+	import {
+		filterCommands,
+		parseCommand,
+		type SlashCommand,
+		type CommandContext
+	} from '$lib/chat/commands.js';
+	import { activeSessionKey } from '$lib/stores/sessions.js';
+	import { get } from 'svelte/store';
+
 	let {
 		onSend,
 		onAbort,
@@ -17,17 +27,102 @@
 	let fileInput: HTMLInputElement;
 	let isDragging = $state(false);
 
+	// Slash command state
+	let showCommandMenu = $state(false);
+	let commandQuery = $state('');
+	let commandSelectedIndex = $state(0);
+
+	function updateCommandMenu() {
+		if (text.startsWith('/') && !text.includes('\n')) {
+			const query = text.slice(1).split(/\s/)[0] ?? '';
+			commandQuery = query;
+			const matches = filterCommands(query);
+			showCommandMenu = matches.length > 0;
+			if (commandSelectedIndex >= matches.length) {
+				commandSelectedIndex = 0;
+			}
+		} else {
+			showCommandMenu = false;
+		}
+	}
+
+	function handleCommandSelect(cmd: SlashCommand) {
+		showCommandMenu = false;
+		// If the command has args, fill in the command name and let user type args
+		if (cmd.args) {
+			text = `/${cmd.name} `;
+			textarea?.focus();
+		} else {
+			text = `/${cmd.name}`;
+			executeSlashCommand();
+		}
+	}
+
+	async function executeSlashCommand(): Promise<boolean> {
+		const parsed = parseCommand(text.trim());
+		if (!parsed) return false;
+		const sessionKey = get(activeSessionKey);
+		if (!sessionKey) return false;
+		const ctx: CommandContext = {
+			sessionKey,
+			abort: async () => {
+				onAbort();
+			}
+		};
+		try {
+			await parsed.command.handler(parsed.args, ctx);
+		} catch (err) {
+			console.error(`[SlashCommand] /${parsed.command.name} failed:`, err);
+		}
+		text = '';
+		resize();
+		return true;
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
+		if (showCommandMenu) {
+			const matches = filterCommands(commandQuery);
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				commandSelectedIndex = (commandSelectedIndex + 1) % matches.length;
+				return;
+			}
+			if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				commandSelectedIndex = (commandSelectedIndex - 1 + matches.length) % matches.length;
+				return;
+			}
+			if (e.key === 'Enter' && matches.length > 0) {
+				e.preventDefault();
+				handleCommandSelect(matches[commandSelectedIndex]);
+				return;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				showCommandMenu = false;
+				return;
+			}
+			if (e.key === 'Tab' && matches.length > 0) {
+				e.preventDefault();
+				handleCommandSelect(matches[commandSelectedIndex]);
+				return;
+			}
+		}
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			send();
 		}
 	}
 
-	function send() {
+	async function send() {
 		const trimmed = text.trim();
 		if (!trimmed && attachments.length === 0) return;
 		if (disabled) return;
+		// Try slash command first
+		if (trimmed.startsWith('/')) {
+			const handled = await executeSlashCommand();
+			if (handled) return;
+		}
 		onSend(trimmed, attachments.length > 0 ? attachments : undefined);
 		text = '';
 		attachments = [];
@@ -42,6 +137,7 @@
 
 	function handleInput() {
 		resize();
+		updateCommandMenu();
 	}
 
 	// File handling
@@ -139,6 +235,16 @@
 			Drop files here
 		</div>
 	{/if}
+
+	<!-- Slash command menu -->
+	<div class="relative">
+		<SlashCommandMenu
+			query={commandQuery}
+			visible={showCommandMenu}
+			selectedIndex={commandSelectedIndex}
+			onSelect={handleCommandSelect}
+		/>
+	</div>
 
 	<!-- Input area -->
 	<div class="flex items-end gap-2">
