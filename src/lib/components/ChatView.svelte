@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { page } from '$app/stores';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread } from '$lib/stores/threads.js';
@@ -13,6 +14,8 @@
 	import ToolCallCard from './ToolCallCard.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ReplyPreview from './ReplyPreview.svelte';
+	import ReactionPicker from './ReactionPicker.svelte';
+	import ReactionDisplay from './ReactionDisplay.svelte';
 	import ThreadPanel from './ThreadPanel.svelte';
 	import type { ThreadInfo } from '$lib/stores/threads.js';
 	import type { ConnectionState } from '$lib/gateway/types.js';
@@ -32,6 +35,8 @@
 
 	let scrollContainer: HTMLDivElement;
 	let shouldAutoScroll = $state(true);
+	let highlightedMessageId = $state<string | null>(null);
+	let pendingScrollToId = $state<string | null>(null);
 
 	// Track active session key
 	$effect(() => {
@@ -137,6 +142,51 @@
 		}
 	});
 
+	// Read ?msg= URL param for deep-link jump-to-message
+	$effect(() => {
+		const unsub = page.subscribe(($page) => {
+			const msgId = $page.url.searchParams.get('msg');
+			if (msgId) {
+				pendingScrollToId = msgId;
+				// Clear the param from the URL without triggering navigation
+				const url = new URL(window.location.href);
+				url.searchParams.delete('msg');
+				history.replaceState(history.state, '', url.pathname + url.search);
+			}
+		});
+		return unsub;
+	});
+
+	// When messages load and we have a pending scroll target, scroll to it
+	$effect(() => {
+		const target = pendingScrollToId;
+		const len = messages.length;
+		if (!target || !len || !scrollContainer) return;
+		// Check if the target message exists in the loaded messages
+		if (!messages.some((m) => m.id === target)) return;
+		// Found it — scroll after DOM renders
+		requestAnimationFrame(() => {
+			scrollToMessage(target);
+		});
+		pendingScrollToId = null;
+	});
+
+	/**
+	 * Scroll to a specific message and briefly highlight it.
+	 * Can be called from URL deep-links or programmatically (e.g. clicking a reply preview).
+	 */
+	function scrollToMessage(messageId: string) {
+		if (!scrollContainer) return;
+		const el = scrollContainer.querySelector(`[data-message-id="${messageId}"]`);
+		if (!el) return;
+		shouldAutoScroll = false;
+		el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		highlightedMessageId = messageId;
+		setTimeout(() => {
+			highlightedMessageId = null;
+		}, 2000);
+	}
+
 	function handleScroll() {
 		if (!scrollContainer) return;
 		const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
@@ -164,8 +214,36 @@
 		chatSession.setReplyTo(null);
 	}
 
+	function handleRetry(messageId: string) {
+		if (!chatSession) return;
+		chatSession.retry(messageId);
+	}
+
 	function findMessageById(id: string): ChatMessage | undefined {
 		return messages.find((m) => m.id === id);
+	}
+
+	let reactionPickerMessageId = $state<string | null>(null);
+
+	function toggleReactionPicker(messageId: string) {
+		reactionPickerMessageId = reactionPickerMessageId === messageId ? null : messageId;
+	}
+
+	function handleReactionSelect(messageId: string, emoji: string) {
+		if (!chatSession) return;
+		chatSession.addReaction(messageId, emoji);
+		reactionPickerMessageId = null;
+	}
+
+	function handleReactionToggle(messageId: string, emoji: string) {
+		if (!chatSession) return;
+		const msg = messages.find((m) => m.id === messageId);
+		const reaction = msg?.reactions?.find((r) => r.emoji === emoji);
+		if (reaction?.reacted) {
+			chatSession.removeReaction(messageId, emoji);
+		} else {
+			chatSession.addReaction(messageId, emoji);
+		}
 	}
 
 	// Check if the current surface is already rendered inline by a message's CanvasBlock
@@ -223,13 +301,22 @@
 					{#each messages as message, i (message.id ?? `msg-${i}`)}
 						{#if message.role === 'user'}
 							<!-- User message -->
-							<div class="flex justify-end">
+							<div
+								class="flex justify-end rounded-lg transition-colors duration-700 {highlightedMessageId ===
+								message.id
+									? 'bg-blue-500/10'
+									: ''}"
+								data-message-id={message.id}
+							>
 								<div class="max-w-[80%]">
 									{#if message.replyToMessageId}
 										{@const replyMsg = findMessageById(message.replyToMessageId)}
 										{#if replyMsg}
 											<div class="mb-1">
-												<ReplyPreview message={replyMsg} />
+												<ReplyPreview
+													message={replyMsg}
+													onclick={() => scrollToMessage(replyMsg.id)}
+												/>
 											</div>
 										{/if}
 									{/if}
@@ -240,19 +327,34 @@
 										<span class="text-xs text-gray-500">
 											{formatMessageTime(message.timestamp)}
 										</span>
+										{#if message.edited}
+											<span class="text-xs italic text-gray-500">(edited)</span>
+										{/if}
 										{#if message.status === 'sending'}
 											<span class="text-xs text-gray-500">Sending...</span>
 										{:else if message.status === 'error'}
 											<span class="text-xs text-red-400">
 												{message.errorMessage ?? 'Failed'}
 											</span>
+											<button
+												onclick={() => handleRetry(message.id)}
+												class="text-xs text-blue-400 transition-colors hover:text-blue-300"
+											>
+												Retry
+											</button>
 										{/if}
 									</div>
 								</div>
 							</div>
 						{:else}
 							<!-- Assistant message -->
-							<div class="flex justify-start">
+							<div
+								class="flex justify-start rounded-lg transition-colors duration-700 {highlightedMessageId ===
+								message.id
+									? 'bg-blue-500/10'
+									: ''}"
+								data-message-id={message.id}
+							>
 								<div class="max-w-[85%]">
 									<!-- Thinking block -->
 									{#if message.thinkingText}
@@ -306,12 +408,29 @@
 										<span class="text-xs text-gray-500">
 											{formatMessageTime(message.timestamp)}
 										</span>
+										{#if message.edited}
+											<span class="text-xs italic text-gray-500">(edited)</span>
+										{/if}
 										{#if message.status === 'error'}
 											<span class="text-xs text-red-400">
 												{message.errorMessage ?? 'Error'}
 											</span>
 										{/if}
 										{#if message.status === 'complete'}
+											<div class="relative">
+												<button
+													onclick={() => toggleReactionPicker(message.id)}
+													class="text-xs text-gray-600 transition-colors hover:text-gray-400"
+												>
+													React
+												</button>
+												{#if reactionPickerMessageId === message.id}
+													<ReactionPicker
+														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+														onClose={() => (reactionPickerMessageId = null)}
+													/>
+												{/if}
+											</div>
 											<button
 												onclick={() => handleReply(message)}
 												class="text-xs text-gray-600 transition-colors hover:text-gray-400"
@@ -320,6 +439,14 @@
 											</button>
 										{/if}
 									</div>
+
+									<!-- Reactions -->
+									{#if message.reactions?.length}
+										<ReactionDisplay
+											reactions={message.reactions}
+											onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
+										/>
+									{/if}
 								</div>
 							</div>
 						{/if}

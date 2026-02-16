@@ -2,15 +2,32 @@
 	import { canvasStore } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { pinnedApps, unpinApp } from '$lib/stores/pinned-apps.js';
+	import { get } from 'svelte/store';
 	import InlineA2UI from './InlineA2UI.svelte';
 
 	let surfaces = $state<Map<string, CanvasSurface>>(new Map());
 	let draggedIndex = $state<number | null>(null);
 	let confirmingId = $state<string | null>(null);
+	let restoredOnce = false;
 
 	$effect(() => {
 		const unsub = canvasStore.surfaces.subscribe((s: Map<string, CanvasSurface>) => {
 			surfaces = s;
+			// On first surface update, restore pinned apps that are missing
+			if (!restoredOnce) {
+				restoredOnce = true;
+				const pins = get(pinnedApps);
+				const missing = pins.filter((p) => !s.has(p.surfaceId));
+				if (missing.length > 0) {
+					canvasStore.restorePinnedSurfaces(
+						missing.map((p) => ({
+							surfaceId: p.surfaceId,
+							surfaceUrl: p.surfaceUrl,
+							surfaceTitle: p.surfaceTitle
+						}))
+					);
+				}
+			}
 		});
 		return unsub;
 	});
@@ -96,6 +113,11 @@
 					{#if surface && surface.messages.length > 0}
 						<div class="app-canvas">
 							<InlineA2UI messages={surface.messages} />
+						</div>
+					{:else if !surface}
+						<div class="app-reconnecting">
+							<div class="reconnecting-dot"></div>
+							<span>Waiting for surface...</span>
 						</div>
 					{/if}
 				</li>
@@ -223,5 +245,33 @@
 		margin-top: 0.5rem;
 		border-top: 1px solid var(--color-border, #313244);
 		padding-top: 0.5rem;
+	}
+
+	.app-reconnecting {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		margin-top: 0.5rem;
+		padding: 0.5rem 0;
+		font-size: 0.75rem;
+		color: var(--color-text-tertiary, #6c7086);
+	}
+
+	.reconnecting-dot {
+		width: 0.375rem;
+		height: 0.375rem;
+		border-radius: 50%;
+		background: var(--color-text-tertiary, #6c7086);
+		animation: pulse 1.5s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%,
+		100% {
+			opacity: 0.3;
+		}
+		50% {
+			opacity: 1;
+		}
 	}
 </style>

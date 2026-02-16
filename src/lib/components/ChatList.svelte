@@ -166,17 +166,23 @@
 					</svg>
 				{/if}
 				{#if editingKey === session.sessionKey}
+					<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
 					<input
 						type="text"
 						bind:value={editName}
 						onblur={commitRename}
 						onkeydown={handleRenameKeydown}
+						onclick={(e) => e.stopPropagation()}
+						autofocus
 						class="flex-1 rounded bg-gray-700 px-2 py-0.5 text-xs text-white focus:outline-none"
 					/>
 				{:else}
 					<span
 						class="flex-1 truncate"
-						ondblclick={() => startRename(session)}
+						ondblclick={(e) => {
+							e.stopPropagation();
+							startRename(session);
+						}}
 						role="button"
 						tabindex="0"
 					>

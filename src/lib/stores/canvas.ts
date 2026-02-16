@@ -184,10 +184,17 @@ export class CanvasStore {
 		return `${this._canvasHostBaseUrl}/a2ui/`;
 	}
 
+	/** Generate a descriptive default title for a canvas surface */
+	private generateDefaultTitle(): string {
+		const ts = new Date();
+		const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		return `Canvas ${time}`;
+	}
+
 	/** canvas.present — create or show a surface */
 	private handlePresent(params: Record<string, unknown>): string {
 		const surfaceId = (params.surfaceId as string) || `surface-${crypto.randomUUID()}`;
-		const title = (params.title as string) || 'Canvas';
+		const title = (params.title as string) || this.generateDefaultTitle();
 		const url = (params.url as string) || this.getDefaultCanvasUrl();
 
 		this._surfaces.update((map) => {
@@ -382,6 +389,33 @@ export class CanvasStore {
 		}).catch((err) => {
 			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
 		});
+	}
+
+	/**
+	 * Restore pinned surfaces from persisted metadata.
+	 * Called after reconnect to re-populate surfaces that were lost on refresh.
+	 */
+	restorePinnedSurfaces(
+		pins: Array<{ surfaceId: string; surfaceUrl?: string; surfaceTitle?: string }>
+	): void {
+		this._surfaces.update((map) => {
+			let changed = false;
+			for (const pin of pins) {
+				if (!pin.surfaceId || map.has(pin.surfaceId)) continue;
+				map.set(pin.surfaceId, {
+					surfaceId: pin.surfaceId,
+					title: pin.surfaceTitle,
+					url: pin.surfaceUrl,
+					messages: [],
+					visible: false,
+					createdAt: Date.now(),
+					updatedAt: Date.now()
+				});
+				changed = true;
+			}
+			return changed ? new Map(map) : map;
+		});
+		diagnosticLog.log('canvas', 'info', `Restored ${pins.length} pinned surfaces`);
 	}
 
 	/**

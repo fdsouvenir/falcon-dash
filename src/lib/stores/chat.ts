@@ -20,6 +20,15 @@ export interface ChatMessage {
 	toolCalls?: ToolCallInfo[];
 	errorMessage?: string;
 	replyToMessageId?: string;
+	reactions?: ReactionInfo[];
+	edited?: boolean;
+}
+
+export interface ReactionInfo {
+	emoji: string;
+	count: number;
+	users: string[];
+	reacted: boolean;
 }
 
 export interface ToolCallInfo {
@@ -48,6 +57,7 @@ export function createChatSession(sessionKey: string) {
 	const _isStreaming: Writable<boolean> = writable(false);
 	const _pendingQueue: Writable<string[]> = writable([]);
 	const _replyTo: Writable<ChatMessage | null> = writable(null);
+	let _safetyTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Public readable stores
 	const messages: Readable<ChatMessage[]> = readonly(_messages);
@@ -57,6 +67,13 @@ export function createChatSession(sessionKey: string) {
 
 	// Derived: is there an active run?
 	const hasActiveRun: Readable<boolean> = derived(_activeRunId, ($id) => $id !== null);
+
+	function clearSafetyTimer(): void {
+		if (_safetyTimer !== null) {
+			clearTimeout(_safetyTimer);
+			_safetyTimer = null;
+		}
+	}
 
 	// Handle stream events
 	const unsubStream = streamManager.on((event: AnyStreamEvent) => {
@@ -79,6 +96,16 @@ export function createChatSession(sessionKey: string) {
 	// Handle incoming message events (from other users or Discord)
 	const unsubChatEvent = eventBus.on('chat.message', (payload) => {
 		handleIncomingMessage(payload);
+	});
+
+	// Handle message update/edit events
+	const unsubUpdateEvent = eventBus.on('chat.message.update', (payload) => {
+		handleMessageUpdate(payload);
+	});
+
+	// Handle reaction events
+	const unsubReactionEvent = eventBus.on('chat.reaction', (payload) => {
+		handleReactionEvent(payload);
 	});
 
 	function handleDelta(event: DeltaEvent): void {
@@ -140,6 +167,7 @@ export function createChatSession(sessionKey: string) {
 		summary?: string;
 		errorMessage?: string;
 	}): void {
+		clearSafetyTimer();
 		_messages.update((msgs) => {
 			const idx = msgs.findIndex((m) => m.runId === event.runId && m.role === 'assistant');
 			if (idx >= 0) {
@@ -177,6 +205,189 @@ export function createChatSession(sessionKey: string) {
 			if (msgs.some((m) => m.id === message.id)) return msgs;
 			return [...msgs, message];
 		});
+	}
+
+	/** Handle a message update/edit event from the gateway */
+	function handleMessageUpdate(payload: Record<string, unknown>): void {
+		const msgSessionKey = payload.sessionKey as string;
+		if (msgSessionKey !== sessionKey) return;
+
+		const messageId = (payload.messageId ?? payload.id) as string;
+		if (!messageId) return;
+
+		_messages.update((msgs) => {
+			const idx = msgs.findIndex((m) => m.id === messageId);
+			if (idx < 0) return msgs;
+			const updated = [...msgs];
+			const patch: Partial<ChatMessage> = { edited: true };
+			if (payload.content != null) {
+				patch.content = extractTextContent(payload.content);
+			}
+			if (payload.status != null) {
+				patch.status = payload.status as ChatMessage['status'];
+			}
+			updated[idx] = { ...updated[idx], ...patch };
+			return updated;
+		});
+	}
+
+	/** Handle a reaction event from the gateway */
+	function handleReactionEvent(payload: Record<string, unknown>): void {
+		const msgSessionKey = payload.sessionKey as string;
+		if (msgSessionKey !== sessionKey) return;
+
+		const messageId = payload.messageId as string;
+		const emoji = payload.emoji as string;
+		const user = payload.user as string;
+		const action = payload.action as 'add' | 'remove';
+
+		_messages.update((msgs) => {
+			const idx = msgs.findIndex((m) => m.id === messageId);
+			if (idx < 0) return msgs;
+			const updated = [...msgs];
+			const reactions = [...(updated[idx].reactions ?? [])];
+			const ri = reactions.findIndex((r) => r.emoji === emoji);
+
+			if (action === 'add') {
+				if (ri >= 0) {
+					const r = reactions[ri];
+					if (!r.users.includes(user)) {
+						reactions[ri] = {
+							...r,
+							count: r.count + 1,
+							users: [...r.users, user],
+							reacted: r.reacted || user === 'self'
+						};
+					}
+				} else {
+					reactions.push({
+						emoji,
+						count: 1,
+						users: [user],
+						reacted: user === 'self'
+					});
+				}
+			} else if (ri >= 0) {
+				const r = reactions[ri];
+				const newUsers = r.users.filter((u) => u !== user);
+				if (newUsers.length === 0) {
+					reactions.splice(ri, 1);
+				} else {
+					reactions[ri] = {
+						...r,
+						count: newUsers.length,
+						users: newUsers,
+						reacted: user === 'self' ? false : r.reacted
+					};
+				}
+			}
+
+			updated[idx] = { ...updated[idx], reactions: reactions.length ? reactions : undefined };
+			return updated;
+		});
+	}
+
+	/** Add a reaction to a message */
+	async function addReaction(messageId: string, emoji: string): Promise<void> {
+		// Optimistic update
+		_messages.update((msgs) => {
+			const idx = msgs.findIndex((m) => m.id === messageId);
+			if (idx < 0) return msgs;
+			const updated = [...msgs];
+			const reactions = [...(updated[idx].reactions ?? [])];
+			const ri = reactions.findIndex((r) => r.emoji === emoji);
+			if (ri >= 0) {
+				const r = reactions[ri];
+				if (!r.reacted) {
+					reactions[ri] = {
+						...r,
+						count: r.count + 1,
+						users: [...r.users, 'self'],
+						reacted: true
+					};
+				}
+			} else {
+				reactions.push({ emoji, count: 1, users: ['self'], reacted: true });
+			}
+			updated[idx] = { ...updated[idx], reactions };
+			return updated;
+		});
+
+		try {
+			await call('chat.react', { sessionKey, messageId, emoji, action: 'add' });
+		} catch {
+			// Rollback optimistic update
+			_messages.update((msgs) => {
+				const idx = msgs.findIndex((m) => m.id === messageId);
+				if (idx < 0) return msgs;
+				const updated = [...msgs];
+				const reactions = [...(updated[idx].reactions ?? [])];
+				const ri = reactions.findIndex((r) => r.emoji === emoji);
+				if (ri >= 0) {
+					const r = reactions[ri];
+					const newUsers = r.users.filter((u) => u !== 'self');
+					if (newUsers.length === 0) {
+						reactions.splice(ri, 1);
+					} else {
+						reactions[ri] = { ...r, count: newUsers.length, users: newUsers, reacted: false };
+					}
+				}
+				updated[idx] = {
+					...updated[idx],
+					reactions: reactions.length ? reactions : undefined
+				};
+				return updated;
+			});
+		}
+	}
+
+	/** Remove a reaction from a message */
+	async function removeReaction(messageId: string, emoji: string): Promise<void> {
+		// Optimistic update
+		_messages.update((msgs) => {
+			const idx = msgs.findIndex((m) => m.id === messageId);
+			if (idx < 0) return msgs;
+			const updated = [...msgs];
+			const reactions = [...(updated[idx].reactions ?? [])];
+			const ri = reactions.findIndex((r) => r.emoji === emoji);
+			if (ri >= 0) {
+				const r = reactions[ri];
+				const newUsers = r.users.filter((u) => u !== 'self');
+				if (newUsers.length === 0) {
+					reactions.splice(ri, 1);
+				} else {
+					reactions[ri] = { ...r, count: newUsers.length, users: newUsers, reacted: false };
+				}
+			}
+			updated[idx] = { ...updated[idx], reactions: reactions.length ? reactions : undefined };
+			return updated;
+		});
+
+		try {
+			await call('chat.react', { sessionKey, messageId, emoji, action: 'remove' });
+		} catch {
+			// Rollback — re-add self
+			_messages.update((msgs) => {
+				const idx = msgs.findIndex((m) => m.id === messageId);
+				if (idx < 0) return msgs;
+				const updated = [...msgs];
+				const reactions = [...(updated[idx].reactions ?? [])];
+				const ri = reactions.findIndex((r) => r.emoji === emoji);
+				if (ri >= 0) {
+					const r = reactions[ri];
+					reactions[ri] = {
+						...r,
+						count: r.count + 1,
+						users: [...r.users, 'self'],
+						reacted: true
+					};
+				} else {
+					reactions.push({ emoji, count: 1, users: ['self'], reacted: true });
+				}
+				updated[idx] = { ...updated[idx], reactions };
+				return updated;
+			});
+		}
 	}
 
 	/**
@@ -249,8 +460,13 @@ export function createChatSession(sessionKey: string) {
 			setCanvasActiveRunId(runId);
 			_isStreaming.set(true);
 
-			// The response frame handler needs to be wired to call streamManager.onFinal
-			// This is handled by listening for the final response matching the runId
+			// Safety timeout: auto-unlock if no messageEnd arrives within 60s of last activity
+			clearSafetyTimer();
+			_safetyTimer = setTimeout(() => {
+				if (streamManager.isActive(runId)) {
+					streamManager.onFinal(runId, 'error', undefined, 'Response timed out');
+				}
+			}, 60_000);
 		} catch (err) {
 			// Mark user message as error
 			_messages.update((msgs) =>
@@ -267,6 +483,7 @@ export function createChatSession(sessionKey: string) {
 	 * Abort the active run.
 	 */
 	async function abort(): Promise<void> {
+		clearSafetyTimer();
 		let currentRunId: string | null = null;
 		const unsub = _activeRunId.subscribe((v) => {
 			currentRunId = v;
@@ -365,9 +582,25 @@ export function createChatSession(sessionKey: string) {
 	 * Clean up the session store.
 	 */
 	function destroy(): void {
+		clearSafetyTimer();
 		unsubStream();
 		unsubChatEvent();
+		unsubUpdateEvent();
+		unsubReactionEvent();
 		streamManager.clear();
+	}
+
+	/**
+	 * Retry a failed user message by removing the old one and re-sending.
+	 */
+	async function retry(messageId: string): Promise<void> {
+		const msgs = get(_messages);
+		const msg = msgs.find((m) => m.id === messageId && m.status === 'error');
+		if (!msg) return;
+		// Remove the failed message
+		_messages.update((list) => list.filter((m) => m.id !== messageId));
+		// Re-send
+		await send(msg.content);
 	}
 
 	return {
@@ -379,7 +612,10 @@ export function createChatSession(sessionKey: string) {
 		replyTo,
 		send,
 		setReplyTo,
+		addReaction,
+		removeReaction,
 		abort,
+		retry,
 		loadHistory,
 		reconcile,
 		destroy,

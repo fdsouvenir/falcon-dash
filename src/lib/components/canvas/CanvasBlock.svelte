@@ -46,12 +46,15 @@
 	});
 
 	let pinned = $derived(surface ? isPinned(surface.surfaceId, $pinnedApps) : false);
+	let isGenericTitle = $derived(
+		surface ? !surface.title || /^Canvas(\s|$)/.test(surface.title) : true
+	);
 
 	let loadingTimedOut = $state(false);
 	let iframeFailed = $state(false);
 
 	$effect(() => {
-		if (surface && surface.messages.length === 0 && !surface.url) {
+		if (surface && surface.messages.length === 0) {
 			loadingTimedOut = false;
 			const timer = setTimeout(() => {
 				loadingTimedOut = true;
@@ -65,7 +68,10 @@
 		if (pinned) {
 			unpinApp(surface.surfaceId);
 		} else {
-			pinApp(surface.surfaceId, surface.title ?? 'Canvas');
+			pinApp(surface.surfaceId, surface.title ?? 'Canvas', {
+				url: surface.url,
+				title: surface.title
+			});
 		}
 	}
 </script>
@@ -91,7 +97,11 @@
 						<path d="M9 21V9" />
 					</svg>
 				</span>
-				<span class="canvas-title">{surface.title}</span>
+				<span class="canvas-title"
+					>{surface.title}{#if isGenericTitle && surface.surfaceId}<span class="canvas-subtitle"
+							>{surface.surfaceId}</span
+						>{/if}</span
+				>
 				<button
 					class="pin-btn"
 					onclick={togglePin}
@@ -167,6 +177,13 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.canvas-subtitle {
+		margin-left: 0.5rem;
+		font-weight: 400;
+		font-size: 0.6875rem;
+		color: var(--color-text-tertiary, #6c7086);
 	}
 
 	.pin-btn {

@@ -8,6 +8,9 @@ export interface PinnedApp {
 	name: string;
 	surfaceId: string;
 	pinnedAt: number;
+	/** Persisted surface metadata for restore after refresh */
+	surfaceUrl?: string;
+	surfaceTitle?: string;
 }
 
 function loadFromStorage(): PinnedApp[] {
@@ -32,10 +35,24 @@ pinnedApps.subscribe((apps) => {
 	saveToStorage(apps);
 });
 
-export function pinApp(surfaceId: string, name: string): void {
+export function pinApp(
+	surfaceId: string,
+	name: string,
+	meta?: { url?: string; title?: string }
+): void {
 	pinnedApps.update((apps) => {
 		if (apps.some((a) => a.surfaceId === surfaceId)) return apps;
-		return [...apps, { id: crypto.randomUUID(), name, surfaceId, pinnedAt: Date.now() }];
+		return [
+			...apps,
+			{
+				id: crypto.randomUUID(),
+				name,
+				surfaceId,
+				pinnedAt: Date.now(),
+				surfaceUrl: meta?.url,
+				surfaceTitle: meta?.title
+			}
+		];
 	});
 }
 

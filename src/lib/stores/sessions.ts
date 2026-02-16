@@ -12,8 +12,31 @@ export interface ChatSessionInfo {
 	channel?: string;
 }
 
+const ACTIVE_SESSION_STORAGE_KEY = 'falcon-dash:activeSessionKey';
+
+function loadPersistedSessionKey(): string | null {
+	try {
+		return typeof window !== 'undefined' ? localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY) : null;
+	} catch {
+		return null;
+	}
+}
+
+function persistSessionKey(key: string | null): void {
+	try {
+		if (typeof window === 'undefined') return;
+		if (key) {
+			localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, key);
+		} else {
+			localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+		}
+	} catch {
+		// Storage unavailable
+	}
+}
+
 const _sessions = writable<ChatSessionInfo[]>([]);
-const _activeSessionKey = writable<string | null>(null);
+const _activeSessionKey = writable<string | null>(loadPersistedSessionKey());
 const _searchQuery = writable('');
 
 export const sessions: Readable<ChatSessionInfo[]> = readonly(_sessions);
@@ -39,9 +62,7 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 
 export async function loadSessions(): Promise<void> {
 	try {
-		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {
-			kinds: ['group']
-		});
+		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
 		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => ({
 			sessionKey: (s.sessionKey ?? s.key ?? '') as string,
 			displayName: (s.displayName ?? s.name ?? 'Untitled') as string,
@@ -60,6 +81,7 @@ export async function loadSessions(): Promise<void> {
 
 export function setActiveSession(sessionKey: string): void {
 	_activeSessionKey.set(sessionKey);
+	persistSessionKey(sessionKey);
 	// Clear unread for active session
 	_sessions.update((list) =>
 		list.map((s) => (s.sessionKey === sessionKey ? { ...s, unreadCount: 0 } : s))
@@ -76,6 +98,10 @@ export async function renameSession(sessionKey: string, name: string): Promise<v
 export async function deleteSession(sessionKey: string): Promise<void> {
 	await call('sessions.delete', { key: sessionKey, deleteTranscript: true });
 	_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
+	if (get(_activeSessionKey) === sessionKey) {
+		_activeSessionKey.set(null);
+		persistSessionKey(null);
+	}
 }
 
 function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
@@ -86,6 +112,11 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
 	return `${base} ${n}`;
 }
 
+/**
+ * Create a new chat session. Each session gets a unique key with a fresh UUID,
+ * which means the gateway spawns a fresh agent context (no prior conversation).
+ * This is expected gateway behavior — session key scopes the agent context.
+ */
 export async function createSession(label?: string, channel?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
@@ -110,6 +141,7 @@ export async function createSession(label?: string, channel?: string): Promise<s
 
 	// Set as active
 	_activeSessionKey.set(sessionKey);
+	persistSessionKey(sessionKey);
 
 	// Create on server
 	const patchParams: Record<string, unknown> = { key: sessionKey, label: displayName };
@@ -133,6 +165,19 @@ export function subscribeToEvents(): void {
 			} else if (action === 'deleted') {
 				_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
 			}
+		})
+	);
+
+	// Increment unread counts for incoming messages on non-active sessions
+	unsubscribers.push(
+		eventBus.on('chat.message', (payload) => {
+			const msgSessionKey = payload.sessionKey as string;
+			if (!msgSessionKey || msgSessionKey === get(_activeSessionKey)) return;
+			_sessions.update((list) =>
+				list.map((s) =>
+					s.sessionKey === msgSessionKey ? { ...s, unreadCount: s.unreadCount + 1 } : s
+				)
+			);
 		})
 	);
 }
@@ -165,9 +210,18 @@ export async function reorderSessions(sessionKeys: string[]): Promise<void> {
 export async function ensureGeneralSession(): Promise<string> {
 	await loadSessions();
 	const list = get(_sessions);
+
+	// Restore persisted session if it still exists
+	const persisted = loadPersistedSessionKey();
+	if (persisted && list.some((s) => s.sessionKey === persisted)) {
+		_activeSessionKey.set(persisted);
+		return persisted;
+	}
+
 	const general = list.find((s) => s.isGeneral);
 	if (general) {
 		_activeSessionKey.set(general.sessionKey);
+		persistSessionKey(general.sessionKey);
 		return general.sessionKey;
 	}
 
@@ -192,5 +246,6 @@ export async function ensureGeneralSession(): Promise<string> {
 		...sessions
 	]);
 	_activeSessionKey.set(sessionKey);
+	persistSessionKey(sessionKey);
 	return sessionKey;
 }

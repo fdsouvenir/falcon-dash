@@ -295,7 +295,7 @@ export class AgentStreamManager {
 				thinkingText: run.thinkingText
 			});
 		} else if (state === 'final') {
-			// Final chat event — the response frame handles messageEnd
+			this.onFinal(runId, 'ok');
 		} else if (state === 'aborted') {
 			this.onFinal(runId, 'aborted');
 		} else if (state === 'error') {
