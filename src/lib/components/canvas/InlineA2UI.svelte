@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
+	import { canvasStore } from '$lib/stores/gateway.js';
 
 	interface Props {
 		messages: unknown[];
@@ -13,9 +15,9 @@
 
 	onMount(async () => {
 		try {
-			// 3-tier loading: local bundle → canvas host → placeholder
-			// No host/port needed — a2ui-bridge handles derivation internally
-			await ensureA2UILoaded();
+			// 3-tier loading: local import → local script → canvas host → placeholder
+			const hostUrl = get(canvasStore.canvasHostBaseUrl);
+			await ensureA2UILoaded(hostUrl ?? undefined);
 			a2uiReady = true;
 			console.log('[InlineA2UI] A2UI ready, messages:', messages.length);
 			if (hostElement) {

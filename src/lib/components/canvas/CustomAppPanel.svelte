@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { canvasStore } from '$lib/stores/gateway.js';
+	import { canvasStore, connection } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { pinnedApps, unpinApp } from '$lib/stores/pinned-apps.js';
 	import { get } from 'svelte/store';
@@ -27,6 +27,16 @@
 						}))
 					);
 				}
+			}
+		});
+		return unsub;
+	});
+
+	// Reset restoredOnce on reconnect so pinned apps can re-restore
+	$effect(() => {
+		const unsub = connection.state.subscribe((state) => {
+			if (state === 'READY') {
+				restoredOnce = false;
 			}
 		});
 		return unsub;

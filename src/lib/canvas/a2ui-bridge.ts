@@ -33,6 +33,33 @@ export function initA2UIBridge(sendAction: (action: A2UIAction) => void): () => 
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
 
+export type A2UILoadTier =
+	| 'not-loaded'
+	| 'local-import'
+	| 'local-script'
+	| 'canvas-host'
+	| 'placeholder';
+
+let loadedTier: A2UILoadTier = 'not-loaded';
+
+export function getLoadedTier(): A2UILoadTier {
+	return loadedTier;
+}
+
+async function loadViaScript(src: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (document.querySelector(`script[src="${src}"]`)) {
+			resolve();
+			return;
+		}
+		const script = document.createElement('script');
+		script.src = src;
+		script.onload = () => resolve();
+		script.onerror = () => reject(new Error(`Script load failed: ${src}`));
+		document.head.appendChild(script);
+	});
+}
+
 /**
  * Resolve the canvas host base URL.
  * Canvas host runs on a separate port (gateway port + 4, default 18793).
@@ -51,14 +78,11 @@ export function getCanvasHostUrl(serverHost?: string, canvasHostPort?: number): 
  *
  * Safe to call multiple times — deduplicates via promise caching.
  */
-export async function ensureA2UILoaded(
-	serverHost?: string,
-	canvasHostPort?: number
-): Promise<void> {
+export async function ensureA2UILoaded(canvasHostBaseUrl?: string): Promise<void> {
 	if (loaded) return;
 	if (loadPromise) return loadPromise;
 
-	loadPromise = doLoad(serverHost, canvasHostPort);
+	loadPromise = doLoad(canvasHostBaseUrl);
 	try {
 		await loadPromise;
 	} finally {
@@ -66,7 +90,7 @@ export async function ensureA2UILoaded(
 	}
 }
 
-async function doLoad(serverHost?: string, canvasHostPort?: number): Promise<void> {
+async function doLoad(canvasHostBaseUrl?: string): Promise<void> {
 	if (loaded) return;
 
 	// If the real component is already registered (e.g. from a previous load), we're done
@@ -75,28 +99,42 @@ async function doLoad(serverHost?: string, canvasHostPort?: number): Promise<voi
 		return;
 	}
 
-	// --- Tier 1: Local static bundle ---
+	// --- Tier 1: Local static bundle (import) ---
 	try {
-		// Use a variable so Rollup can't statically analyze the path (SSR-safe)
 		const localBundlePath = '/a2ui.bundle.js';
 		await import(/* @vite-ignore */ localBundlePath);
 		if (customElements.get('openclaw-a2ui-host')) {
-			console.log('[A2UI] Loaded from local static bundle');
+			console.log('[A2UI] Loaded from local static bundle (import)');
+			loadedTier = 'local-import';
 			loaded = true;
 			return;
 		}
 	} catch (err) {
-		console.warn('[A2UI] Local bundle not available, trying canvas host...', err);
+		console.warn('[A2UI] Local bundle import failed, trying script tag...', err);
+	}
+
+	// --- Tier 1.5: Local static bundle (script tag) ---
+	try {
+		await loadViaScript('/a2ui.bundle.js');
+		if (customElements.get('openclaw-a2ui-host')) {
+			console.log('[A2UI] Loaded from local static bundle (script tag)');
+			loadedTier = 'local-script';
+			loaded = true;
+			return;
+		}
+	} catch (err) {
+		console.warn('[A2UI] Local script tag failed, trying canvas host...', err);
 	}
 
 	// --- Tier 2: Canvas host server ---
-	const canvasHostUrl = getCanvasHostUrl(serverHost, canvasHostPort);
+	const canvasHostUrl = canvasHostBaseUrl ?? getCanvasHostUrl();
 	const bundleUrl = `${canvasHostUrl}/a2ui/a2ui.bundle.js`;
 
 	try {
 		await import(/* @vite-ignore */ bundleUrl);
 		if (customElements.get('openclaw-a2ui-host')) {
 			console.log(`[A2UI] Loaded from canvas host: ${bundleUrl}`);
+			loadedTier = 'canvas-host';
 			loaded = true;
 			return;
 		}
@@ -293,5 +331,6 @@ async function doLoad(serverHost?: string, canvasHostPort?: number): Promise<voi
 			}
 		);
 	}
+	loadedTier = 'placeholder';
 	loaded = true;
 }

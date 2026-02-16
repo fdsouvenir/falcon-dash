@@ -127,13 +127,17 @@
 			</div>
 		{/if}
 		{#if surface.messages.length > 0}
-			<InlineA2UI messages={surface.messages} />
+			<div class="canvas-content">
+				<InlineA2UI messages={surface.messages} />
+			</div>
 		{:else if surface.url && !iframeFailed}
-			<HTMLCanvasFrame
-				url={surface.url}
-				surfaceId={surface.surfaceId}
-				onfailure={() => (iframeFailed = true)}
-			/>
+			<div class="canvas-content">
+				<HTMLCanvasFrame
+					url={surface.url}
+					surfaceId={surface.surfaceId}
+					onfailure={() => (iframeFailed = true)}
+				/>
+			</div>
 		{:else if loadingTimedOut || iframeFailed}
 			<div class="canvas-empty">
 				<span>No canvas content received.</span>
@@ -208,6 +212,11 @@
 	.pin-btn:hover {
 		background: var(--color-bg-hover, #313244);
 		color: var(--color-text-primary, #cdd6f4);
+	}
+
+	.canvas-content {
+		max-height: 32rem;
+		overflow-y: auto;
 	}
 
 	.canvas-loading {
