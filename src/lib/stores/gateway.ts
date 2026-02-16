@@ -11,6 +11,7 @@ import type { Frame, ConnectionState } from '$lib/gateway/types.js';
 import { CanvasStore } from '$lib/stores/canvas.js';
 import { initA2UIBridge, getCanvasHostUrl } from '$lib/canvas/a2ui-bridge.js';
 import { gatewayUrl, gatewayToken } from '$lib/stores/token.js';
+import { checkPMAvailability } from '$lib/stores/pm-store.js';
 
 // Stable per-tab instance ID — survives reconnects and HMR within the same tab,
 // but each new tab gets its own ID. Prevents stale virtual canvas node accumulation.
@@ -34,6 +35,9 @@ export const eventBus = new EventBus();
 export const snapshot = new SnapshotStore();
 export const reconnector = new Reconnector(connection, eventBus);
 export const canvasStore = new CanvasStore();
+
+// PM feature detection — reactive subscription to snapshot.features
+checkPMAvailability();
 
 // Re-export for convenient access
 export { diagnosticLog };
@@ -171,13 +175,21 @@ connection.setOnHelloOk((helloOk) => {
 		? Number((helloOk as unknown as Record<string, unknown>).canvasHostPort)
 		: gwPort + 4;
 	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(gatewayHost, canvasHostPort));
-	call('canvas.bridge.register', {}).catch(() => {
-		diagnosticLog.log(
-			'canvas',
-			'info',
-			'canvas.bridge.register unavailable — plugin not installed'
-		);
-	});
+	call<{ nodeId?: string }>('canvas.bridge.register', {})
+		.then((result) => {
+			canvasStore.setBridgeStatus({ registered: true, nodeId: result?.nodeId });
+			diagnosticLog.log('canvas', 'info', 'Canvas bridge registered', {
+				nodeId: result?.nodeId
+			});
+		})
+		.catch((err) => {
+			canvasStore.setBridgeStatus({ registered: false, error: String(err) });
+			diagnosticLog.log(
+				'canvas',
+				'info',
+				'canvas.bridge.register unavailable — plugin not installed'
+			);
+		});
 	reconnector.onConnected(helloOk.policy.tickIntervalMs);
 	tickHealth.set({
 		lastTickAt: Date.now(),
@@ -264,7 +276,32 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
 		connection,
 		snapshot,
 		eventBus,
-		canvasStore
+		canvasStore,
+		testCanvasPresent: (title?: string) => {
+			const surfaceId = `test-${crypto.randomUUID().slice(0, 8)}`;
+			canvasStore.handleCommand('canvas.present', {
+				surfaceId,
+				title: title ?? `Test Canvas ${new Date().toLocaleTimeString()}`
+			});
+			console.log(`[test] Created test surface: ${surfaceId}`);
+			return surfaceId;
+		},
+		testCanvasPush: (surfaceId: string, messages?: unknown[]) => {
+			const defaultMessages = [
+				{
+					type: 'surfaceUpdate',
+					componentType: 'text',
+					id: 'test-1',
+					content: 'Hello from test!'
+				},
+				{ type: 'data', key: 'testData', data: { value: 42 } }
+			];
+			canvasStore.handleCommand('canvas.a2ui.pushJSONL', {
+				surfaceId,
+				messages: messages ?? defaultMessages
+			});
+			console.log(`[test] Pushed messages to surface: ${surfaceId}`);
+		}
 	};
 }
 

@@ -8,11 +8,10 @@ import type { Domain, Focus } from './pm-domains.js';
 const _pmAvailable: Writable<boolean> = writable(false);
 export const pmAvailable: Readable<boolean> = readonly(_pmAvailable);
 
-export function checkPMAvailability(): void {
-	const unsubscribe = snapshot.features.subscribe((features) => {
+export function checkPMAvailability(): () => void {
+	return snapshot.features.subscribe((features) => {
 		_pmAvailable.set(features.some((m: string) => m.startsWith('pm.')));
 	});
-	unsubscribe();
 }
 
 // State version tracking
@@ -45,8 +44,8 @@ export async function hydratePMStores(): Promise<void> {
 		const projectMap = new Map<number, Project>();
 		for (const p of projectsRes.projects) projectMap.set(p.id, p);
 		_projectCache.set(projectMap);
-	} catch {
-		// PM skill not available
+	} catch (err) {
+		console.error('[PM] Failed to hydrate PM stores:', err);
 		_pmAvailable.set(false);
 	}
 }

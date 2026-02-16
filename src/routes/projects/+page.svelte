@@ -17,7 +17,6 @@
 
 	// Page state
 	let navSelection = $state<NavSelection>({ type: 'all-projects' });
-	let projectFilter = $state<number | null>(null);
 	let selectedProjectId = $state<number | null>(null);
 	let selectedTaskId = $state<number | null>(null);
 
@@ -53,16 +52,14 @@
 	});
 
 	// Navigation handlers
-	function handleNavTreeSelect(sel: NavSelection) {
-		navSelection = sel;
-		projectFilter = null;
-		selectedProjectId = null;
-		selectedTaskId = null;
-	}
-
-	function handleDashboardProjectClick(projectId: number) {
-		navSelection = { type: 'all-projects' };
-		projectFilter = projectId;
+	function handleNavTreeSelect(domain: string | null, focus: string | null) {
+		if (!domain && !focus) {
+			navSelection = { type: 'all-projects' };
+		} else if (domain && focus) {
+			navSelection = { type: 'focus', domainId: domain, focusId: focus };
+		} else if (domain) {
+			navSelection = { type: 'domain', domainId: domain };
+		}
 		selectedProjectId = null;
 		selectedTaskId = null;
 	}
@@ -70,10 +67,6 @@
 	function handleProjectSelect(projectId: number) {
 		selectedProjectId = projectId;
 		selectedTaskId = null;
-	}
-
-	function handleTaskClick(taskId: number) {
-		selectedTaskId = taskId;
 	}
 
 	function handleTaskNavigate(taskId: number) {
@@ -105,18 +98,25 @@
 {:else}
 	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
 		<!-- Left sidebar: PMNavTree -->
-		<PMNavTree selection={navSelection} onselect={handleNavTreeSelect} />
+		<PMNavTree
+			selectedDomain={navSelection.type === 'domain' || navSelection.type === 'focus'
+				? navSelection.domainId
+				: null}
+			selectedFocus={navSelection.type === 'focus' ? navSelection.focusId : null}
+			onselect={handleNavTreeSelect}
+		/>
 
 		<!-- Content area -->
 		<div class="flex-1 overflow-hidden">
 			{#if navSelection.type === 'dashboard'}
-				<PMDashboard onProjectClick={handleDashboardProjectClick} />
+				<PMDashboard />
 			{:else}
 				<ProjectList
-					{navSelection}
-					{projectFilter}
-					onProjectClick={handleProjectSelect}
-					onTaskClick={handleTaskClick}
+					domainFilter={navSelection.type === 'domain' || navSelection.type === 'focus'
+						? navSelection.domainId
+						: null}
+					focusFilter={navSelection.type === 'focus' ? navSelection.focusId : null}
+					onselect={handleProjectSelect}
 				/>
 			{/if}
 		</div>
