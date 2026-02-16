@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
-	import { gatewayUrl } from '$lib/stores/token.js';
 
 	interface Props {
 		messages: unknown[];
@@ -15,13 +13,9 @@
 
 	onMount(async () => {
 		try {
-			const host = window.location.hostname;
-			let gwPort = 18789;
-			try {
-				gwPort = parseInt(new URL(get(gatewayUrl)).port, 10) || 18789;
-			} catch {}
-			console.log('[InlineA2UI] loading A2UI bundle, host:', host);
-			await ensureA2UILoaded(host, gwPort);
+			// 3-tier loading: local bundle → canvas host → placeholder
+			// No host/port needed — a2ui-bridge handles derivation internally
+			await ensureA2UILoaded();
 			a2uiReady = true;
 			console.log('[InlineA2UI] A2UI ready, messages:', messages.length);
 			if (hostElement) {

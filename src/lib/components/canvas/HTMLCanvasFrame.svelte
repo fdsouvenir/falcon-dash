@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { canvasStore } from '$lib/stores/gateway.js';
 
 	interface Props {
 		url: string;
+		surfaceId: string;
 		onfailure?: () => void;
 	}
 
-	let { url, onfailure }: Props = $props();
+	let { url, surfaceId, onfailure }: Props = $props();
 
 	let iframeElement: HTMLIFrameElement | null = $state(null);
 	let loaded = $state(false);
@@ -32,6 +34,11 @@
 			}
 			if (event.data?.type === 'canvas-action') {
 				console.log('[HTMLCanvasFrame] Canvas action received:', event.data);
+				canvasStore.sendAction(
+					surfaceId,
+					event.data.actionId ?? event.data.action ?? 'unknown',
+					event.data.payload ?? {}
+				);
 			}
 		}
 

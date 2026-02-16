@@ -24,6 +24,7 @@ export class CanvasStore {
 	private callFn: CallFn | null = null;
 	private _activeRunId: string | null = null;
 	private _canvasHostBaseUrl: string | null = null;
+	private _canvasHostBaseUrlStore = writable<string | null>(null);
 
 	/** Set the active chat run ID so canvas surfaces can auto-associate */
 	setActiveRunId(runId: string | null): void {
@@ -33,7 +34,11 @@ export class CanvasStore {
 	/** Set the canvas host base URL (derived from gateway hello-ok) */
 	setCanvasHostBaseUrl(url: string): void {
 		this._canvasHostBaseUrl = url;
+		this._canvasHostBaseUrlStore.set(url);
 	}
+
+	/** Canvas host base URL as a readable store for components */
+	readonly canvasHostBaseUrl: Readable<string | null> = readonly(this._canvasHostBaseUrlStore);
 
 	/** All active canvas surfaces */
 	readonly surfaces: Readable<Map<string, CanvasSurface>> = readonly(this._surfaces);
@@ -436,6 +441,8 @@ export class CanvasStore {
 		this.unsubscribeAll();
 		this._surfaces.set(new Map());
 		this._currentSurfaceId.set(null);
+		this._canvasHostBaseUrlStore.set(null);
+		this._canvasHostBaseUrl = null;
 		this.callFn = null;
 	}
 

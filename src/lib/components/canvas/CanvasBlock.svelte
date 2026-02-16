@@ -129,7 +129,11 @@
 		{#if surface.messages.length > 0}
 			<InlineA2UI messages={surface.messages} />
 		{:else if surface.url && !iframeFailed}
-			<HTMLCanvasFrame url={surface.url} onfailure={() => (iframeFailed = true)} />
+			<HTMLCanvasFrame
+				url={surface.url}
+				surfaceId={surface.surfaceId}
+				onfailure={() => (iframeFailed = true)}
+			/>
 		{:else if loadingTimedOut || iframeFailed}
 			<div class="canvas-empty">
 				<span>No canvas content received.</span>

@@ -165,7 +165,12 @@ connection.setOnHelloOk((helloOk) => {
 			return 18789;
 		}
 	})();
-	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(gatewayHost, gwPort));
+	// Canvas host runs on gateway port + 4 (e.g. 18793 when gateway is 18789)
+	// Use hello-ok payload if available, otherwise default offset
+	const canvasHostPort = (helloOk as unknown as Record<string, unknown>).canvasHostPort
+		? Number((helloOk as unknown as Record<string, unknown>).canvasHostPort)
+		: gwPort + 4;
+	canvasStore.setCanvasHostBaseUrl(getCanvasHostUrl(gatewayHost, canvasHostPort));
 	call('canvas.bridge.register', {}).catch(() => {
 		diagnosticLog.log(
 			'canvas',
@@ -254,7 +259,13 @@ export function call<T = unknown>(method: string, params?: Record<string, unknow
 
 // Expose gateway internals on window for dev debugging (e.g. __oc.call('pm.domain.list'))
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
-	(window as any).__oc = { call, connection, snapshot, eventBus, canvasStore };
+	(window as unknown as Record<string, unknown>).__oc = {
+		call,
+		connection,
+		snapshot,
+		eventBus,
+		canvasStore
+	};
 }
 
 /**
