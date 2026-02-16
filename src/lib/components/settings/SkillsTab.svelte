@@ -399,14 +399,24 @@
 {#if apiKeyModalSkill}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+		role="presentation"
 		onclick={closeApiKeyModal}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') closeApiKeyModal();
+		}}
 	>
 		<div
 			class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-4"
+			role="dialog"
+			aria-labelledby="api-key-modal-title"
+			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
-			<h3 class="mb-3 text-sm font-medium text-gray-200">Set API Key</h3>
+			<h3 id="api-key-modal-title" class="mb-3 text-sm font-medium text-gray-200">Set API Key</h3>
+			<label for="api-key-input" class="sr-only">API Key</label>
 			<input
+				id="api-key-input"
 				type="password"
 				bind:value={apiKeyInput}
 				placeholder="Enter API key"
@@ -441,19 +451,31 @@
 {#if installModalOpen}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+		role="presentation"
 		onclick={closeInstallModal}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') closeInstallModal();
+		}}
 	>
 		<div
 			class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-4"
+			role="dialog"
+			aria-labelledby="install-skill-modal-title"
+			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
-			<h3 class="mb-1 text-sm font-medium text-gray-200">Install Skill</h3>
+			<h3 id="install-skill-modal-title" class="mb-1 text-sm font-medium text-gray-200">
+				Install Skill
+			</h3>
 			<p class="mb-3 text-xs text-gray-500">
 				Skills are npm packages. Enter the full package name to install.
 			</p>
 			<div class="mb-3">
-				<label class="mb-1 block text-xs text-gray-400">Skill Name *</label>
+				<label for="install-name-input" class="mb-1 block text-xs text-gray-400">Skill Name *</label
+				>
 				<input
+					id="install-name-input"
 					type="text"
 					bind:value={installName}
 					placeholder="e.g., @modelcontextprotocol/server-brave-search"
@@ -462,8 +484,11 @@
 				<div class="mt-1 text-xs text-gray-600">Scoped packages use @scope/package-name format</div>
 			</div>
 			<div class="mb-3">
-				<label class="mb-1 block text-xs text-gray-400">Install ID (optional)</label>
+				<label for="install-id-input" class="mb-1 block text-xs text-gray-400"
+					>Install ID (optional)</label
+				>
 				<input
+					id="install-id-input"
 					type="text"
 					bind:value={installId}
 					placeholder="Custom identifier for this installation"
@@ -471,8 +496,11 @@
 				/>
 			</div>
 			<div class="mb-3">
-				<label class="mb-1 block text-xs text-gray-400">Registry URL (optional)</label>
+				<label for="install-registry-input" class="mb-1 block text-xs text-gray-400"
+					>Registry URL (optional)</label
+				>
 				<input
+					id="install-registry-input"
 					type="text"
 					bind:value={installRegistry}
 					placeholder="https://registry.npmjs.org"
