@@ -1,0 +1,14 @@
+node_modules
+build
+.svelte-kit
+.env
+.env.*
+.git
+.github
+tests
+*.md
+!README.md
+builddocs
+.omc
+.husky
+.vscode
