@@ -257,7 +257,7 @@
 
 	{#if loading}
 		<div class="flex flex-col gap-2">
-			{#each [1, 2, 3] as _}
+			{#each [1, 2, 3] as _i (_i)}
 				<div class="animate-pulse rounded border border-gray-700 bg-gray-800/50 p-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex-1">

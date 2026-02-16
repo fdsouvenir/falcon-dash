@@ -32,7 +32,7 @@
 	class="absolute bottom-full mb-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-xl"
 >
 	<div class="grid grid-cols-4 gap-1">
-		{#each emojis as emoji}
+		{#each emojis as emoji (emoji)}
 			<button
 				onclick={() => onSelect(emoji)}
 				class="rounded p-1.5 text-lg transition-colors hover:bg-gray-700"
