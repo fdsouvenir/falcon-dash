@@ -1,5 +1,7 @@
 # Falcon Dash
 
+![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)
+
 The primary user interface for [OpenClaw](https://github.com/fdsouvenir/openclaw) — a web dashboard that connects to the OpenClaw Gateway over WebSocket to provide real-time control of the AI agent, project management, file browsing, and system monitoring.
 
 Falcon Dash is designed to be installed alongside OpenClaw and serves as the main operator console. It reads its configuration directly from `~/.openclaw/openclaw.json`, so once OpenClaw is running, the dashboard connects automatically with no manual setup.
@@ -74,14 +76,16 @@ Restart the gateway after installing plugins.
 
 ## Scripts
 
-| Command           | Description                          |
-| ----------------- | ------------------------------------ |
-| `npm run dev`     | Start the Vite dev server with HMR   |
-| `npm run build`   | Production build                     |
-| `npm run preview` | Preview the production build locally |
-| `npm run check`   | TypeScript type checking             |
-| `npm run lint`    | ESLint                               |
-| `npm run format`  | Format all files with Prettier       |
+| Command                 | Description                          |
+| ----------------------- | ------------------------------------ |
+| `npm run dev`           | Start the Vite dev server with HMR   |
+| `npm run build`         | Production build                     |
+| `npm run preview`       | Preview the production build locally |
+| `npm run check`         | TypeScript type checking             |
+| `npm run lint`          | ESLint                               |
+| `npm run test`          | Run unit tests                       |
+| `npm run test:coverage` | Run tests with coverage report       |
+| `npm run format`        | Format all files with Prettier       |
 
 ## Tech Stack
 
