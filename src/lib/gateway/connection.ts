@@ -237,7 +237,8 @@ export class GatewayConnection {
 				id: this.config.device.id,
 				publicKey: this.config.device.publicKeyBase64,
 				signature,
-				signedAt: Date.now()
+				signedAt: Date.now(),
+				nonce: challenge.nonce
 			};
 		}
 
