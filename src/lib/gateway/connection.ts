@@ -9,7 +9,7 @@ import type {
 	HelloOkPayload,
 	ChallengePayload
 } from './types.js';
-import { signChallenge } from './device-identity.js';
+import { buildSignMessage, signMessage } from './device-identity.js';
 
 const PROTOCOL_VERSION = 3;
 const CLIENT_ID = 'openclaw-control-ui';
@@ -232,12 +232,29 @@ export class GatewayConnection {
 		};
 
 		if (this.config.device) {
-			const signature = await signChallenge(this.config.device.privateKey, challenge.nonce);
+			const signedAt = Date.now();
+			const message = buildSignMessage({
+				deviceId: this.config.device.id,
+				clientId: CLIENT_ID,
+				clientMode: CLIENT_MODE,
+				role: 'operator',
+				scopes: [
+					'operator.read',
+					'operator.write',
+					'operator.admin',
+					'operator.approvals',
+					'operator.pairing'
+				],
+				signedAtMs: signedAt,
+				token: this.config.token,
+				nonce: challenge.nonce
+			});
+			const signature = await signMessage(this.config.device.privateKey, message);
 			params.device = {
 				id: this.config.device.id,
 				publicKey: this.config.device.publicKeyBase64,
 				signature,
-				signedAt: Date.now(),
+				signedAt,
 				nonce: challenge.nonce
 			};
 		}

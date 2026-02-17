@@ -49,10 +49,40 @@ export async function exportPublicKeyBase64(publicKey: CryptoKey): Promise<strin
 	return btoa(String.fromCharCode(...new Uint8Array(exported)));
 }
 
-// Sign challenge nonce
-export async function signChallenge(privateKey: CryptoKey, nonce: string): Promise<string> {
+// Build the pipe-delimited message that the gateway expects for signature verification
+export interface SignPayload {
+	deviceId: string;
+	clientId: string;
+	clientMode: string;
+	role: string;
+	scopes: string[];
+	signedAtMs: number;
+	token: string | null;
+	nonce: string;
+}
+
+export function buildSignMessage(p: SignPayload): string {
+	const version = p.nonce ? 'v2' : 'v1';
+	const scopesCsv = p.scopes.join(',');
+	const token = p.token ?? '';
+	const parts = [
+		version,
+		p.deviceId,
+		p.clientId,
+		p.clientMode,
+		p.role,
+		scopesCsv,
+		String(p.signedAtMs),
+		token
+	];
+	if (version === 'v2') parts.push(p.nonce ?? '');
+	return parts.join('|');
+}
+
+// Sign a message string with Ed25519
+export async function signMessage(privateKey: CryptoKey, message: string): Promise<string> {
 	const encoder = new TextEncoder();
-	const data = encoder.encode(nonce);
+	const data = encoder.encode(message);
 	const signature = await crypto.subtle.sign('Ed25519', privateKey, data);
 	return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
