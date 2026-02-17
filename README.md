@@ -1,6 +1,7 @@
 # Falcon Dash
 
-![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml)
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
 The primary user interface for [OpenClaw](https://github.com/fdsouvenir/openclaw) — a web dashboard that connects to the OpenClaw Gateway over WebSocket to provide real-time control of the AI agent, project management, file browsing, and system monitoring.
 
@@ -35,6 +36,22 @@ npm run dev
 ```
 
 Open `http://localhost:5173` in your browser. If OpenClaw is running, the dashboard reads the gateway token from `~/.openclaw/openclaw.json` and connects automatically. If the config file is unavailable, a manual token entry screen is shown.
+
+## Docker
+
+Pull the pre-built image from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/fdsouvenir/falcon-dash:latest
+docker run -p 3000:3000 ghcr.io/fdsouvenir/falcon-dash:latest
+```
+
+Or build locally:
+
+```bash
+docker build -t falcon-dash .
+docker run -p 3000:3000 falcon-dash
+```
 
 ## Gateway Connection
 
@@ -157,4 +174,4 @@ The token and URL can also be entered manually through the dashboard's token ent
 
 ## License
 
-Private. All rights reserved.
+This project is licensed under the [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](https://creativecommons.org/licenses/by-nc-nd/4.0/). See the [LICENSE](LICENSE) file for details, or read the [full legal code](https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode).
