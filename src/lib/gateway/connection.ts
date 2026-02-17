@@ -236,7 +236,8 @@ export class GatewayConnection {
 			params.device = {
 				id: this.config.device.id,
 				publicKey: this.config.device.publicKeyBase64,
-				signature
+				signature,
+				signedAt: Date.now()
 			};
 		}
 
