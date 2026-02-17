@@ -52,12 +52,12 @@
 	<div class="mb-2 rounded-lg border border-gray-700 bg-gray-900">
 		<button
 			onclick={toggle}
-			class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-400 transition-colors hover:text-gray-200"
+			class="flex w-full items-center gap-2 px-3 py-3 md:py-2 text-left text-sm text-gray-400 transition-colors hover:text-gray-200"
 			aria-expanded={expanded}
 		>
 			<!-- Chevron -->
 			<svg
-				class="h-3.5 w-3.5 transition-transform {expanded ? 'rotate-90' : ''}"
+				class="h-4 w-4 md:h-3.5 md:w-3.5 transition-transform {expanded ? 'rotate-90' : ''}"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -66,7 +66,8 @@
 			</svg>
 			<!-- Spinner while streaming -->
 			{#if isStreaming}
-				<span class="h-3 w-3 animate-spin rounded-full border-2 border-gray-500 border-t-blue-400"
+				<span
+					class="h-3.5 w-3.5 md:h-3 md:w-3 animate-spin rounded-full border-2 border-gray-500 border-t-blue-400"
 				></span>
 			{/if}
 			<span class="text-xs font-medium">{label}</span>

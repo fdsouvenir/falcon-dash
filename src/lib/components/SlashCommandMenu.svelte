@@ -18,12 +18,12 @@
 
 {#if visible && filtered.length > 0}
 	<div
-		class="absolute bottom-full left-0 mb-1 w-80 rounded-lg border border-gray-700 bg-gray-800 py-1 shadow-xl max-h-64 overflow-y-auto"
+		class="absolute bottom-full left-0 mb-1 w-full md:w-80 rounded-lg border border-gray-700 bg-gray-800 py-1 shadow-xl max-h-64 overflow-y-auto"
 	>
 		{#each filtered as cmd, i (cmd.name)}
 			<button
 				onclick={() => onSelect(cmd)}
-				class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 transition-colors {i ===
+				class="flex w-full items-center gap-3 px-3 py-3 md:py-2 text-left hover:bg-gray-700 transition-colors {i ===
 				selectedIndex
 					? 'bg-gray-700'
 					: ''}"

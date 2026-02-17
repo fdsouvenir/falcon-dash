@@ -196,7 +196,7 @@
 </script>
 
 <div
-	class="border-t border-gray-800 bg-gray-900 p-4"
+	class="border-t border-gray-800 bg-gray-900 px-3 pb-[calc(0.5rem+var(--safe-bottom,0px))] pt-3 md:p-4"
 	ondrop={handleDrop}
 	ondragover={handleDragOver}
 	ondragleave={handleDragLeave}
@@ -251,7 +251,7 @@
 		<!-- File upload button -->
 		<button
 			onclick={openFileDialog}
-			class="flex-shrink-0 rounded p-2 text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+			class="hidden md:flex flex-shrink-0 rounded p-2 text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
 			aria-label="Attach file"
 			{disabled}
 		>
@@ -276,14 +276,14 @@
 			placeholder={disabled ? 'Agent is responding...' : 'Message...'}
 			{disabled}
 			rows="1"
-			class="flex-1 resize-none rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+			class="flex-1 resize-none rounded-2xl md:rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
 		></textarea>
 
 		<!-- Send/Abort button -->
 		{#if isStreaming}
 			<button
 				onclick={onAbort}
-				class="flex-shrink-0 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 transition-colors"
+				class="flex-shrink-0 h-10 w-10 md:h-auto md:w-auto rounded-full md:rounded-lg bg-red-600 md:px-4 md:py-2.5 flex items-center justify-center text-sm font-medium text-white hover:bg-red-500 transition-colors"
 				aria-label="Stop"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -305,7 +305,7 @@
 			<button
 				onclick={send}
 				disabled={disabled || (!text.trim() && attachments.length === 0)}
-				class="flex-shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+				class="flex-shrink-0 h-10 w-10 md:h-auto md:w-auto rounded-full md:rounded-lg bg-blue-600 md:px-4 md:py-2.5 flex items-center justify-center text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 				aria-label="Send message"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

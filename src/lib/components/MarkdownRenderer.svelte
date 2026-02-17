@@ -94,10 +94,6 @@
 	}
 </script>
 
-<svelte:head>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-</svelte:head>
-
 <div class="markdown-content prose prose-invert max-w-none">
 	{#each segments as segment (segment.id)}
 		{#if segment.type === 'mermaid'}

@@ -9,8 +9,10 @@
 	} from '$lib/stores/sessions.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
+	import MobileShell from '$lib/components/mobile/MobileShell.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
+	import { isMobile } from '$lib/stores/viewport.js';
 
 	let { children } = $props();
 
@@ -18,6 +20,14 @@
 	let loading = $state(true);
 	let hasToken = $derived(token !== null);
 	let connected = $state(false);
+	let mobile = $state(false);
+
+	$effect(() => {
+		const unsub = isMobile.subscribe((v) => {
+			mobile = v;
+		});
+		return unsub;
+	});
 
 	// Subscribe to token store — picks up changes from config fetch or manual entry
 	$effect(() => {
@@ -87,10 +97,17 @@
 		<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"></div>
 	</div>
 {:else if hasToken}
-	<AppShell>
-		<ConnectionErrorBanner />
-		{@render children()}
-	</AppShell>
+	{#if mobile}
+		<MobileShell>
+			<ConnectionErrorBanner />
+			{@render children()}
+		</MobileShell>
+	{:else}
+		<AppShell>
+			<ConnectionErrorBanner />
+			{@render children()}
+		</AppShell>
+	{/if}
 {:else}
 	<TokenEntry />
 {/if}

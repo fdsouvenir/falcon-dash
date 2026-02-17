@@ -4,6 +4,8 @@
 	let token = $state('');
 	let url = $state('ws://127.0.0.1:18789');
 	let error = $state('');
+	let copiedAgent = $state(false);
+	let copiedTroubleshoot = $state(false);
 
 	// Initialize url from store
 	$effect(() => {
@@ -29,56 +31,162 @@
 			handleSubmit();
 		}
 	}
+
+	const agentMessage =
+		'I need a gateway token for the Falcon Dashboard control UI. ' +
+		'Please generate one with operator.read and operator.write scopes.';
+	const troubleshootMessage =
+		"I'm having trouble connecting the Falcon Dashboard. " +
+		'Please check that gateway.controlUi.allowInsecureAuth is set to true ' +
+		'and the gateway is running on the expected port.';
+
+	async function copyText(text: string, which: 'agent' | 'troubleshoot') {
+		try {
+			await navigator.clipboard.writeText(text);
+			if (which === 'agent') {
+				copiedAgent = true;
+				setTimeout(() => (copiedAgent = false), 2000);
+			} else {
+				copiedTroubleshoot = true;
+				setTimeout(() => (copiedTroubleshoot = false), 2000);
+			}
+		} catch {
+			// Clipboard API may fail in insecure contexts
+		}
+	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-950 p-4">
-	<div class="w-full max-w-md rounded-lg border border-gray-800 bg-gray-900 p-6">
-		<h1 class="mb-2 text-xl font-bold text-white">Falcon Dashboard</h1>
-		<p class="mb-6 text-sm text-gray-400">
-			Connect to your OpenClaw Gateway. Enter the gateway token to authenticate.
-		</p>
-
-		<div class="mb-4">
-			<label for="gateway-url" class="mb-1 block text-sm font-medium text-gray-300">
-				Gateway URL
-			</label>
-			<input
-				id="gateway-url"
-				type="text"
-				bind:value={url}
-				placeholder="ws://127.0.0.1:18789"
-				class="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-			/>
+<div class="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 py-8">
+	<div class="w-full max-w-md space-y-6">
+		<!-- Header -->
+		<div class="text-center">
+			<h1 class="text-2xl font-bold text-white">Self-Hosted</h1>
+			<p class="mt-1 text-sm text-gray-400">Connect to your OpenClaw Gateway</p>
 		</div>
 
-		<div class="mb-4">
-			<label for="gateway-token" class="mb-1 block text-sm font-medium text-gray-300">
-				Gateway Token
-			</label>
-			<input
-				id="gateway-token"
-				type="password"
-				bind:value={token}
-				onkeydown={handleKeydown}
-				placeholder="Paste your gateway token"
-				class="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-			/>
+		<!-- Connection form -->
+		<div class="space-y-4">
+			<div>
+				<label for="gateway-url" class="mb-1.5 block text-sm font-medium text-gray-300">
+					Gateway URL
+				</label>
+				<input
+					id="gateway-url"
+					type="text"
+					bind:value={url}
+					placeholder="ws://127.0.0.1:18789"
+					class="w-full rounded-xl border border-gray-700 bg-gray-800/80 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+			</div>
+
+			<div>
+				<label for="gateway-token" class="mb-1.5 block text-sm font-medium text-gray-300">
+					Gateway Token
+				</label>
+				<input
+					id="gateway-token"
+					type="password"
+					bind:value={token}
+					onkeydown={handleKeydown}
+					placeholder="Paste your gateway token"
+					class="w-full rounded-xl border border-gray-700 bg-gray-800/80 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+			</div>
+
+			{#if error}
+				<p class="text-sm text-red-400">{error}</p>
+			{/if}
+
+			<button
+				onclick={handleSubmit}
+				class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950 transition-colors"
+			>
+				Connect
+			</button>
 		</div>
 
-		{#if error}
-			<p class="mb-4 text-sm text-red-400">{error}</p>
-		{/if}
+		<!-- Ask your agent card -->
+		<div class="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+			<div class="mb-2 flex items-center gap-2">
+				<div class="h-1 w-1 rounded-full bg-teal-500"></div>
+				<span class="text-sm font-medium text-teal-400">Ask your agent</span>
+			</div>
+			<p class="mb-3 text-xs leading-relaxed text-gray-400">
+				Copy this message and send it to your OpenClaw agent to get a token:
+			</p>
+			<div
+				class="rounded-lg border border-teal-500/20 bg-teal-950/30 px-3 py-2 text-xs text-gray-300"
+			>
+				{agentMessage}
+			</div>
+			<button
+				onclick={() => copyText(agentMessage, 'agent')}
+				class="mt-2 flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 transition-colors"
+			>
+				{#if copiedAgent}
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M5 13l4 4L19 7"
+						/>
+					</svg>
+					Copied!
+				{:else}
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+						/>
+					</svg>
+					Copy to clipboard
+				{/if}
+			</button>
+		</div>
 
-		<button
-			onclick={handleSubmit}
-			class="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-		>
-			Connect
-		</button>
-
-		<p class="mt-4 text-xs text-gray-500">
-			Requires <code class="text-gray-400">gateway.controlUi.allowInsecureAuth: true</code> in gateway
-			config for token-only auth.
-		</p>
+		<!-- Troubleshooting card -->
+		<div class="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+			<div class="mb-2 flex items-center gap-2">
+				<div class="h-1 w-1 rounded-full bg-orange-500"></div>
+				<span class="text-sm font-medium text-orange-400">Troubleshooting</span>
+			</div>
+			<p class="mb-3 text-xs leading-relaxed text-gray-400">
+				Having trouble connecting? Send this to your agent for help:
+			</p>
+			<div
+				class="rounded-lg border border-orange-500/20 bg-orange-950/30 px-3 py-2 text-xs text-gray-300"
+			>
+				{troubleshootMessage}
+			</div>
+			<button
+				onclick={() => copyText(troubleshootMessage, 'troubleshoot')}
+				class="mt-2 flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 transition-colors"
+			>
+				{#if copiedTroubleshoot}
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M5 13l4 4L19 7"
+						/>
+					</svg>
+					Copied!
+				{:else}
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+						/>
+					</svg>
+					Copy to clipboard
+				{/if}
+			</button>
+		</div>
 	</div>
 </div>

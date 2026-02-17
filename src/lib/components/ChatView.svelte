@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
-	import { activeThread } from '$lib/stores/threads.js';
+	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection, canvasStore } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { renderMarkdownSync } from '$lib/chat/markdown.js';
@@ -224,6 +224,18 @@
 	}
 
 	let reactionPickerMessageId = $state<string | null>(null);
+	let isMobile = $state(false);
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const mql = window.matchMedia('(max-width: 767px)');
+		isMobile = mql.matches;
+		function handleChange(e: MediaQueryListEvent) {
+			isMobile = e.matches;
+		}
+		mql.addEventListener('change', handleChange);
+		return () => mql.removeEventListener('change', handleChange);
+	});
 
 	function toggleReactionPicker(messageId: string) {
 		reactionPickerMessageId = reactionPickerMessageId === messageId ? null : messageId;
@@ -290,14 +302,59 @@
 		<div
 			bind:this={scrollContainer}
 			onscroll={handleScroll}
-			class="flex-1 overflow-y-auto px-4 py-4"
+			class="flex-1 overflow-y-auto px-3 md:px-4 py-4"
 		>
 			{#if messages.length === 0}
-				<div class="flex h-full items-center justify-center">
-					<p class="text-sm text-gray-500">Send a message to start the conversation</p>
+				<div class="flex h-full flex-col items-center justify-center px-4">
+					<!-- Avatar -->
+					<div
+						class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600"
+					>
+						<svg class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+							/>
+						</svg>
+					</div>
+					<h2 class="mb-1 text-lg font-semibold text-white">How can I help you today?</h2>
+					{#if connState === 'READY'}
+						<p class="mb-6 text-sm text-gray-400">Connected and ready</p>
+					{:else}
+						<p class="mb-6 text-sm text-gray-500">Send a message to start</p>
+					{/if}
+					<!-- Quick-action chips -->
+					<div class="grid w-full max-w-sm grid-cols-2 gap-2">
+						<button
+							onclick={() => handleSend('Summarize a document')}
+							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
+						>
+							Summarize a document
+						</button>
+						<button
+							onclick={() => handleSend('Write some code')}
+							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
+						>
+							Write some code
+						</button>
+						<button
+							onclick={() => handleSend('Explain a concept')}
+							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
+						>
+							Explain a concept
+						</button>
+						<button
+							onclick={() => handleSend('Help me brainstorm')}
+							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
+						>
+							Help me brainstorm
+						</button>
+					</div>
 				</div>
 			{:else}
-				<div class="mx-auto max-w-3xl space-y-4">
+				<div class="mx-auto max-w-none md:max-w-3xl space-y-4">
 					{#each messages as message, i (message.id ?? `msg-${i}`)}
 						{#if message.role === 'divider'}
 							<!-- Divider message -->
@@ -315,7 +372,7 @@
 									: ''}"
 								data-message-id={message.id}
 							>
-								<div class="max-w-[80%]">
+								<div class="max-w-[95%] md:max-w-[80%]">
 									{#if message.replyToMessageId}
 										{@const replyMsg = findMessageById(message.replyToMessageId)}
 										{#if replyMsg}
@@ -362,7 +419,7 @@
 									: ''}"
 								data-message-id={message.id}
 							>
-								<div class="max-w-[85%]">
+								<div class="max-w-full md:max-w-[85%]">
 									<!-- Thinking block -->
 									{#if message.thinkingText}
 										<ThinkingBlock
@@ -427,7 +484,7 @@
 											<div class="relative">
 												<button
 													onclick={() => toggleReactionPicker(message.id)}
-													class="text-xs text-gray-600 transition-colors hover:text-gray-400"
+													class="py-1.5 md:py-0 text-xs text-gray-600 transition-colors hover:text-gray-400"
 												>
 													React
 												</button>
@@ -440,7 +497,7 @@
 											</div>
 											<button
 												onclick={() => handleReply(message)}
-												class="text-xs text-gray-600 transition-colors hover:text-gray-400"
+												class="py-1.5 md:py-0 text-xs text-gray-600 transition-colors hover:text-gray-400"
 											>
 												Reply
 											</button>
@@ -478,8 +535,33 @@
 		/>
 	</div>
 
-	<!-- Thread panel (side) -->
+	<!-- Thread panel: full-screen overlay on mobile, side panel on desktop -->
 	{#if thread}
-		<ThreadPanel />
+		{#if isMobile}
+			<div class="fixed inset-0 z-50 flex flex-col bg-gray-950">
+				<div class="flex items-center justify-between border-b border-gray-800 px-3 py-2">
+					<span class="text-sm font-medium text-white">Thread</span>
+					<button
+						onclick={() => closeThread()}
+						class="rounded p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+						aria-label="Close thread"
+					>
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</div>
+				<div class="flex-1 overflow-y-auto">
+					<ThreadPanel />
+				</div>
+			</div>
+		{:else}
+			<ThreadPanel />
+		{/if}
 	{/if}
 </div>

@@ -40,16 +40,17 @@
 <div class="my-2 rounded-lg border-l-4 {statusColor} overflow-hidden">
 	<button
 		onclick={toggle}
-		class="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors"
+		class="flex w-full items-center gap-2 px-3 py-3 md:py-2 text-left hover:bg-white/5 transition-colors"
 		aria-expanded={expanded}
 	>
 		<!-- Status indicator -->
 		{#if toolCall.status === 'running'}
-			<span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-800 border-t-blue-400"
+			<span
+				class="h-4 w-4 md:h-3.5 md:w-3.5 animate-spin rounded-full border-2 border-blue-800 border-t-blue-400"
 			></span>
 		{:else}
 			<svg
-				class="h-3.5 w-3.5 {statusTextColor}"
+				class="h-4 w-4 md:h-3.5 md:w-3.5 {statusTextColor}"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -68,7 +69,9 @@
 
 		<!-- Expand chevron -->
 		<svg
-			class="ml-auto h-3.5 w-3.5 text-gray-500 transition-transform {expanded ? 'rotate-90' : ''}"
+			class="ml-auto h-4 w-4 md:h-3.5 md:w-3.5 text-gray-500 transition-transform {expanded
+				? 'rotate-90'
+				: ''}"
 			fill="none"
 			viewBox="0 0 24 24"
 			stroke="currentColor"
@@ -84,7 +87,7 @@
 				<div>
 					<div class="mb-1 text-xs font-semibold uppercase text-gray-500">Arguments</div>
 					<pre
-						class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-xs text-gray-300 font-mono">{formatJson(
+						class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-xs text-gray-300 font-mono whitespace-pre-wrap md:whitespace-pre">{formatJson(
 							toolCall.args
 						)}</pre>
 				</div>
@@ -95,7 +98,7 @@
 				<div>
 					<div class="mb-1 text-xs font-semibold uppercase text-gray-500">Result</div>
 					<pre
-						class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-xs text-gray-300 font-mono">{formatJson(
+						class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-xs text-gray-300 font-mono whitespace-pre-wrap md:whitespace-pre">{formatJson(
 							toolCall.output
 						)}</pre>
 				</div>

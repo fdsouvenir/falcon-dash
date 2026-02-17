@@ -14,7 +14,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="flex items-center gap-2 rounded border-l-2 border-blue-500 bg-gray-800/50 px-3 py-1.5 {onclick
+	class="flex items-center gap-2 rounded border-l-2 border-blue-500 bg-gray-800/50 px-3 py-2.5 md:py-1.5 {onclick
 		? 'cursor-pointer hover:bg-gray-800'
 		: ''}"
 	{onclick}
@@ -38,10 +38,10 @@
 				e.stopPropagation();
 				oncancel?.();
 			}}
-			class="text-gray-500 hover:text-gray-300"
+			class="flex h-8 w-8 md:h-auto md:w-auto items-center justify-center text-gray-500 hover:text-gray-300"
 			aria-label="Cancel reply"
 		>
-			<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+			<svg class="h-4 w-4 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"

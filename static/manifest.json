@@ -4,8 +4,11 @@
 	"description": "Web dashboard for the OpenClaw AI platform",
 	"start_url": "/",
 	"display": "standalone",
+	"orientation": "any",
 	"theme_color": "#030712",
 	"background_color": "#030712",
+	"categories": ["productivity", "utilities"],
+	"prefer_related_applications": false,
 	"icons": [
 		{
 			"src": "/icon-192.svg",
