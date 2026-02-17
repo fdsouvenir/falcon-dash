@@ -16,10 +16,19 @@ export const GET: RequestHandler = async () => {
 			return json({ error: 'No gateway token found in config' }, { status: 404 });
 		}
 
-		const port = config?.gateway?.port ?? 18789;
-		const bind = config?.gateway?.bind ?? 'loopback';
-		const host = bind === 'loopback' ? '127.0.0.1' : bind;
-		const url = `ws://${host}:${port}`;
+		// When ORIGIN is set (production behind reverse proxy), derive WSS URL
+		// so the browser connects through the tunnel instead of localhost
+		const origin = process.env.ORIGIN;
+		let url: string;
+		if (origin && origin.startsWith('https://')) {
+			const host = new URL(origin).host;
+			url = `wss://${host}/ws`;
+		} else {
+			const port = config?.gateway?.port ?? 18789;
+			const bind = config?.gateway?.bind ?? 'loopback';
+			const host = bind === 'loopback' ? '127.0.0.1' : bind;
+			url = `ws://${host}:${port}`;
+		}
 
 		return json({ token, url });
 	} catch {
