@@ -46,6 +46,11 @@ export interface ConnectionConfig {
 	url: string;
 	token: string;
 	instanceId?: string;
+	device?: {
+		id: string;
+		publicKeyBase64: string;
+		privateKey: CryptoKey;
+	};
 }
 
 // Hello-OK payload

@@ -9,6 +9,7 @@ import type {
 	HelloOkPayload,
 	ChallengePayload
 } from './types.js';
+import { signChallenge } from './device-identity.js';
 
 const PROTOCOL_VERSION = 3;
 const CLIENT_ID = 'openclaw-control-ui';
@@ -185,45 +186,65 @@ export class GatewayConnection {
 	private sendConnectFrame(challenge: ChallengePayload): void {
 		this.lastChallenge = challenge;
 		if (!this.config) return;
+		this.buildAndSendConnectFrame(challenge).catch((err) => {
+			console.error('[GatewayConnection] Failed to sign challenge:', err);
+			this._state.set('AUTH_FAILED');
+			this._diagnosticCb?.('device-sign-error', { error: String(err) });
+		});
+	}
+
+	private async buildAndSendConnectFrame(challenge: ChallengePayload): Promise<void> {
+		if (!this.config) return;
 
 		const instanceId = this.config.instanceId || crypto.randomUUID();
+
+		const params: Record<string, unknown> = {
+			minProtocol: PROTOCOL_VERSION,
+			maxProtocol: PROTOCOL_VERSION,
+			client: {
+				id: CLIENT_ID,
+				version: CLIENT_VERSION,
+				platform: 'web',
+				mode: CLIENT_MODE,
+				displayName: 'Falcon Dashboard',
+				instanceId
+			},
+			role: 'operator',
+			scopes: [
+				'operator.read',
+				'operator.write',
+				'operator.admin',
+				'operator.approvals',
+				'operator.pairing'
+			],
+			caps: ['canvas', 'canvas.a2ui'],
+			commands: [
+				'canvas.present',
+				'canvas.hide',
+				'canvas.navigate',
+				'canvas.a2ui.pushJSONL',
+				'canvas.a2ui.reset'
+			],
+			permissions: {},
+			auth: { token: this.config.token },
+			locale: navigator?.language || 'en-US',
+			userAgent: `falcon-dash/${CLIENT_VERSION}`
+		};
+
+		if (this.config.device) {
+			const signature = await signChallenge(this.config.device.privateKey, challenge.nonce);
+			params.device = {
+				id: this.config.device.id,
+				publicKey: this.config.device.publicKeyBase64,
+				signature
+			};
+		}
 
 		const connectFrame: RequestFrame = {
 			type: 'req',
 			id: '__connect',
 			method: 'connect',
-			params: {
-				minProtocol: PROTOCOL_VERSION,
-				maxProtocol: PROTOCOL_VERSION,
-				client: {
-					id: CLIENT_ID,
-					version: CLIENT_VERSION,
-					platform: 'web',
-					mode: CLIENT_MODE,
-					displayName: 'Falcon Dashboard',
-					instanceId
-				},
-				role: 'operator',
-				scopes: [
-					'operator.read',
-					'operator.write',
-					'operator.admin',
-					'operator.approvals',
-					'operator.pairing'
-				],
-				caps: ['canvas', 'canvas.a2ui'],
-				commands: [
-					'canvas.present',
-					'canvas.hide',
-					'canvas.navigate',
-					'canvas.a2ui.pushJSONL',
-					'canvas.a2ui.reset'
-				],
-				permissions: {},
-				auth: { token: this.config.token },
-				locale: navigator?.language || 'en-US',
-				userAgent: `falcon-dash/${CLIENT_VERSION}`
-			}
+			params
 		};
 
 		this.send(connectFrame);

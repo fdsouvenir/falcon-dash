@@ -7,7 +7,12 @@ import { Reconnector } from '$lib/gateway/reconnector.js';
 import { diagnosticLog } from '$lib/gateway/diagnostic-log.js';
 import { tickHealth } from '$lib/stores/diagnostics.js';
 import { addToast } from '$lib/stores/toast.js';
-import type { Frame, ConnectionState } from '$lib/gateway/types.js';
+import type { Frame, ConnectionState, ConnectionConfig } from '$lib/gateway/types.js';
+import {
+	ensureDeviceIdentity,
+	exportPublicKeyBase64,
+	storeDeviceToken
+} from '$lib/gateway/device-identity.js';
 import { CanvasStore } from '$lib/stores/canvas.js';
 import { initA2UIBridge, getCanvasHostUrl } from '$lib/canvas/a2ui-bridge.js';
 import { gatewayUrl, gatewayToken } from '$lib/stores/token.js';
@@ -74,6 +79,9 @@ connection.setDiagnosticCallback((event, detail) => {
 		case 'parse-error':
 			diagnosticLog.log('error', 'error', 'Failed to parse gateway frame');
 			break;
+		case 'device-sign-error':
+			diagnosticLog.log('auth', 'error', 'Failed to sign device challenge', detail);
+			break;
 	}
 });
 
@@ -110,7 +118,7 @@ connection.state.subscribe((state) => {
 		addToast('Authentication failed. Check your gateway token.', 'error', 8000);
 	} else if (state === 'PAIRING_REQUIRED') {
 		addToast(
-			'Gateway token mismatch — the token may have been rotated. Reload to re-read from config.',
+			'Device pairing required. Approve this device in the gateway admin, then retry.',
 			'error',
 			0
 		);
@@ -190,6 +198,11 @@ connection.setOnHelloOk((helloOk) => {
 				'canvas.bridge.register unavailable — plugin not installed'
 			);
 		});
+	if (helloOk.auth?.deviceToken) {
+		storeDeviceToken(helloOk.auth.deviceToken).catch((err) => {
+			console.warn('[gateway] Failed to persist device token:', err);
+		});
+	}
 	reconnector.onConnected(helloOk.policy.tickIntervalMs);
 	tickHealth.set({
 		lastTickAt: Date.now(),
@@ -219,8 +232,16 @@ export function setCanvasActiveRunId(runId: string | null): void {
 /**
  * Connect to the gateway with the given URL and token.
  */
-export function connectToGateway(url: string, token: string): void {
-	const config = { url, token, instanceId: tabInstanceId };
+export async function connectToGateway(url: string, token: string): Promise<void> {
+	const identity = await ensureDeviceIdentity();
+	const publicKeyBase64 = await exportPublicKeyBase64(identity.publicKey);
+
+	const config: ConnectionConfig = {
+		url,
+		token,
+		instanceId: tabInstanceId,
+		device: { id: identity.deviceId, publicKeyBase64, privateKey: identity.privateKey }
+	};
 
 	// Refresh token from server config before each reconnection attempt
 	reconnector.onBeforeReconnect = async () => {

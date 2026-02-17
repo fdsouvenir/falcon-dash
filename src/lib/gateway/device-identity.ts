@@ -43,6 +43,12 @@ export async function deriveDeviceId(publicKey: CryptoKey): Promise<string> {
 		.join('');
 }
 
+// Export public key as base64 for the connect frame wire format
+export async function exportPublicKeyBase64(publicKey: CryptoKey): Promise<string> {
+	const exported = await crypto.subtle.exportKey('raw', publicKey);
+	return btoa(String.fromCharCode(...new Uint8Array(exported)));
+}
+
 // Sign challenge nonce
 export async function signChallenge(privateKey: CryptoKey, nonce: string): Promise<string> {
 	const encoder = new TextEncoder();
@@ -115,12 +121,22 @@ export async function storeDeviceToken(token: string): Promise<void> {
 
 // Get or create device identity
 export async function ensureDeviceIdentity(): Promise<DeviceIdentity> {
-	const existing = await loadIdentity();
-	if (existing) return existing;
+	try {
+		const existing = await loadIdentity();
+		if (existing) return existing;
+	} catch (err) {
+		console.warn('[DeviceIdentity] Failed to load from IndexedDB:', err);
+	}
 
 	const { publicKey, privateKey } = await generateKeypair();
 	const deviceId = await deriveDeviceId(publicKey);
 	const identity: DeviceIdentity = { publicKey, privateKey, deviceId };
-	await storeIdentity(identity);
+
+	try {
+		await storeIdentity(identity);
+	} catch (err) {
+		console.warn('[DeviceIdentity] Failed to persist identity:', err);
+	}
+
 	return identity;
 }
