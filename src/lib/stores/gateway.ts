@@ -95,9 +95,50 @@ connection.setOnClose((code, reason) => {
 });
 
 // --- Disable reconnector on terminal auth states ---
+let pairingRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let pairingRetryCount = 0;
+const PAIRING_MAX_RETRIES = 10;
+const PAIRING_RETRY_DELAY_MS = 3000;
+
 connection.state.subscribe((state) => {
-	if (state === 'AUTH_FAILED' || state === 'PAIRING_REQUIRED') {
+	if (state === 'AUTH_FAILED') {
 		reconnector.disable();
+	} else if (state === 'PAIRING_REQUIRED') {
+		reconnector.disable();
+		// Start pairing retry loop — device may be approved momentarily
+		if (pairingRetryCount < PAIRING_MAX_RETRIES) {
+			pairingRetryCount++;
+			diagnosticLog.log(
+				'auth',
+				'info',
+				`Pairing retry ${pairingRetryCount}/${PAIRING_MAX_RETRIES} in ${PAIRING_RETRY_DELAY_MS}ms`
+			);
+			pairingRetryTimer = setTimeout(() => {
+				connection.disconnect();
+				const gwUrl = get(gatewayUrl);
+				const gwToken = get(gatewayToken);
+				if (gwUrl && gwToken) {
+					connectToGateway(gwUrl, gwToken);
+				}
+			}, PAIRING_RETRY_DELAY_MS);
+		} else {
+			diagnosticLog.log('auth', 'error', 'Pairing retries exhausted — giving up');
+			addToast(
+				'Device pairing timed out. Approve this device in the gateway admin, then refresh.',
+				'error',
+				0
+			);
+		}
+	} else if (state === 'READY') {
+		// Pairing succeeded — clear retry state
+		if (pairingRetryTimer) {
+			clearTimeout(pairingRetryTimer);
+			pairingRetryTimer = null;
+		}
+		if (pairingRetryCount > 0) {
+			diagnosticLog.log('auth', 'info', `Device paired after ${pairingRetryCount} retries`);
+			pairingRetryCount = 0;
+		}
 	}
 });
 
@@ -116,12 +157,8 @@ let previousState: ConnectionState = 'DISCONNECTED';
 connection.state.subscribe((state) => {
 	if (state === 'AUTH_FAILED') {
 		addToast('Authentication failed. Check your gateway token.', 'error', 8000);
-	} else if (state === 'PAIRING_REQUIRED') {
-		addToast(
-			'Device pairing required. Approve this device in the gateway admin, then retry.',
-			'error',
-			0
-		);
+	} else if (state === 'PAIRING_REQUIRED' && pairingRetryCount <= 1) {
+		addToast('Device pairing in progress...', 'info', 6000);
 	} else if (
 		state === 'RECONNECTING' &&
 		(previousState === 'READY' || previousState === 'DISCONNECTED')
