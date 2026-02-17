@@ -38,7 +38,7 @@ export async function deriveDeviceId(publicKey: CryptoKey): Promise<string> {
 	const exported = await crypto.subtle.exportKey('raw', publicKey);
 	const hash = await crypto.subtle.digest('SHA-256', exported);
 	const bytes = new Uint8Array(hash);
-	return Array.from(bytes.slice(0, 16))
+	return Array.from(bytes)
 		.map((b) => b.toString(16).padStart(2, '0'))
 		.join('');
 }
