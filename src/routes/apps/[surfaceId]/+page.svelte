@@ -3,12 +3,21 @@
 	import { canvasStore } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { pinnedApps, unpinApp, isPinned } from '$lib/stores/pinned-apps.js';
+	import { isMobile } from '$lib/stores/viewport.js';
 	import InlineA2UI from '$lib/components/canvas/InlineA2UI.svelte';
 
 	const surfaceId = $derived($page.params.surfaceId ?? '');
 	let surface = $state<CanvasSurface | null>(null);
 	let loadingTimedOut = $state(false);
 	let confirmingUnpin = $state(false);
+	let mobile = $state(false);
+
+	$effect(() => {
+		const unsub = isMobile.subscribe((v) => {
+			mobile = v;
+		});
+		return unsub;
+	});
 
 	$effect(() => {
 		if (!surfaceId) return;
@@ -44,7 +53,27 @@
 	}
 </script>
 
-{#if surface && surface.messages.length > 0}
+{#if mobile}
+	<div class="flex h-full flex-col items-center justify-center bg-gray-950 px-6 text-center">
+		<svg
+			class="mb-4 h-12 w-12 text-gray-600"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="1.5"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"
+			/>
+		</svg>
+		<h2 class="text-lg font-semibold text-white">Desktop Only</h2>
+		<p class="mt-2 text-sm text-gray-400">
+			Canvas apps require a desktop browser for the best experience.
+		</p>
+	</div>
+{:else if surface && surface.messages.length > 0}
 	<div class="flex h-full flex-col p-4">
 		<div class="mb-4 flex items-center gap-3">
 			<h1 class="text-lg font-semibold text-white">{surface.title}</h1>

@@ -2,6 +2,7 @@
 	import { canvasStore } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { pinnedApps, pinApp, unpinApp, isPinned } from '$lib/stores/pinned-apps.js';
+	import { isMobile } from '$lib/stores/viewport.js';
 	import InlineA2UI from './InlineA2UI.svelte';
 	import HTMLCanvasFrame from './HTMLCanvasFrame.svelte';
 
@@ -61,6 +62,14 @@
 			}, 10_000);
 			return () => clearTimeout(timer);
 		}
+	});
+
+	let mobile = $state(false);
+	$effect(() => {
+		const unsub = isMobile.subscribe((v) => {
+			mobile = v;
+		});
+		return unsub;
 	});
 
 	function togglePin() {
@@ -126,7 +135,26 @@
 				</button>
 			</div>
 		{/if}
-		{#if surface.messages.length > 0}
+		{#if mobile}
+			<div class="canvas-mobile-gate">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path
+						d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"
+					/>
+				</svg>
+				<span>View on desktop</span>
+			</div>
+		{:else if surface.messages.length > 0}
 			<div class="canvas-content">
 				<InlineA2UI messages={surface.messages} />
 			</div>
@@ -237,6 +265,16 @@
 		padding: 1.5rem;
 		color: var(--color-text-secondary, #a6adc8);
 		font-size: 0.8125rem;
+	}
+
+	.canvas-mobile-gate {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
+		padding: 0.75rem;
+		color: var(--color-text-tertiary, #6c7086);
+		font-size: 0.75rem;
 	}
 
 	.canvas-empty-hint {
