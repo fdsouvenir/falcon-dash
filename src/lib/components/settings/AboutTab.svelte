@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { snapshot, call } from '$lib/stores/gateway.js';
 
-	const dashboardVersion = '0.0.1';
+	const dashboardVersion = __APP_VERSION__;
 
 	let agentIdentity = $state<{ name: string; description?: string } | null>(null);
 	let serverInfo = $state<{ version: string } | null>(null);

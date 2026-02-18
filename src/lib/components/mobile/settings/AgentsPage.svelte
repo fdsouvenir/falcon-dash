@@ -1,6 +1,5 @@
 <script lang="ts">
 	import InformationTab from '$lib/components/settings/InformationTab.svelte';
-	import ModelsList from '$lib/components/settings/ModelsList.svelte';
 
 	let { onback }: { onback: () => void } = $props();
 </script>
@@ -24,7 +23,6 @@
 	<div class="flex-1 overflow-y-auto p-4">
 		<div class="space-y-6">
 			<InformationTab />
-			<ModelsList />
 		</div>
 	</div>
 </div>

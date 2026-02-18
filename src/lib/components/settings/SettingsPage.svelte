@@ -2,7 +2,6 @@
 	import PreferencesTab from './PreferencesTab.svelte';
 	import InformationTab from './InformationTab.svelte';
 	import AboutTab from './AboutTab.svelte';
-	import ModelsList from './ModelsList.svelte';
 	import ConfigEditor from './ConfigEditor.svelte';
 	import DiscordSetup from './DiscordSetup.svelte';
 	import DeviceManagement from './DeviceManagement.svelte';
@@ -14,7 +13,6 @@
 	const tabs = [
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
 		{ id: 'information', label: 'Information', component: InformationTab },
-		{ id: 'models', label: 'Models', component: ModelsList },
 		{ id: 'config', label: 'Config', component: ConfigEditor },
 		{ id: 'discord', label: 'Discord', component: DiscordSetup },
 		{ id: 'devices', label: 'Devices', component: DeviceManagement },
