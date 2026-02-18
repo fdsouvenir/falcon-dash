@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { bulkUpdate, bulkMove } from '$lib/server/pm/bulk.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
+import { emitPMEvent } from '$lib/server/pm/events.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -15,6 +16,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				ids: body.ids,
 				fields: body.fields
 			});
+			emitPMEvent({
+				action: 'updated',
+				entityType: body.entityType,
+				entityId: 0,
+				data: { ids: body.ids, fields: body.fields }
+			});
 			return json(result);
 		}
 
@@ -22,6 +29,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			const result = bulkMove({
 				ids: body.ids,
 				target: body.target
+			});
+			emitPMEvent({
+				action: 'moved',
+				entityType: 'task',
+				entityId: 0,
+				data: { ids: body.ids, target: body.target }
 			});
 			return json(result);
 		}

@@ -86,3 +86,6 @@ export type { PMEvent, PMAction, PMEntityType } from './events.js';
 
 export { PMError, PM_ERRORS } from './validation.js';
 export { handlePMError } from './errors.js';
+
+export { generateAndWriteContext } from './context-generator.js';
+export { startContextScheduler, triggerContextGeneration } from './context-scheduler.js';

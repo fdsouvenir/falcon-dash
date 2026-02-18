@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { getProject, updateProject, deleteProject } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
+import { emitPMEvent } from '$lib/server/pm/events.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -21,6 +22,13 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		const body = await request.json();
 		const project = updateProject(id, body);
 		if (!project) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Project ${id} not found`);
+		emitPMEvent({
+			action: 'updated',
+			entityType: 'project',
+			entityId: id,
+			projectId: id,
+			data: body
+		});
 		return json(project);
 	} catch (err) {
 		return handlePMError(err);
@@ -32,6 +40,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 		const id = parseInt(params.id);
 		const deleted = deleteProject(id);
 		if (!deleted) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Project ${id} not found`);
+		emitPMEvent({ action: 'deleted', entityType: 'project', entityId: id, projectId: id });
 		return json({ success: true });
 	} catch (err) {
 		return handlePMError(err);

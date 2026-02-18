@@ -1,4 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
+import { startContextScheduler } from '$lib/server/pm/context-scheduler.js';
+
+startContextScheduler();
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);

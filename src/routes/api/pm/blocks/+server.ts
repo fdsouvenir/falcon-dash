@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { listBlocks, createBlock, deleteBlock } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
+import { emitPMEvent } from '$lib/server/pm/events.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -22,6 +23,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const block = createBlock(body.blocker_id, body.blocked_id);
+		emitPMEvent({
+			action: 'created',
+			entityType: 'block',
+			entityId: `${body.blocker_id}-${body.blocked_id}`,
+			data: body
+		});
 		return json(block, { status: 201 });
 	} catch (err) {
 		return handlePMError(err);
@@ -33,6 +40,11 @@ export const DELETE: RequestHandler = async ({ request }) => {
 		const body = await request.json();
 		const deleted = deleteBlock(body.blocker_id, body.blocked_id);
 		if (!deleted) throw new PMError(PM_ERRORS.PM_NOT_FOUND, 'Block relationship not found');
+		emitPMEvent({
+			action: 'deleted',
+			entityType: 'block',
+			entityId: `${body.blocker_id}-${body.blocked_id}`
+		});
 		return json({ success: true });
 	} catch (err) {
 		return handlePMError(err);

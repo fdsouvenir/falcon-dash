@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { listProjects, createProject } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
+import { emitPMEvent } from '$lib/server/pm/events.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -31,6 +32,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const project = createProject(body);
+		emitPMEvent({
+			action: 'created',
+			entityType: 'project',
+			entityId: project.id,
+			projectId: project.id,
+			data: body
+		});
 		return json(project, { status: 201 });
 	} catch (err) {
 		return handlePMError(err);

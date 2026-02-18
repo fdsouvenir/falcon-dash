@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { listComments, createComment } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
+import { emitPMEvent } from '$lib/server/pm/events.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -33,6 +34,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const comment = createComment(body);
+		emitPMEvent({
+			action: 'created',
+			entityType: 'comment',
+			entityId: comment.id,
+			data: body
+		});
 		return json(comment, { status: 201 });
 	} catch (err) {
 		return handlePMError(err);

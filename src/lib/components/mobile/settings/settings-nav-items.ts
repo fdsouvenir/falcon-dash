@@ -1,0 +1,115 @@
+export interface SettingsNavItem {
+	id: string;
+	title: string;
+	subtitle: string;
+	iconPath: string;
+}
+
+export interface SettingsNavGroup {
+	label: string;
+	items: SettingsNavItem[];
+}
+
+export const settingsNavGroups: SettingsNavGroup[] = [
+	{
+		label: 'CONFIGURE',
+		items: [
+			{
+				id: 'channels',
+				title: 'Channels',
+				subtitle: 'Discord, WhatsApp, Telegram',
+				iconPath:
+					'M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z'
+			},
+			{
+				id: 'agents',
+				title: 'Agents',
+				subtitle: 'Sub-agents and models',
+				iconPath:
+					'M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6'
+			},
+			{
+				id: 'skills',
+				title: 'Skills',
+				subtitle: 'Installed and marketplace',
+				iconPath:
+					'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'
+			},
+			{
+				id: 'tools',
+				title: 'Tools',
+				subtitle: 'Approval policies',
+				iconPath:
+					'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'
+			},
+			{
+				id: 'hooks',
+				title: 'Hooks',
+				subtitle: 'Automation triggers',
+				iconPath:
+					'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71'
+			},
+			{
+				id: 'cron',
+				title: 'Cron Jobs',
+				subtitle: 'Scheduled tasks',
+				iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
+			}
+		]
+	},
+	{
+		label: 'MONITOR',
+		items: [
+			{
+				id: 'analytics',
+				title: 'Analytics',
+				subtitle: 'Usage and costs',
+				iconPath:
+					'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+			},
+			{
+				id: 'logs',
+				title: 'Logs',
+				subtitle: 'Live event stream',
+				iconPath: 'M4 6h16M4 10h16M4 14h16M4 18h16'
+			}
+		]
+	},
+	{
+		label: 'ADVANCED',
+		items: [
+			{
+				id: 'advanced',
+				title: 'Advanced',
+				subtitle: 'Gateway, devices, workspace',
+				iconPath:
+					'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'
+			},
+			{
+				id: 'config',
+				title: 'Config',
+				subtitle: 'Raw configuration editor',
+				iconPath: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'
+			}
+		]
+	},
+	{
+		label: 'ACCOUNT',
+		items: [
+			{
+				id: 'subscription',
+				title: 'Subscription',
+				subtitle: 'Plan and billing',
+				iconPath:
+					'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'
+			},
+			{
+				id: 'language',
+				title: 'Language',
+				subtitle: 'Display language',
+				iconPath:
+					'M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129'
+			}
+		]
+	}
+];
