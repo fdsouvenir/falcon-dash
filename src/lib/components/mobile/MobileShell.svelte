@@ -10,6 +10,7 @@
 	import ChatList from '$lib/components/ChatList.svelte';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
+	import AgentRail from './AgentRail.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -77,9 +78,12 @@
 		<!-- Chat route: two-panel slide architecture -->
 		<ConnectionErrorBanner />
 		<div class="relative flex-1 overflow-hidden">
-			<!-- Base layer: ChatList -->
-			<div class="absolute inset-0 overflow-y-auto">
-				<ChatList onselect={() => openMobileChat()} />
+			<!-- Base layer: AgentRail + ChatList -->
+			<div class="absolute inset-0 flex">
+				<AgentRail />
+				<div class="flex-1 overflow-y-auto">
+					<ChatList onselect={() => openMobileChat()} />
+				</div>
 			</div>
 
 			<!-- Overlay layer: ChatView (slides in from right) -->
