@@ -16,6 +16,8 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import CreateChatDialog from './CreateChatDialog.svelte';
 
+	let { onselect }: { onselect?: () => void } = $props();
+
 	let groups = $state<SessionGroup[]>([]);
 	let activeKey = $state<string | null>(null);
 	let query = $state('');
@@ -73,6 +75,7 @@
 		setActiveSession(key);
 		// eslint-disable-next-line svelte/no-navigation-without-resolve -- static route
 		goto('/');
+		onselect?.();
 	}
 
 	function startRename(session: ChatSessionInfo) {

@@ -81,3 +81,8 @@ body.sheet-open {
 .compact .text-2xl {
 	font-size: 1.25rem;
 }
+
+/* GPU-composited slide for mobile chat panel */
+.mobile-chat-panel {
+	will-change: transform;
+}

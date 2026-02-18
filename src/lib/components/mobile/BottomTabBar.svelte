@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
 
-	let { onmore }: { onmore: () => void } = $props();
+	let { onmore, hidden = false }: { onmore: () => void; hidden?: boolean } = $props();
 
 	let pathname = $state('/');
 	let kbVisible = $state(false);
@@ -28,7 +28,7 @@
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
-{#if !kbVisible}
+{#if !kbVisible && !hidden}
 	<nav
 		class="flex shrink-0 items-stretch border-t border-gray-800 bg-gray-900 pb-[var(--safe-bottom)]"
 	>

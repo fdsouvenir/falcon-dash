@@ -144,8 +144,8 @@
 	</div>
 </div>
 
-<!-- Mobile header -->
-<div class="flex md:hidden items-center justify-between border-b border-gray-800 px-3 py-2">
+<!-- Mobile header (hidden — MobileHeader handles mobile chrome) -->
+<div class="hidden">
 	<div class="flex-1"></div>
 	<div class="flex items-center gap-2">
 		<div

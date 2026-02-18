@@ -99,7 +99,6 @@
 {:else if hasToken}
 	{#if mobile}
 		<MobileShell>
-			<ConnectionErrorBanner />
 			{@render children()}
 		</MobileShell>
 	{:else}
