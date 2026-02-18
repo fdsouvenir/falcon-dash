@@ -3,9 +3,17 @@ import type { RequestHandler } from './$types.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { env } from '$env/dynamic/private';
 
-/** GET: Read gateway token and URL from ~/.openclaw/openclaw.json */
+/** GET: Read gateway token and URL from env vars or ~/.openclaw/openclaw.json */
 export const GET: RequestHandler = async () => {
+	// Dev override: use GATEWAY_URL and GATEWAY_TOKEN env vars if both are set
+	const envUrl = env.GATEWAY_URL;
+	const envToken = env.GATEWAY_TOKEN;
+	if (envUrl && envToken) {
+		return json({ token: envToken, url: envUrl });
+	}
+
 	try {
 		const configPath = join(homedir(), '.openclaw', 'openclaw.json');
 		const raw = readFileSync(configPath, 'utf-8');
