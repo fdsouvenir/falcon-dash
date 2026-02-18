@@ -18,3 +18,35 @@ export const isMobile = readable(false, (set) => {
 	mql.addEventListener('change', onChange);
 	return () => mql.removeEventListener('change', onChange);
 });
+
+/** Tracks `window.visualViewport.height`, falling back to `window.innerHeight`. */
+export const viewportHeight = readable(browser ? window.innerHeight : 0, (set) => {
+	if (!browser) return;
+
+	const vv = window.visualViewport;
+	if (!vv) return;
+
+	function onResize() {
+		set(vv!.height);
+	}
+
+	set(vv.height);
+	vv.addEventListener('resize', onResize);
+	return () => vv.removeEventListener('resize', onResize);
+});
+
+/** True when the virtual keyboard is likely open (visual viewport >150px smaller than layout). */
+export const keyboardVisible = readable(false, (set) => {
+	if (!browser) return;
+
+	const vv = window.visualViewport;
+	if (!vv) return;
+
+	function onResize() {
+		set(window.innerHeight - vv!.height > 150);
+	}
+
+	onResize();
+	vv.addEventListener('resize', onResize);
+	return () => vv.removeEventListener('resize', onResize);
+});

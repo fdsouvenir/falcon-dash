@@ -337,22 +337,19 @@
 {/if}
 
 {#if showDeleteConfirm && deleteTarget}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-		onclick={() => {
-			showDeleteConfirm = false;
+		role="dialog"
+		aria-modal="true"
+		aria-label="Delete job confirmation"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showDeleteConfirm = false;
 		}}
 		onkeydown={(e) => {
 			if (e.key === 'Escape') showDeleteConfirm = false;
 		}}
 	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div
-			class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
-			onclick={(e) => e.stopPropagation()}
-		>
+		<div class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4">
 			<h3 class="mb-2 text-sm font-medium text-white">Delete Job</h3>
 			<p class="mb-4 text-xs text-gray-400">
 				Are you sure you want to delete <span class="font-medium text-white"

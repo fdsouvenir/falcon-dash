@@ -4,6 +4,12 @@
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
 
+	let {
+		onsearchToggle
+	}: {
+		onsearchToggle?: () => void;
+	} = $props();
+
 	let showSettings = $state(false);
 	let showThreads = $state(false);
 	let model = $state('');
@@ -81,6 +87,22 @@
 	<div class="flex items-center gap-3">
 		{#if model}
 			<span class="text-xs text-gray-400">{model}</span>
+		{/if}
+		{#if onsearchToggle}
+			<button
+				onclick={onsearchToggle}
+				class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+				aria-label="Search messages"
+			>
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+			</button>
 		{/if}
 		<button
 			onclick={() => {

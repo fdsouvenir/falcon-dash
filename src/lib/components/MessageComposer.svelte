@@ -129,10 +129,16 @@
 		resize();
 	}
 
+	let resizeRafId: number | undefined;
+
 	function resize() {
-		if (!textarea) return;
-		textarea.style.height = 'auto';
-		textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+		if (resizeRafId) return;
+		resizeRafId = requestAnimationFrame(() => {
+			resizeRafId = undefined;
+			if (!textarea) return;
+			textarea.style.height = 'auto';
+			textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+		});
 	}
 
 	function handleInput() {
@@ -276,6 +282,7 @@
 			placeholder={disabled ? 'Agent is responding...' : 'Message...'}
 			{disabled}
 			rows="1"
+			aria-label="Type a message"
 			class="flex-1 resize-none rounded-2xl md:rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
 		></textarea>
 

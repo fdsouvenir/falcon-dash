@@ -1,14 +1,17 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { page } from '$app/stores';
-	import { activeSessionKey } from '$lib/stores/sessions.js';
+	import { activeSessionKey, setActiveSession } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection, canvasStore } from '$lib/stores/gateway.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { renderMarkdownSync } from '$lib/chat/markdown.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
+	import { keyboardVisible } from '$lib/stores/viewport.js';
+	import { clearSearch } from '$lib/stores/chat-search.js';
 	import ChatHeader from './ChatHeader.svelte';
+	import ChatSearch from './ChatSearch.svelte';
 	import MessageComposer from './MessageComposer.svelte';
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallCard from './ToolCallCard.svelte';
@@ -25,6 +28,7 @@
 	let messages = $state<ChatMessage[]>([]);
 	let isStreaming = $state(false);
 	let replyToMessage = $state<ChatMessage | null>(null);
+	let showSearch = $state(false);
 	let thread = $state<ThreadInfo | null>(null);
 	let connState = $state<ConnectionState>('DISCONNECTED');
 	let currentSurface = $state<CanvasSurface | null>(null);
@@ -142,6 +146,20 @@
 		}
 	});
 
+	// Re-scroll when keyboard opens/closes (mobile)
+	$effect(() => {
+		const unsub = keyboardVisible.subscribe(() => {
+			if (shouldAutoScroll && scrollContainer) {
+				requestAnimationFrame(() => {
+					if (scrollContainer) {
+						scrollContainer.scrollTop = scrollContainer.scrollHeight;
+					}
+				});
+			}
+		});
+		return unsub;
+	});
+
 	// Read ?msg= URL param for deep-link jump-to-message
 	$effect(() => {
 		const unsub = page.subscribe(($page) => {
@@ -217,6 +235,26 @@
 	function handleRetry(messageId: string) {
 		if (!chatSession) return;
 		chatSession.retry(messageId);
+	}
+
+	function toggleSearch() {
+		showSearch = !showSearch;
+		if (!showSearch) {
+			clearSearch();
+		}
+	}
+
+	async function handleSearchJump(jumpSessionKey: string, messageId: string) {
+		const currentKey = untrack(() => sessionKey);
+		if (jumpSessionKey !== currentKey) {
+			setActiveSession(jumpSessionKey);
+			await tick();
+		}
+		showSearch = false;
+		clearSearch();
+		requestAnimationFrame(() => {
+			scrollToMessage(messageId);
+		});
 	}
 
 	function findMessageById(id: string): ChatMessage | undefined {
@@ -296,7 +334,11 @@
 	<!-- Main chat area -->
 	<div class="flex min-w-0 flex-1 flex-col">
 		<!-- Header -->
-		<ChatHeader />
+		<ChatHeader onsearchToggle={toggleSearch} />
+
+		{#if showSearch}
+			<ChatSearch onjump={handleSearchJump} />
+		{/if}
 
 		<!-- Message list -->
 		<div

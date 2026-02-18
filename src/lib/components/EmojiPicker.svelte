@@ -20,8 +20,16 @@
 </script>
 
 <!-- Backdrop -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-40" onclick={handleBackdropClick} onkeydown={() => {}}></div>
+<div
+	class="fixed inset-0 z-40"
+	role="button"
+	tabindex="-1"
+	aria-label="Close emoji picker"
+	onclick={handleBackdropClick}
+	onkeydown={(e) => {
+		if (e.key === 'Escape') handleBackdropClick();
+	}}
+></div>
 
 <!-- Picker -->
 <div

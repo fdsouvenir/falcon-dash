@@ -12,7 +12,7 @@
 	let sidebarOpen = $state(false);
 </script>
 
-<div class="flex h-screen flex-col bg-gray-950 text-white">
+<div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
 	<MobileHeader onSidebarOpen={() => (sidebarOpen = true)} />
 
 	<main class="flex-1 overflow-y-auto">

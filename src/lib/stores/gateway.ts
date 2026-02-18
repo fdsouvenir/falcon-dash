@@ -1,4 +1,4 @@
-import { get } from 'svelte/store';
+import { get, writable, readonly, type Readable } from 'svelte/store';
 import { GatewayConnection } from '$lib/gateway/connection.js';
 import { RequestCorrelator } from '$lib/gateway/correlator.js';
 import { EventBus } from '$lib/gateway/event-bus.js';
@@ -89,20 +89,41 @@ connection.setOnClose((code, reason) => {
 	reconnector.onDisconnect();
 });
 
+// --- Pairing state store ---
+export interface PairingState {
+	status: 'idle' | 'waiting' | 'approved' | 'timeout';
+	retryCount: number;
+	maxRetries: number;
+}
+
+const PAIRING_MAX_RETRIES = 10;
+const PAIRING_RETRY_DELAY_MS = 3000;
+
+const _pairingState = writable<PairingState>({
+	status: 'idle',
+	retryCount: 0,
+	maxRetries: PAIRING_MAX_RETRIES
+});
+export const pairingState: Readable<PairingState> = readonly(_pairingState);
+
 // --- Disable reconnector on terminal auth states ---
 let pairingRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let pairingRetryCount = 0;
-const PAIRING_MAX_RETRIES = 10;
-const PAIRING_RETRY_DELAY_MS = 3000;
 
 connection.state.subscribe((state) => {
 	if (state === 'AUTH_FAILED') {
 		reconnector.disable();
+		_pairingState.set({ status: 'idle', retryCount: 0, maxRetries: PAIRING_MAX_RETRIES });
 	} else if (state === 'PAIRING_REQUIRED') {
 		reconnector.disable();
 		// Start pairing retry loop — device may be approved momentarily
 		if (pairingRetryCount < PAIRING_MAX_RETRIES) {
 			pairingRetryCount++;
+			_pairingState.set({
+				status: 'waiting',
+				retryCount: pairingRetryCount,
+				maxRetries: PAIRING_MAX_RETRIES
+			});
 			diagnosticLog.log(
 				'auth',
 				'info',
@@ -117,6 +138,11 @@ connection.state.subscribe((state) => {
 				}
 			}, PAIRING_RETRY_DELAY_MS);
 		} else {
+			_pairingState.set({
+				status: 'timeout',
+				retryCount: pairingRetryCount,
+				maxRetries: PAIRING_MAX_RETRIES
+			});
 			diagnosticLog.log('auth', 'error', 'Pairing retries exhausted — giving up');
 			addToast(
 				'Device pairing timed out. Approve this device in the gateway admin, then refresh.',
@@ -132,8 +158,15 @@ connection.state.subscribe((state) => {
 		}
 		if (pairingRetryCount > 0) {
 			diagnosticLog.log('auth', 'info', `Device paired after ${pairingRetryCount} retries`);
+			_pairingState.set({
+				status: 'approved',
+				retryCount: pairingRetryCount,
+				maxRetries: PAIRING_MAX_RETRIES
+			});
 			pairingRetryCount = 0;
 		}
+	} else if (state === 'DISCONNECTED') {
+		_pairingState.set({ status: 'idle', retryCount: 0, maxRetries: PAIRING_MAX_RETRIES });
 	}
 });
 

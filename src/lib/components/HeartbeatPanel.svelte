@@ -247,22 +247,19 @@
 
 	<!-- Config Edit Dialog -->
 	{#if showConfigEdit}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-			onclick={() => {
-				showConfigEdit = false;
+			role="dialog"
+			aria-modal="true"
+			aria-label="Edit heartbeat config"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) showConfigEdit = false;
 			}}
 			onkeydown={(e) => {
 				if (e.key === 'Escape') showConfigEdit = false;
 			}}
 		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<div
-				class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5"
-				onclick={(e) => e.stopPropagation()}
-			>
+			<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5">
 				<h3 class="mb-4 text-sm font-medium text-white">Edit Heartbeat Config</h3>
 				<div class="space-y-3">
 					<div class="grid grid-cols-2 gap-3">

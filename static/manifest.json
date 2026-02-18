@@ -2,13 +2,19 @@
 	"name": "Falcon Dashboard",
 	"short_name": "Falcon",
 	"description": "Web dashboard for the OpenClaw AI platform",
+	"id": "/",
 	"start_url": "/",
+	"scope": "/",
 	"display": "standalone",
+	"display_override": ["standalone"],
 	"orientation": "any",
 	"theme_color": "#030712",
 	"background_color": "#030712",
 	"categories": ["productivity", "utilities"],
 	"prefer_related_applications": false,
+	"edge_side_panel": {
+		"preferred_width": 400
+	},
 	"icons": [
 		{
 			"src": "/icon-192.svg",

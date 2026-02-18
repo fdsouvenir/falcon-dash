@@ -1,10 +1,17 @@
 <script lang="ts">
-	import { connection, snapshot, reconnector, correlator } from '$lib/stores/gateway.js';
+	import {
+		connection,
+		snapshot,
+		reconnector,
+		correlator,
+		pairingState
+	} from '$lib/stores/gateway.js';
 	import { tickHealth } from '$lib/stores/diagnostics.js';
 	import { gatewayToken } from '$lib/stores/token.js';
 	import { connectToGateway } from '$lib/stores/gateway.js';
 	import { gatewayUrl } from '$lib/stores/token.js';
 	import type { ConnectionState } from '$lib/gateway/types.js';
+	import type { PairingState } from '$lib/stores/gateway.js';
 	import type { ReconnectorMetrics } from '$lib/gateway/reconnector.js';
 	import type { CorrelatorMetrics } from '$lib/gateway/correlator.js';
 	import DiagnosticPanel from './DiagnosticPanel.svelte';
@@ -32,6 +39,7 @@
 		lastErrorAt: null
 	});
 	let lastTickAt = $state<number | null>(null);
+	let pairing = $state<PairingState>({ status: 'idle', retryCount: 0, maxRetries: 10 });
 
 	// Subscribe to connection state
 	$effect(() => {
@@ -78,6 +86,14 @@
 		return unsub;
 	});
 
+	// Subscribe to pairing state
+	$effect(() => {
+		const unsub = pairingState.subscribe((s) => {
+			pairing = s;
+		});
+		return unsub;
+	});
+
 	// Update current time every second for uptime calculation
 	$effect(() => {
 		if (connectionState === 'READY' || connectionState === 'RECONNECTING') {
@@ -90,6 +106,7 @@
 
 	function statusColor(state: ConnectionState): string {
 		if (state === 'READY') return 'bg-green-500';
+		if (state === 'PAIRING_REQUIRED') return 'bg-yellow-500 animate-pulse';
 		if (state === 'RECONNECTING' || state === 'CONNECTING' || state === 'AUTHENTICATING')
 			return 'bg-yellow-500';
 		return 'bg-red-500';
@@ -291,7 +308,18 @@
 				<!-- Pairing required recovery -->
 				{#if connectionState === 'PAIRING_REQUIRED'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
-						<p class="text-gray-400 mb-2">Approve device in gateway admin</p>
+						<p class="text-yellow-400 mb-1">
+							{#if pairing.status === 'waiting'}
+								Waiting for approval ({pairing.retryCount}/{pairing.maxRetries})...
+							{:else if pairing.status === 'timeout'}
+								Pairing retries exhausted
+							{:else}
+								Approve device in gateway admin
+							{/if}
+						</p>
+						<p class="text-xs text-gray-400 mb-2">
+							Run <code class="font-mono">openclaw devices approve</code>
+						</p>
 						<button
 							class="w-full rounded bg-yellow-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-yellow-700 transition-colors"
 							onclick={handleRetryConnection}

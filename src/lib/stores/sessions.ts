@@ -1,5 +1,6 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
+import { isDiscordConnected } from '$lib/stores/discord.js';
 
 export interface ChatSessionInfo {
 	sessionKey: string;
@@ -99,6 +100,37 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 			}
 			return b.updatedAt - a.updatedAt;
 		});
+	}
+);
+
+export interface SessionGroup {
+	id: string;
+	label: string;
+	sessions: ChatSessionInfo[];
+}
+
+export const groupedSessions: Readable<SessionGroup[]> = derived(
+	[filteredSessions, isDiscordConnected],
+	([$sessions, $discord]) => {
+		const general = $sessions.filter((s) => s.isGeneral);
+		const discord = $sessions.filter((s) => !s.isGeneral && s.channel);
+		const chats = $sessions.filter((s) => !s.isGeneral && !s.channel);
+
+		const groups: SessionGroup[] = [];
+
+		if (general.length > 0) {
+			groups.push({ id: 'general', label: 'General', sessions: general });
+		}
+
+		if ($discord && discord.length > 0) {
+			groups.push({ id: 'discord', label: 'Discord Channels', sessions: discord });
+		}
+
+		if (chats.length > 0) {
+			groups.push({ id: 'chats', label: 'Chats', sessions: chats });
+		}
+
+		return groups;
 	}
 );
 
