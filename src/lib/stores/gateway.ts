@@ -16,8 +16,6 @@ import {
 import { CanvasStore } from '$lib/stores/canvas.js';
 import { initA2UIBridge, getCanvasHostUrl } from '$lib/canvas/a2ui-bridge.js';
 import { gatewayUrl, gatewayToken } from '$lib/stores/token.js';
-import { checkPMAvailability } from '$lib/stores/pm-store.js';
-
 // Stable per-tab instance ID — survives reconnects and HMR within the same tab,
 // but each new tab gets its own ID. Prevents stale virtual canvas node accumulation.
 function getStableTabInstanceId(): string {
@@ -40,9 +38,6 @@ export const eventBus = new EventBus();
 export const snapshot = new SnapshotStore();
 export const reconnector = new Reconnector(connection, eventBus);
 export const canvasStore = new CanvasStore();
-
-// PM feature detection — reactive subscription to snapshot.features
-checkPMAvailability();
 
 // Re-export for convenient access
 export { diagnosticLog };

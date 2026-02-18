@@ -1,5 +1,5 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
 
 // Re-export types for UI components
 export interface Domain {
@@ -27,6 +27,11 @@ export interface Milestone {
 	created_at: number;
 }
 
+interface PaginatedResponse<T> {
+	items: T[];
+	total: number;
+}
+
 // Internal stores
 const _domains: Writable<Domain[]> = writable([]);
 const _focuses: Writable<Focus[]> = writable([]);
@@ -46,8 +51,8 @@ export async function loadDomains(): Promise<void> {
 	_loading.set(true);
 	_error.set(null);
 	try {
-		const result = await call<{ domains: Domain[] }>('pm.domain.list');
-		_domains.set(result.domains ?? []);
+		const result = await pmGet<PaginatedResponse<Domain>>('/api/pm/domains', { limit: '500' });
+		_domains.set(result.items);
 	} catch (err) {
 		_error.set((err as Error).message);
 		_domains.set([]);
@@ -59,7 +64,7 @@ export async function loadDomains(): Promise<void> {
 export async function getDomain(id: string): Promise<Domain> {
 	_error.set(null);
 	try {
-		return await call<Domain>('pm.domain.get', { id });
+		return await pmGet<Domain>(`/api/pm/domains/${id}`);
 	} catch (err) {
 		_error.set((err as Error).message);
 		throw err;
@@ -73,7 +78,7 @@ export async function createDomain(data: {
 }): Promise<Domain> {
 	_error.set(null);
 	try {
-		const domain = await call<Domain>('pm.domain.create', data as Record<string, unknown>);
+		const domain = await pmPost<Domain>('/api/pm/domains', data);
 		await loadDomains();
 		return domain;
 	} catch (err) {
@@ -88,7 +93,7 @@ export async function updateDomain(
 ): Promise<Domain> {
 	_error.set(null);
 	try {
-		const domain = await call<Domain>('pm.domain.update', { id, ...data });
+		const domain = await pmPatch<Domain>(`/api/pm/domains/${id}`, data);
 		await loadDomains();
 		return domain;
 	} catch (err) {
@@ -100,7 +105,7 @@ export async function updateDomain(
 export async function deleteDomain(id: string): Promise<void> {
 	_error.set(null);
 	try {
-		await call('pm.domain.delete', { id });
+		await pmDelete(`/api/pm/domains/${id}`);
 		await loadDomains();
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -111,7 +116,7 @@ export async function deleteDomain(id: string): Promise<void> {
 export async function reorderDomains(ids: string[]): Promise<void> {
 	_error.set(null);
 	try {
-		await call('pm.domain.reorder', { ids });
+		await pmPost('/api/pm/domains/reorder', { ids });
 		await loadDomains();
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -124,9 +129,10 @@ export async function loadFocuses(domainId?: string): Promise<void> {
 	_loading.set(true);
 	_error.set(null);
 	try {
-		const params = domainId ? { domainId } : undefined;
-		const result = await call<{ focuses: Focus[] }>('pm.focus.list', params);
-		_focuses.set(result.focuses ?? []);
+		const params: Record<string, string> = { limit: '500' };
+		if (domainId) params.domain_id = domainId;
+		const result = await pmGet<PaginatedResponse<Focus>>('/api/pm/focuses', params);
+		_focuses.set(result.items);
 	} catch (err) {
 		_error.set((err as Error).message);
 		_focuses.set([]);
@@ -138,7 +144,7 @@ export async function loadFocuses(domainId?: string): Promise<void> {
 export async function getFocus(id: string): Promise<Focus> {
 	_error.set(null);
 	try {
-		return await call<Focus>('pm.focus.get', { id });
+		return await pmGet<Focus>(`/api/pm/focuses/${id}`);
 	} catch (err) {
 		_error.set((err as Error).message);
 		throw err;
@@ -153,7 +159,7 @@ export async function createFocus(data: {
 }): Promise<Focus> {
 	_error.set(null);
 	try {
-		const focus = await call<Focus>('pm.focus.create', data as Record<string, unknown>);
+		const focus = await pmPost<Focus>('/api/pm/focuses', data);
 		await loadFocuses();
 		return focus;
 	} catch (err) {
@@ -168,7 +174,7 @@ export async function updateFocus(
 ): Promise<Focus> {
 	_error.set(null);
 	try {
-		const focus = await call<Focus>('pm.focus.update', { id, ...data });
+		const focus = await pmPatch<Focus>(`/api/pm/focuses/${id}`, data);
 		await loadFocuses();
 		return focus;
 	} catch (err) {
@@ -180,7 +186,9 @@ export async function updateFocus(
 export async function moveFocus(id: string, newDomainId: string): Promise<Focus> {
 	_error.set(null);
 	try {
-		const focus = await call<Focus>('pm.focus.move', { id, domainId: newDomainId });
+		const focus = await pmPost<Focus>(`/api/pm/focuses/${id}/move`, {
+			domain_id: newDomainId
+		});
 		await loadFocuses();
 		return focus;
 	} catch (err) {
@@ -192,7 +200,7 @@ export async function moveFocus(id: string, newDomainId: string): Promise<Focus>
 export async function deleteFocus(id: string): Promise<void> {
 	_error.set(null);
 	try {
-		await call('pm.focus.delete', { id });
+		await pmDelete(`/api/pm/focuses/${id}`);
 		await loadFocuses();
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -203,7 +211,7 @@ export async function deleteFocus(id: string): Promise<void> {
 export async function reorderFocuses(ids: string[]): Promise<void> {
 	_error.set(null);
 	try {
-		await call('pm.focus.reorder', { ids });
+		await pmPost('/api/pm/focuses/reorder', { ids });
 		await loadFocuses();
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -216,8 +224,10 @@ export async function loadMilestones(): Promise<void> {
 	_loading.set(true);
 	_error.set(null);
 	try {
-		const result = await call<{ milestones: Milestone[] }>('pm.milestone.list');
-		_milestones.set(result.milestones ?? []);
+		const result = await pmGet<PaginatedResponse<Milestone>>('/api/pm/milestones', {
+			limit: '500'
+		});
+		_milestones.set(result.items);
 	} catch (err) {
 		_error.set((err as Error).message);
 		_milestones.set([]);
@@ -229,7 +239,7 @@ export async function loadMilestones(): Promise<void> {
 export async function getMilestone(id: number): Promise<Milestone> {
 	_error.set(null);
 	try {
-		return await call<Milestone>('pm.milestone.get', { id });
+		return await pmGet<Milestone>(`/api/pm/milestones/${id}`);
 	} catch (err) {
 		_error.set((err as Error).message);
 		throw err;
@@ -243,7 +253,7 @@ export async function createMilestone(data: {
 }): Promise<Milestone> {
 	_error.set(null);
 	try {
-		const milestone = await call<Milestone>('pm.milestone.create', data as Record<string, unknown>);
+		const milestone = await pmPost<Milestone>('/api/pm/milestones', data);
 		await loadMilestones();
 		return milestone;
 	} catch (err) {
@@ -258,7 +268,7 @@ export async function updateMilestone(
 ): Promise<Milestone> {
 	_error.set(null);
 	try {
-		const milestone = await call<Milestone>('pm.milestone.update', { id, ...data });
+		const milestone = await pmPatch<Milestone>(`/api/pm/milestones/${id}`, data);
 		await loadMilestones();
 		return milestone;
 	} catch (err) {
@@ -270,49 +280,10 @@ export async function updateMilestone(
 export async function deleteMilestone(id: number): Promise<void> {
 	_error.set(null);
 	try {
-		await call('pm.milestone.delete', { id });
+		await pmDelete(`/api/pm/milestones/${id}`);
 		await loadMilestones();
 	} catch (err) {
 		_error.set((err as Error).message);
 		throw err;
-	}
-}
-
-// Event subscriptions
-let eventUnsub: (() => void) | null = null;
-
-export function subscribeToPMEvents(): void {
-	if (eventUnsub) return;
-
-	const unsubs: Array<() => void> = [];
-
-	unsubs.push(
-		eventBus.on('pm.domain.changed', () => {
-			loadDomains();
-		})
-	);
-
-	unsubs.push(
-		eventBus.on('pm.focus.changed', () => {
-			loadFocuses();
-		})
-	);
-
-	unsubs.push(
-		eventBus.on('pm.milestone.changed', () => {
-			loadMilestones();
-		})
-	);
-
-	eventUnsub = () => {
-		unsubs.forEach((u) => u());
-		eventUnsub = null;
-	};
-}
-
-export function unsubscribeFromPMEvents(): void {
-	if (eventUnsub) {
-		eventUnsub();
-		eventUnsub = null;
 	}
 }

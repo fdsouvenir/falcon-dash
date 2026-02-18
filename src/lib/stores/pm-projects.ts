@@ -1,5 +1,5 @@
 import { writable, readonly, get, type Readable, type Writable } from 'svelte/store';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
 
 export interface Project {
 	id: number;
@@ -33,6 +33,11 @@ export interface Task {
 	last_activity_at: number;
 }
 
+interface PaginatedResponse<T> {
+	items: T[];
+	total: number;
+}
+
 const _projects: Writable<Project[]> = writable([]);
 const _tasks: Writable<Task[]> = writable([]);
 const _currentProject: Writable<Project | null> = writable(null);
@@ -55,18 +60,19 @@ export async function loadProjects(filters?: {
 }): Promise<void> {
 	_projectsLoading.set(true);
 	try {
-		const res = await call<{ projects: Project[] }>(
-			'pm.project.list',
-			filters as Record<string, unknown>
-		);
-		_projects.set(res.projects);
+		const params: Record<string, string | number | undefined> = { limit: '500' };
+		if (filters?.focus_id) params.focus_id = filters.focus_id;
+		if (filters?.status) params.status = filters.status;
+		if (filters?.milestone_id !== undefined) params.milestone_id = filters.milestone_id;
+		const res = await pmGet<PaginatedResponse<Project>>('/api/pm/projects', params);
+		_projects.set(res.items);
 	} finally {
 		_projectsLoading.set(false);
 	}
 }
 
 export async function getProject(id: number): Promise<Project> {
-	const project = await call<Project>('pm.project.get', { id });
+	const project = await pmGet<Project>(`/api/pm/projects/${id}`);
 	_currentProject.set(project);
 	return project;
 }
@@ -80,7 +86,7 @@ export async function createProject(data: {
 	due_date?: string;
 	priority?: string;
 }): Promise<Project> {
-	const project = await call<Project>('pm.project.create', data as Record<string, unknown>);
+	const project = await pmPost<Project>('/api/pm/projects', data);
 	await loadProjects();
 	return project;
 }
@@ -97,14 +103,14 @@ export async function updateProject(
 		focus_id?: string;
 	}
 ): Promise<Project> {
-	const project = await call<Project>('pm.project.update', { id, ...data });
+	const project = await pmPatch<Project>(`/api/pm/projects/${id}`, data);
 	_currentProject.set(project);
 	await loadProjects();
 	return project;
 }
 
 export async function deleteProject(id: number): Promise<void> {
-	await call('pm.project.delete', { id });
+	await pmDelete(`/api/pm/projects/${id}`);
 	const currentValue = get(_currentProject);
 	if (currentValue?.id === id) {
 		_currentProject.set(null);
@@ -120,11 +126,15 @@ export async function loadTasks(filters?: {
 }): Promise<void> {
 	_tasksLoading.set(true);
 	try {
-		const res = await call<{ tasks: Task[] }>('pm.task.list', filters as Record<string, unknown>);
-		_tasks.set(res.tasks);
-		// If filtering by project, also update currentTasks
+		const params: Record<string, string | number | undefined> = { limit: '500' };
+		if (filters?.parent_project_id !== undefined)
+			params.parent_project_id = filters.parent_project_id;
+		if (filters?.parent_task_id !== undefined) params.parent_task_id = filters.parent_task_id;
+		if (filters?.status) params.status = filters.status;
+		const res = await pmGet<PaginatedResponse<Task>>('/api/pm/tasks', params);
+		_tasks.set(res.items);
 		if (filters?.parent_project_id !== undefined) {
-			_currentTasks.set(res.tasks);
+			_currentTasks.set(res.items);
 		}
 	} finally {
 		_tasksLoading.set(false);
@@ -132,8 +142,7 @@ export async function loadTasks(filters?: {
 }
 
 export async function getTask(id: number): Promise<Task> {
-	const task = await call<Task>('pm.task.get', { id });
-	return task;
+	return pmGet<Task>(`/api/pm/tasks/${id}`);
 }
 
 export async function createTask(data: {
@@ -146,7 +155,7 @@ export async function createTask(data: {
 	priority?: string;
 	milestone_id?: number;
 }): Promise<Task> {
-	const task = await call<Task>('pm.task.create', data as Record<string, unknown>);
+	const task = await pmPost<Task>('/api/pm/tasks', data);
 	if (data.parent_project_id !== undefined) {
 		await loadTasks({ parent_project_id: data.parent_project_id });
 	} else {
@@ -166,8 +175,7 @@ export async function updateTask(
 		milestone_id?: number;
 	}
 ): Promise<Task> {
-	const task = await call<Task>('pm.task.update', { id, ...data });
-	// Refresh current tasks if we have a project context
+	const task = await pmPatch<Task>(`/api/pm/tasks/${id}`, data);
 	const currentValue = get(_currentProject);
 	if (currentValue) {
 		await loadTasks({ parent_project_id: currentValue.id });
@@ -181,14 +189,13 @@ export async function moveTask(
 	id: number,
 	target: { parent_project_id?: number; parent_task_id?: number }
 ): Promise<Task> {
-	const task = await call<Task>('pm.task.move', { id, ...target });
+	const task = await pmPost<Task>(`/api/pm/tasks/${id}/move`, target);
 	await loadTasks();
 	return task;
 }
 
 export async function reorderTasks(ids: number[]): Promise<void> {
-	await call('pm.task.reorder', { ids });
-	// Refresh current tasks
+	await pmPost('/api/pm/tasks/reorder', { ids });
 	const currentValue = get(_currentProject);
 	if (currentValue) {
 		await loadTasks({ parent_project_id: currentValue.id });
@@ -198,39 +205,11 @@ export async function reorderTasks(ids: number[]): Promise<void> {
 }
 
 export async function deleteTask(id: number): Promise<void> {
-	await call('pm.task.delete', { id });
+	await pmDelete(`/api/pm/tasks/${id}`);
 	const currentValue = get(_currentProject);
 	if (currentValue) {
 		await loadTasks({ parent_project_id: currentValue.id });
 	} else {
 		await loadTasks();
 	}
-}
-
-// Event subscriptions
-let unsubscribers: Array<() => void> = [];
-
-export function subscribeToPMProjectEvents(): () => void {
-	unsubscribeFromPMProjectEvents();
-	unsubscribers.push(
-		eventBus.on('pm.project.changed', async () => {
-			const currentValue = get(_currentProject);
-			if (currentValue) {
-				await getProject(currentValue.id);
-			}
-			await loadProjects();
-		}),
-		eventBus.on('pm.task.changed', async () => {
-			const currentValue = get(_currentProject);
-			if (currentValue) {
-				await loadTasks({ parent_project_id: currentValue.id });
-			}
-		})
-	);
-	return () => unsubscribeFromPMProjectEvents();
-}
-
-export function unsubscribeFromPMProjectEvents(): void {
-	for (const unsub of unsubscribers) unsub();
-	unsubscribers = [];
 }

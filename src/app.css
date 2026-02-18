@@ -1,26 +1,5 @@
 @import 'tailwindcss';
 
-/* Responsive type scale */
-:root {
-	--text-xs: 0.75rem;
-	--text-sm: 0.8125rem;
-	--text-base: 1rem;
-	--text-lg: 1.125rem;
-	--text-xl: 1.25rem;
-	--text-2xl: 1.5rem;
-}
-
-@media (min-width: 768px) {
-	:root {
-		--text-xs: 0.6875rem;
-		--text-sm: 0.75rem;
-		--text-base: 0.9375rem;
-		--text-lg: 1.0625rem;
-		--text-xl: 1.1875rem;
-		--text-2xl: 1.375rem;
-	}
-}
-
 /* Safe area insets for notch phones */
 :root {
 	--safe-top: env(safe-area-inset-top, 0px);

@@ -1,4 +1,4 @@
-import { call } from '$lib/stores/gateway.js';
+import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
 
 // Re-export types for UI
 export interface Comment {
@@ -100,13 +100,19 @@ export interface PMStats {
 	recentActivity: number;
 }
 
+interface PaginatedResponse<T> {
+	items: T[];
+	total: number;
+}
+
 // --- COMMENT methods ---
 export async function listComments(targetType: string, targetId: number): Promise<Comment[]> {
-	const res = await call<{ comments: Comment[] }>('pm.comment.list', {
-		targetType,
-		targetId
+	const res = await pmGet<PaginatedResponse<Comment>>('/api/pm/comments', {
+		target_type: targetType,
+		target_id: targetId,
+		limit: '500'
 	});
-	return res.comments;
+	return res.items;
 }
 export async function createComment(data: {
 	target_type: string;
@@ -114,37 +120,38 @@ export async function createComment(data: {
 	body: string;
 	author: string;
 }): Promise<Comment> {
-	return call<Comment>('pm.comment.create', data as unknown as Record<string, unknown>);
+	return pmPost<Comment>('/api/pm/comments', data);
 }
 export async function updateComment(id: number, body: string): Promise<Comment> {
-	return call<Comment>('pm.comment.update', { id, body });
+	return pmPatch<Comment>(`/api/pm/comments/${id}`, { body });
 }
 export async function deleteComment(id: number): Promise<void> {
-	await call('pm.comment.delete', { id });
+	await pmDelete(`/api/pm/comments/${id}`);
 }
 
 // --- BLOCK methods ---
 export async function listBlocks(
 	taskId: number
 ): Promise<{ blocking: Block[]; blockedBy: Block[] }> {
-	return call<{ blocking: Block[]; blockedBy: Block[] }>('pm.block.list', {
-		taskId
+	return pmGet<{ blocking: Block[]; blockedBy: Block[] }>('/api/pm/blocks', {
+		task_id: taskId
 	});
 }
 export async function createBlock(blockerId: number, blockedId: number): Promise<Block> {
-	return call<Block>('pm.block.create', { blockerId, blockedId });
+	return pmPost<Block>('/api/pm/blocks', { blocker_id: blockerId, blocked_id: blockedId });
 }
 export async function deleteBlock(blockerId: number, blockedId: number): Promise<void> {
-	await call('pm.block.delete', { blockerId, blockedId });
+	await pmDelete('/api/pm/blocks', { blocker_id: blockerId, blocked_id: blockedId });
 }
 
 // --- ATTACHMENT methods ---
 export async function listAttachments(targetType: string, targetId: number): Promise<Attachment[]> {
-	const res = await call<{ attachments: Attachment[] }>('pm.attachment.list', {
-		targetType,
-		targetId
+	const res = await pmGet<PaginatedResponse<Attachment>>('/api/pm/attachments', {
+		target_type: targetType,
+		target_id: targetId,
+		limit: '500'
 	});
-	return res.attachments;
+	return res.items;
 }
 export async function createAttachment(data: {
 	target_type: string;
@@ -154,38 +161,38 @@ export async function createAttachment(data: {
 	description?: string;
 	added_by: string;
 }): Promise<Attachment> {
-	return call<Attachment>('pm.attachment.create', data as unknown as Record<string, unknown>);
+	return pmPost<Attachment>('/api/pm/attachments', data);
 }
 export async function deleteAttachment(id: number): Promise<void> {
-	await call('pm.attachment.delete', { id });
+	await pmDelete(`/api/pm/attachments/${id}`);
 }
 
 // --- ACTIVITY methods ---
 export async function listActivities(projectId: number, limit?: number): Promise<Activity[]> {
-	const res = await call<{ activities: Activity[] }>('pm.activity.list', {
-		projectId,
+	const res = await pmGet<PaginatedResponse<Activity>>('/api/pm/activities', {
+		project_id: projectId,
 		limit: limit ?? 50
 	});
-	return res.activities;
+	return res.items;
 }
 
 // --- CONTEXT methods (structured data) ---
 export async function getDashboardContext(): Promise<DashboardContext> {
-	return call<DashboardContext>('pm.context.dashboard');
+	return pmGet<DashboardContext>('/api/pm/context');
 }
 export async function getDomainContext(domainId: string): Promise<DomainContext> {
-	return call<DomainContext>('pm.context.domain', { domainId });
+	return pmGet<DomainContext>(`/api/pm/context/domain/${domainId}`);
 }
 export async function getProjectContext(projectId: number): Promise<ProjectContext> {
-	return call<ProjectContext>('pm.context.project', { projectId });
+	return pmGet<ProjectContext>(`/api/pm/context/project/${projectId}`);
 }
 
 // --- AI CONTEXT methods (markdown summaries) ---
 export async function getAIProjectContext(projectId: number): Promise<AIProjectContext> {
-	return call<AIProjectContext>('pm.context.project', { projectId });
+	return pmGet<AIProjectContext>(`/api/pm/context/project/${projectId}`);
 }
 export async function getAIDashboardContext(): Promise<AIDashboardContext> {
-	return call<AIDashboardContext>('pm.context.dashboard');
+	return pmGet<AIDashboardContext>('/api/pm/context');
 }
 
 // --- SEARCH ---
@@ -198,10 +205,12 @@ export async function searchPM(
 		offset?: number;
 	}
 ): Promise<PMSearchResult[]> {
-	const res = await call<{ results: PMSearchResult[] }>('pm.search', {
-		query,
-		...options
-	} as Record<string, unknown>);
+	const params: Record<string, string | number | undefined> = { q: query };
+	if (options?.entityType) params.entity_type = options.entityType;
+	if (options?.projectId !== undefined) params.project_id = options.projectId;
+	if (options?.limit !== undefined) params.limit = options.limit;
+	if (options?.offset !== undefined) params.offset = options.offset;
+	const res = await pmGet<{ results: PMSearchResult[] }>('/api/pm/search', params);
 	return res.results;
 }
 
@@ -211,17 +220,17 @@ export async function bulkUpdateStatus(
 	entityType: 'project' | 'task',
 	status: string
 ): Promise<void> {
-	await call('pm.bulk.update', { ids, entityType, fields: { status } });
+	await pmPost('/api/pm/bulk', { action: 'update', ids, entityType, fields: { status } });
 }
 export async function bulkMove(
 	ids: number[],
 	entityType: 'project' | 'task',
 	target: Record<string, unknown>
 ): Promise<void> {
-	await call('pm.bulk.move', { ids, entityType, target });
+	await pmPost('/api/pm/bulk', { action: 'move', ids, entityType, target });
 }
 
 // --- STATS ---
 export async function getPMStats(): Promise<PMStats> {
-	return call<PMStats>('pm.stats');
+	return pmGet<PMStats>('/api/pm/stats');
 }
