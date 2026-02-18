@@ -81,7 +81,7 @@
 			<!-- Base layer: AgentRail + ChatList -->
 			<div class="absolute inset-0 flex">
 				<AgentRail />
-				<div class="flex-1 overflow-y-auto">
+				<div class="flex-1 overflow-y-auto pl-1.5">
 					<ChatList variant="mobile" onselect={() => openMobileChat()} />
 				</div>
 			</div>
