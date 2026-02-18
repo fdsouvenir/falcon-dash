@@ -15,7 +15,9 @@ export default ts.config(
 			globals: {
 				...globals.browser,
 				...globals.node,
-				__APP_VERSION__: 'readonly'
+				__APP_VERSION__: 'readonly',
+				__SENTRY_DSN__: 'readonly',
+				__SENTRY_ENVIRONMENT__: 'readonly'
 			}
 		}
 	},

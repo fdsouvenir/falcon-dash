@@ -48,9 +48,13 @@
 		window.location.reload();
 	}
 
-	function reportError() {
-		// TODO: implement remote error reporting
-		console.log('[ErrorBoundary] Report error:', { errorCode, errorDetails });
+	async function reportError() {
+		try {
+			const Sentry = await import('@sentry/sveltekit');
+			Sentry.captureException(new Error(`[${errorCode}] ${errorDetails}`));
+		} catch {
+			console.log('[ErrorBoundary] Sentry not available, error not reported');
+		}
 		alert('Error reported. Thank you!');
 	}
 

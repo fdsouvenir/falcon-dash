@@ -53,6 +53,8 @@ docker build -t falcon-dash .
 docker run -p 3000:3000 falcon-dash
 ```
 
+For production deployment, reverse proxy setup, and Docker Compose examples, see the [Deployment Guide](docs/deployment.md).
+
 ## Gateway Connection
 
 Falcon Dash connects to the OpenClaw Gateway using WebSocket protocol v3.

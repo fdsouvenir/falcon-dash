@@ -10,7 +10,9 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		define: {
-			__APP_VERSION__: JSON.stringify(pkg.version)
+			__APP_VERSION__: JSON.stringify(pkg.version),
+			__SENTRY_DSN__: JSON.stringify(envVars.SENTRY_DSN || ''),
+			__SENTRY_ENVIRONMENT__: JSON.stringify(envVars.SENTRY_ENVIRONMENT || 'production')
 		},
 		plugins: [tailwindcss(), sveltekit()],
 		server: {
