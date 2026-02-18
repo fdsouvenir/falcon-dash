@@ -18,7 +18,7 @@ export const commands: SlashCommand[] = [
 		description: 'Start a new session',
 		args: '[model]',
 		handler: async (args, ctx) => {
-			const params: Record<string, unknown> = { sessionKey: ctx.sessionKey };
+			const params: Record<string, unknown> = { key: ctx.sessionKey };
 			if (args.trim()) params.model = args.trim();
 			await call('sessions.reset', params);
 		}
@@ -44,7 +44,7 @@ export const commands: SlashCommand[] = [
 		description: 'Compact conversation history',
 		args: '[instructions]',
 		handler: async (args, ctx) => {
-			const params: Record<string, unknown> = { sessionKey: ctx.sessionKey };
+			const params: Record<string, unknown> = { key: ctx.sessionKey };
 			if (args.trim()) params.instructions = args.trim();
 			await call('sessions.compact', params);
 		}

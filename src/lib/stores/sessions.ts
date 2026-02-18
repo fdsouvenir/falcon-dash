@@ -11,6 +11,10 @@ export interface ChatSessionInfo {
 	isGeneral: boolean;
 	kind: string;
 	channel?: string;
+	model?: string;
+	totalTokens?: number;
+	contextTokens?: number;
+	ageMs?: number;
 }
 
 const ACTIVE_SESSION_STORAGE_KEY = 'falcon-dash:activeSessionKey';
@@ -113,8 +117,8 @@ export const groupedSessions: Readable<SessionGroup[]> = derived(
 	[filteredSessions, isDiscordConnected],
 	([$sessions, $discord]) => {
 		const general = $sessions.filter((s) => s.isGeneral);
-		const discord = $sessions.filter((s) => !s.isGeneral && s.channel);
-		const chats = $sessions.filter((s) => !s.isGeneral && !s.channel);
+		const discord = $sessions.filter((s) => !s.isGeneral && s.channel && s.channel !== 'webchat');
+		const chats = $sessions.filter((s) => !s.isGeneral && (!s.channel || s.channel === 'webchat'));
 
 		const groups: SessionGroup[] = [];
 
@@ -136,22 +140,25 @@ export const groupedSessions: Readable<SessionGroup[]> = derived(
 
 export async function loadSessions(): Promise<void> {
 	try {
-		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {
-			kinds: ['group']
-		});
+		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
 		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => ({
 			sessionKey: (s.sessionKey ?? s.key ?? '') as string,
-			displayName: (s.displayName ?? s.name ?? 'Untitled') as string,
+			displayName: (s.label ?? s.displayName ?? s.name ?? 'Untitled') as string,
 			createdAt: (s.createdAt ?? 0) as number,
 			updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
 			unreadCount: (s.unreadCount ?? 0) as number,
-			isGeneral: (s.isGeneral ?? s.sessionKey === 'general') as boolean,
+			isGeneral: (s.isGeneral ??
+				String(s.sessionKey ?? s.key ?? '').endsWith(':general')) as boolean,
 			kind: (s.kind ?? 'group') as string,
-			channel: s.channel as string | undefined
+			channel: s.channel as string | undefined,
+			model: s.model as string | undefined,
+			totalTokens: s.totalTokens as number | undefined,
+			contextTokens: s.contextTokens as number | undefined,
+			ageMs: s.ageMs as number | undefined
 		}));
 		_sessions.set(parsed);
-	} catch {
-		// Keep existing sessions on error
+	} catch (err) {
+		console.warn('[sessions] loadSessions failed:', err);
 	}
 }
 
@@ -198,37 +205,39 @@ export async function createSession(label?: string, channel?: string): Promise<s
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:group:${crypto.randomUUID()}`;
 	const displayName = label || uniqueLabel('New Chat', get(_sessions));
-	const now = Date.now();
 
-	// Optimistic update
-	_sessions.update((list) => [
-		...list,
-		{
-			sessionKey,
-			displayName,
-			createdAt: now,
-			updatedAt: now,
-			unreadCount: 0,
-			isGeneral: false,
-			kind: 'group',
-			channel
-		}
-	]);
-
-	// Set as active
+	// Set as active immediately so UI switches
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
 
-	// Create on server
-	const patchParams: Record<string, unknown> = { key: sessionKey, label: displayName };
-	if (channel) patchParams.channel = channel;
-	await call('sessions.patch', patchParams);
+	// Create on server, then refresh authoritative list
+	try {
+		const patchParams: Record<string, unknown> = { key: sessionKey, label: displayName };
+		if (channel) patchParams.channel = channel;
+		await call('sessions.patch', patchParams);
+		await loadSessions();
+	} catch (err) {
+		// Revert active session on failure
+		_activeSessionKey.set(null);
+		persistSessionKey(null);
+		console.warn('[sessions] createSession failed:', err);
+		throw err;
+	}
 
 	return sessionKey;
 }
 
 // Subscribe to session events for live updates
 let unsubscribers: Array<() => void> = [];
+let _loadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedLoadSessions(): void {
+	if (_loadDebounceTimer) clearTimeout(_loadDebounceTimer);
+	_loadDebounceTimer = setTimeout(() => {
+		_loadDebounceTimer = null;
+		loadSessions();
+	}, 200);
+}
 
 export function subscribeToEvents(): void {
 	unsubscribeFromEvents();
@@ -237,7 +246,7 @@ export function subscribeToEvents(): void {
 			const action = payload.action as string;
 			const sessionKey = payload.sessionKey as string;
 			if (action === 'created' || action === 'updated') {
-				loadSessions(); // Refresh full list
+				debouncedLoadSessions();
 			} else if (action === 'deleted') {
 				_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
 			}

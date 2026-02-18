@@ -7,7 +7,6 @@ import type {
 	ToolResultEvent
 } from '$lib/gateway/stream.js';
 import { call, eventBus, connection, setCanvasActiveRunId } from '$lib/stores/gateway.js';
-import { renameSession } from '$lib/stores/sessions.js';
 
 // Message types
 export interface ChatMessage {
@@ -443,15 +442,6 @@ export function createChatSession(sessionKey: string) {
 			_messages.update((msgs) =>
 				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
 			);
-
-			// Auto-title session from first message
-			if (
-				!message.startsWith('/') &&
-				get(_messages).filter((m) => m.role === 'user').length === 1
-			) {
-				const title = message.length > 50 ? message.slice(0, 47) + '...' : message;
-				renameSession(sessionKey, title).catch(() => {});
-			}
 
 			// Notify stream manager of ack
 			streamManager.onAck(runId, sessionKey);
