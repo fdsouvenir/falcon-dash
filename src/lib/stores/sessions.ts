@@ -138,24 +138,54 @@ export const groupedSessions: Readable<SessionGroup[]> = derived(
 	}
 );
 
+function originLabel(s: Record<string, unknown>): string | undefined {
+	const origin = s.origin as Record<string, unknown> | undefined;
+	return origin?.label as string | undefined;
+}
+
 export async function loadSessions(): Promise<void> {
 	try {
 		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
-		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => ({
-			sessionKey: (s.sessionKey ?? s.key ?? '') as string,
-			displayName: (s.label ?? s.displayName ?? s.name ?? 'Untitled') as string,
-			createdAt: (s.createdAt ?? 0) as number,
-			updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
-			unreadCount: (s.unreadCount ?? 0) as number,
-			isGeneral: (s.isGeneral ??
-				String(s.sessionKey ?? s.key ?? '').endsWith(':general')) as boolean,
-			kind: (s.kind ?? 'group') as string,
-			channel: s.channel as string | undefined,
-			model: s.model as string | undefined,
-			totalTokens: s.totalTokens as number | undefined,
-			contextTokens: s.contextTokens as number | undefined,
-			ageMs: s.ageMs as number | undefined
-		}));
+		const labelless = new Set<string>();
+		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => {
+			const hasLabel = typeof s.label === 'string' && s.label.length > 0;
+			const displayName = (s.label ?? originLabel(s) ?? s.name ?? 'Untitled') as string;
+			const sessionKey = (s.sessionKey ?? s.key ?? '') as string;
+			if (!hasLabel) labelless.add(sessionKey);
+			return {
+				sessionKey,
+				displayName,
+				createdAt: (s.createdAt ?? 0) as number,
+				updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
+				unreadCount: (s.unreadCount ?? 0) as number,
+				isGeneral: (s.isGeneral ??
+					String(s.sessionKey ?? s.key ?? '').endsWith(':general')) as boolean,
+				kind: (s.kind ?? 'group') as string,
+				channel: s.channel as string | undefined,
+				model: s.model as string | undefined,
+				totalTokens: s.totalTokens as number | undefined,
+				contextTokens: s.contextTokens as number | undefined,
+				ageMs: s.ageMs as number | undefined
+			};
+		});
+
+		// Disambiguate sessions sharing the same origin-based display name
+		const nameCounts = new Map<string, number>();
+		for (const s of parsed) {
+			if (!labelless.has(s.sessionKey)) continue;
+			nameCounts.set(s.displayName, (nameCounts.get(s.displayName) ?? 0) + 1);
+		}
+		for (const [name, count] of nameCounts) {
+			if (count <= 1) continue;
+			let idx = 1;
+			for (const s of parsed) {
+				if (labelless.has(s.sessionKey) && s.displayName === name) {
+					s.displayName = `${name} ${idx}`;
+					idx++;
+				}
+			}
+		}
+
 		_sessions.set(parsed);
 	} catch (err) {
 		console.warn('[sessions] loadSessions failed:', err);
