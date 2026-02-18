@@ -105,7 +105,7 @@
 		</main>
 	{/if}
 
-	<BottomTabBar onmore={() => (moreOpen = true)} hidden={isChatRoute && chatOpen} />
+	<BottomTabBar onmore={() => (moreOpen = true)} />
 
 	<BottomSheet open={moreOpen} onclose={() => (moreOpen = false)}>
 		<MoreSheet />
