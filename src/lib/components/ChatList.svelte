@@ -14,9 +14,24 @@
 		type SessionGroup
 	} from '$lib/stores/sessions.js';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { call } from '$lib/stores/gateway.js';
 	import CreateChatDialog from './CreateChatDialog.svelte';
 
-	let { onselect }: { onselect?: () => void } = $props();
+	let { onselect, variant = 'desktop' }: { onselect?: () => void; variant?: 'desktop' | 'mobile' } =
+		$props();
+
+	let agentName = $state('Agent');
+
+	$effect(() => {
+		if (variant !== 'mobile') return;
+		call<{ name: string; description?: string }>('agent-identity')
+			.then((identity) => {
+				agentName = identity.name || 'Agent';
+			})
+			.catch(() => {
+				agentName = 'Agent';
+			});
+	});
 
 	let groups = $state<SessionGroup[]>([]);
 	let activeKey = $state<string | null>(null);
@@ -163,29 +178,85 @@
 </script>
 
 <div class="flex flex-col">
-	<!-- New Chat button -->
-	<div class="px-2 pb-2">
-		<button
-			onclick={handleNewChat}
-			class="flex w-full items-center justify-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-		>
-			<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+	{#if variant === 'mobile'}
+		<!-- Mobile: Agent name header -->
+		<div class="flex items-center gap-1 px-3 pb-2 pt-3">
+			<span class="text-base font-bold text-white">{agentName}</span>
+			<svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
 			</svg>
-			New Chat
-		</button>
-	</div>
+		</div>
 
-	<!-- Search -->
-	<div class="px-2 pb-2">
-		<input
-			type="text"
-			value={query}
-			oninput={handleSearch}
-			placeholder="Search chats..."
-			class="w-full rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-		/>
-	</div>
+		<!-- Mobile: Search + New button row -->
+		<div class="flex items-center gap-2 px-3 pb-2">
+			<div class="relative flex-1">
+				<svg
+					class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+				<input
+					type="text"
+					value={query}
+					oninput={handleSearch}
+					placeholder="Search"
+					class="w-full rounded-full bg-gray-900 py-1.5 pl-8 pr-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-700"
+				/>
+			</div>
+			<button
+				onclick={handleNewChat}
+				class="flex shrink-0 items-center gap-1 rounded-full bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+			>
+				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 4v16m8-8H4"
+					/>
+				</svg>
+				New
+			</button>
+		</div>
+	{:else}
+		<!-- Desktop: existing layout -->
+		<!-- New Chat button -->
+		<div class="px-2 pb-2">
+			<button
+				onclick={handleNewChat}
+				class="flex w-full items-center justify-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+			>
+				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 4v16m8-8H4"
+					/>
+				</svg>
+				New Chat
+			</button>
+		</div>
+
+		<!-- Search -->
+		<div class="px-2 pb-2">
+			<input
+				type="text"
+				value={query}
+				oninput={handleSearch}
+				placeholder="Search chats..."
+				class="w-full rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+			/>
+		</div>
+	{/if}
 
 	<!-- Session list (grouped) -->
 	<div class="flex-1 overflow-y-auto">
@@ -285,7 +356,9 @@
 				role="button"
 				tabindex="0"
 			>
-				{session.displayName}
+				{#if variant === 'mobile' && !session.isGeneral}<span class="text-gray-500"
+						>#
+					</span>{/if}{session.displayName}
 			</span>
 			{#if session.channel}
 				<span class="text-indigo-400" title="Synced with Discord">

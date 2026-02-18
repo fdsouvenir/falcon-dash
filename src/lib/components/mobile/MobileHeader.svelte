@@ -64,7 +64,7 @@
 
 	let title = $derived(() => {
 		if (isChatRoute && chatOpen) return sessionName();
-		if (isChatRoute) return 'Chats';
+		if (isChatRoute) return 'Falcon Dash';
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
 

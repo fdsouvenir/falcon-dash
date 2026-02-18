@@ -82,7 +82,7 @@
 			<div class="absolute inset-0 flex">
 				<AgentRail />
 				<div class="flex-1 overflow-y-auto">
-					<ChatList onselect={() => openMobileChat()} />
+					<ChatList variant="mobile" onselect={() => openMobileChat()} />
 				</div>
 			</div>
 

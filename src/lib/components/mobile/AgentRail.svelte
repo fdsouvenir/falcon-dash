@@ -17,7 +17,9 @@
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static route -->
-<div class="flex w-14 shrink-0 flex-col items-center gap-2 bg-gray-950 pb-3 pt-3">
+<div
+	class="flex w-14 shrink-0 flex-col items-center gap-2 border-r border-gray-800 bg-gray-900 pb-3 pt-3"
+>
 	<!-- Active agent icon -->
 	<div class="relative">
 		<!-- Active pill indicator (left edge) -->
