@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { flip } from 'svelte/animate';
-	import { dndzone, SHADOW_ITEM_MARKER_PROPERTY_NAME } from 'svelte-dnd-action';
 	import { usePan, type GestureCustomEvent } from 'svelte-gestures';
 	import {
 		filteredSessions,
@@ -11,8 +9,8 @@
 		renameSession,
 		deleteSession,
 		createSessionOptimistic,
-		reorderSessions,
-		setManualOrder,
+		togglePin,
+		pinnedSessions,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
 	import { call } from '$lib/stores/gateway.js';
@@ -56,10 +54,8 @@
 			});
 	});
 
-	// DnD items — need `id` field for svelte-dnd-action
-	type DndSession = ChatSessionInfo & { id: string };
-	let dndItems = $state<DndSession[]>([]);
-	const FLIP_MS = 200;
+	let items = $state<ChatSessionInfo[]>([]);
+	let pinned = $state<string[]>([]);
 
 	let activeKey = $state<string | null>(null);
 	let query = $state('');
@@ -78,7 +74,7 @@
 	let isPanning = $state(false);
 	let panKey = $state<string | null>(null);
 	const SWIPE_THRESHOLD = 60;
-	const ACTION_WIDTH = 120;
+	const ACTION_WIDTH = 180;
 
 	// Delete confirmation state
 	let deleteConfirmSession = $state<ChatSessionInfo | null>(null);
@@ -137,7 +133,13 @@
 
 	$effect(() => {
 		const unsub = filteredSessions.subscribe((v) => {
-			dndItems = v.map((s) => ({ ...s, id: s.sessionKey }));
+			items = v;
+		});
+		return unsub;
+	});
+	$effect(() => {
+		const unsub = pinnedSessions.subscribe((v) => {
+			pinned = v;
 		});
 		return unsub;
 	});
@@ -231,18 +233,6 @@
 
 	function handleCreateCancel() {
 		showNewChatDialog = false;
-	}
-
-	// svelte-dnd-action handlers
-	function handleConsider(e: CustomEvent<{ items: DndSession[] }>) {
-		dndItems = e.detail.items;
-	}
-
-	async function handleFinalize(e: CustomEvent<{ items: DndSession[] }>) {
-		dndItems = e.detail.items;
-		const keys = dndItems.map((s) => s.sessionKey);
-		setManualOrder(keys);
-		await reorderSessions(keys);
 	}
 
 	function createPanProps(key: string) {
@@ -340,31 +330,26 @@
 	{/if}
 
 	<!-- Session list -->
-	<div
-		class="flex-1 overflow-y-auto"
-		use:dndzone={{
-			items: dndItems,
-			flipDurationMs: FLIP_MS,
-			dropTargetStyle: {},
-			morphDisabled: true,
-			delayTouchStart: 200
-		}}
-		onconsider={handleConsider}
-		onfinalize={handleFinalize}
-	>
-		{#each dndItems as session (session.id)}
+	<div class="flex-1 overflow-y-auto">
+		{#each items as session (session.sessionKey)}
 			{@const isOpen = swipedKey === session.sessionKey}
 			{@const offset = isOpen ? swipeOffset : 0}
-			{@const isShadow = SHADOW_ITEM_MARKER_PROPERTY_NAME in session}
+			{@const isPinned = pinned.includes(session.sessionKey)}
 			{@const panProps = createPanProps(session.sessionKey)}
-			<div
-				class="group relative overflow-hidden rounded"
-				class:opacity-50={isShadow}
-				animate:flip={{ duration: FLIP_MS }}
-			>
+			<div class="group relative overflow-hidden rounded">
 				<!-- Action buttons revealed behind the row -->
 				{#if isOpen}
 					<div class="absolute inset-y-0 right-0 flex items-stretch">
+						<button
+							onclick={() => {
+								closeSwipe();
+								togglePin(session.sessionKey);
+							}}
+							class="flex w-[60px] items-center justify-center bg-amber-600 text-xs font-medium text-white transition-colors hover:bg-amber-500"
+							aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}
+						>
+							{isPinned ? 'Unpin' : 'Pin'}
+						</button>
 						<button
 							onclick={() => {
 								closeSwipe();
@@ -405,19 +390,6 @@
 						? 'none'
 						: 'transform 0.2s ease'}"
 				>
-					<svg
-						class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 8h16M4 16h16"
-						/>
-					</svg>
 					{#if editingKey === session.sessionKey}
 						<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
 						<input
@@ -440,7 +412,12 @@
 								role="button"
 								tabindex="0"
 							>
-								{#if variant === 'mobile'}<span class="text-gray-500"
+								{#if isPinned}<svg
+										class="mr-0.5 inline h-3 w-3 text-amber-500"
+										fill="currentColor"
+										viewBox="0 0 24 24"
+										><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" /></svg
+									>{/if}{#if variant === 'mobile'}<span class="text-gray-500"
 										>#
 									</span>{/if}{session.displayName}
 							</span>
@@ -497,6 +474,17 @@
 					class="pointer-events-none absolute inset-y-0 right-1 hidden items-center gap-0.5 group-hover:flex"
 				>
 					<button
+						onclick={() => togglePin(session.sessionKey)}
+						class="pointer-events-auto rounded p-0.5 transition-colors {isPinned
+							? 'text-amber-500 hover:text-amber-400'
+							: 'text-gray-500 hover:text-amber-400'}"
+						aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}
+					>
+						<svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+							<path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+						</svg>
+					</button>
+					<button
 						onclick={() => startRename(session)}
 						class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-blue-400"
 						aria-label="Rename chat"
@@ -528,7 +516,7 @@
 			</div>
 		{/each}
 
-		{#if dndItems.length === 0 && contentResults.length === 0 && !searching}
+		{#if items.length === 0 && contentResults.length === 0 && !searching}
 			<div class="px-2 py-4 text-center text-xs italic text-gray-500">
 				{query ? 'No matching chats' : 'No chats yet'}
 			</div>

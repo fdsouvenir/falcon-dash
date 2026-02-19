@@ -38,25 +38,25 @@ function persistSessionKey(key: string | null): void {
 	}
 }
 
-const MANUAL_ORDER_STORAGE_KEY = 'falcon-dash:sessionManualOrder';
+const PINNED_SESSIONS_STORAGE_KEY = 'falcon-dash:pinnedSessions';
 
-function loadManualOrder(): string[] {
+function loadPinnedSessions(): string[] {
 	try {
 		if (typeof window === 'undefined') return [];
-		const raw = localStorage.getItem(MANUAL_ORDER_STORAGE_KEY);
+		const raw = localStorage.getItem(PINNED_SESSIONS_STORAGE_KEY);
 		return raw ? JSON.parse(raw) : [];
 	} catch {
 		return [];
 	}
 }
 
-function persistManualOrder(order: string[]): void {
+function persistPinnedSessions(keys: string[]): void {
 	try {
 		if (typeof window === 'undefined') return;
-		if (order.length > 0) {
-			localStorage.setItem(MANUAL_ORDER_STORAGE_KEY, JSON.stringify(order));
+		if (keys.length > 0) {
+			localStorage.setItem(PINNED_SESSIONS_STORAGE_KEY, JSON.stringify(keys));
 		} else {
-			localStorage.removeItem(MANUAL_ORDER_STORAGE_KEY);
+			localStorage.removeItem(PINNED_SESSIONS_STORAGE_KEY);
 		}
 	} catch {
 		// Storage unavailable
@@ -66,38 +66,39 @@ function persistManualOrder(order: string[]): void {
 const _sessions = writable<ChatSessionInfo[]>([]);
 const _activeSessionKey = writable<string | null>(loadPersistedSessionKey());
 const _searchQuery = writable('');
-const _manualOrder = writable<string[]>(loadManualOrder());
+const _pinnedSessions = writable<string[]>(loadPinnedSessions());
 
 export const sessions: Readable<ChatSessionInfo[]> = readonly(_sessions);
 export const activeSessionKey: Readable<string | null> = readonly(_activeSessionKey);
 export const searchQuery = _searchQuery;
-export const manualOrder: Readable<string[]> = readonly(_manualOrder);
+export const pinnedSessions: Readable<string[]> = readonly(_pinnedSessions);
 
-export function setManualOrder(order: string[]): void {
-	_manualOrder.set(order);
-	persistManualOrder(order);
+export function togglePin(sessionKey: string): void {
+	_pinnedSessions.update((keys) => {
+		const next = keys.includes(sessionKey)
+			? keys.filter((k) => k !== sessionKey)
+			: [...keys, sessionKey];
+		persistPinnedSessions(next);
+		return next;
+	});
 }
 
-// Derived: filtered and sorted sessions (excludes automated sessions, by manual order or updatedAt)
+// Derived: filtered and sorted sessions (excludes automated sessions, pinned first then by updatedAt desc)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
-	[_sessions, _searchQuery, _manualOrder],
-	([$sessions, $query, $order]) => {
+	[_sessions, _searchQuery, _pinnedSessions],
+	([$sessions, $query, $pinned]) => {
 		let list = $sessions;
 		list = list.filter((s) => !s.sessionKey.includes(':cron:'));
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
 		}
+		const pinnedSet = new Set($pinned);
 		return list.sort((a, b) => {
-			if ($order.length > 0) {
-				const ai = $order.indexOf(a.sessionKey);
-				const bi = $order.indexOf(b.sessionKey);
-				// Both in manual order — sort by position
-				if (ai !== -1 && bi !== -1) return ai - bi;
-				// Only one in manual order — it comes first
-				if (ai !== -1) return -1;
-				if (bi !== -1) return 1;
-			}
+			const ap = pinnedSet.has(a.sessionKey);
+			const bp = pinnedSet.has(b.sessionKey);
+			if (ap && !bp) return -1;
+			if (!ap && bp) return 1;
 			return b.updatedAt - a.updatedAt;
 		});
 	}
@@ -294,14 +295,6 @@ export function subscribeToEvents(): void {
 export function unsubscribeFromEvents(): void {
 	for (const unsub of unsubscribers) unsub();
 	unsubscribers = [];
-}
-
-export async function reorderSessions(sessionKeys: string[]): Promise<void> {
-	// Persist manual order locally so filteredSessions uses it
-	setManualOrder(sessionKeys);
-	await call('sessions.reorder', { sessionKeys }).catch(() => {
-		// Gateway may not support reorder — local order still works
-	});
 }
 
 /**
