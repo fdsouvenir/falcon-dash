@@ -24,7 +24,7 @@ No test runner is configured. No single-test command exists.
 - **Framework:** SvelteKit with Svelte 5 (runes: `$state`, `$derived`, `$effect`, `$props`)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite` plugin, imported as `@import 'tailwindcss'` in `app.css`)
 - **Language:** TypeScript (strict mode, bundler moduleResolution)
-- **Server DB:** better-sqlite3 (WAL mode) at `~/.openclaw/data/pm.db`
+- **Server DB:** better-sqlite3 (WAL mode) at `~/.openclaw/data/pm.db` (persists via Docker volume mount at `~/.openclaw`)
 - **Markdown:** unified pipeline (remark-parse → remark-gfm → remark-math → rehype → rehype-katex → rehype-sanitize → rehype-stringify) with Shiki syntax highlighting and Mermaid diagrams
 
 ## Code Conventions
@@ -73,11 +73,15 @@ Svelte writable/readable stores that provide reactive state to components. Key s
 SvelteKit server code using better-sqlite3:
 
 - **`pm/`** — Project management CRUD, search, validation, events, stats, bulk operations, context. Schema: domains → focuses → projects → tasks (with subtasks), plus milestones, comments, blocks, activities, attachments, sync_mappings.
+  - **`context-generator.ts`** — writes `PROJECTS.md`, per-project files, and `PM-API.md` to shared dir (`~/.openclaw/data/pm-context/`), then symlinks into all agent workspaces
+  - **`context-scheduler.ts`** — debounced (5s) regeneration via PM events + 60s max staleness interval; `triggerContextGeneration()` for synchronous regen on individual mutations
+  - **`workspace-discovery.ts`** — reads `~/.openclaw/openclaw.json` → `agents.list[]` to discover agent workspace paths for symlink targets
 - **`files-config.ts`** — File system configuration for document browsing
 - **`keepassxc.ts`**, **`password-security.ts`**, **`passwords-config.ts`** — KeePassXC vault integration
 
 ### API Routes (`src/routes/api/`)
 
+- `pm/**` — full PM REST API (domains, focuses, projects, tasks, milestones, comments, blocks, activities, attachments, search, bulk, stats, context). Individual mutations call `triggerContextGeneration()` synchronously; bulk endpoint uses debounced regeneration via PM events. Auto-generated API reference at `~/.openclaw/data/pm-context/PM-API.md`.
 - `files/[...path]` — file CRUD operations
 - `files-bulk` — bulk file operations
 - `gateway-config` — gateway configuration proxy
@@ -105,6 +109,16 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **`src/lib/pwa/`** — service worker registration
 - **`src/lib/theme/`** — theme manager
 - **`src/lib/performance/`** — virtual scroll implementation
+
+### PM Context Pipeline
+
+Auto-generated markdown files that give agents read access to PM data:
+
+- **Shared dir:** `~/.openclaw/data/pm-context/` (override via `PM_CONTEXT_DIR` env var)
+- **Files generated:** `PROJECTS.md` (active project summary table + dashboard), `Projects/{id}.md` (per-project detail), `PM-API.md` (REST API reference)
+- **Symlinks:** created in each agent workspace discovered from `~/.openclaw/openclaw.json` → `agents.list[].workspace`
+- **Regen triggers:** synchronous after individual mutations (via `triggerContextGeneration()`), debounced (5s) for bulk operations and PM events, 60s max staleness interval
+- **Agent writes:** agents `curl` the REST API at `localhost:3000/api/pm/*` directly — documented in `PM-API.md`
 
 ### Gateway Plugin (`openclaw-canvas-bridge/`)
 

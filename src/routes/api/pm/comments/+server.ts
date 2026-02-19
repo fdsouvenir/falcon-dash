@@ -4,6 +4,7 @@ import { listComments, createComment } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -40,6 +41,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			entityId: comment.id,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(comment, { status: 201 });
 	} catch (err) {
 		return handlePMError(err);

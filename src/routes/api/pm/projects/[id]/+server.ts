@@ -4,6 +4,7 @@ import { getProject, updateProject, deleteProject } from '$lib/server/pm/crud.js
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -29,6 +30,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			projectId: id,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(project);
 	} catch (err) {
 		return handlePMError(err);
@@ -41,6 +43,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 		const deleted = deleteProject(id);
 		if (!deleted) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Project ${id} not found`);
 		emitPMEvent({ action: 'deleted', entityType: 'project', entityId: id, projectId: id });
+		triggerContextGeneration();
 		return json({ success: true });
 	} catch (err) {
 		return handlePMError(err);

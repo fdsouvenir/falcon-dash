@@ -4,6 +4,7 @@ import { moveTask } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const POST: RequestHandler = async ({ params, request }) => {
 	try {
@@ -18,6 +19,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			projectId: task.parent_project_id ?? null,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(task);
 	} catch (err) {
 		return handlePMError(err);

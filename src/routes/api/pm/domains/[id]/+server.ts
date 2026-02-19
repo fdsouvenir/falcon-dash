@@ -4,6 +4,7 @@ import { getDomain, updateDomain, deleteDomain } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -26,6 +27,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			entityId: params.id,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(domain);
 	} catch (err) {
 		return handlePMError(err);
@@ -37,6 +39,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 		const deleted = deleteDomain(params.id);
 		if (!deleted) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Domain "${params.id}" not found`);
 		emitPMEvent({ action: 'deleted', entityType: 'domain', entityId: params.id });
+		triggerContextGeneration();
 		return json({ success: true });
 	} catch (err) {
 		return handlePMError(err);

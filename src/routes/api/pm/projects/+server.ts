@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { listProjects, createProject } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -39,6 +40,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			projectId: project.id,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(project, { status: 201 });
 	} catch (err) {
 		return handlePMError(err);

@@ -4,6 +4,7 @@ import { getTask, updateTask, deleteTask } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
+import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -29,6 +30,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			projectId: task.parent_project_id ?? null,
 			data: body
 		});
+		triggerContextGeneration();
 		return json(task);
 	} catch (err) {
 		return handlePMError(err);
@@ -47,6 +49,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 			entityId: id,
 			projectId: existing?.parent_project_id ?? null
 		});
+		triggerContextGeneration();
 		return json({ success: true });
 	} catch (err) {
 		return handlePMError(err);
