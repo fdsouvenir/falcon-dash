@@ -10,7 +10,7 @@
 		setActiveSession,
 		renameSession,
 		deleteSession,
-		createSession,
+		createSessionOptimistic,
 		reorderSessions,
 		setManualOrder,
 		type ChatSessionInfo
@@ -223,14 +223,10 @@
 		showNewChatDialog = true;
 	}
 
-	async function handleCreateConfirm(name: string) {
+	function handleCreateConfirm(name: string) {
 		showNewChatDialog = false;
-		try {
-			const key = await createSession(name || undefined);
-			selectSession(key);
-		} catch {
-			// createSession already logs and reverts state
-		}
+		const key = createSessionOptimistic(name || undefined);
+		selectSession(key);
 	}
 
 	function handleCreateCancel() {

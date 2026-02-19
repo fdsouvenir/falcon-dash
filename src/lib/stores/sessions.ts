@@ -224,6 +224,33 @@ export async function createSession(label?: string): Promise<string> {
 	return sessionKey;
 }
 
+/**
+ * Optimistic variant of createSession — returns the session key immediately
+ * and fires the RPC in the background. The UI navigates instantly while the
+ * gateway call completes asynchronously.
+ */
+export function createSessionOptimistic(label?: string): string {
+	const defaults = get(snapshot.sessionDefaults);
+	const agentId = defaults.defaultAgentId ?? 'default';
+	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
+	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
+
+	// Set as active immediately so UI switches
+	_activeSessionKey.set(sessionKey);
+	persistSessionKey(sessionKey);
+
+	// Fire RPC in background — revert on failure
+	call('sessions.patch', { key: sessionKey, label: displayName })
+		.then(() => loadSessions())
+		.catch((err) => {
+			_activeSessionKey.set(null);
+			persistSessionKey(null);
+			console.warn('[sessions] createSession failed:', err);
+		});
+
+	return sessionKey;
+}
+
 // Subscribe to session events for live updates
 let unsubscribers: Array<() => void> = [];
 let _loadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
