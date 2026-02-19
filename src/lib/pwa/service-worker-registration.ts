@@ -1,3 +1,9 @@
+import { writable } from 'svelte/store';
+
+export const installPromptAvailable = writable(false);
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
 	if (!('serviceWorker' in navigator)) return null;
 	try {
@@ -8,23 +14,26 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 	}
 }
 
-export function showInstallPrompt(): void {
-	// Listen for beforeinstallprompt
-	let deferredPrompt: BeforeInstallPromptEvent | null = null;
-
+export function listenForInstallPrompt(): void {
 	window.addEventListener('beforeinstallprompt', (e) => {
 		e.preventDefault();
 		deferredPrompt = e as BeforeInstallPromptEvent;
+		installPromptAvailable.set(true);
 	});
 
-	// Expose install function
-	(globalThis as Record<string, unknown>).__installPWA = async () => {
-		if (!deferredPrompt) return false;
-		deferredPrompt.prompt();
-		const result = await deferredPrompt.userChoice;
+	window.addEventListener('appinstalled', () => {
 		deferredPrompt = null;
-		return result.outcome === 'accepted';
-	};
+		installPromptAvailable.set(false);
+	});
+}
+
+export async function triggerInstall(): Promise<boolean> {
+	if (!deferredPrompt) return false;
+	deferredPrompt.prompt();
+	const result = await deferredPrompt.userChoice;
+	deferredPrompt = null;
+	installPromptAvailable.set(false);
+	return result.outcome === 'accepted';
 }
 
 interface BeforeInstallPromptEvent extends Event {

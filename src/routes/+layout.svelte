@@ -13,6 +13,12 @@
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
 	import { isMobile } from '$lib/stores/viewport.js';
+	import {
+		registerServiceWorker,
+		listenForInstallPrompt
+	} from '$lib/pwa/service-worker-registration.js';
+	import InstallPrompt from '$lib/components/InstallPrompt.svelte';
+	import { browser } from '$app/environment';
 
 	let { children } = $props();
 
@@ -27,6 +33,14 @@
 			mobile = v;
 		});
 		return unsub;
+	});
+
+	// Register service worker and install prompt listener
+	$effect(() => {
+		if (browser) {
+			registerServiceWorker();
+			listenForInstallPrompt();
+		}
 	});
 
 	// Subscribe to token store — picks up changes from config fetch or manual entry
@@ -112,3 +126,4 @@
 {/if}
 
 <ToastContainer />
+<InstallPrompt />
