@@ -10,6 +10,7 @@
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
 	import { clearSearch } from '$lib/stores/chat-search.js';
+	import { watchConnectionForChat } from '$lib/stores/chat-resilience.js';
 	import ChatHeader from './ChatHeader.svelte';
 	import ChatSearch from './ChatSearch.svelte';
 	import MessageComposer from './MessageComposer.svelte';
@@ -99,11 +100,20 @@
 		const session = createChatSession(sessionKey);
 		chatSession = session;
 
-		// Load history outside effect to avoid state update cycles
-		const ready = untrack(() => connState);
-		if (ready === 'READY') {
-			queueMicrotask(() => session.loadHistory());
-		}
+		// Wire resilience watcher for reconnect reconciliation
+		const unwatchConnection = watchConnectionForChat(session);
+
+		return () => {
+			unwatchConnection();
+		};
+	});
+
+	// Load history when connection becomes READY (handles race condition + reconnect)
+	$effect(() => {
+		if (connState !== 'READY') return;
+		const session = untrack(() => chatSession);
+		if (!session) return;
+		queueMicrotask(() => session.loadHistory());
 	});
 
 	// Subscribe to chat session stores

@@ -56,7 +56,7 @@ export function createChatSession(sessionKey: string) {
 	const _activeRunId: Writable<string | null> = writable(null);
 	const _isStreaming: Writable<boolean> = writable(false);
 	const _pendingQueue: Writable<string[]> = writable([]);
-	const _isLoadingHistory: Writable<boolean> = writable(true);
+	const _isLoadingHistory: Writable<boolean> = writable(false);
 	const _replyTo: Writable<ChatMessage | null> = writable(null);
 	let _safetyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -506,6 +506,8 @@ export function createChatSession(sessionKey: string) {
 	 * Deduplicates by message ID.
 	 */
 	async function loadHistory(): Promise<void> {
+		if (get(_isLoadingHistory)) return; // already in progress
+		_isLoadingHistory.set(true);
 		try {
 			const result = await call<{ messages: Record<string, unknown>[] }>('chat.history', {
 				sessionKey
