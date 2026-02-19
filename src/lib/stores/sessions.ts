@@ -78,12 +78,12 @@ export function setManualOrder(order: string[]): void {
 	persistManualOrder(order);
 }
 
-// Derived: filtered and sorted sessions (webchat only, by manual order or updatedAt)
+// Derived: filtered and sorted sessions (excludes cron jobs, by manual order or updatedAt)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	[_sessions, _searchQuery, _manualOrder],
 	([$sessions, $query, $order]) => {
 		let list = $sessions;
-		list = list.filter((s) => s.channel === 'webchat');
+		list = list.filter((s) => !s.sessionKey.startsWith('cron:'));
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
@@ -203,7 +203,7 @@ export async function createSession(label?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
-	const displayName = label || uniqueLabel('New Chat', get(_sessions));
+	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
 	// Set as active immediately so UI switches
 	_activeSessionKey.set(sessionKey);
