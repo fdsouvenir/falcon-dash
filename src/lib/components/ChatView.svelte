@@ -341,7 +341,7 @@
 
 <div class="flex h-full">
 	<!-- Main chat area -->
-	<div class="flex min-w-0 flex-1 flex-col">
+	<div class="flex min-h-0 min-w-0 flex-1 flex-col">
 		<!-- Header -->
 		<ChatHeader onsearchToggle={toggleSearch} />
 
@@ -353,7 +353,7 @@
 		<div
 			bind:this={scrollContainer}
 			onscroll={handleScroll}
-			class="flex-1 overflow-y-auto px-3 md:px-4 py-4"
+			class="flex-1 overflow-y-auto overscroll-y-contain px-3 py-4 md:px-4"
 		>
 			{#if messages.length === 0 && !isLoadingHistory}
 				<div class="flex h-full flex-col items-center justify-center px-4">

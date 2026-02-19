@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+/* Prevent document-level scrolling in PWA standalone mode */
+html,
+body {
+	height: 100%;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+
 /* Safe area insets for notch phones */
 :root {
 	--safe-top: env(safe-area-inset-top, 0px);
