@@ -1,6 +1,5 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
-import { isDiscordConnected } from '$lib/stores/discord.js';
 
 export interface ChatSessionInfo {
 	sessionKey: string;
@@ -8,7 +7,6 @@ export interface ChatSessionInfo {
 	createdAt: number;
 	updatedAt: number;
 	unreadCount: number;
-	isGeneral: boolean;
 	kind: string;
 	channel?: string;
 	model?: string;
@@ -80,19 +78,17 @@ export function setManualOrder(order: string[]): void {
 	persistManualOrder(order);
 }
 
-// Derived: filtered and sorted sessions (General first, then by manual order or updatedAt)
+// Derived: filtered and sorted sessions (webchat only, by manual order or updatedAt)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	[_sessions, _searchQuery, _manualOrder],
 	([$sessions, $query, $order]) => {
 		let list = $sessions;
-		list = list.filter((s) => s.kind === 'group' || s.isGeneral);
+		list = list.filter((s) => s.channel === 'webchat');
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
 		}
 		return list.sort((a, b) => {
-			if (a.isGeneral) return -1;
-			if (b.isGeneral) return 1;
 			if ($order.length > 0) {
 				const ai = $order.indexOf(a.sessionKey);
 				const bi = $order.indexOf(b.sessionKey);
@@ -104,37 +100,6 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 			}
 			return b.updatedAt - a.updatedAt;
 		});
-	}
-);
-
-export interface SessionGroup {
-	id: string;
-	label: string;
-	sessions: ChatSessionInfo[];
-}
-
-export const groupedSessions: Readable<SessionGroup[]> = derived(
-	[filteredSessions, isDiscordConnected],
-	([$sessions, $discord]) => {
-		const general = $sessions.filter((s) => s.isGeneral);
-		const discord = $sessions.filter((s) => !s.isGeneral && s.channel && s.channel !== 'webchat');
-		const chats = $sessions.filter((s) => !s.isGeneral && (!s.channel || s.channel === 'webchat'));
-
-		const groups: SessionGroup[] = [];
-
-		if (general.length > 0) {
-			groups.push({ id: 'general', label: 'General', sessions: general });
-		}
-
-		if ($discord && discord.length > 0) {
-			groups.push({ id: 'discord', label: 'Discord Channels', sessions: discord });
-		}
-
-		if (chats.length > 0) {
-			groups.push({ id: 'chats', label: 'Chats', sessions: chats });
-		}
-
-		return groups;
 	}
 );
 
@@ -158,8 +123,6 @@ export async function loadSessions(): Promise<void> {
 				createdAt: (s.createdAt ?? 0) as number,
 				updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
 				unreadCount: (s.unreadCount ?? 0) as number,
-				isGeneral: (s.isGeneral ??
-					String(s.sessionKey ?? s.key ?? '').endsWith(':general')) as boolean,
 				kind: (s.kind ?? 'group') as string,
 				channel: s.channel as string | undefined,
 				model: s.model as string | undefined,
@@ -230,10 +193,10 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
  * which means the gateway spawns a fresh agent context (no prior conversation).
  * This is expected gateway behavior — session key scopes the agent context.
  */
-export async function createSession(label?: string, channel?: string): Promise<string> {
+export async function createSession(label?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
-	const sessionKey = `agent:${agentId}:webchat:group:${crypto.randomUUID()}`;
+	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = label || uniqueLabel('New Chat', get(_sessions));
 
 	// Set as active immediately so UI switches
@@ -242,9 +205,7 @@ export async function createSession(label?: string, channel?: string): Promise<s
 
 	// Create on server, then refresh authoritative list
 	try {
-		const patchParams: Record<string, unknown> = { key: sessionKey, label: displayName };
-		if (channel) patchParams.channel = channel;
-		await call('sessions.patch', patchParams);
+		await call('sessions.patch', { key: sessionKey, label: displayName });
 		await loadSessions();
 	} catch (err) {
 		// Revert active session on failure
@@ -310,45 +271,15 @@ export async function reorderSessions(sessionKeys: string[]): Promise<void> {
 	});
 }
 
-export async function ensureGeneralSession(): Promise<string> {
+/**
+ * Load sessions and restore the previously active session if it still exists.
+ * If no persisted session is found, activeSessionKey stays null (welcome page).
+ */
+export async function restoreActiveSession(): Promise<void> {
 	await loadSessions();
 	const list = get(_sessions);
-
-	// Restore persisted session if it still exists
 	const persisted = loadPersistedSessionKey();
 	if (persisted && list.some((s) => s.sessionKey === persisted)) {
 		_activeSessionKey.set(persisted);
-		return persisted;
 	}
-
-	const general = list.find((s) => s.isGeneral);
-	if (general) {
-		_activeSessionKey.set(general.sessionKey);
-		persistSessionKey(general.sessionKey);
-		return general.sessionKey;
-	}
-
-	// Create General session
-	const defaults = get(snapshot.sessionDefaults);
-	const agentId = defaults.defaultAgentId ?? 'default';
-	const sessionKey = `agent:${agentId}:webchat:group:general`;
-	const now = Date.now();
-
-	await call('sessions.patch', { key: sessionKey, label: 'General' });
-
-	_sessions.update((sessions) => [
-		{
-			sessionKey,
-			displayName: 'General',
-			createdAt: now,
-			updatedAt: now,
-			unreadCount: 0,
-			isGeneral: true,
-			kind: 'group'
-		},
-		...sessions
-	]);
-	_activeSessionKey.set(sessionKey);
-	persistSessionKey(sessionKey);
-	return sessionKey;
 }

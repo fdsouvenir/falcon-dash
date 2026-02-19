@@ -3,7 +3,7 @@
 	import { gatewayToken, gatewayUrl } from '$lib/stores/token.js';
 	import { connection, connectToGateway } from '$lib/stores/gateway.js';
 	import {
-		ensureGeneralSession,
+		restoreActiveSession,
 		subscribeToEvents,
 		unsubscribeFromEvents
 	} from '$lib/stores/sessions.js';
@@ -77,11 +77,11 @@
 		}
 	});
 
-	// Set up general session and event subscriptions when connection is ready
+	// Load sessions and event subscriptions when connection is ready
 	$effect(() => {
 		const unsub = connection.state.subscribe((state) => {
 			if (state === 'READY') {
-				ensureGeneralSession();
+				restoreActiveSession();
 				subscribeToEvents();
 			}
 		});

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import {
-		groupedSessions,
+		filteredSessions,
 		activeSessionKey,
 		searchQuery,
 		setActiveSession,
@@ -10,10 +10,8 @@
 		createSession,
 		reorderSessions,
 		setManualOrder,
-		type ChatSessionInfo,
-		type SessionGroup
+		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
-	import { SvelteSet } from 'svelte/reactivity';
 	import { call } from '$lib/stores/gateway.js';
 	import {
 		searchAllChats,
@@ -56,7 +54,7 @@
 			});
 	});
 
-	let groups = $state<SessionGroup[]>([]);
+	let sessionList = $state<ChatSessionInfo[]>([]);
 	let activeKey = $state<string | null>(null);
 	let query = $state('');
 	let editingKey = $state<string | null>(null);
@@ -67,41 +65,9 @@
 	let searching = $state(false);
 	let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const COLLAPSED_STORAGE_KEY = 'falcon-dash:collapsedGroups';
-
-	function loadCollapsedGroups(): SvelteSet<string> {
-		try {
-			if (typeof window === 'undefined') return new SvelteSet();
-			const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY);
-			return raw ? new SvelteSet(JSON.parse(raw)) : new SvelteSet();
-		} catch {
-			return new SvelteSet();
-		}
-	}
-
-	function persistCollapsedGroups(groups: SvelteSet<string>): void {
-		try {
-			if (typeof window === 'undefined') return;
-			localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...groups]));
-		} catch {
-			// Storage unavailable
-		}
-	}
-
-	let collapsed = $state(loadCollapsedGroups());
-
-	function toggleGroup(groupId: string) {
-		if (collapsed.has(groupId)) {
-			collapsed.delete(groupId);
-		} else {
-			collapsed.add(groupId);
-		}
-		persistCollapsedGroups(collapsed);
-	}
-
 	$effect(() => {
-		const unsub = groupedSessions.subscribe((v) => {
-			groups = v;
+		const unsub = filteredSessions.subscribe((v) => {
+			sessionList = v;
 		});
 		return unsub;
 	});
@@ -132,7 +98,6 @@
 	}
 
 	function startRename(session: ChatSessionInfo) {
-		if (session.isGeneral) return;
 		editingKey = session.sessionKey;
 		editName = session.displayName;
 	}
@@ -155,7 +120,6 @@
 	}
 
 	async function handleDelete(session: ChatSessionInfo) {
-		if (session.isGeneral) return;
 		await deleteSession(session.sessionKey);
 	}
 
@@ -208,17 +172,15 @@
 			return;
 		}
 
-		const allSessions = groups.flatMap((g) => g.sessions);
-		const nonGeneralSessions = allSessions.filter((s) => !s.isGeneral);
-		const draggedIndex = nonGeneralSessions.findIndex((s) => s.sessionKey === draggedKey);
-		const targetIndex = nonGeneralSessions.findIndex((s) => s.sessionKey === targetKey);
+		const draggedIndex = sessionList.findIndex((s) => s.sessionKey === draggedKey);
+		const targetIndex = sessionList.findIndex((s) => s.sessionKey === targetKey);
 
 		if (draggedIndex === -1 || targetIndex === -1) {
 			draggedKey = null;
 			return;
 		}
 
-		const reordered = [...nonGeneralSessions];
+		const reordered = [...sessionList];
 		const [dragged] = reordered.splice(draggedIndex, 1);
 		reordered.splice(targetIndex, 0, dragged);
 
@@ -310,48 +272,13 @@
 		</div>
 	{/if}
 
-	<!-- Session list (grouped) -->
+	<!-- Session list -->
 	<div class="flex-1 overflow-y-auto">
-		{#each groups as group (group.id)}
-			{#if group.id === 'general'}
-				{#each group.sessions as session (session.sessionKey)}
-					{@render sessionButton(session)}
-				{/each}
-			{:else}
-				<button
-					onclick={() => toggleGroup(group.id)}
-					class="flex w-full items-center gap-1.5 px-2 py-1.5"
-				>
-					<svg
-						class="h-3 w-3 text-gray-500 transition-transform {collapsed.has(group.id)
-							? ''
-							: 'rotate-90'}"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 5l7 7-7 7"
-						/>
-					</svg>
-					<span class="text-xs font-medium uppercase tracking-wider text-gray-400"
-						>{group.label}</span
-					>
-					<span class="text-xs text-gray-500">{group.sessions.length}</span>
-				</button>
-
-				{#if !collapsed.has(group.id)}
-					{#each group.sessions as session (session.sessionKey)}
-						{@render sessionButton(session)}
-					{/each}
-				{/if}
-			{/if}
+		{#each sessionList as session (session.sessionKey)}
+			{@render sessionButton(session)}
 		{/each}
 
-		{#if groups.length === 0 && contentResults.length === 0 && !searching}
+		{#if sessionList.length === 0 && contentResults.length === 0 && !searching}
 			<div class="px-2 py-4 text-center text-xs italic text-gray-500">
 				{query ? 'No matching chats' : 'No chats yet'}
 			</div>
@@ -395,7 +322,7 @@
 
 {#snippet sessionButton(session: ChatSessionInfo)}
 	<button
-		draggable={!session.isGeneral}
+		draggable={true}
 		ondragstart={() => dragStart(session.sessionKey)}
 		ondragover={(e) => dragOver(e, session.sessionKey)}
 		ondrop={() => drop(session.sessionKey)}
@@ -407,16 +334,14 @@
 			? 'opacity-50'
 			: ''}"
 	>
-		{#if !session.isGeneral}
-			<svg
-				class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-			</svg>
-		{/if}
+		<svg
+			class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+		</svg>
 		{#if editingKey === session.sessionKey}
 			<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
 			<input
@@ -439,9 +364,7 @@
 					role="button"
 					tabindex="0"
 				>
-					{#if variant === 'mobile' && !session.isGeneral}<span class="text-gray-500"
-							>#
-						</span>{/if}{session.displayName}
+					{#if variant === 'mobile'}<span class="text-gray-500"># </span>{/if}{session.displayName}
 				</span>
 				{#if session.model || session.totalTokens || session.updatedAt}
 					<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
@@ -478,15 +401,6 @@
 					</span>
 				{/if}
 			</div>
-			{#if session.channel}
-				<span class="mt-0.5 text-indigo-400" title="Synced with Discord">
-					<svg class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
-						<path
-							d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"
-						/>
-					</svg>
-				</span>
-			{/if}
 		{/if}
 
 		<!-- Unread badge -->
@@ -498,33 +412,31 @@
 			</span>
 		{/if}
 
-		<!-- Delete button (not for General) -->
-		{#if !session.isGeneral}
-			<div
-				onclick={(e) => {
+		<!-- Delete button -->
+		<div
+			onclick={(e) => {
+				e.stopPropagation();
+				handleDelete(session);
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
 					e.stopPropagation();
 					handleDelete(session);
-				}}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.stopPropagation();
-						handleDelete(session);
-					}
-				}}
-				role="button"
-				tabindex="0"
-				class="mt-0.5 hidden text-gray-500 hover:text-red-400 group-hover:block"
-				aria-label="Delete chat"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M6 18L18 6M6 6l12 12"
-					/>
-				</svg>
-			</div>
-		{/if}
+				}
+			}}
+			role="button"
+			tabindex="0"
+			class="mt-0.5 hidden text-gray-500 hover:text-red-400 group-hover:block"
+			aria-label="Delete chat"
+		>
+			<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M6 18L18 6M6 6l12 12"
+				/>
+			</svg>
+		</div>
 	</button>
 {/snippet}

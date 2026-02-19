@@ -45,7 +45,7 @@ export async function openThread(
 	const agentId = defaults.defaultAgentId ?? 'default';
 	// Extract parentId from parentSessionKey (last segment before any :thread:)
 	const parentId = parentSessionKey.split(':').pop() ?? parentSessionKey;
-	const threadKey = `agent:${agentId}:webchat:group:${parentId}:thread:${crypto.randomUUID()}`;
+	const threadKey = `agent:${agentId}:webchat:dm:${parentId}:thread:${crypto.randomUUID()}`;
 	const name = displayName ?? 'Thread';
 
 	// Create thread session on server
