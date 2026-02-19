@@ -56,6 +56,7 @@ export function createChatSession(sessionKey: string) {
 	const _activeRunId: Writable<string | null> = writable(null);
 	const _isStreaming: Writable<boolean> = writable(false);
 	const _pendingQueue: Writable<string[]> = writable([]);
+	const _isLoadingHistory: Writable<boolean> = writable(true);
 	const _replyTo: Writable<ChatMessage | null> = writable(null);
 	let _safetyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -521,6 +522,8 @@ export function createChatSession(sessionKey: string) {
 			}
 		} catch {
 			// History load failed — keep existing messages
+		} finally {
+			_isLoadingHistory.set(false);
 		}
 	}
 
@@ -621,6 +624,7 @@ export function createChatSession(sessionKey: string) {
 		messages,
 		activeRunId,
 		isStreaming,
+		isLoadingHistory: readonly(_isLoadingHistory) as Readable<boolean>,
 		hasActiveRun,
 		pendingQueue: readonly(_pendingQueue) as Readable<string[]>,
 		replyTo,

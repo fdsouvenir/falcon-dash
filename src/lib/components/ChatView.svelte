@@ -27,6 +27,7 @@
 	let chatSession = $state<ChatSessionStore | null>(null);
 	let messages = $state<ChatMessage[]>([]);
 	let isStreaming = $state(false);
+	let isLoadingHistory = $state(true);
 	let replyToMessage = $state<ChatMessage | null>(null);
 	let showSearch = $state(false);
 	let thread = $state<ThreadInfo | null>(null);
@@ -118,6 +119,14 @@
 		if (!chatSession) return;
 		const unsub = chatSession.isStreaming.subscribe((v) => {
 			isStreaming = v;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (!chatSession) return;
+		const unsub = chatSession.isLoadingHistory.subscribe((v) => {
+			isLoadingHistory = v;
 		});
 		return unsub;
 	});
@@ -346,7 +355,7 @@
 			onscroll={handleScroll}
 			class="flex-1 overflow-y-auto px-3 md:px-4 py-4"
 		>
-			{#if messages.length === 0}
+			{#if messages.length === 0 && !isLoadingHistory}
 				<div class="flex h-full flex-col items-center justify-center px-4">
 					<!-- Avatar -->
 					<div
