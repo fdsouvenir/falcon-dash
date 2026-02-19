@@ -263,32 +263,26 @@ Stories are organized by implementation phase. Each story has an ID, title, desc
 
 **As a** user, **I want** a list of my chats **so that** I can switch between conversations.
 
-- [ ] Loads via `sessions.list` with `kinds` filter (only group sessions)
-- [ ] "General" chat always first, cannot be deleted or renamed
-- [ ] Regular chats can be created, renamed, deleted, reordered
+- [ ] Loads via `sessions.list`, excludes automated sessions (cron, webhook, node) by key segment
+- [ ] All chats can be created, renamed, deleted, reordered
 - [ ] Unread badges per chat
 - [ ] Search/filter chats
-- [ ] Live updates from session events (new Discord channel appears automatically)
+- [ ] Live updates from session events
 
 #### P2-09: Implement New Chat Creation
 
 **As a** user, **I want** to create new chats **so that** I can start fresh conversations.
 
 - [ ] "+ New Chat" button in chat list
-- [ ] Generates key: `agent:<agentId>:webchat:group:<crypto.randomUUID()>`
+- [ ] Generates key: `agent:<agentId>:webchat:dm:<crypto.randomUUID()>`
 - [ ] `agentId` from `hello-ok.snapshot.sessionDefaults.defaultAgentId`
 - [ ] Creates via `sessions.patch` with label
 - [ ] Navigates to new chat view
 - [ ] Session appears in `sessions.list` immediately
 
-#### P2-10: Implement General Chat Persistence
+#### ~~P2-10: Implement General Chat Persistence~~ (Removed)
 
-**As a** user, **I want** a "General" chat that always exists **so that** I have a default conversation.
-
-- [ ] On first connect, checks `sessions.list` for group session with label "General" and channel "webchat"
-- [ ] If not found, creates via `sessions.patch`
-- [ ] Cannot be deleted or renamed
-- [ ] Default landing chat when opening the dashboard
+_The "General" session concept was removed in favor of a flat session list. Users land on a welcome page when no session is active._
 
 #### P2-11: Implement Chat Session Settings
 
@@ -329,7 +323,7 @@ Stories are organized by implementation phase. Each story has an ID, title, desc
 **As a** user, **I want** threaded conversations **so that** I can discuss topics without cluttering the main chat.
 
 - [ ] "Start Thread" action on messages opens side panel
-- [ ] Generates thread key: `agent:<agentId>:webchat:group:<parentId>:thread:<uuid>`
+- [ ] Generates thread key: `agent:<agentId>:webchat:dm:<parentId>:thread:<uuid>`
 - [ ] Creates thread session via `sessions.patch` with `parentSessionId` and `originMessageId`
 - [ ] Thread panel: header (name, parent chat, close), messages, composer
 - [ ] Independent message history for the thread sub-session
@@ -1160,11 +1154,11 @@ Stories are organized by implementation phase. Each story has an ID, title, desc
 | FR-12 | Agent event stream renders thinking blocks, tool calls, tool results, and text deltas                                 |
 | FR-13 | Message composer supports SHIFT+ENTER for newline, ENTER to send, file drag-and-drop, clipboard paste                 |
 | FR-14 | Slash commands implemented: /new, /status, /stop, /compact, /usage, /reasoning, /verbose, /context, /subagents, /send |
-| FR-15 | Chat list shows only group sessions (filtered by `kinds`); cron, webhook, node, sub-agent sessions never shown        |
-| FR-16 | "General" chat persists across sessions; created on first connect if missing                                          |
+| FR-15 | Chat list excludes automated sessions (cron, webhook, node) by key segment; shows all client chat sessions            |
+| FR-16 | ~~"General" chat persists across sessions~~ (Removed — flat session list, welcome page when no session active)        |
 | FR-17 | Session creation uses `sessions.patch` for explicit creation with metadata                                            |
-| FR-18 | Session keys follow pattern: `agent:<agentId>:<channel>:group:<id>`                                                   |
-| FR-19 | Thread keys follow pattern: `agent:<agentId>:<channel>:group:<parentId>:thread:<threadId>`                            |
+| FR-18 | Session keys follow pattern: `agent:<agentId>:<channel>:dm:<id>`                                                      |
+| FR-19 | Thread keys follow pattern: `agent:<agentId>:<channel>:dm:<parentId>:thread:<threadId>`                               |
 | FR-20 | Replies send `replyToMessageId` in `chat.send`; sync as Discord `message_reference`                                   |
 | FR-21 | Thread lifecycle: active → archived (auto after 24h inactivity) → locked                                              |
 | FR-22 | On reconnect, `chat.history` fills message gaps; messages deduped by ID                                               |
