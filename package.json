@@ -91,6 +91,8 @@
 		"remark-parse": "^11.0.0",
 		"remark-rehype": "^11.1.2",
 		"shiki": "^3.22.0",
+		"svelte-dnd-action": "^0.9.69",
+		"svelte-gestures": "^5.2.2",
 		"unified": "^11.0.5"
 	}
 }

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { flip } from 'svelte/animate';
+	import { dndzone, SHADOW_ITEM_MARKER_PROPERTY_NAME } from 'svelte-dnd-action';
+	import { usePan, type GestureCustomEvent } from 'svelte-gestures';
 	import {
 		filteredSessions,
 		activeSessionKey,
@@ -34,7 +37,6 @@
 	}
 
 	function shortModel(model: string): string {
-		// Strip common prefixes for compact display
 		return model
 			.replace(/^claude-/, '')
 			.replace(/^openai\//, '')
@@ -54,12 +56,15 @@
 			});
 	});
 
-	let sessionList = $state<ChatSessionInfo[]>([]);
+	// DnD items — need `id` field for svelte-dnd-action
+	type DndSession = ChatSessionInfo & { id: string };
+	let dndItems = $state<DndSession[]>([]);
+	const FLIP_MS = 200;
+
 	let activeKey = $state<string | null>(null);
 	let query = $state('');
 	let editingKey = $state<string | null>(null);
 	let editName = $state('');
-	let draggedKey = $state<string | null>(null);
 	let showNewChatDialog = $state(false);
 	let contentResults = $state<SearchResult[]>([]);
 	let searching = $state(false);
@@ -68,65 +73,61 @@
 	// Swipe-to-reveal state
 	let swipedKey = $state<string | null>(null);
 	let swipeOffset = $state(0);
-	let touchStartX = 0;
-	let touchStartY = 0;
-	let isSwiping = false;
+	let panStartX = 0;
+	let panStartY = 0;
+	let isPanning = $state(false);
+	let panKey = $state<string | null>(null);
 	const SWIPE_THRESHOLD = 60;
-	const ACTION_WIDTH = 120; // width of revealed action buttons
+	const ACTION_WIDTH = 120;
 
 	// Delete confirmation state
 	let deleteConfirmSession = $state<ChatSessionInfo | null>(null);
 
-	function handleTouchStart(e: TouchEvent) {
-		touchStartX = e.touches[0].clientX;
-		touchStartY = e.touches[0].clientY;
-		isSwiping = false;
+	function handlePanDown(e: GestureCustomEvent, key: string) {
+		panStartX = e.detail.event.clientX;
+		panStartY = e.detail.event.clientY;
+		isPanning = false;
+		panKey = key;
 	}
 
-	function handleTouchMove(e: TouchEvent, key: string) {
-		const dx = e.touches[0].clientX - touchStartX;
-		const dy = e.touches[0].clientY - touchStartY;
+	function handlePanMove(e: GestureCustomEvent, key: string) {
+		if (panKey !== key) return;
+		const dx = e.detail.event.clientX - panStartX;
+		const dy = e.detail.event.clientY - panStartY;
 
-		// If vertical scroll is dominant, bail out
-		if (!isSwiping && Math.abs(dy) > Math.abs(dx)) return;
-
-		// Once horizontal movement exceeds a small threshold, commit to swipe
-		if (!isSwiping && Math.abs(dx) > 10) {
-			isSwiping = true;
+		if (!isPanning && Math.abs(dy) > Math.abs(dx)) return;
+		if (!isPanning && Math.abs(dx) > 10) {
+			isPanning = true;
 		}
-
-		if (!isSwiping) return;
-		e.preventDefault();
+		if (!isPanning) return;
 
 		if (swipedKey === key) {
-			// Already open — allow swiping back closed
 			const raw = -ACTION_WIDTH + dx;
 			swipeOffset = Math.max(-ACTION_WIDTH, Math.min(0, raw));
 		} else {
-			// Closed — only allow swiping left
 			swipeOffset = Math.max(-ACTION_WIDTH, Math.min(0, dx));
 		}
 	}
 
-	function handleTouchEnd(key: string) {
-		if (!isSwiping) {
-			// It was a tap, not a swipe — close any open actions
+	function handlePanUp(_e: GestureCustomEvent, key: string) {
+		if (panKey !== key) return;
+		if (!isPanning) {
 			if (swipedKey && swipedKey !== key) {
 				swipedKey = null;
 				swipeOffset = 0;
 			}
+			panKey = null;
 			return;
 		}
 
 		if (Math.abs(swipeOffset) > SWIPE_THRESHOLD) {
-			// Commit open
 			swipedKey = key;
 			swipeOffset = -ACTION_WIDTH;
 		} else {
-			// Snap closed
 			swipedKey = null;
 			swipeOffset = 0;
 		}
+		panKey = null;
 	}
 
 	function closeSwipe() {
@@ -136,7 +137,7 @@
 
 	$effect(() => {
 		const unsub = filteredSessions.subscribe((v) => {
-			sessionList = v;
+			dndItems = v.map((s) => ({ ...s, id: s.sessionKey }));
 		});
 		return unsub;
 	});
@@ -208,7 +209,6 @@
 		searchQuery.set(input.value);
 		query = input.value;
 
-		// Content search for queries > 2 chars, debounced
 		if (searchTimer) clearTimeout(searchTimer);
 		if (input.value.trim().length > 2) {
 			searchTimer = setTimeout(() => {
@@ -237,37 +237,28 @@
 		showNewChatDialog = false;
 	}
 
-	function dragStart(key: string) {
-		draggedKey = key;
+	// svelte-dnd-action handlers
+	function handleConsider(e: CustomEvent<{ items: DndSession[] }>) {
+		dndItems = e.detail.items;
 	}
 
-	function dragOver(e: DragEvent, key: string) {
-		if (!draggedKey || draggedKey === key) return;
-		e.preventDefault();
-	}
-
-	async function drop(targetKey: string) {
-		if (!draggedKey || draggedKey === targetKey) {
-			draggedKey = null;
-			return;
-		}
-
-		const draggedIndex = sessionList.findIndex((s) => s.sessionKey === draggedKey);
-		const targetIndex = sessionList.findIndex((s) => s.sessionKey === targetKey);
-
-		if (draggedIndex === -1 || targetIndex === -1) {
-			draggedKey = null;
-			return;
-		}
-
-		const reordered = [...sessionList];
-		const [dragged] = reordered.splice(draggedIndex, 1);
-		reordered.splice(targetIndex, 0, dragged);
-
-		const keys = reordered.map((s) => s.sessionKey);
+	async function handleFinalize(e: CustomEvent<{ items: DndSession[] }>) {
+		dndItems = e.detail.items;
+		const keys = dndItems.map((s) => s.sessionKey);
 		setManualOrder(keys);
 		await reorderSessions(keys);
-		draggedKey = null;
+	}
+
+	function createPanProps(key: string) {
+		return usePan(
+			() => {},
+			() => ({ delay: 0, touchAction: 'pan-y' as const }),
+			{
+				onpandown: (e: GestureCustomEvent) => handlePanDown(e, key),
+				onpanmove: (e: GestureCustomEvent) => handlePanMove(e, key),
+				onpanup: (e: GestureCustomEvent) => handlePanUp(e, key)
+			}
+		);
 	}
 </script>
 
@@ -353,12 +344,195 @@
 	{/if}
 
 	<!-- Session list -->
-	<div class="flex-1 overflow-y-auto">
-		{#each sessionList as session (session.sessionKey)}
-			{@render sessionButton(session)}
+	<div
+		class="flex-1 overflow-y-auto"
+		use:dndzone={{
+			items: dndItems,
+			flipDurationMs: FLIP_MS,
+			dropTargetStyle: {},
+			morphDisabled: true,
+			delayTouchStart: 200
+		}}
+		onconsider={handleConsider}
+		onfinalize={handleFinalize}
+	>
+		{#each dndItems as session (session.id)}
+			{@const isOpen = swipedKey === session.sessionKey}
+			{@const offset = isOpen ? swipeOffset : 0}
+			{@const isShadow = SHADOW_ITEM_MARKER_PROPERTY_NAME in session}
+			{@const panProps = createPanProps(session.sessionKey)}
+			<div
+				class="group relative overflow-hidden rounded"
+				class:opacity-50={isShadow}
+				animate:flip={{ duration: FLIP_MS }}
+			>
+				<!-- Action buttons revealed behind the row -->
+				{#if isOpen}
+					<div class="absolute inset-y-0 right-0 flex items-stretch">
+						<button
+							onclick={() => {
+								closeSwipe();
+								startRename(session);
+							}}
+							class="flex w-[60px] items-center justify-center bg-blue-600 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+							aria-label="Rename chat"
+						>
+							Rename
+						</button>
+						<button
+							onclick={() => promptDelete(session)}
+							class="flex w-[60px] items-center justify-center bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-500"
+							aria-label="Delete chat"
+						>
+							Delete
+						</button>
+					</div>
+				{/if}
+
+				<!-- Main session row — slides left on swipe -->
+				<button
+					{...panProps}
+					onclick={() => {
+						if (isPanning) return;
+						if (swipedKey) {
+							closeSwipe();
+							return;
+						}
+						selectSession(session.sessionKey);
+					}}
+					class="relative flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {activeKey ===
+					session.sessionKey
+						? 'bg-gray-800 text-white'
+						: 'bg-gray-900 text-gray-300 hover:bg-gray-800 hover:text-white'}"
+					style="transform: translateX({offset}px); transition: {isPanning &&
+					panKey === session.sessionKey
+						? 'none'
+						: 'transform 0.2s ease'}"
+				>
+					<svg
+						class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 8h16M4 16h16"
+						/>
+					</svg>
+					{#if editingKey === session.sessionKey}
+						<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
+						<input
+							type="text"
+							bind:value={editName}
+							onblur={commitRename}
+							onkeydown={handleRenameKeydown}
+							onclick={(e) => e.stopPropagation()}
+							autofocus
+							class="flex-1 rounded bg-gray-700 px-2 py-0.5 text-xs text-white focus:outline-none"
+						/>
+					{:else}
+						<div class="flex min-w-0 flex-1 flex-col">
+							<span
+								class="truncate"
+								ondblclick={(e) => {
+									e.stopPropagation();
+									startRename(session);
+								}}
+								role="button"
+								tabindex="0"
+							>
+								{#if variant === 'mobile'}<span class="text-gray-500"
+										>#
+									</span>{/if}{session.displayName}
+							</span>
+							{#if session.model || session.totalTokens || session.updatedAt}
+								<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
+									{#if session.model}
+										<span
+											class="rounded bg-gray-700/50 px-1 py-px leading-tight"
+											title={session.model}>{shortModel(session.model)}</span
+										>
+									{/if}
+									{#if session.totalTokens && session.contextTokens}
+										{@const pct = Math.min(
+											100,
+											Math.round((session.totalTokens / session.contextTokens) * 100)
+										)}
+										<span
+											class="inline-flex items-center gap-0.5"
+											title="{session.totalTokens.toLocaleString()} / {session.contextTokens.toLocaleString()} tokens"
+										>
+											<span class="inline-block h-1 w-6 overflow-hidden rounded-full bg-gray-700">
+												<span
+													class="block h-full rounded-full {pct > 80
+														? 'bg-red-500'
+														: pct > 50
+															? 'bg-yellow-500'
+															: 'bg-blue-500'}"
+													style="width:{pct}%"
+												></span>
+											</span>
+											{pct}%
+										</span>
+									{/if}
+									{#if session.updatedAt}
+										<span>{formatRelativeTime(session.updatedAt)}</span>
+									{/if}
+								</span>
+							{/if}
+						</div>
+					{/if}
+
+					<!-- Unread badge -->
+					{#if session.unreadCount > 0}
+						<span
+							class="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-medium text-white"
+						>
+							{session.unreadCount}
+						</span>
+					{/if}
+				</button>
+
+				<!-- Desktop hover actions -->
+				<div
+					class="pointer-events-none absolute inset-y-0 right-1 hidden items-center gap-0.5 group-hover:flex"
+				>
+					<button
+						onclick={() => startRename(session)}
+						class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-blue-400"
+						aria-label="Rename chat"
+					>
+						<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+							/>
+						</svg>
+					</button>
+					<button
+						onclick={() => promptDelete(session)}
+						class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-red-400"
+						aria-label="Delete chat"
+					>
+						<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</div>
+			</div>
 		{/each}
 
-		{#if sessionList.length === 0 && contentResults.length === 0 && !searching}
+		{#if dndItems.length === 0 && contentResults.length === 0 && !searching}
 			<div class="px-2 py-4 text-center text-xs italic text-gray-500">
 				{query ? 'No matching chats' : 'No chats yet'}
 			</div>
@@ -437,173 +611,3 @@
 		</div>
 	{/if}
 </div>
-
-{#snippet sessionButton(session: ChatSessionInfo)}
-	{@const isOpen = swipedKey === session.sessionKey}
-	{@const offset = isOpen ? swipeOffset : 0}
-	<div class="group relative overflow-hidden rounded">
-		<!-- Action buttons revealed behind the row -->
-		<div class="absolute inset-y-0 right-0 flex items-stretch">
-			<button
-				onclick={() => {
-					closeSwipe();
-					startRename(session);
-				}}
-				class="flex w-[60px] items-center justify-center bg-blue-600 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-				aria-label="Rename chat"
-			>
-				Rename
-			</button>
-			<button
-				onclick={() => promptDelete(session)}
-				class="flex w-[60px] items-center justify-center bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-500"
-				aria-label="Delete chat"
-			>
-				Delete
-			</button>
-		</div>
-
-		<!-- Main session row — slides left on swipe -->
-		<button
-			draggable={true}
-			ondragstart={() => dragStart(session.sessionKey)}
-			ondragover={(e) => dragOver(e, session.sessionKey)}
-			ondrop={() => drop(session.sessionKey)}
-			onclick={() => {
-				if (isSwiping) return;
-				if (swipedKey) {
-					closeSwipe();
-					return;
-				}
-				selectSession(session.sessionKey);
-			}}
-			ontouchstart={(e) => handleTouchStart(e)}
-			ontouchmove={(e) => handleTouchMove(e, session.sessionKey)}
-			ontouchend={() => handleTouchEnd(session.sessionKey)}
-			class="relative flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {activeKey ===
-			session.sessionKey
-				? 'bg-gray-800 text-white'
-				: 'bg-gray-900 text-gray-300 hover:bg-gray-800 hover:text-white'} {draggedKey ===
-			session.sessionKey
-				? 'opacity-50'
-				: ''}"
-			style="transform: translateX({offset}px); transition: {isSwiping
-				? 'none'
-				: 'transform 0.2s ease'}"
-		>
-			<svg
-				class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-			</svg>
-			{#if editingKey === session.sessionKey}
-				<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
-				<input
-					type="text"
-					bind:value={editName}
-					onblur={commitRename}
-					onkeydown={handleRenameKeydown}
-					onclick={(e) => e.stopPropagation()}
-					autofocus
-					class="flex-1 rounded bg-gray-700 px-2 py-0.5 text-xs text-white focus:outline-none"
-				/>
-			{:else}
-				<div class="flex min-w-0 flex-1 flex-col">
-					<span
-						class="truncate"
-						ondblclick={(e) => {
-							e.stopPropagation();
-							startRename(session);
-						}}
-						role="button"
-						tabindex="0"
-					>
-						{#if variant === 'mobile'}<span class="text-gray-500"
-								>#
-							</span>{/if}{session.displayName}
-					</span>
-					{#if session.model || session.totalTokens || session.updatedAt}
-						<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
-							{#if session.model}
-								<span class="rounded bg-gray-700/50 px-1 py-px leading-tight" title={session.model}
-									>{shortModel(session.model)}</span
-								>
-							{/if}
-							{#if session.totalTokens && session.contextTokens}
-								{@const pct = Math.min(
-									100,
-									Math.round((session.totalTokens / session.contextTokens) * 100)
-								)}
-								<span
-									class="inline-flex items-center gap-0.5"
-									title="{session.totalTokens.toLocaleString()} / {session.contextTokens.toLocaleString()} tokens"
-								>
-									<span class="inline-block h-1 w-6 overflow-hidden rounded-full bg-gray-700">
-										<span
-											class="block h-full rounded-full {pct > 80
-												? 'bg-red-500'
-												: pct > 50
-													? 'bg-yellow-500'
-													: 'bg-blue-500'}"
-											style="width:{pct}%"
-										></span>
-									</span>
-									{pct}%
-								</span>
-							{/if}
-							{#if session.updatedAt}
-								<span>{formatRelativeTime(session.updatedAt)}</span>
-							{/if}
-						</span>
-					{/if}
-				</div>
-			{/if}
-
-			<!-- Unread badge -->
-			{#if session.unreadCount > 0}
-				<span
-					class="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-medium text-white"
-				>
-					{session.unreadCount}
-				</span>
-			{/if}
-		</button>
-
-		<!-- Desktop hover actions (positioned outside the button to avoid nesting) -->
-		<div
-			class="pointer-events-none absolute inset-y-0 right-1 hidden items-center gap-0.5 group-hover:flex"
-		>
-			<button
-				onclick={() => startRename(session)}
-				class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-blue-400"
-				aria-label="Rename chat"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-					/>
-				</svg>
-			</button>
-			<button
-				onclick={() => promptDelete(session)}
-				class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-red-400"
-				aria-label="Delete chat"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M6 18L18 6M6 6l12 12"
-					/>
-				</svg>
-			</button>
-		</div>
-	</div>
-{/snippet}
