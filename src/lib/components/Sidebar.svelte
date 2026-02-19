@@ -2,8 +2,19 @@
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
 	import ChatList from './ChatList.svelte';
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
+	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
 
 	let { collapsed = false, onToggle }: { collapsed: boolean; onToggle: () => void } = $props();
+
+	let agentName = $state('Falcon Dashboard');
+	let agentEmoji = $state<string | undefined>(undefined);
+
+	$effect(() => {
+		getAgentIdentity().then((identity) => {
+			agentName = identity.name || 'Falcon Dashboard';
+			agentEmoji = identity.emoji;
+		});
+	});
 
 	let editingId = $state<string | null>(null);
 	let editName = $state('');
@@ -59,7 +70,9 @@
 	<!-- Header -->
 	<div class="flex items-center gap-2 border-b border-gray-800 px-4 py-3">
 		<ConnectionStatus />
-		<span class="text-sm font-semibold text-white">Falcon Dashboard</span>
+		<span class="text-sm font-semibold text-white"
+			>{agentEmoji ? `${agentEmoji} ` : ''}{agentName}</span
+		>
 		<button
 			class="ml-auto text-gray-400 hover:text-white md:hidden"
 			onclick={onToggle}

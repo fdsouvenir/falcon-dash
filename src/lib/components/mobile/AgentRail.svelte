@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { call } from '$lib/stores/gateway.js';
+	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
 
 	let agentName = $state('Agent');
+	let agentEmoji = $state<string | undefined>(undefined);
 
 	$effect(() => {
-		call<{ name: string; description?: string }>('agent-identity')
-			.then((identity) => {
-				agentName = identity.name || 'Agent';
-			})
-			.catch(() => {
-				agentName = 'Agent';
-			});
+		getAgentIdentity().then((identity) => {
+			agentName = identity.name || 'Agent';
+			agentEmoji = identity.emoji;
+		});
 	});
 
 	let agentInitial = $derived(agentName.charAt(0).toUpperCase());
@@ -27,7 +25,7 @@
 		<div
 			class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white"
 		>
-			{agentInitial}
+			{agentEmoji || agentInitial}
 		</div>
 	</div>
 

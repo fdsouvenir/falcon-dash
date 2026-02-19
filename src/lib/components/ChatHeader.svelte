@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { snapshot, call } from '$lib/stores/gateway.js';
+	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
@@ -33,15 +34,11 @@
 		return unsub;
 	});
 
-	// Agent name from snapshot presence
 	let agentName = $state('Agent');
 	$effect(() => {
-		const unsub = snapshot.presence.subscribe((list) => {
-			const agent = list.find((p) => (p as Record<string, unknown>).role === 'agent');
-			const name = (agent as Record<string, unknown>)?.displayName ?? agent?.displayName;
-			if (typeof name === 'string' && name) agentName = name;
+		getAgentIdentity().then((identity) => {
+			agentName = identity.name || 'Agent';
 		});
-		return unsub;
 	});
 
 	async function updateSetting(field: string, value: unknown) {

@@ -13,7 +13,7 @@
 		pinnedSessions,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
-	import { call } from '$lib/stores/gateway.js';
+	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
 	import {
 		searchAllChats,
 		searchResults,
@@ -42,16 +42,14 @@
 	}
 
 	let agentName = $state('Agent');
+	let agentEmoji = $state<string | undefined>(undefined);
 
 	$effect(() => {
 		if (variant !== 'mobile') return;
-		call<{ name: string; description?: string }>('agent-identity')
-			.then((identity) => {
-				agentName = identity.name || 'Agent';
-			})
-			.catch(() => {
-				agentName = 'Agent';
-			});
+		getAgentIdentity().then((identity) => {
+			agentName = identity.name || 'Agent';
+			agentEmoji = identity.emoji;
+		});
 	});
 
 	let items = $state<ChatSessionInfo[]>([]);
@@ -252,7 +250,9 @@
 	{#if variant === 'mobile'}
 		<!-- Mobile: Agent name header -->
 		<div class="flex items-center gap-1 px-3 pb-2 pt-3">
-			<span class="text-base font-bold text-white">{agentName}</span>
+			<span class="text-base font-bold text-white"
+				>{agentEmoji ? `${agentEmoji} ` : ''}{agentName}</span
+			>
 			<svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
 			</svg>
