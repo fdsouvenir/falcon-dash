@@ -78,12 +78,12 @@ export function setManualOrder(order: string[]): void {
 	persistManualOrder(order);
 }
 
-// Derived: filtered and sorted sessions (excludes cron jobs, by manual order or updatedAt)
+// Derived: filtered and sorted sessions (only dm/group chat kinds, by manual order or updatedAt)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	[_sessions, _searchQuery, _manualOrder],
 	([$sessions, $query, $order]) => {
 		let list = $sessions;
-		list = list.filter((s) => !s.sessionKey.startsWith('cron:'));
+		list = list.filter((s) => s.kind === 'dm' || s.kind === 'group');
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
