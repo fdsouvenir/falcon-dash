@@ -1,8 +1,13 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { getTask, getProject, type Task } from '$lib/stores/pm-projects.js';
 	import { listComments, type Comment } from '$lib/stores/pm-operations.js';
 	import { pmGet } from '$lib/stores/pm-api.js';
+	import {
+		STATUS_BORDER,
+		STATUS_BADGE,
+		getPriorityIndicator,
+		formatStatusLabel
+	} from './pm-utils.js';
 
 	interface Props {
 		taskId: number;
@@ -18,21 +23,27 @@
 	let comments = $state<Comment[]>([]);
 	let loading = $state(true);
 
-	onMount(async () => {
-		await loadData();
+	// Re-load data whenever taskId changes
+	$effect(() => {
+		const id = taskId;
+		loadData(id);
+	});
+
+	// Keyboard listener with cleanup
+	$effect(() => {
+		function handleKeyDown(e: KeyboardEvent) {
+			if (e.key === 'Escape') onClose();
+		}
 		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 
-	onDestroy(() => {
-		document.removeEventListener('keydown', handleKeyDown);
-	});
-
-	async function loadData() {
+	async function loadData(id: number) {
 		loading = true;
-		task = await getTask(taskId);
+		task = await getTask(id);
 		await buildAncestry();
 		await loadSubtasks();
-		comments = await listComments('task', taskId);
+		comments = await listComments('task', id);
 		loading = false;
 	}
 
@@ -64,10 +75,6 @@
 		subtasks = res.items.sort((a, b) => a.sort_order - b.sort_order);
 	}
 
-	function handleKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onClose();
-	}
-
 	function handleBreadcrumbClick(item: { id: number; type: 'project' | 'task' }) {
 		if (item.type === 'task' && onNavigate) {
 			onNavigate(item.id);
@@ -76,26 +83,6 @@
 
 	function formatTimestamp(ts: number): string {
 		return new Date(ts * 1000).toLocaleString();
-	}
-
-	function getStatusColor(status: string): string {
-		const colors: Record<string, string> = {
-			todo: 'bg-gray-600',
-			in_progress: 'bg-blue-600',
-			review: 'bg-purple-600',
-			done: 'bg-green-600'
-		};
-		return colors[status] || 'bg-gray-600';
-	}
-
-	function getPriorityColor(priority: string | null): string {
-		const colors: Record<string, string> = {
-			critical: 'bg-red-600',
-			high: 'bg-orange-600',
-			medium: 'bg-yellow-600',
-			low: 'bg-green-600'
-		};
-		return colors[priority || ''] || 'bg-gray-600';
 	}
 
 	function handleBackdropClick() {
@@ -169,20 +156,23 @@
 				<div>
 					<label class="mb-1 block text-sm text-gray-400">Status</label>
 					<span
-						class="inline-block rounded px-3 py-1 text-sm text-white {getStatusColor(task.status)}"
+						class="inline-block rounded px-3 py-1 text-sm {STATUS_BADGE[task.status] ||
+							'bg-gray-600 text-gray-200'}"
 					>
-						{task.status.replace('_', ' ')}
+						{formatStatusLabel(task.status)}
 					</span>
 				</div>
-				{#if task.priority}
+				{#if getPriorityIndicator(task.priority)}
+					{@const taskPriority = getPriorityIndicator(task.priority)!}
 					<div>
 						<label class="mb-1 block text-sm text-gray-400">Priority</label>
-						<span
-							class="inline-block rounded px-3 py-1 text-sm text-white {getPriorityColor(
-								task.priority
-							)}"
-						>
-							{task.priority}
+						<span class="inline-flex items-center gap-1.5 text-sm text-gray-300">
+							<span
+								class="inline-block h-2 w-2 rounded-full {taskPriority.dot} {taskPriority.pulse
+									? 'animate-pulse'
+									: ''}"
+							></span>
+							{taskPriority.label}
 						</span>
 					</div>
 				{/if}
@@ -198,19 +188,27 @@
 			{#if subtasks.length > 0}
 				<div>
 					<h3 class="mb-2 text-lg font-semibold text-white">Subtasks</h3>
-					<div class="space-y-2">
+					<div class="space-y-1">
 						{#each subtasks as subtask (subtask.id)}
+							{@const subPriority = getPriorityIndicator(subtask.priority)}
 							<button
 								onclick={() => onNavigate?.(subtask.id)}
-								class="flex min-h-[44px] w-full items-center gap-2 rounded border border-gray-700 bg-gray-800 p-3 text-left hover:border-gray-600"
+								class="flex min-h-[40px] w-full items-center gap-2 rounded border-l-2 py-2 pl-3 pr-2 text-left transition-colors hover:bg-gray-800 {STATUS_BORDER[
+									subtask.status
+								] || 'border-l-gray-500'}"
 							>
-								<span
-									class="inline-block h-2 w-2 shrink-0 rounded-full {getStatusColor(
-										subtask.status
-									)}"
-								></span>
-								<span class="flex-1 text-base text-white">{subtask.title}</span>
-								<span class="text-xs text-gray-400">{subtask.status.replace('_', ' ')}</span>
+								<span class="flex-1 text-sm text-white">{subtask.title}</span>
+								{#if subPriority}
+									<span
+										class="inline-block h-1.5 w-1.5 shrink-0 rounded-full {subPriority.dot} {subPriority.pulse
+											? 'animate-pulse'
+											: ''}"
+										title={subPriority.label}
+									></span>
+								{/if}
+								<span class="shrink-0 text-xs text-gray-500">
+									{formatStatusLabel(subtask.status)}
+								</span>
 							</button>
 						{/each}
 					</div>

@@ -13,6 +13,13 @@
 		type Activity
 	} from '$lib/stores/pm-operations.js';
 	import { getDomain, getFocus, type Domain, type Focus } from '$lib/stores/pm-domains.js';
+	import { pmGet } from '$lib/stores/pm-api.js';
+	import {
+		STATUS_BORDER,
+		STATUS_BADGE,
+		getPriorityIndicator,
+		formatStatusLabel
+	} from './pm-utils.js';
 
 	interface Props {
 		projectId: number;
@@ -60,8 +67,28 @@
 	}
 
 	$effect(() => {
-		const unsub = tasks.subscribe((v) => {
-			taskList = v;
+		const unsub = tasks.subscribe(async (v) => {
+			// Merge subtasks: for each root task, fetch its children
+			const rootTasks = v.filter((t) => t.parent_task_id === null);
+			const allTasks = [...v];
+			const subtaskPromises = rootTasks.map((t) =>
+				pmGet<{ items: Task[] }>('/api/pm/tasks', {
+					parent_task_id: t.id,
+					limit: '500'
+				}).catch(() => ({ items: [] as Task[] }))
+			);
+			const subtaskResults = await Promise.all(subtaskPromises);
+			const existingIds: Record<number, true> = {};
+			for (const t of allTasks) existingIds[t.id] = true;
+			for (const res of subtaskResults) {
+				for (const st of res.items) {
+					if (!existingIds[st.id]) {
+						allTasks.push(st);
+						existingIds[st.id] = true;
+					}
+				}
+			}
+			taskList = allTasks;
 		});
 		return unsub;
 	});
@@ -72,26 +99,6 @@
 
 	function formatTimestamp(ts: number): string {
 		return new Date(ts * 1000).toLocaleString();
-	}
-
-	function getStatusColor(status: string): string {
-		const colors: Record<string, string> = {
-			todo: 'bg-gray-600',
-			in_progress: 'bg-blue-600',
-			review: 'bg-purple-600',
-			done: 'bg-green-600'
-		};
-		return colors[status] || 'bg-gray-600';
-	}
-
-	function getPriorityColor(priority: string | null): string {
-		const colors: Record<string, string> = {
-			critical: 'bg-red-600',
-			high: 'bg-orange-600',
-			medium: 'bg-yellow-600',
-			low: 'bg-green-600'
-		};
-		return colors[priority || ''] || 'bg-gray-600';
 	}
 
 	function buildTaskTree(allTasks: Task[]): Task[] {
@@ -167,12 +174,21 @@
 
 				<!-- Metadata -->
 				<div class="mt-4 flex flex-wrap items-center gap-3">
-					<span class="rounded px-2 py-1 text-sm text-white {getStatusColor(project.status)}">
-						{project.status.replace('_', ' ')}
+					<span
+						class="rounded px-2 py-1 text-sm {STATUS_BADGE[project.status] ||
+							'bg-gray-600 text-gray-200'}"
+					>
+						{formatStatusLabel(project.status)}
 					</span>
-					{#if project.priority}
-						<span class="rounded px-2 py-1 text-sm text-white {getPriorityColor(project.priority)}">
-							{project.priority}
+					{#if getPriorityIndicator(project.priority)}
+						{@const projPriority = getPriorityIndicator(project.priority)!}
+						<span class="flex items-center gap-1.5 text-sm text-gray-300">
+							<span
+								class="inline-block h-2 w-2 rounded-full {projPriority.dot} {projPriority.pulse
+									? 'animate-pulse'
+									: ''}"
+							></span>
+							{projPriority.label}
 						</span>
 					{/if}
 					{#if project.due_date}
@@ -224,53 +240,54 @@
 			<!-- Tab content -->
 			<div class="flex-1 overflow-y-auto p-6">
 				{#if activeTab === 'tasks'}
-					<div class="space-y-2">
+					<div class="space-y-1">
 						{#each buildTaskTree(taskList) as task (task.id)}
-							<div class="rounded bg-gray-800 p-3">
-								<button
-									onclick={() => onTaskClick?.(task.id)}
-									class="flex min-h-[44px] w-full items-center gap-3 text-left"
-								>
+							{@const taskPriority = getPriorityIndicator(task.priority)}
+							<button
+								onclick={() => onTaskClick?.(task.id)}
+								class="flex min-h-[40px] w-full items-center gap-3 rounded border-l-2 py-2 pl-3 pr-2 text-left transition-colors hover:bg-gray-800 {STATUS_BORDER[
+									task.status
+								] || 'border-l-gray-500'}"
+							>
+								<span class="flex-1 text-sm text-white hover:text-blue-400">
+									{task.title}
+								</span>
+								{#if taskPriority}
 									<span
-										class="inline-block h-2 w-2 shrink-0 rounded-full {getStatusColor(task.status)}"
+										class="inline-block h-2 w-2 shrink-0 rounded-full {taskPriority.dot} {taskPriority.pulse
+											? 'animate-pulse'
+											: ''}"
+										title={taskPriority.label}
 									></span>
-									<span class="flex-1 text-base text-white hover:text-blue-400">{task.title}</span>
-									{#if task.priority}
+								{/if}
+								<span class="shrink-0 text-xs text-gray-500">
+									{formatStatusLabel(task.status)}
+								</span>
+							</button>
+							{#each getSubtasks(task.id, taskList) as subtask (subtask.id)}
+								{@const subPriority = getPriorityIndicator(subtask.priority)}
+								<button
+									onclick={() => onTaskClick?.(subtask.id)}
+									class="ml-5 flex min-h-[36px] w-[calc(100%-1.25rem)] items-center gap-3 rounded border-l-2 py-1.5 pl-3 pr-2 text-left transition-colors hover:bg-gray-800 {STATUS_BORDER[
+										subtask.status
+									] || 'border-l-gray-500'}"
+								>
+									<span class="flex-1 text-sm text-gray-300 hover:text-blue-400">
+										{subtask.title}
+									</span>
+									{#if subPriority}
 										<span
-											class="rounded px-2 py-1 text-xs text-white {getPriorityColor(task.priority)}"
-										>
-											{task.priority}
-										</span>
+											class="inline-block h-1.5 w-1.5 shrink-0 rounded-full {subPriority.dot} {subPriority.pulse
+												? 'animate-pulse'
+												: ''}"
+											title={subPriority.label}
+										></span>
 									{/if}
-									<span class="rounded px-2 py-1 text-xs text-white {getStatusColor(task.status)}">
-										{task.status.replace('_', ' ')}
+									<span class="shrink-0 text-xs text-gray-600">
+										{formatStatusLabel(subtask.status)}
 									</span>
 								</button>
-								{#each getSubtasks(task.id, taskList) as subtask (subtask.id)}
-									<button
-										onclick={() => onTaskClick?.(subtask.id)}
-										class="ml-6 mt-2 flex min-h-[44px] w-full items-center gap-3 rounded bg-gray-700 p-2 text-left"
-									>
-										<span
-											class="inline-block h-2 w-2 shrink-0 rounded-full {getStatusColor(
-												subtask.status
-											)}"
-										></span>
-										<span class="flex-1 text-sm text-white hover:text-blue-400"
-											>{subtask.title}</span
-										>
-										{#if subtask.priority}
-											<span
-												class="rounded px-2 py-1 text-xs text-white {getPriorityColor(
-													subtask.priority
-												)}"
-											>
-												{subtask.priority}
-											</span>
-										{/if}
-									</button>
-								{/each}
-							</div>
+							{/each}
 						{/each}
 						{#if taskList.length === 0}
 							<p class="text-base text-gray-500">No tasks</p>
@@ -303,9 +320,13 @@
 										<span class="text-gray-400"> "{activity.target_title}"</span>
 									{/if}
 								</div>
-								<div class="mt-1 text-xs text-gray-500">{formatTimestamp(activity.created_at)}</div>
+								<div class="mt-1 text-xs text-gray-500">
+									{formatTimestamp(activity.created_at)}
+								</div>
 								{#if activity.details}
-									<div class="mt-1 text-xs text-gray-400">{activity.details}</div>
+									<div class="mt-1 text-xs text-gray-400">
+										{activity.details}
+									</div>
 								{/if}
 							</div>
 						{/each}
