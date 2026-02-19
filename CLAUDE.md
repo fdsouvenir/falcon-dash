@@ -60,7 +60,7 @@ Svelte writable/readable stores that provide reactive state to components. Key s
 - `gateway.ts` — singleton gateway instances + `connectToGateway()`, `call()`, `canvasStore`
 - `chat.ts` — `createChatSession(sessionKey)` factory returning a session store with send/abort/reconcile/streaming
 - `threads.ts`, `bookmarks.ts`, `chat-search.ts`, `chat-resilience.ts` — chat feature stores
-- `sessions.ts` — session lifecycle (general session, event subscriptions)
+- `sessions.ts` — session lifecycle (create, rename, delete, reorder, event subscriptions)
 - `files.ts`, `editor.ts` — document browser state
 - `passwords.ts` — password vault state
 - `pm-store.ts`, `pm-domains.ts`, `pm-projects.ts`, `pm-operations.ts`, `pm-events.ts` — project management stores
