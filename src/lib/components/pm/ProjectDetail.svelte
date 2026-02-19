@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		getProject,
 		loadTasks,
@@ -16,9 +17,11 @@
 	import { pmGet } from '$lib/stores/pm-api.js';
 	import {
 		STATUS_BORDER,
+		STATUS_DOT,
 		STATUS_BADGE,
-		getPriorityIndicator,
-		formatStatusLabel
+		getPriorityBadge,
+		formatStatusLabel,
+		formatRelativeTime
 	} from './pm-utils.js';
 
 	interface Props {
@@ -38,6 +41,8 @@
 	let activeTab = $state<'tasks' | 'comments' | 'activity'>('tasks');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+	let descExpanded = $state(false);
+	let expandedTasks = new SvelteSet<number>();
 
 	async function loadData() {
 		loading = true;
@@ -68,7 +73,6 @@
 
 	$effect(() => {
 		const unsub = tasks.subscribe(async (v) => {
-			// Merge subtasks: for each root task, fetch its children
 			const rootTasks = v.filter((t) => t.parent_task_id === null);
 			const allTasks = [...v];
 			const subtaskPromises = rootTasks.map((t) =>
@@ -113,12 +117,25 @@
 			.sort((a, b) => a.sort_order - b.sort_order);
 	}
 
+	function toggleTaskExpand(taskId: number) {
+		if (expandedTasks.has(taskId)) expandedTasks.delete(taskId);
+		else expandedTasks.add(taskId);
+	}
+
 	function handleBackdropClick(e: MouseEvent) {
 		if (e.target === e.currentTarget) onClose?.();
 	}
 
 	function handleBackdropKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') onClose?.();
+	}
+
+	function handleActivityClick(activity: Activity) {
+		if (activity.target_type === 'task' && activity.target_id) {
+			onTaskClick?.(activity.target_id);
+		} else if (activity.target_type === 'comment') {
+			activeTab = 'comments';
+		}
 	}
 </script>
 
@@ -144,71 +161,79 @@
 				</button>
 			</div>
 		{:else if project}
-			<!-- Header -->
-			<div class="border-b border-gray-700 bg-gray-800 p-6">
-				<!-- Breadcrumb -->
+			<!-- Compact header toolbar -->
+			<div
+				class="flex min-h-[44px] items-center gap-2 border-b border-gray-700 bg-gray-800 px-3 py-2"
+			>
+				<button
+					onclick={onClose}
+					class="min-h-[36px] min-w-[36px] shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
+					title="Back"
+				>
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						></path>
+					</svg>
+				</button>
+
 				{#if domain && focus}
-					<div class="mb-3 text-sm text-gray-400">
-						<span>{domain.name}</span>
-						<span class="mx-2">›</span>
-						<span>{focus.name}</span>
-					</div>
+					<span class="shrink-0 text-xs text-gray-500">
+						{domain.name} / {focus.name}
+					</span>
+					<span class="text-xs text-gray-600">&middot;</span>
 				{/if}
 
-				<div class="flex items-start justify-between gap-4">
-					<h1 class="text-xl font-bold text-white md:text-2xl">{project.title}</h1>
-					<button
-						onclick={onClose}
-						class="min-h-[44px] min-w-[44px] rounded p-2 text-gray-400 hover:bg-gray-700 hover:text-white"
-					>
-						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							></path>
-						</svg>
-					</button>
-				</div>
+				<h1 class="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+					{project.title}
+				</h1>
 
-				<!-- Metadata -->
-				<div class="mt-4 flex flex-wrap items-center gap-3">
-					<span
-						class="rounded px-2 py-1 text-sm {STATUS_BADGE[project.status] ||
-							'bg-gray-600 text-gray-200'}"
-					>
-						{formatStatusLabel(project.status)}
+				<span
+					class="shrink-0 rounded px-1.5 py-0.5 text-xs {STATUS_BADGE[project.status] ||
+						'bg-gray-600 text-gray-200'}"
+				>
+					{formatStatusLabel(project.status)}
+				</span>
+
+				{#if getPriorityBadge(project.priority).label !== '\u2014'}
+					{@const pb = getPriorityBadge(project.priority)}
+					<span class="shrink-0 rounded px-1.5 py-0.5 text-xs {pb.classes}">
+						{pb.label}
 					</span>
-					{#if getPriorityIndicator(project.priority)}
-						{@const projPriority = getPriorityIndicator(project.priority)!}
-						<span class="flex items-center gap-1.5 text-sm text-gray-300">
-							<span
-								class="inline-block h-2 w-2 rounded-full {projPriority.dot} {projPriority.pulse
-									? 'animate-pulse'
-									: ''}"
-							></span>
-							{projPriority.label}
-						</span>
-					{/if}
-					{#if project.due_date}
-						<span class="text-sm text-gray-400">Due: {project.due_date}</span>
-					{/if}
-				</div>
+				{/if}
 
-				{#if project.description}
-					<p class="mt-4 text-base text-gray-300">{project.description}</p>
+				{#if project.due_date}
+					<span class="shrink-0 text-xs text-gray-400">{project.due_date}</span>
 				{/if}
 			</div>
 
+			<!-- Collapsible description -->
+			{#if project.description}
+				<button
+					class="w-full border-b border-gray-700/50 px-4 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-800/30"
+					onclick={() => {
+						descExpanded = !descExpanded;
+					}}
+				>
+					{#if descExpanded}
+						{project.description}
+					{:else}
+						<span class="line-clamp-1">{project.description}</span>
+					{/if}
+				</button>
+			{/if}
+
 			<!-- Tabs -->
 			<div class="border-b border-gray-700 bg-gray-800">
-				<div class="flex gap-1 px-6">
+				<div class="flex gap-1 px-4">
 					<button
 						onclick={() => {
 							activeTab = 'tasks';
 						}}
-						class="min-h-[44px] px-4 py-3 text-sm font-medium {activeTab === 'tasks'
+						class="min-h-[40px] px-3 py-2 text-xs font-medium {activeTab === 'tasks'
 							? 'border-b-2 border-blue-500 text-white'
 							: 'text-gray-400 hover:text-white'}"
 					>
@@ -218,7 +243,7 @@
 						onclick={() => {
 							activeTab = 'comments';
 						}}
-						class="min-h-[44px] px-4 py-3 text-sm font-medium {activeTab === 'comments'
+						class="min-h-[40px] px-3 py-2 text-xs font-medium {activeTab === 'comments'
 							? 'border-b-2 border-blue-500 text-white'
 							: 'text-gray-400 hover:text-white'}"
 					>
@@ -228,7 +253,7 @@
 						onclick={() => {
 							activeTab = 'activity';
 						}}
-						class="min-h-[44px] px-4 py-3 text-sm font-medium {activeTab === 'activity'
+						class="min-h-[40px] px-3 py-2 text-xs font-medium {activeTab === 'activity'
 							? 'border-b-2 border-blue-500 text-white'
 							: 'text-gray-400 hover:text-white'}"
 					>
@@ -238,100 +263,173 @@
 			</div>
 
 			<!-- Tab content -->
-			<div class="flex-1 overflow-y-auto p-6">
+			<div class="flex-1 overflow-y-auto">
 				{#if activeTab === 'tasks'}
-					<div class="space-y-1">
+					<!-- Table header -->
+					<div
+						class="sticky top-0 z-[1] flex items-center gap-3 border-b border-gray-700 bg-gray-900 px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500"
+					>
+						<span class="w-5"></span>
+						<span class="flex-1">Task</span>
+						<span class="w-16 text-center">Priority</span>
+						<span class="w-20 text-right">Status</span>
+					</div>
+
+					<!-- Task rows -->
+					<div class="divide-y divide-gray-800">
 						{#each buildTaskTree(taskList) as task (task.id)}
-							{@const taskPriority = getPriorityIndicator(task.priority)}
-							<button
-								onclick={() => onTaskClick?.(task.id)}
-								class="flex min-h-[40px] w-full items-center gap-3 rounded border-l-2 py-2 pl-3 pr-2 text-left transition-colors hover:bg-gray-800 {STATUS_BORDER[
-									task.status
-								] || 'border-l-gray-500'}"
-							>
-								<span class="flex-1 text-sm text-white hover:text-blue-400">
-									{task.title}
-								</span>
-								{#if taskPriority}
-									<span
-										class="inline-block h-2 w-2 shrink-0 rounded-full {taskPriority.dot} {taskPriority.pulse
-											? 'animate-pulse'
-											: ''}"
-										title={taskPriority.label}
-									></span>
-								{/if}
-								<span class="shrink-0 text-xs text-gray-500">
-									{formatStatusLabel(task.status)}
-								</span>
-							</button>
-							{#each getSubtasks(task.id, taskList) as subtask (subtask.id)}
-								{@const subPriority = getPriorityIndicator(subtask.priority)}
-								<button
-									onclick={() => onTaskClick?.(subtask.id)}
-									class="ml-5 flex min-h-[36px] w-[calc(100%-1.25rem)] items-center gap-3 rounded border-l-2 py-1.5 pl-3 pr-2 text-left transition-colors hover:bg-gray-800 {STATUS_BORDER[
-										subtask.status
+							{@const subs = getSubtasks(task.id, taskList)}
+							{@const hasSubs = subs.length > 0}
+							{@const isExpanded = expandedTasks.has(task.id)}
+							{@const pb = getPriorityBadge(task.priority)}
+							<div>
+								<div
+									class="flex min-h-[40px] items-center gap-3 border-l-2 px-4 py-1.5 transition-colors hover:bg-gray-800/60 {STATUS_BORDER[
+										task.status
 									] || 'border-l-gray-500'}"
 								>
-									<span class="flex-1 text-sm text-gray-300 hover:text-blue-400">
-										{subtask.title}
-									</span>
-									{#if subPriority}
-										<span
-											class="inline-block h-1.5 w-1.5 shrink-0 rounded-full {subPriority.dot} {subPriority.pulse
-												? 'animate-pulse'
-												: ''}"
-											title={subPriority.label}
-										></span>
+									<!-- Expand/collapse toggle -->
+									{#if hasSubs}
+										<button
+											class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-500 hover:text-gray-300"
+											onclick={() => toggleTaskExpand(task.id)}
+											title={isExpanded ? 'Collapse' : 'Expand'}
+										>
+											<svg
+												class="h-3 w-3 transition-transform {isExpanded ? 'rotate-90' : ''}"
+												fill="currentColor"
+												viewBox="0 0 12 12"
+											>
+												<path d="M4 2l4 4-4 4z" />
+											</svg>
+										</button>
+									{:else}
+										<span class="w-5"></span>
 									{/if}
-									<span class="shrink-0 text-xs text-gray-600">
-										{formatStatusLabel(subtask.status)}
+
+									<!-- Title (clickable) -->
+									<button
+										class="min-w-0 flex-1 truncate text-left text-sm text-white hover:text-blue-400"
+										onclick={() => onTaskClick?.(task.id)}
+									>
+										{task.title}
+										{#if hasSubs && !isExpanded}
+											<span class="ml-1 text-xs text-gray-600">({subs.length})</span>
+										{/if}
+									</button>
+
+									<!-- Priority -->
+									<span class="w-16 shrink-0 text-center text-xs {pb.classes}">
+										{pb.label}
 									</span>
-								</button>
-							{/each}
-						{/each}
-						{#if taskList.length === 0}
-							<p class="text-base text-gray-500">No tasks</p>
-						{/if}
-					</div>
-				{:else if activeTab === 'comments'}
-					<div class="space-y-4">
-						{#each comments as comment (comment.id)}
-							<div class="rounded bg-gray-800 p-4">
-								<div class="mb-2 flex items-center gap-2">
-									<span class="text-sm font-medium text-white">{comment.author}</span>
-									<span class="text-sm text-gray-400">{formatTimestamp(comment.created_at)}</span>
+
+									<!-- Status -->
+									<span
+										class="flex w-20 shrink-0 items-center justify-end gap-1.5 text-xs text-gray-400"
+									>
+										<span
+											class="inline-block h-1.5 w-1.5 rounded-full {STATUS_DOT[task.status] ||
+												'bg-gray-500'}"
+										></span>
+										{formatStatusLabel(task.status)}
+									</span>
 								</div>
-								<p class="text-base text-gray-300">{comment.body}</p>
+
+								<!-- Subtasks (when expanded) -->
+								{#if hasSubs && isExpanded}
+									{#each subs as subtask (subtask.id)}
+										{@const spb = getPriorityBadge(subtask.priority)}
+										<div
+											class="flex min-h-[36px] items-center gap-3 border-l-2 py-1 pl-12 pr-4 transition-colors hover:bg-gray-800/40 {STATUS_BORDER[
+												subtask.status
+											] || 'border-l-gray-500'}"
+										>
+											<span class="w-5"></span>
+											<button
+												class="min-w-0 flex-1 truncate text-left text-sm text-gray-300 hover:text-blue-400"
+												onclick={() => onTaskClick?.(subtask.id)}
+											>
+												{subtask.title}
+											</button>
+											<span class="w-16 shrink-0 text-center text-xs {spb.classes}">
+												{spb.label}
+											</span>
+											<span
+												class="flex w-20 shrink-0 items-center justify-end gap-1.5 text-xs text-gray-500"
+											>
+												<span
+													class="inline-block h-1.5 w-1.5 rounded-full {STATUS_DOT[
+														subtask.status
+													] || 'bg-gray-500'}"
+												></span>
+												{formatStatusLabel(subtask.status)}
+											</span>
+										</div>
+									{/each}
+								{/if}
+							</div>
+						{/each}
+					</div>
+
+					{#if taskList.length === 0}
+						<p class="p-4 text-sm text-gray-500">No tasks</p>
+					{/if}
+				{:else if activeTab === 'comments'}
+					<div class="space-y-3 p-4">
+						{#each comments as comment (comment.id)}
+							<div class="rounded bg-gray-800 p-3">
+								<div class="mb-1 flex items-center gap-2">
+									<span class="text-sm font-medium text-white">{comment.author}</span>
+									<span class="text-xs text-gray-400">{formatTimestamp(comment.created_at)}</span>
+								</div>
+								<p class="text-sm text-gray-300">{comment.body}</p>
 							</div>
 						{/each}
 						{#if comments.length === 0}
-							<p class="text-base text-gray-500">No comments</p>
+							<p class="text-sm text-gray-500">No comments</p>
 						{/if}
 					</div>
 				{:else if activeTab === 'activity'}
-					<div class="space-y-2">
+					<div class="divide-y divide-gray-800">
 						{#each activities as activity (activity.id)}
-							<div class="rounded bg-gray-800 p-3">
-								<div class="text-sm">
+							<div class="px-4 py-2.5">
+								<div class="text-xs">
 									<span class="font-medium text-white">{activity.actor}</span>
-									<span class="text-gray-400"> {activity.action} </span>
-									<span class="text-white">{activity.target_type}</span>
-									{#if activity.target_title}
-										<span class="text-gray-400"> "{activity.target_title}"</span>
+									<span class="text-gray-400">
+										{activity.action}
+									</span>
+									{#if activity.target_type === 'task' && activity.target_id}
+										<button
+											class="text-blue-400 hover:underline"
+											onclick={() => handleActivityClick(activity)}
+										>
+											{activity.target_title || `Task #${activity.target_id}`}
+										</button>
+									{:else if activity.target_type === 'comment'}
+										<button
+											class="text-blue-400 hover:underline"
+											onclick={() => handleActivityClick(activity)}
+										>
+											{activity.target_title || 'comment'}
+										</button>
+									{:else}
+										<span class="text-white">
+											{activity.target_title || ''}
+										</span>
 									{/if}
 								</div>
-								<div class="mt-1 text-xs text-gray-500">
-									{formatTimestamp(activity.created_at)}
-								</div>
 								{#if activity.details}
-									<div class="mt-1 text-xs text-gray-400">
+									<div class="mt-0.5 text-xs text-gray-500">
 										{activity.details}
 									</div>
 								{/if}
+								<div class="mt-0.5 text-xs text-gray-600">
+									{formatRelativeTime(activity.created_at)}
+								</div>
 							</div>
 						{/each}
 						{#if activities.length === 0}
-							<p class="text-base text-gray-500">No recent activity</p>
+							<p class="p-4 text-sm text-gray-500">No recent activity</p>
 						{/if}
 					</div>
 				{/if}

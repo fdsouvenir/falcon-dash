@@ -18,6 +18,42 @@
 			}
 		});
 	});
+
+	// --- History state management ---
+	interface PMNavState {
+		projectId: number | null;
+		taskId: number | null;
+	}
+
+	function navigateToProject(projectId: number) {
+		selectedProjectId = projectId;
+		selectedTaskId = null;
+		history.pushState({ pmNav: { projectId, taskId: null } satisfies PMNavState }, '');
+	}
+
+	function navigateToTask(taskId: number) {
+		selectedTaskId = taskId;
+		history.pushState({ pmNav: { projectId: selectedProjectId, taskId } satisfies PMNavState }, '');
+	}
+
+	function navigateBack() {
+		history.back();
+	}
+
+	$effect(() => {
+		function handlePopState(e: PopStateEvent) {
+			const nav = (e.state as { pmNav?: PMNavState } | null)?.pmNav;
+			if (nav) {
+				selectedProjectId = nav.projectId;
+				selectedTaskId = nav.taskId;
+			} else {
+				selectedProjectId = null;
+				selectedTaskId = null;
+			}
+		}
+		window.addEventListener('popstate', handlePopState);
+		return () => window.removeEventListener('popstate', handlePopState);
+	});
 </script>
 
 <svelte:head>
@@ -40,36 +76,19 @@
 {:else}
 	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
 		<div class="flex-1 overflow-hidden">
-			<ProjectList
-				onselect={(projectId) => {
-					selectedProjectId = projectId;
-					selectedTaskId = null;
-				}}
-			/>
+			<ProjectList onselect={navigateToProject} />
 		</div>
 
 		{#if selectedProjectId !== null}
 			<ProjectDetail
 				projectId={selectedProjectId}
-				onClose={() => {
-					selectedProjectId = null;
-				}}
-				onTaskClick={(taskId) => {
-					selectedTaskId = taskId;
-				}}
+				onClose={navigateBack}
+				onTaskClick={navigateToTask}
 			/>
 		{/if}
 
 		{#if selectedTaskId !== null}
-			<TaskDetailPanel
-				taskId={selectedTaskId}
-				onClose={() => {
-					selectedTaskId = null;
-				}}
-				onNavigate={(taskId) => {
-					selectedTaskId = taskId;
-				}}
-			/>
+			<TaskDetailPanel taskId={selectedTaskId} onClose={navigateBack} onNavigate={navigateToTask} />
 		{/if}
 	</div>
 {/if}

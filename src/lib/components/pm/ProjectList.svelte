@@ -12,6 +12,12 @@
 		type Domain,
 		type Focus
 	} from '$lib/stores/pm-domains.js';
+	import {
+		getPMStats,
+		getDashboardContext,
+		type PMStats,
+		type DashboardContext
+	} from '$lib/stores/pm-operations.js';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { formatRelativeTime, STATUS_BORDER, getPriorityIndicator } from './pm-utils.js';
 
@@ -27,6 +33,8 @@
 	let loading = $state(false);
 	let filterMode = $state<'active' | 'all' | 'done' | 'archived'>('active');
 	let collapsedDomains = new SvelteSet<string>();
+	let dashStats = $state<PMStats | null>(null);
+	let dashContext = $state<DashboardContext | null>(null);
 
 	$effect(() => {
 		const u1 = projects.subscribe((v) => {
@@ -52,6 +60,10 @@
 	$effect(() => {
 		loadProjects();
 		loadDomains();
+		Promise.all([getPMStats(), getDashboardContext()]).then(([s, c]) => {
+			dashStats = s;
+			dashContext = c;
+		});
 	});
 
 	interface FocusGroup {
@@ -80,18 +92,6 @@
 		});
 	});
 
-	const stats = $derived.by(() => {
-		const total = projectList.length;
-		const active = projectList.filter(
-			(p) => p.status === 'todo' || p.status === 'in_progress' || p.status === 'review'
-		).length;
-		const overdue = projectList.filter((p) => {
-			if (!p.due_date || p.status === 'done' || p.status === 'cancelled') return false;
-			return new Date(p.due_date).getTime() < Date.now();
-		}).length;
-		return { total, active, overdue };
-	});
-
 	const grouped = $derived.by(() => {
 		const focusMap: Record<string, Focus> = {};
 		for (const f of focusList) focusMap[f.id] = f;
@@ -109,7 +109,6 @@
 			list.push(p);
 			projectsByFocus[p.focus_id] = list;
 		}
-		// Sort projects within each focus by last_activity_at desc
 		for (const key of Object.keys(projectsByFocus)) {
 			projectsByFocus[key].sort((a, b) => b.last_activity_at - a.last_activity_at);
 		}
@@ -135,44 +134,37 @@
 			}
 		}
 
-		// Handle projects whose focus doesn't belong to any known domain
+		return result;
+	});
+
+	// Orphan projects: focus doesn't belong to any known domain
+	const orphanProjects = $derived.by(() => {
+		const focusMap: Record<string, Focus> = {};
+		for (const f of focusList) focusMap[f.id] = f;
 		const knownDomainIds: Record<string, true> = {};
 		for (const d of domainList) knownDomainIds[d.id] = true;
 		const orphanFocusIds: Record<string, true> = {};
 		for (const f of focusList) {
 			if (!knownDomainIds[f.domain_id]) orphanFocusIds[f.id] = true;
 		}
-		const orphanProjects = filtered.filter(
-			(p) => orphanFocusIds[p.focus_id] || !focusMap[p.focus_id]
-		);
-		if (orphanProjects.length > 0) {
-			const orphanFocus: Focus = {
-				id: '__orphan',
-				domain_id: '__orphan',
-				name: 'uncategorized',
-				description: null,
-				sort_order: 0,
-				created_at: 0
-			};
-			result.push({
-				domain: {
-					id: '__orphan',
-					name: 'Uncategorized',
-					description: null,
-					sort_order: 999,
-					created_at: 0
-				},
-				focusGroups: [
-					{
-						focus: orphanFocus,
-						projects: orphanProjects.sort((a, b) => b.last_activity_at - a.last_activity_at)
-					}
-				],
-				projectCount: orphanProjects.length
-			});
-		}
+		return filtered
+			.filter((p) => orphanFocusIds[p.focus_id] || !focusMap[p.focus_id])
+			.sort((a, b) => b.last_activity_at - a.last_activity_at);
+	});
 
-		return result;
+	// Attention items: dueSoon + blocked, max 3
+	const attentionItems = $derived.by(() => {
+		if (!dashContext) return [];
+		const items: Array<{ id: number; title: string; tag: string; tagColor: string }> = [];
+		for (const d of dashContext.dueSoon) {
+			if (items.length >= 3) break;
+			items.push({ id: d.id, title: d.title, tag: 'due soon', tagColor: 'text-amber-400' });
+		}
+		for (const b of dashContext.blocked) {
+			if (items.length >= 3) break;
+			items.push({ id: b.id, title: b.title, tag: 'blocked', tagColor: 'text-red-400' });
+		}
+		return items;
 	});
 
 	function toggleDomain(domainId: string) {
@@ -195,13 +187,50 @@
 	{#if loading}
 		<div class="flex flex-1 items-center justify-center text-base text-gray-400">Loading...</div>
 	{:else}
-		<!-- Stats bar + filter pills -->
-		<div class="border-b border-gray-800 px-4 py-3">
-			<div class="mb-2 text-sm text-gray-400">
-				{stats.total} projects · {stats.active} active{#if stats.overdue > 0}
-					&nbsp;·&nbsp;<span class="text-red-400">{stats.overdue} overdue</span>
-				{/if}
-			</div>
+		<!-- Dashboard header -->
+		<div class="border-b border-gray-800 px-4 pt-4 pb-3">
+			<!-- Stat cards -->
+			{#if dashStats}
+				<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+						<div class="text-xs text-gray-500">Total</div>
+						<div class="text-lg font-semibold text-white">{dashStats.totalProjects}</div>
+					</div>
+					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+						<div class="text-xs text-gray-500">Active</div>
+						<div class="text-lg font-semibold text-green-400">
+							{dashStats.byStatus.in_progress || 0}
+						</div>
+					</div>
+					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+						<div class="text-xs text-gray-500">Due Soon</div>
+						<div class="text-lg font-semibold text-amber-400">
+							{dashContext?.dueSoon.length ?? 0}
+						</div>
+					</div>
+					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+						<div class="text-xs text-gray-500">Overdue</div>
+						<div class="text-lg font-semibold text-red-400">{dashStats.overdue}</div>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Attention items -->
+			{#if attentionItems.length > 0}
+				<div class="mb-3 flex flex-wrap gap-1.5">
+					{#each attentionItems as item (item.id)}
+						<button
+							class="flex items-center gap-1.5 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs transition-colors hover:border-gray-600"
+							onclick={() => onselect?.(item.id)}
+						>
+							<span class="truncate text-white">{item.title}</span>
+							<span class={item.tagColor}>{item.tag}</span>
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Filter pills -->
 			<div class="flex gap-1.5">
 				{#each filters as f (f.key)}
 					<button
@@ -221,7 +250,7 @@
 
 		<!-- Grouped project list -->
 		<div class="flex-1 overflow-y-auto">
-			{#if grouped.length === 0}
+			{#if grouped.length === 0 && orphanProjects.length === 0}
 				<div class="flex items-center justify-center p-8 text-base text-gray-500">
 					No projects found
 				</div>
@@ -284,6 +313,37 @@
 						{/each}
 					{/if}
 				{/each}
+
+				<!-- Orphan projects (not in any known domain) -->
+				{#if orphanProjects.length > 0}
+					<div class="mt-1 border-t border-gray-700 pt-1">
+						<div class="px-4 py-1.5 text-xs text-gray-500">Other</div>
+						{#each orphanProjects as project (project.id)}
+							{@const priority = getPriorityIndicator(project.priority)}
+							<button
+								class="flex min-h-[40px] w-full items-center gap-3 border-l-2 py-2 pl-8 pr-4 text-left transition-colors hover:bg-gray-800/60 {STATUS_BORDER[
+									project.status
+								] || 'border-l-gray-500'}"
+								onclick={() => onselect?.(project.id)}
+							>
+								<span class="min-w-0 flex-1 truncate text-sm text-gray-200">
+									{project.title}
+								</span>
+								<span class="shrink-0 text-xs text-gray-600">
+									{formatRelativeTime(project.last_activity_at)}
+								</span>
+								{#if priority}
+									<span
+										class="inline-block h-2 w-2 shrink-0 rounded-full {priority.dot} {priority.pulse
+											? 'animate-pulse'
+											: ''}"
+										title={priority.label}
+									></span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}

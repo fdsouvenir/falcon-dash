@@ -47,6 +47,13 @@ export function getPriorityIndicator(
 	return null;
 }
 
+/** Returns a labeled priority badge with classes. Always returns a value (normal shows as dash). */
+export function getPriorityBadge(priority: string | null): { classes: string; label: string } {
+	if (priority === 'urgent') return { classes: 'bg-red-500/20 text-red-400', label: 'urgent' };
+	if (priority === 'high') return { classes: 'bg-orange-400/20 text-orange-300', label: 'high' };
+	return { classes: 'text-gray-600', label: '\u2014' };
+}
+
 /** Format a status string for display (replace underscores with spaces). */
 export function formatStatusLabel(status: string): string {
 	return status.replace('_', ' ');

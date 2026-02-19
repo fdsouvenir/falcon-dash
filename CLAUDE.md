@@ -98,7 +98,7 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - `/jobs` — cron job management
 - `/heartbeat` — system health monitoring
 - `/passwords` — password vault (KeePassXC)
-- `/projects` — project management (kanban, nav tree, detail panels)
+- `/projects` — project management dashboard (stat cards, domain/focus grouped list, project detail modal, task detail panel). Uses `history.pushState` for browser back navigation between views.
 - `/settings` — settings page (config editor, devices, Discord, exec approvals, live logs, models, skills, workspace files)
 
 ### Specialized Modules
@@ -109,6 +109,16 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - **`src/lib/pwa/`** — service worker registration
 - **`src/lib/theme/`** — theme manager
 - **`src/lib/performance/`** — virtual scroll implementation
+
+### PM UI Components (`src/lib/components/pm/`)
+
+- **`pm-utils.ts`** — shared formatting utilities: `STATUS_BORDER`/`STATUS_DOT`/`STATUS_BADGE` maps, `getPriorityIndicator()` (dot indicators), `getPriorityBadge()` (labeled badges), `formatRelativeTime()` (wraps chat time-utils for unix seconds), `formatStatusLabel()`
+- **`ProjectList.svelte`** — dashboard view with stat cards (Total/Active/Due Soon/Overdue from `getPMStats`/`getDashboardContext`), attention chips, filter pills (Active/All/Done/Archived), projects grouped by Domain → Focus with collapsible domain headers. Orphan projects (no known domain) render in a flat "Other" section.
+- **`ProjectDetail.svelte`** — modal overlay for project detail. Compact single-row toolbar header (back arrow + breadcrumb + title + status/priority). Three tabs: Tasks (table layout with expand/collapse subtasks via `SvelteSet`), Comments, Activity (clickable targets navigate to tasks/comments). Fetches subtasks for each root task and merges into taskList.
+- **`TaskDetailPanel.svelte`** — right-side panel (500px desktop, full mobile) for task detail. Back arrow navigation, ancestry breadcrumb, subtask list with priority badges. Reloads on `taskId` prop change via `$effect`.
+- **`PMDashboard.svelte`** — standalone dashboard view (currently unused, superseded by dashboard header in ProjectList)
+
+**Navigation flow:** `+page.svelte` manages `selectedProjectId`/`selectedTaskId` state with `history.pushState`/`popstate` integration. Browser back navigates: task → project → list → exit. All close/navigate callbacks route through `navigateBack()`/`navigateToProject()`/`navigateToTask()`.
 
 ### PM Context Pipeline
 
