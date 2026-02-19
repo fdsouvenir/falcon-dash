@@ -2,7 +2,7 @@
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
 	import ChatList from './ChatList.svelte';
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
-	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 
 	let { collapsed = false, onToggle }: { collapsed: boolean; onToggle: () => void } = $props();
 
@@ -10,10 +10,14 @@
 	let agentEmoji = $state<string | undefined>(undefined);
 
 	$effect(() => {
-		getAgentIdentity().then((identity) => {
-			agentName = identity.name || 'Falcon Dashboard';
-			agentEmoji = identity.emoji;
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Falcon Dashboard';
+				agentEmoji = identity.emoji;
+			});
 		});
+		return unsub;
 	});
 
 	let editingId = $state<string | null>(null);

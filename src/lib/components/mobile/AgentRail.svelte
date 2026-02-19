@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 
 	let agentName = $state('Agent');
 	let agentEmoji = $state<string | undefined>(undefined);
 
 	$effect(() => {
-		getAgentIdentity().then((identity) => {
-			agentName = identity.name || 'Agent';
-			agentEmoji = identity.emoji;
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+				agentEmoji = identity.emoji;
+			});
 		});
+		return unsub;
 	});
 
 	let agentInitial = $derived(agentName.charAt(0).toUpperCase());

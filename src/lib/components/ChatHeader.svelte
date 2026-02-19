@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { snapshot, call } from '$lib/stores/gateway.js';
-	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
@@ -36,9 +36,13 @@
 
 	let agentName = $state('Agent');
 	$effect(() => {
-		getAgentIdentity().then((identity) => {
-			agentName = identity.name || 'Agent';
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+			});
 		});
+		return unsub;
 	});
 
 	async function updateSetting(field: string, value: unknown) {

@@ -1,4 +1,4 @@
-import { call } from '$lib/stores/gateway.js';
+import { call, connection } from '$lib/stores/gateway.js';
 
 export interface AgentIdentity {
 	agentId: string;
@@ -8,6 +8,9 @@ export interface AgentIdentity {
 }
 
 const FALLBACK: AgentIdentity = { agentId: '', name: 'Agent', avatar: '', emoji: undefined };
+
+/** Readable store — re-subscribe in `$effect` to trigger fetch after reconnect. */
+export const connectionState = connection.state;
 
 export async function getAgentIdentity(agentId?: string): Promise<AgentIdentity> {
 	try {

@@ -13,7 +13,7 @@
 		pinnedSessions,
 		type ChatSessionInfo
 	} from '$lib/stores/sessions.js';
-	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import {
 		searchAllChats,
 		searchResults,
@@ -46,10 +46,14 @@
 
 	$effect(() => {
 		if (variant !== 'mobile') return;
-		getAgentIdentity().then((identity) => {
-			agentName = identity.name || 'Agent';
-			agentEmoji = identity.emoji;
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+				agentEmoji = identity.emoji;
+			});
 		});
+		return unsub;
 	});
 
 	let items = $state<ChatSessionInfo[]>([]);
