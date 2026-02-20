@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AgentRail from './AgentRail.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import { canvasStore } from '$lib/stores/gateway.js';
@@ -6,6 +7,7 @@
 
 	let { children }: { children: import('svelte').Snippet } = $props();
 	let sidebarCollapsed = $state(false);
+	let selectedAgentId = $state('default');
 	let currentSurface = $state<CanvasSurface | null>(null);
 	let canvasPanelMinimized = $state(false);
 
@@ -24,7 +26,12 @@
 </script>
 
 <div class="flex h-screen bg-gray-950 text-white">
-	<Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+	<!-- Agent rail — always visible on desktop, hidden on mobile -->
+	<div class="hidden md:flex">
+		<AgentRail bind:selectedAgentId />
+	</div>
+
+	<Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} {selectedAgentId} />
 
 	<!-- Mobile overlay -->
 	{#if !sidebarCollapsed}

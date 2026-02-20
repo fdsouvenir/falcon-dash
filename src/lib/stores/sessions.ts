@@ -67,11 +67,23 @@ const _sessions = writable<ChatSessionInfo[]>([]);
 const _activeSessionKey = writable<string | null>(loadPersistedSessionKey());
 const _searchQuery = writable('');
 const _pinnedSessions = writable<string[]>(loadPinnedSessions());
+const _selectedAgentId = writable<string | null>(null);
 
 export const sessions: Readable<ChatSessionInfo[]> = readonly(_sessions);
 export const activeSessionKey: Readable<string | null> = readonly(_activeSessionKey);
 export const searchQuery = _searchQuery;
 export const pinnedSessions: Readable<string[]> = readonly(_pinnedSessions);
+export const selectedAgentId: Readable<string | null> = readonly(_selectedAgentId);
+
+export function setSelectedAgent(agentId: string | null): void {
+	_selectedAgentId.set(agentId);
+}
+
+function sessionMatchesAgent(sessionKey: string, agentId: string | null): boolean {
+	if (!agentId) return true;
+	const match = sessionKey.match(/^agent:([^:]+):/);
+	return match ? match[1] === agentId : true;
+}
 
 export function togglePin(sessionKey: string): void {
 	_pinnedSessions.update((keys) => {
@@ -94,11 +106,12 @@ function isSystemSession(s: ChatSessionInfo): boolean {
 	);
 }
 
-// Derived: filtered and sorted sessions (excludes system/thread sessions, pinned first then by updatedAt desc)
+// Derived: filtered and sorted sessions (excludes system/thread sessions, filters by agent, pinned first)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
-	[_sessions, _searchQuery, _pinnedSessions],
-	([$sessions, $query, $pinned]) => {
+	[_sessions, _searchQuery, _pinnedSessions, _selectedAgentId],
+	([$sessions, $query, $pinned, $agentId]) => {
 		let list = $sessions.filter((s) => !isSystemSession(s));
+		list = list.filter((s) => sessionMatchesAgent(s.sessionKey, $agentId));
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
@@ -274,8 +287,9 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
 }
 
 export async function createSession(label?: string): Promise<string> {
+	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
-	const agentId = defaults.defaultAgentId ?? 'default';
+	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
@@ -296,8 +310,9 @@ export async function createSession(label?: string): Promise<string> {
 }
 
 export function createSessionOptimistic(label?: string): string {
+	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
-	const agentId = defaults.defaultAgentId ?? 'default';
+	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
