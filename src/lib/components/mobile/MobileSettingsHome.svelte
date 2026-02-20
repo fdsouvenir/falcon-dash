@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { settingsNavGroups, type SettingsNavItem } from './settings/settings-nav-items.js';
+	import { gatewayToken } from '$lib/stores/token.js';
 
 	let { onnavigate }: { onnavigate: (id: string) => void } = $props();
 
@@ -8,6 +9,10 @@
 		if (item.id === 'cron') {
 			// eslint-disable-next-line svelte/no-navigation-without-resolve -- static route
 			goto('/jobs');
+		} else if (item.id === 'disconnect') {
+			gatewayToken.clear();
+		} else if (item.id === 'logout') {
+			window.location.href = '/cdn-cgi/access/logout';
 		} else {
 			onnavigate(item.id);
 		}
