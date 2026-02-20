@@ -31,7 +31,13 @@ function runKeepassxc(args: string[], input?: string): Promise<string> {
 
 		proc.on('close', (code) => {
 			if (code === 0) resolve(stdout.trim());
-			else reject(new Error(stderr.trim() || `Process exited with code ${code}`));
+			else {
+				const msg = stderr
+					.trim()
+					.replace(/^(Enter password.*?:\s*|Repeat password.*?:\s*)*/g, '')
+					.trim();
+				reject(new Error(msg || `Process exited with code ${code}`));
+			}
 		});
 
 		proc.on('error', reject);
@@ -56,7 +62,8 @@ export async function initVault(password: string): Promise<void> {
 	// Create directory if needed
 	const dir = dirname(VAULT_PATH);
 	await mkdir(dir, { recursive: true });
-	await runKeepassxc(['db-create', VAULT_PATH, '--set-password'], password);
+	// keepassxc-cli db-create --set-password prompts for password twice (enter + confirm)
+	await runKeepassxc(['db-create', VAULT_PATH, '--set-password'], password + '\n' + password);
 }
 
 export async function listEntries(password: string): Promise<PasswordEntry[]> {
