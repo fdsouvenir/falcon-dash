@@ -135,6 +135,9 @@ Falcon Dash is configured using environment variables:
 | `HOST`               | No        | `0.0.0.0`              | Server bind address                                                    |
 | `SENTRY_DSN`         | No        | —                      | Sentry error tracking DSN                                              |
 | `SENTRY_ENVIRONMENT` | No        | `production`           | Sentry environment tag (e.g., `staging`, `production`)                 |
+| `SENTRY_AUTH_TOKEN`  | No        | —                      | Sentry auth token for source map upload (build-time only)              |
+| `SENTRY_ORG`         | No        | —                      | Sentry organization slug (required with `SENTRY_AUTH_TOKEN`)           |
+| `SENTRY_PROJECT`     | No        | —                      | Sentry project slug (required with `SENTRY_AUTH_TOKEN`)                |
 
 ### Gateway Connection
 
