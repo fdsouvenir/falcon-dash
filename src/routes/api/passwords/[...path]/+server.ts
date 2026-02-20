@@ -1,7 +1,13 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { getSession } from '$lib/server/passwords-config.js';
-import { getEntry, addEntry, editEntry, deleteEntry } from '$lib/server/keepassxc.js';
+import {
+	getEntry,
+	addEntry,
+	editEntry,
+	deleteEntry,
+	removeAttribute
+} from '$lib/server/keepassxc.js';
 
 function requireSession(request: Request): string {
 	const token = request.headers.get('x-session-token') ?? '';
@@ -49,12 +55,15 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	}
 
 	const body = await request.json();
+	const customAttributes = body.customAttributes as Record<string, string> | undefined;
+	const removedAttributes = body.removedAttributes as string[] | undefined;
 	const fields = {
 		username: body.username as string | undefined,
 		password: body.password as string | undefined,
 		url: body.url as string | undefined,
 		notes: body.notes as string | undefined,
-		title: body.title as string | undefined
+		title: body.title as string | undefined,
+		customAttributes
 	};
 
 	try {
@@ -64,6 +73,14 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 		} catch {
 			await addEntry(password, path, fields);
 		}
+
+		// Remove deleted custom attributes
+		if (removedAttributes?.length) {
+			for (const attr of removedAttributes) {
+				await removeAttribute(password, path, attr);
+			}
+		}
+
 		return json({ success: true, path });
 	} catch (err) {
 		return error(500, (err as Error).message);
