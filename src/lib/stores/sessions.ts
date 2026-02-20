@@ -234,12 +234,6 @@ export async function loadSessions(): Promise<void> {
 			}
 		}
 
-		// Persist friendly names for labelless sessions back to the gateway
-		for (const s of parsed) {
-			if (!labelless.has(s.sessionKey)) continue;
-			call('sessions.patch', { key: s.sessionKey, label: s.displayName }).catch(() => {});
-		}
-
 		_sessions.set(parsed);
 	} catch (err) {
 		console.warn('[sessions] loadSessions failed:', err);
