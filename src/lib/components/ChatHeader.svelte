@@ -83,8 +83,15 @@
 </script>
 
 <!-- Desktop header -->
-<div class="hidden md:flex items-center justify-between border-b border-gray-800 px-4 py-2">
-	<div class="text-sm font-medium text-white">Chat</div>
+<div class="hidden items-center justify-between border-b border-gray-800 px-4 py-2 md:flex">
+	<div class="flex items-center gap-2">
+		<div
+			class="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-bold text-white"
+		>
+			{agentName.charAt(0).toUpperCase()}
+		</div>
+		<span class="text-sm font-semibold text-white">{agentName}</span>
+	</div>
 	<div class="flex items-center gap-3">
 		{#if model}
 			<span class="text-xs text-gray-400">{model}</span>
