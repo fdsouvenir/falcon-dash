@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { SvelteSet } from 'svelte/reactivity';
+	import { get } from 'svelte/store';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import {
 		getAgentIdentity,
 		connectionState,
@@ -21,81 +22,63 @@
 		sessionCount: number;
 	}
 
-	let agents = $state<AgentEntry[]>([]);
-	let loadedIds = new SvelteSet<string>();
+	// Separate state for session counts (written by sessions effect)
+	let sessionCounts = $state<Record<string, number>>({});
 
-	// Extract unique agent IDs from session keys (format: agent:{agentId}:webchat:dm:{uuid})
-	function extractAgentId(sessionKey: string): string | null {
-		const match = sessionKey.match(/^agent:([^:]+):/);
-		return match ? match[1] : null;
-	}
+	// Identity cache (written only by fetch effect)
+	let identityMap = new SvelteMap<string, AgentIdentity>();
+	let loadingIds = new SvelteSet<string>();
 
-	// Derive agent IDs from sessions + default agent
+	// Effect: subscribe to sessions store, compute counts
 	$effect(() => {
 		const unsub = sessions.subscribe(($sessions) => {
-			// Always include default agent
-			const defaults = snapshot.sessionDefaults;
-			let defaultId = 'default';
-			const unsubDefaults = defaults.subscribe((d) => {
-				defaultId = d.defaultAgentId ?? 'default';
-			});
-			unsubDefaults();
-
-			// Collect unique agent IDs and session counts
-			const counts: Record<string, number> = {};
-			counts[defaultId] = 0;
+			const defId = get(snapshot.sessionDefaults).defaultAgentId ?? 'default';
+			const counts: Record<string, number> = { [defId]: 0 };
 			for (const s of $sessions) {
-				const id = extractAgentId(s.sessionKey);
-				if (id) counts[id] = (counts[id] ?? 0) + 1;
+				const match = s.sessionKey.match(/^agent:([^:]+):/);
+				if (match) counts[match[1]] = (counts[match[1]] ?? 0) + 1;
 			}
-			const agentIds = Object.keys(counts);
-
-			// Fetch identities for new agents
-			for (const id of agentIds) {
-				if (!loadedIds.has(id)) {
-					loadedIds.add(id);
-					getAgentIdentity(id).then((identity) => {
-						updateAgent(id, identity, counts[id] ?? 0);
-					});
-				}
-			}
-
-			// Update session counts for existing agents
-			agents = agents.map((a) => ({
-				...a,
-				sessionCount: counts[a.agentId] ?? 0
-			}));
+			sessionCounts = counts;
 		});
 		return unsub;
 	});
 
-	function updateAgent(agentId: string, identity: AgentIdentity, sessionCount: number) {
-		const name = identity.name || agentId;
-		const entry: AgentEntry = {
-			agentId,
-			name,
-			emoji: identity.emoji,
-			initial: name.charAt(0).toUpperCase(),
-			sessionCount
-		};
+	// Effect: fetch identities for newly seen agent IDs
+	$effect(() => {
+		for (const id of Object.keys(sessionCounts)) {
+			if (!identityMap.has(id) && !loadingIds.has(id)) {
+				loadingIds.add(id);
+				getAgentIdentity(id).then((identity) => {
+					identityMap.set(id, identity);
+				});
+			}
+		}
+	});
 
-		agents = agents.some((a) => a.agentId === agentId)
-			? agents.map((a) => (a.agentId === agentId ? entry : a))
-			: [...agents, entry];
-	}
+	// Pure derivation: agents list from counts + identities
+	let agents = $derived(
+		Object.keys(sessionCounts).map((id) => {
+			const identity = identityMap.get(id);
+			const name = identity?.name || id;
+			return {
+				agentId: id,
+				name,
+				emoji: identity?.emoji,
+				initial: name.charAt(0).toUpperCase(),
+				sessionCount: sessionCounts[id] ?? 0
+			} as AgentEntry;
+		})
+	);
 
 	// Auto-select default agent on connection
 	$effect(() => {
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'CONNECTED') return;
-			const defaultsUnsub = snapshot.sessionDefaults.subscribe((d) => {
-				const defaultId = d.defaultAgentId ?? 'default';
-				if (!selectedAgentId || selectedAgentId === 'default') {
-					selectedAgentId = defaultId;
-					setSelectedAgent(defaultId);
-				}
-			});
-			defaultsUnsub();
+			const defaultId = get(snapshot.sessionDefaults).defaultAgentId ?? 'default';
+			if (!selectedAgentId || selectedAgentId === 'default') {
+				selectedAgentId = defaultId;
+				setSelectedAgent(defaultId);
+			}
 		});
 		return unsub;
 	});

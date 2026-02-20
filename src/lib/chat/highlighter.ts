@@ -1,4 +1,5 @@
 import { createHighlighter, type Highlighter } from 'shiki';
+import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
 
 let highlighter: Highlighter | null = null;
 let initPromise: Promise<Highlighter> | null = null;
@@ -34,7 +35,8 @@ async function getHighlighter(): Promise<Highlighter> {
 	if (initPromise) return initPromise;
 	initPromise = createHighlighter({
 		themes: ['github-dark'],
-		langs: COMMON_LANGS
+		langs: COMMON_LANGS,
+		engine: createJavaScriptRegexEngine()
 	});
 	highlighter = await initPromise;
 	return highlighter;
