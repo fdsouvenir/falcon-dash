@@ -28,12 +28,12 @@
 		<pre class="mt-2 overflow-x-auto text-xs text-gray-400">{code}</pre>
 	</div>
 {:else if rendered}
-	<div class="my-4 flex justify-center">
+	<div class="my-4 flex min-h-[200px] items-center justify-center">
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 		{@html rendered}
 	</div>
 {:else}
-	<div class="my-4 flex justify-center">
+	<div class="my-4 flex min-h-[200px] items-center justify-center">
 		<div class="animate-pulse text-sm text-gray-500">Loading diagram...</div>
 	</div>
 {/if}

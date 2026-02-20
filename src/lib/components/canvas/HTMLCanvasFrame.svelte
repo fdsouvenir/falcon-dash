@@ -33,7 +33,6 @@
 				return;
 			}
 			if (event.data?.type === 'canvas-action') {
-				console.log('[HTMLCanvasFrame] Canvas action received:', event.data);
 				canvasStore.sendAction(
 					surfaceId,
 					event.data.actionId ?? event.data.action ?? 'unknown',
