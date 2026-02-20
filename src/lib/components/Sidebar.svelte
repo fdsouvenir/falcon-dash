@@ -77,14 +77,26 @@
 		? '-translate-x-full'
 		: 'translate-x-0'} fixed inset-y-0 left-0 z-40 md:relative md:translate-x-0"
 >
-	<!-- Header -->
-	<div class="flex items-center gap-2 border-b border-gray-800 px-4 py-3">
-		<ConnectionStatus />
-		<span class="text-sm font-semibold text-white"
-			>{agentEmoji ? `${agentEmoji} ` : ''}{agentName}</span
-		>
+	<!-- Header — agent name (Discord-style server header) -->
+	<div
+		class="flex items-center justify-between border-b border-gray-800 px-4 py-3 shadow-sm shadow-black/20"
+	>
+		<div class="flex items-center gap-2">
+			<ConnectionStatus />
+			<span class="text-sm font-semibold text-white"
+				>{agentEmoji ? `${agentEmoji} ` : ''}{agentName}</span
+			>
+			<svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2.5"
+					d="M19 9l-7 7-7-7"
+				/>
+			</svg>
+		</div>
 		<button
-			class="ml-auto text-gray-400 hover:text-white md:hidden"
+			class="text-gray-400 hover:text-white md:hidden"
 			onclick={onToggle}
 			aria-label="Close sidebar"
 		>
@@ -101,9 +113,8 @@
 
 	<!-- Scrollable content -->
 	<nav class="flex flex-1 flex-col overflow-y-auto">
-		<!-- Chats section -->
+		<!-- Channel list (sessions) -->
 		<div class="px-3 py-3">
-			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Chats</h2>
 			<ChatList />
 		</div>
 

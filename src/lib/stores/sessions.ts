@@ -214,8 +214,9 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
  * This is expected gateway behavior — session key scopes the agent context.
  */
 export async function createSession(label?: string): Promise<string> {
+	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
-	const agentId = defaults.defaultAgentId ?? 'default';
+	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
@@ -244,8 +245,9 @@ export async function createSession(label?: string): Promise<string> {
  * gateway call completes asynchronously.
  */
 export function createSessionOptimistic(label?: string): string {
+	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
-	const agentId = defaults.defaultAgentId ?? 'default';
+	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
