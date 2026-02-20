@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
+	import NotificationCenter from '$lib/components/NotificationCenter.svelte';
 	import ChatList from './ChatList.svelte';
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
@@ -272,6 +273,7 @@
 
 	<!-- Bottom section -->
 	<div class="border-t border-gray-800 px-3 py-3">
+		<NotificationCenter />
 		<a
 			href="/settings"
 			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"

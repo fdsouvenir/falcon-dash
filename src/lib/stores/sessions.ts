@@ -1,5 +1,6 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
+import { notifyNewMessage } from '$lib/stores/notifications.js';
 
 export interface ChatSessionInfo {
 	sessionKey: string;
@@ -365,6 +366,12 @@ export function subscribeToEvents(): void {
 					s.sessionKey === msgSessionKey ? { ...s, unreadCount: s.unreadCount + 1 } : s
 				)
 			);
+			// Trigger notification (sound, browser notification, notification center)
+			const sessionList = get(_sessions);
+			const session = sessionList.find((s) => s.sessionKey === msgSessionKey);
+			const sessionName = session?.displayName ?? 'New message';
+			const content = (payload.content as string) ?? '';
+			notifyNewMessage(sessionName, content, msgSessionKey);
 		})
 	);
 }
