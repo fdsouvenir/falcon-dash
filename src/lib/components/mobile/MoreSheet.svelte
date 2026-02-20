@@ -13,24 +13,8 @@
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
 <nav class="flex flex-col gap-1 pb-4">
-	<h3 class="mb-1 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Pages</h3>
-
-	<a
-		href="/documents"
-		class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800"
-	>
-		<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-			/>
-		</svg>
-		Documents
-	</a>
-
 	{#if apps.length > 0}
-		<h3 class="mb-1 mt-3 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+		<h3 class="mb-1 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
 			Custom Apps
 		</h3>
 		{#each apps as app (app.id)}
