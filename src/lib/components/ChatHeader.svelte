@@ -37,7 +37,7 @@
 	let agentName = $state('Agent');
 	$effect(() => {
 		const unsub = connectionState.subscribe((s) => {
-			if (s !== 'CONNECTED') return;
+			if (s !== 'READY') return;
 			getAgentIdentity().then((identity) => {
 				agentName = identity.name || 'Agent';
 			});

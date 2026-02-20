@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { usePan, type GestureCustomEvent } from 'svelte-gestures';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import {
 		groupedSessions,
 		activeSessionKey,
@@ -23,6 +23,7 @@
 		clearSearch,
 		type SearchResult
 	} from '$lib/stores/chat-search.js';
+	import { loadThreads, threadsForSession } from '$lib/stores/threads.js';
 	import CreateChatDialog from './CreateChatDialog.svelte';
 
 	let { onselect, variant = 'desktop' }: { onselect?: () => void; variant?: 'desktop' | 'mobile' } =
@@ -49,7 +50,7 @@
 	$effect(() => {
 		if (variant !== 'mobile') return;
 		const unsub = connectionState.subscribe((s) => {
-			if (s !== 'CONNECTED') return;
+			if (s !== 'READY') return;
 			getAgentIdentity().then((identity) => {
 				agentName = identity.name || 'Agent';
 				agentEmoji = identity.emoji;
@@ -175,6 +176,31 @@
 			searching = v;
 		});
 		return unsub;
+	});
+
+	// Thread count tracking per session
+	let threadCounts = new SvelteMap<string, number>();
+	let threadUnsubs: Array<() => void> = [];
+
+	// Load threads for all visible sessions and subscribe to counts
+	$effect(() => {
+		// Clean up previous subscriptions
+		for (const unsub of threadUnsubs) unsub();
+		threadUnsubs = [];
+
+		const allSessions = [...pinnedItems, ...groups.flatMap((g) => g.sessions)];
+		for (const session of allSessions) {
+			loadThreads(session.sessionKey).catch(() => {});
+			const unsub = threadsForSession(session.sessionKey).subscribe((threads) => {
+				threadCounts.set(session.sessionKey, threads.length);
+			});
+			threadUnsubs.push(unsub);
+		}
+
+		return () => {
+			for (const unsub of threadUnsubs) unsub();
+			threadUnsubs = [];
+		};
 	});
 
 	function selectSession(key: string) {
@@ -434,9 +460,8 @@
 									fill="currentColor"
 									viewBox="0 0 24 24"
 									><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" /></svg
-								>{/if}{#if variant === 'mobile'}<span class="text-gray-500"
-									>#
-								</span>{/if}{session.displayName}
+								>{/if}{#if variant === 'mobile' && agentEmoji}<span class="mr-1">{agentEmoji}</span
+								>{/if}{session.displayName}
 						</span>
 						{#if session.model || session.totalTokens || session.updatedAt}
 							<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
@@ -470,6 +495,26 @@
 								{/if}
 								{#if session.updatedAt}
 									<span>{formatRelativeTime(session.updatedAt)}</span>
+								{/if}
+								{#if (threadCounts.get(session.sessionKey) ?? 0) > 0}
+									<span
+										class="inline-flex items-center gap-0.5"
+										title="{threadCounts.get(session.sessionKey)} thread{threadCounts.get(
+											session.sessionKey
+										) === 1
+											? ''
+											: 's'}"
+									>
+										<svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+											/>
+										</svg>
+										{threadCounts.get(session.sessionKey)}
+									</span>
 								{/if}
 							</span>
 						{/if}

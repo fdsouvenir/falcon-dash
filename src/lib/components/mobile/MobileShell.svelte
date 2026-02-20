@@ -12,11 +12,14 @@
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
 	import AgentRail from './AgentRail.svelte';
 	import MobileNotificationSheet from './MobileNotificationSheet.svelte';
+	import ThreadList from '$lib/components/ThreadList.svelte';
+	import { loadThreads } from '$lib/stores/threads.js';
 
 	let { children }: { children: Snippet } = $props();
 
 	let moreOpen = $state(false);
 	let notificationsOpen = $state(false);
+	let threadsOpen = $state(false);
 	let chatOpen = $state(false);
 	let pathname = $state('/');
 	let activeKey = $state<string | null>(null);
@@ -71,6 +74,13 @@
 			history.back();
 		}
 	}
+
+	function handleThreads() {
+		if (activeKey) {
+			loadThreads(activeKey).catch(() => {});
+		}
+		threadsOpen = true;
+	}
 </script>
 
 <div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
@@ -78,6 +88,7 @@
 		chatOpen={isChatRoute && chatOpen}
 		onBack={handleBack}
 		onNotifications={() => (notificationsOpen = true)}
+		onThreads={handleThreads}
 	/>
 
 	{#if isChatRoute}
@@ -118,4 +129,29 @@
 	</BottomSheet>
 
 	<MobileNotificationSheet open={notificationsOpen} onclose={() => (notificationsOpen = false)} />
+
+	{#if threadsOpen}
+		<div class="fixed inset-0 z-50 flex flex-col bg-gray-950">
+			<div class="flex items-center justify-between border-b border-gray-800 px-3 py-2">
+				<span class="text-sm font-medium text-white">Threads</span>
+				<button
+					onclick={() => (threadsOpen = false)}
+					class="rounded p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+					aria-label="Close threads"
+				>
+					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			</div>
+			<div class="flex-1 overflow-y-auto">
+				<ThreadList />
+			</div>
+		</div>
+	{/if}
 </div>
