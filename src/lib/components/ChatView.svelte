@@ -11,6 +11,7 @@
 	import { keyboardVisible } from '$lib/stores/viewport.js';
 	import { clearSearch } from '$lib/stores/chat-search.js';
 	import { watchConnectionForChat } from '$lib/stores/chat-resilience.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import ChatHeader from './ChatHeader.svelte';
 	import ChatSearch from './ChatSearch.svelte';
 	import MessageComposer from './MessageComposer.svelte';
@@ -280,6 +281,34 @@
 		return messages.find((m) => m.id === id);
 	}
 
+	let agentName = $state('Agent');
+	let agentInitial = $derived(agentName.charAt(0).toUpperCase());
+
+	$effect(() => {
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+			});
+		});
+		return unsub;
+	});
+
+	// Discord-style message grouping: consecutive messages from same role
+	// within 5 minutes are grouped (no repeated avatar/name)
+	const GROUP_THRESHOLD_MS = 5 * 60 * 1000;
+
+	function isGrouped(index: number): boolean {
+		if (index === 0) return false;
+		const curr = messages[index];
+		const prev = messages[index - 1];
+		if (!curr || !prev) return false;
+		if (curr.role === 'divider' || prev.role === 'divider') return false;
+		if (curr.role !== prev.role) return false;
+		if (Math.abs(curr.timestamp - prev.timestamp) > GROUP_THRESHOLD_MS) return false;
+		return true;
+	}
+
 	let reactionPickerMessageId = $state<string | null>(null);
 	let isMobile = $state(false);
 
@@ -415,8 +444,9 @@
 					</div>
 				</div>
 			{:else}
-				<div class="mx-auto max-w-none md:max-w-3xl space-y-4">
+				<div class="mx-auto max-w-none space-y-0 md:max-w-3xl">
 					{#each messages as message, i (message.id ?? `msg-${i}`)}
+						{@const grouped = isGrouped(i)}
 						{#if message.role === 'divider'}
 							<!-- Divider message -->
 							<div class="flex items-center gap-3 py-2">
@@ -425,15 +455,46 @@
 								<div class="h-px flex-1 bg-gray-700"></div>
 							</div>
 						{:else if message.role === 'user'}
-							<!-- User message -->
+							<!-- User message (Discord-style: left-aligned with avatar) -->
 							<div
-								class="flex justify-end rounded-lg transition-colors duration-700 {highlightedMessageId ===
-								message.id
+								class="group/msg flex gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+									? 'py-0.5'
+									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
 									: ''}"
 								data-message-id={message.id}
 							>
-								<div class="max-w-[95%] md:max-w-[80%]">
+								<!-- Avatar or hover timestamp -->
+								<div class="w-10 shrink-0">
+									{#if !grouped}
+										<div
+											class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
+										>
+											You
+										</div>
+									{:else}
+										<span
+											class="hidden text-[10px] text-gray-600 group-hover/msg:inline"
+											title={formatMessageTime(message.timestamp)}
+										>
+											{new Date(message.timestamp).toLocaleTimeString([], {
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</span>
+									{/if}
+								</div>
+
+								<!-- Message body -->
+								<div class="min-w-0 flex-1">
+									{#if !grouped}
+										<div class="mb-0.5 flex items-baseline gap-2">
+											<span class="text-sm font-semibold text-blue-400">You</span>
+											<span class="text-[10px] text-gray-500">
+												{formatMessageTime(message.timestamp)}
+											</span>
+										</div>
+									{/if}
 									{#if message.replyToMessageId}
 										{@const replyMsg = findMessageById(message.replyToMessageId)}
 										{#if replyMsg}
@@ -445,42 +506,66 @@
 											</div>
 										{/if}
 									{/if}
-									<div class="rounded-2xl rounded-br-md bg-blue-600 px-4 py-2.5 text-sm text-white">
+									<div class="text-sm text-gray-100">
 										<p class="whitespace-pre-wrap break-words">{message.content}</p>
 									</div>
-									<div class="mt-1 flex items-center justify-end gap-2">
-										<span class="text-xs text-gray-500">
-											{formatMessageTime(message.timestamp)}
+									{#if message.status === 'sending'}
+										<span class="text-xs text-gray-500">Sending...</span>
+									{:else if message.status === 'error'}
+										<span class="text-xs text-red-400">
+											{message.errorMessage ?? 'Failed'}
 										</span>
-										{#if message.edited}
-											<span class="text-xs italic text-gray-500">(edited)</span>
-										{/if}
-										{#if message.status === 'sending'}
-											<span class="text-xs text-gray-500">Sending...</span>
-										{:else if message.status === 'error'}
-											<span class="text-xs text-red-400">
-												{message.errorMessage ?? 'Failed'}
-											</span>
-											<button
-												onclick={() => handleRetry(message.id)}
-												class="text-xs text-blue-400 transition-colors hover:text-blue-300"
-											>
-												Retry
-											</button>
-										{/if}
-									</div>
+										<button
+											onclick={() => handleRetry(message.id)}
+											class="text-xs text-blue-400 transition-colors hover:text-blue-300"
+										>
+											Retry
+										</button>
+									{/if}
 								</div>
 							</div>
 						{:else}
-							<!-- Assistant message -->
+							<!-- Assistant message (Discord-style: left-aligned with avatar) -->
 							<div
-								class="flex justify-start rounded-lg transition-colors duration-700 {highlightedMessageId ===
-								message.id
+								class="group/msg flex gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+									? 'py-0.5'
+									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
 									: ''}"
 								data-message-id={message.id}
 							>
-								<div class="max-w-full md:max-w-[85%]">
+								<!-- Avatar or hover timestamp -->
+								<div class="w-10 shrink-0">
+									{#if !grouped}
+										<div
+											class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white"
+										>
+											{agentInitial}
+										</div>
+									{:else}
+										<span
+											class="hidden text-[10px] text-gray-600 group-hover/msg:inline"
+											title={formatMessageTime(message.timestamp)}
+										>
+											{new Date(message.timestamp).toLocaleTimeString([], {
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</span>
+									{/if}
+								</div>
+
+								<!-- Message body -->
+								<div class="min-w-0 flex-1">
+									{#if !grouped}
+										<div class="mb-0.5 flex items-baseline gap-2">
+											<span class="text-sm font-semibold text-purple-400">{agentName}</span>
+											<span class="text-[10px] text-gray-500">
+												{formatMessageTime(message.timestamp)}
+											</span>
+										</div>
+									{/if}
+
 									<!-- Thinking block -->
 									{#if message.thinkingText}
 										<ThinkingBlock
@@ -492,15 +577,13 @@
 
 									<!-- Content -->
 									{#if message.content}
-										<div
-											class="prose prose-invert prose-sm max-w-none rounded-2xl rounded-bl-md bg-gray-800 px-4 py-2.5"
-										>
+										<div class="prose prose-invert prose-sm max-w-none">
 											<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 											{@html getRenderedHtml(message)}
 										</div>
 									{:else if message.status === 'streaming' && !message.thinkingText}
 										<!-- Typing indicator -->
-										<div class="flex gap-1 rounded-2xl rounded-bl-md bg-gray-800 px-4 py-3">
+										<div class="flex gap-1 py-1">
 											<span
 												class="h-2 w-2 animate-bounce rounded-full bg-gray-500"
 												style="animation-delay: 0ms"
@@ -528,24 +611,15 @@
 										<CanvasBlock runId={message.runId} />
 									{/if}
 
-									<!-- Timestamp and actions -->
-									<div class="mt-1 flex items-center gap-2">
-										<span class="text-xs text-gray-500">
-											{formatMessageTime(message.timestamp)}
-										</span>
-										{#if message.edited}
-											<span class="text-xs italic text-gray-500">(edited)</span>
-										{/if}
-										{#if message.status === 'error'}
-											<span class="text-xs text-red-400">
-												{message.errorMessage ?? 'Error'}
-											</span>
-										{/if}
-										{#if message.status === 'complete'}
+									<!-- Actions (visible on hover) -->
+									{#if message.status === 'complete'}
+										<div
+											class="mt-0.5 flex items-center gap-2 opacity-0 transition-opacity group-hover/msg:opacity-100"
+										>
 											<div class="relative">
 												<button
 													onclick={() => toggleReactionPicker(message.id)}
-													class="py-1.5 md:py-0 text-xs text-gray-600 transition-colors hover:text-gray-400"
+													class="py-1.5 text-xs text-gray-600 transition-colors hover:text-gray-400 md:py-0"
 												>
 													React
 												</button>
@@ -558,12 +632,17 @@
 											</div>
 											<button
 												onclick={() => handleReply(message)}
-												class="py-1.5 md:py-0 text-xs text-gray-600 transition-colors hover:text-gray-400"
+												class="py-1.5 text-xs text-gray-600 transition-colors hover:text-gray-400 md:py-0"
 											>
 												Reply
 											</button>
-										{/if}
-									</div>
+										</div>
+									{/if}
+									{#if message.status === 'error'}
+										<span class="text-xs text-red-400">
+											{message.errorMessage ?? 'Error'}
+										</span>
+									{/if}
 
 									<!-- Reactions -->
 									{#if message.reactions?.length}
