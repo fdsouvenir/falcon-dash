@@ -77,3 +77,54 @@ Configuration: tabs, single quotes, no trailing commas, 100 character print widt
 ### Svelte 5
 
 This project uses Svelte 5 runes. Use `$state()`, `$derived()`, `$effect()`, `$props()` and `onevent` handlers (not Svelte 4 `on:event` syntax).
+
+## Testing
+
+Unit tests use [Vitest](https://vitest.dev/) with happy-dom. Test files live next to the code they test using the `*.test.ts` convention.
+
+```bash
+npm run test              # Run all tests once
+npm run test:watch        # Watch mode
+npm run test:coverage     # With v8 coverage report
+npm run test:ui           # Browser UI
+```
+
+## CI/CD
+
+All pushes and PRs to `main` trigger the **CI** workflow, which runs format check, lint, type check, tests with coverage, and a production build.
+
+Additional workflows:
+
+- **Release** — triggered by pushing a `v*` tag; runs CI then creates a GitHub Release with auto-generated notes
+- **Docker** — triggered on push to `main` and `v*` tags; builds and pushes to `ghcr.io/fdsouvenir/falcon-dash`
+- **E2E** — placeholder for Playwright tests (disabled until tests are added)
+- **Dependabot** — weekly npm dependency updates
+
+## Release Process
+
+```bash
+npm version patch    # or minor / major — bumps version in package.json and creates a git tag
+git push origin main --tags
+```
+
+This triggers the Release and Docker workflows automatically.
+
+## Docker
+
+Build and run locally:
+
+```bash
+docker compose up --build     # Build and start
+docker compose up -d          # Detached mode
+```
+
+The container exposes port 3000 and mounts `~/.openclaw` for persistent data (SQLite DB, PM context, agent workspaces). The image includes a health check against `/api/health`.
+
+## Branch Protection (recommended for `main`)
+
+- Require pull request before merging (1 approval minimum)
+- Require status checks to pass: `quality` (from CI workflow)
+- Require branches to be up to date before merging
+- Require linear history (squash or rebase merges)
+- Do not allow force pushes
+- Do not allow branch deletion
