@@ -1,0 +1,11 @@
+services:
+  falcon-dash:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - PORT=3000
+      - ORIGIN=http://localhost:3000
+    volumes:
+      - ~/.openclaw:/root/.openclaw
+    restart: unless-stopped
