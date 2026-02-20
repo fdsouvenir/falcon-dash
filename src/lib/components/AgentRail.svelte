@@ -73,7 +73,7 @@
 	// Auto-select default agent on connection
 	$effect(() => {
 		const unsub = connectionState.subscribe((s) => {
-			if (s !== 'CONNECTED') return;
+			if (s !== 'READY') return;
 			const defaultId = get(snapshot.sessionDefaults).defaultAgentId ?? 'default';
 			if (!selectedAgentId || selectedAgentId === 'default') {
 				selectedAgentId = defaultId;
