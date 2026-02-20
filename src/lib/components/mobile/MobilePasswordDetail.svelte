@@ -20,6 +20,7 @@
 		url: string;
 		notes: string;
 		path: string;
+		customAttributes?: Record<string, string>;
 	}
 
 	let entry = $state<EntryDetail | null>(null);
@@ -229,6 +230,38 @@
 					<div class="rounded-xl border border-gray-700 bg-gray-900 p-4">
 						<div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">Notes</div>
 						<p class="whitespace-pre-wrap text-sm text-gray-300">{entry.notes}</p>
+					</div>
+				{/if}
+
+				<!-- Custom Attributes -->
+				{#if entry.customAttributes && Object.keys(entry.customAttributes).length > 0}
+					<div class="rounded-xl border border-gray-700 bg-gray-900 p-4">
+						<div class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+							Custom Attributes
+						</div>
+						<div class="space-y-2">
+							{#each Object.entries(entry.customAttributes) as [key, value] (key)}
+								<div class="flex items-center justify-between gap-2">
+									<div class="min-w-0">
+										<span class="text-xs font-medium text-gray-400">{key}</span>
+										<p class="truncate text-sm text-white">{value}</p>
+									</div>
+									<button
+										onclick={() => handleCopy(value)}
+										class="shrink-0 rounded-lg bg-gray-800 p-2 text-gray-400 active:bg-gray-700"
+									>
+										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+											/>
+										</svg>
+									</button>
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
 			</div>

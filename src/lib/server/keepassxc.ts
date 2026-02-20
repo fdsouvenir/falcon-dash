@@ -14,6 +14,7 @@ export interface PasswordEntry {
 export interface PasswordDetail extends PasswordEntry {
 	password: string;
 	notes: string;
+	customAttributes: Record<string, string>;
 }
 
 function runKeepassxc(args: string[], input?: string): Promise<string> {
@@ -90,9 +91,9 @@ export async function listEntries(password: string): Promise<PasswordEntry[]> {
 				const parsed = parseEntryOutput(info);
 				return {
 					...entry,
-					title: parsed.title || entry.title,
-					username: parsed.username || '',
-					url: parsed.url || '',
+					title: parsed.standard.title || entry.title,
+					username: parsed.standard.username || '',
+					url: parsed.standard.url || '',
 					group: entry.path.includes('/')
 						? entry.path.substring(0, entry.path.lastIndexOf('/'))
 						: undefined
@@ -110,11 +111,12 @@ export async function getEntry(password: string, path: string): Promise<Password
 	const output = await runKeepassxc(['show', VAULT_PATH, path], password);
 	const parsed = parseEntryOutput(output);
 	return {
-		title: parsed.title || path.split('/').pop() || path,
-		username: parsed.username || '',
-		password: parsed.password || '',
-		url: parsed.url || '',
-		notes: parsed.notes || '',
+		title: parsed.standard.title || path.split('/').pop() || path,
+		username: parsed.standard.username || '',
+		password: parsed.standard.password || '',
+		url: parsed.standard.url || '',
+		notes: parsed.standard.notes || '',
+		customAttributes: parsed.custom,
 		path,
 		group: path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : undefined
 	};
@@ -123,7 +125,13 @@ export async function getEntry(password: string, path: string): Promise<Password
 export async function addEntry(
 	password: string,
 	path: string,
-	fields: { username?: string; password?: string; url?: string; notes?: string }
+	fields: {
+		username?: string;
+		password?: string;
+		url?: string;
+		notes?: string;
+		customAttributes?: Record<string, string>;
+	}
 ): Promise<void> {
 	const args = ['add', VAULT_PATH, path];
 	if (fields.username) args.push('-u', fields.username);
@@ -136,6 +144,10 @@ export async function addEntry(
 	if (fields.notes) {
 		await runKeepassxc(['edit', VAULT_PATH, path, '-n', fields.notes], password);
 	}
+
+	if (fields.customAttributes) {
+		await setCustomAttributes(password, path, fields.customAttributes);
+	}
 }
 
 export async function editEntry(
@@ -147,6 +159,7 @@ export async function editEntry(
 		url?: string;
 		notes?: string;
 		title?: string;
+		customAttributes?: Record<string, string>;
 	}
 ): Promise<void> {
 	const args = ['edit', VAULT_PATH, path];
@@ -161,25 +174,74 @@ export async function editEntry(
 	if (fields.notes) {
 		await runKeepassxc(['edit', VAULT_PATH, path, '-n', fields.notes], password);
 	}
+
+	if (fields.customAttributes) {
+		await setCustomAttributes(password, path, fields.customAttributes);
+	}
+}
+
+async function setCustomAttributes(
+	password: string,
+	path: string,
+	attributes: Record<string, string>
+): Promise<void> {
+	for (const [key, value] of Object.entries(attributes)) {
+		await runKeepassxc(
+			['edit', VAULT_PATH, path, '--set-attribute', key, '--attribute-value', value],
+			password
+		);
+	}
+}
+
+export async function removeAttribute(
+	password: string,
+	path: string,
+	attributeName: string
+): Promise<void> {
+	await runKeepassxc(['edit', VAULT_PATH, path, '--remove-attribute', attributeName], password);
 }
 
 export async function deleteEntry(password: string, path: string): Promise<void> {
 	await runKeepassxc(['rm', VAULT_PATH, path], password);
 }
 
-function parseEntryOutput(output: string): Record<string, string> {
-	const result: Record<string, string> = {};
+const STANDARD_FIELDS = new Set([
+	'title',
+	'username',
+	'user name',
+	'password',
+	'url',
+	'notes',
+	'uuid',
+	'tags',
+	'created',
+	'modified',
+	'last accessed',
+	'times used',
+	'icon number'
+]);
+
+interface ParsedEntry {
+	standard: Record<string, string>;
+	custom: Record<string, string>;
+}
+
+function parseEntryOutput(output: string): ParsedEntry {
+	const standard: Record<string, string> = {};
+	const custom: Record<string, string> = {};
 	const lines = output.split('\n');
 	for (const line of lines) {
 		const colonIdx = line.indexOf(':');
 		if (colonIdx === -1) continue;
-		const key = line.substring(0, colonIdx).trim().toLowerCase();
+		const rawKey = line.substring(0, colonIdx).trim();
+		const key = rawKey.toLowerCase();
 		const value = line.substring(colonIdx + 1).trim();
-		if (key === 'title') result.title = value;
-		else if (key === 'username' || key === 'user name') result.username = value;
-		else if (key === 'password') result.password = value;
-		else if (key === 'url') result.url = value;
-		else if (key === 'notes') result.notes = value;
+		if (key === 'title') standard.title = value;
+		else if (key === 'username' || key === 'user name') standard.username = value;
+		else if (key === 'password') standard.password = value;
+		else if (key === 'url') standard.url = value;
+		else if (key === 'notes') standard.notes = value;
+		else if (!STANDARD_FIELDS.has(key) && rawKey) custom[rawKey] = value;
 	}
-	return result;
+	return { standard, custom };
 }
