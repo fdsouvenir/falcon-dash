@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { usePan, type GestureCustomEvent } from 'svelte-gestures';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
-		filteredSessions,
+		groupedSessions,
 		activeSessionKey,
 		searchQuery,
 		setActiveSession,
@@ -11,7 +12,8 @@
 		createSessionOptimistic,
 		togglePin,
 		pinnedSessions,
-		type ChatSessionInfo
+		type ChatSessionInfo,
+		type SessionGroup
 	} from '$lib/stores/sessions.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import {
@@ -56,8 +58,18 @@
 		return unsub;
 	});
 
-	let items = $state<ChatSessionInfo[]>([]);
+	let pinnedItems = $state<ChatSessionInfo[]>([]);
+	let groups = $state<SessionGroup[]>([]);
 	let pinned = $state<string[]>([]);
+	let collapsedGroups = new SvelteSet<string>();
+
+	function toggleGroup(label: string) {
+		if (collapsedGroups.has(label)) {
+			collapsedGroups.delete(label);
+		} else {
+			collapsedGroups.add(label);
+		}
+	}
 
 	let activeKey = $state<string | null>(null);
 	let query = $state('');
@@ -134,8 +146,9 @@
 	}
 
 	$effect(() => {
-		const unsub = filteredSessions.subscribe((v) => {
-			items = v;
+		const unsub = groupedSessions.subscribe((v) => {
+			pinnedItems = v.pinned;
+			groups = v.groups;
 		});
 		return unsub;
 	});
@@ -333,194 +346,254 @@
 		</div>
 	{/if}
 
-	<!-- Session list -->
-	<div class="flex-1 overflow-y-auto">
-		{#each items as session (session.sessionKey)}
-			{@const isOpen = swipedKey === session.sessionKey}
-			{@const offset = isOpen ? swipeOffset : 0}
-			{@const isPinned = pinned.includes(session.sessionKey)}
-			{@const panProps = createPanProps(session.sessionKey)}
-			<div class="group relative overflow-hidden rounded">
-				<!-- Action buttons revealed behind the row -->
-				{#if isOpen}
-					<div class="absolute inset-y-0 right-0 flex items-stretch">
-						<button
-							onclick={() => {
-								closeSwipe();
-								togglePin(session.sessionKey);
-							}}
-							class="flex w-[60px] items-center justify-center bg-amber-600 text-xs font-medium text-white transition-colors hover:bg-amber-500"
-							aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}
-						>
-							{isPinned ? 'Unpin' : 'Pin'}
-						</button>
-						<button
-							onclick={() => {
-								closeSwipe();
-								startRename(session);
-							}}
-							class="flex w-[60px] items-center justify-center bg-blue-600 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-							aria-label="Rename chat"
-						>
-							Rename
-						</button>
-						<button
-							onclick={() => promptDelete(session)}
-							class="flex w-[60px] items-center justify-center bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-500"
-							aria-label="Delete chat"
-						>
-							Delete
-						</button>
-					</div>
-				{/if}
-
-				<!-- Main session row — slides left on swipe -->
-				<button
-					{...panProps}
-					onclick={() => {
-						if (isPanning) return;
-						if (swipedKey) {
-							closeSwipe();
-							return;
-						}
-						selectSession(session.sessionKey);
-					}}
-					class="relative flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {activeKey ===
-					session.sessionKey
-						? 'bg-gray-800 text-white'
-						: 'bg-gray-900 text-gray-300 hover:bg-gray-800 hover:text-white'}"
-					style="transform: translateX({offset}px); transition: {isPanning &&
-					panKey === session.sessionKey
-						? 'none'
-						: 'transform 0.2s ease'}"
-				>
-					{#if editingKey === session.sessionKey}
-						<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
-						<input
-							type="text"
-							bind:value={editName}
-							onblur={commitRename}
-							onkeydown={handleRenameKeydown}
-							onclick={(e) => e.stopPropagation()}
-							autofocus
-							class="flex-1 rounded bg-gray-700 px-2 py-0.5 text-xs text-white focus:outline-none"
-						/>
-					{:else}
-						<div class="flex min-w-0 flex-1 flex-col">
-							<span
-								class="truncate"
-								ondblclick={(e) => {
-									e.stopPropagation();
-									startRename(session);
-								}}
-								role="button"
-								tabindex="0"
-							>
-								{#if isPinned}<svg
-										class="mr-0.5 inline h-3 w-3 text-amber-500"
-										fill="currentColor"
-										viewBox="0 0 24 24"
-										><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" /></svg
-									>{/if}{#if variant === 'mobile'}<span class="text-gray-500"
-										>#
-									</span>{/if}{session.displayName}
-							</span>
-							{#if session.model || session.totalTokens || session.updatedAt}
-								<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
-									{#if session.model}
-										<span
-											class="rounded bg-gray-700/50 px-1 py-px leading-tight"
-											title={session.model}>{shortModel(session.model)}</span
-										>
-									{/if}
-									{#if session.totalTokens && session.contextTokens}
-										{@const pct = Math.min(
-											100,
-											Math.round((session.totalTokens / session.contextTokens) * 100)
-										)}
-										<span
-											class="inline-flex items-center gap-0.5"
-											title="{session.totalTokens.toLocaleString()} / {session.contextTokens.toLocaleString()} tokens"
-										>
-											<span class="inline-block h-1 w-6 overflow-hidden rounded-full bg-gray-700">
-												<span
-													class="block h-full rounded-full {pct > 80
-														? 'bg-red-500'
-														: pct > 50
-															? 'bg-yellow-500'
-															: 'bg-blue-500'}"
-													style="width:{pct}%"
-												></span>
-											</span>
-											{pct}%
-										</span>
-									{/if}
-									{#if session.updatedAt}
-										<span>{formatRelativeTime(session.updatedAt)}</span>
-									{/if}
-								</span>
-							{/if}
-						</div>
-					{/if}
-
-					<!-- Unread badge -->
-					{#if session.unreadCount > 0}
-						<span
-							class="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-medium text-white"
-						>
-							{session.unreadCount}
-						</span>
-					{/if}
-				</button>
-
-				<!-- Desktop hover actions -->
-				<div
-					class="pointer-events-none absolute inset-y-0 right-1 hidden items-center gap-0.5 group-hover:flex"
-				>
+	{#snippet sessionRow(
+		session: ChatSessionInfo,
+		isOpen: boolean,
+		offset: number,
+		isPinned: boolean,
+		panProps: ReturnType<typeof createPanProps>
+	)}
+		<div class="group relative overflow-hidden rounded">
+			<!-- Action buttons revealed behind the row -->
+			{#if isOpen}
+				<div class="absolute inset-y-0 right-0 flex items-stretch">
 					<button
-						onclick={() => togglePin(session.sessionKey)}
-						class="pointer-events-auto rounded p-0.5 transition-colors {isPinned
-							? 'text-amber-500 hover:text-amber-400'
-							: 'text-gray-500 hover:text-amber-400'}"
+						onclick={() => {
+							closeSwipe();
+							togglePin(session.sessionKey);
+						}}
+						class="flex w-[60px] items-center justify-center bg-amber-600 text-xs font-medium text-white transition-colors hover:bg-amber-500"
 						aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}
 					>
-						<svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-							<path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-						</svg>
+						{isPinned ? 'Unpin' : 'Pin'}
 					</button>
 					<button
-						onclick={() => startRename(session)}
-						class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-blue-400"
+						onclick={() => {
+							closeSwipe();
+							startRename(session);
+						}}
+						class="flex w-[60px] items-center justify-center bg-blue-600 text-xs font-medium text-white transition-colors hover:bg-blue-500"
 						aria-label="Rename chat"
 					>
-						<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-							/>
-						</svg>
+						Rename
 					</button>
 					<button
 						onclick={() => promptDelete(session)}
-						class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-red-400"
+						class="flex w-[60px] items-center justify-center bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-500"
 						aria-label="Delete chat"
 					>
-						<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
+						Delete
 					</button>
 				</div>
+			{/if}
+
+			<!-- Main session row — slides left on swipe -->
+			<button
+				{...panProps}
+				onclick={() => {
+					if (isPanning) return;
+					if (swipedKey) {
+						closeSwipe();
+						return;
+					}
+					selectSession(session.sessionKey);
+				}}
+				class="relative flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors {activeKey ===
+				session.sessionKey
+					? 'bg-gray-800 text-white'
+					: 'bg-gray-900 text-gray-300 hover:bg-gray-800 hover:text-white'}"
+				style="transform: translateX({offset}px); transition: {isPanning &&
+				panKey === session.sessionKey
+					? 'none'
+					: 'transform 0.2s ease'}"
+			>
+				{#if editingKey === session.sessionKey}
+					<!-- eslint-disable-next-line svelte/no-autofocus -- renaming needs immediate focus -->
+					<input
+						type="text"
+						bind:value={editName}
+						onblur={commitRename}
+						onkeydown={handleRenameKeydown}
+						onclick={(e) => e.stopPropagation()}
+						autofocus
+						class="flex-1 rounded bg-gray-700 px-2 py-0.5 text-xs text-white focus:outline-none"
+					/>
+				{:else}
+					<div class="flex min-w-0 flex-1 flex-col">
+						<span
+							class="truncate"
+							ondblclick={(e) => {
+								e.stopPropagation();
+								startRename(session);
+							}}
+							role="button"
+							tabindex="0"
+						>
+							{#if isPinned}<svg
+									class="mr-0.5 inline h-3 w-3 text-amber-500"
+									fill="currentColor"
+									viewBox="0 0 24 24"
+									><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" /></svg
+								>{/if}{#if variant === 'mobile'}<span class="text-gray-500"
+									>#
+								</span>{/if}{session.displayName}
+						</span>
+						{#if session.model || session.totalTokens || session.updatedAt}
+							<span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500">
+								{#if session.model}
+									<span
+										class="rounded bg-gray-700/50 px-1 py-px leading-tight"
+										title={session.model}>{shortModel(session.model)}</span
+									>
+								{/if}
+								{#if session.totalTokens && session.contextTokens}
+									{@const pct = Math.min(
+										100,
+										Math.round((session.totalTokens / session.contextTokens) * 100)
+									)}
+									<span
+										class="inline-flex items-center gap-0.5"
+										title="{session.totalTokens.toLocaleString()} / {session.contextTokens.toLocaleString()} tokens"
+									>
+										<span class="inline-block h-1 w-6 overflow-hidden rounded-full bg-gray-700">
+											<span
+												class="block h-full rounded-full {pct > 80
+													? 'bg-red-500'
+													: pct > 50
+														? 'bg-yellow-500'
+														: 'bg-blue-500'}"
+												style="width:{pct}%"
+											></span>
+										</span>
+										{pct}%
+									</span>
+								{/if}
+								{#if session.updatedAt}
+									<span>{formatRelativeTime(session.updatedAt)}</span>
+								{/if}
+							</span>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Unread badge -->
+				{#if session.unreadCount > 0}
+					<span
+						class="mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-medium text-white"
+					>
+						{session.unreadCount}
+					</span>
+				{/if}
+			</button>
+
+			<!-- Desktop hover actions -->
+			<div
+				class="pointer-events-none absolute inset-y-0 right-1 hidden items-center gap-0.5 group-hover:flex"
+			>
+				<button
+					onclick={() => togglePin(session.sessionKey)}
+					class="pointer-events-auto rounded p-0.5 transition-colors {isPinned
+						? 'text-amber-500 hover:text-amber-400'
+						: 'text-gray-500 hover:text-amber-400'}"
+					aria-label={isPinned ? 'Unpin chat' : 'Pin chat'}
+				>
+					<svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+					</svg>
+				</button>
+				<button
+					onclick={() => startRename(session)}
+					class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-blue-400"
+					aria-label="Rename chat"
+				>
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+						/>
+					</svg>
+				</button>
+				<button
+					onclick={() => promptDelete(session)}
+					class="pointer-events-auto rounded p-0.5 text-gray-500 transition-colors hover:text-red-400"
+					aria-label="Delete chat"
+				>
+					<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			</div>
+		</div>
+	{/snippet}
+
+	<!-- Session list -->
+	<div class="flex-1 overflow-y-auto">
+		<!-- Pinned sessions -->
+		{#if pinnedItems.length > 0}
+			<div class="px-1 pb-1">
+				<div class="flex items-center gap-1 px-1 py-1">
+					<svg class="h-3 w-3 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+					</svg>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+						>Pinned</span
+					>
+				</div>
+				{#each pinnedItems as session (session.sessionKey)}
+					{@const isOpen = swipedKey === session.sessionKey}
+					{@const offset = isOpen ? swipeOffset : 0}
+					{@const panProps = createPanProps(session.sessionKey)}
+					{@render sessionRow(session, isOpen, offset, true, panProps)}
+				{/each}
+			</div>
+		{/if}
+
+		<!-- Time-grouped sessions -->
+		{#each groups as group (group.label)}
+			<div class="px-1 pb-1">
+				<button
+					onclick={() => toggleGroup(group.label)}
+					class="flex w-full items-center gap-1 px-1 py-1 text-left"
+				>
+					<svg
+						class="h-3 w-3 text-gray-500 transition-transform {collapsedGroups.has(group.label)
+							? '-rotate-90'
+							: ''}"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 9l-7 7-7-7"
+						/>
+					</svg>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+						>{group.label}</span
+					>
+				</button>
+				{#if !collapsedGroups.has(group.label)}
+					{#each group.sessions as session (session.sessionKey)}
+						{@const isOpen = swipedKey === session.sessionKey}
+						{@const offset = isOpen ? swipeOffset : 0}
+						{@const isPinned = pinned.includes(session.sessionKey)}
+						{@const panProps = createPanProps(session.sessionKey)}
+						{@render sessionRow(session, isOpen, offset, isPinned, panProps)}
+					{/each}
+				{/if}
 			</div>
 		{/each}
 
-		{#if items.length === 0 && contentResults.length === 0 && !searching}
+		{#if pinnedItems.length === 0 && groups.length === 0 && contentResults.length === 0 && !searching}
 			<div class="px-2 py-4 text-center text-xs italic text-gray-500">
 				{query ? 'No matching chats' : 'No chats yet'}
 			</div>
