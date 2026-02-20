@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
+	import { pinnedApps } from '$lib/stores/pinned-apps.js';
 
 	let { onmore, hidden = false }: { onmore: () => void; hidden?: boolean } = $props();
 
 	let pathname = $state('/');
 	let kbVisible = $state(false);
+	let hasApps = $state(false);
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
@@ -17,6 +19,13 @@
 	$effect(() => {
 		const unsub = keyboardVisible.subscribe((v) => {
 			kbVisible = v;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = pinnedApps.subscribe((v) => {
+			hasApps = v.length > 0;
 		});
 		return unsub;
 	});
@@ -87,6 +96,24 @@
 		</a>
 
 		<a
+			href="/documents"
+			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
+				'/documents'
+			)
+				? 'text-blue-400'
+				: 'text-gray-500'}"
+		>
+			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+				/>
+			</svg>
+			<span>Docs</span>
+		</a>
+
+		<a
 			href="/passwords"
 			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
 				'/passwords'
@@ -104,16 +131,18 @@
 			<span>Passwords</span>
 		</a>
 
-		<button
-			onclick={onmore}
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs text-gray-500"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
-				<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-				<circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
-			</svg>
-			<span>More</span>
-		</button>
+		{#if hasApps}
+			<button
+				onclick={onmore}
+				class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs text-gray-500"
+			>
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
+					<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+					<circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
+				</svg>
+				<span>More</span>
+			</button>
+		{/if}
 	</nav>
 {/if}
