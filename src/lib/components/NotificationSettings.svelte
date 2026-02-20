@@ -3,14 +3,25 @@
 		notificationSettings,
 		updateSettings,
 		requestNotificationPermission,
-		type NotificationSettings
+		type NotificationSettings,
+		type NotificationCategory
 	} from '$lib/stores/notifications.js';
 
 	let settings = $state<NotificationSettings>({
 		soundEnabled: true,
 		browserNotificationsEnabled: false,
-		soundVolume: 0.5
+		soundVolume: 0.5,
+		mutedCategories: { chat: false, system: false, cron: false, approval: false }
 	});
+
+	const categoryLabels: Record<NotificationCategory, string> = {
+		chat: 'Chat messages',
+		system: 'System events',
+		cron: 'Cron jobs',
+		approval: 'Exec approvals'
+	};
+
+	const categories: NotificationCategory[] = ['chat', 'cron', 'approval', 'system'];
 
 	$effect(() => {
 		const unsub = notificationSettings.subscribe((v) => {
@@ -37,6 +48,12 @@
 	function handleVolumeChange(e: Event) {
 		const input = e.target as HTMLInputElement;
 		updateSettings({ soundVolume: parseFloat(input.value) });
+	}
+
+	function toggleCategory(cat: NotificationCategory) {
+		const muted = { ...settings.mutedCategories };
+		muted[cat] = !muted[cat];
+		updateSettings({ mutedCategories: muted });
 	}
 </script>
 
@@ -72,4 +89,19 @@
 			class="rounded"
 		/>
 	</label>
+
+	<div class="mt-2 border-t border-gray-700 pt-3">
+		<div class="mb-2 text-xs font-medium text-gray-400">Categories</div>
+		{#each categories as cat (cat)}
+			<label class="flex items-center justify-between py-0.5">
+				<span class="text-xs text-gray-300">{categoryLabels[cat]}</span>
+				<input
+					type="checkbox"
+					checked={!settings.mutedCategories[cat]}
+					onchange={() => toggleCategory(cat)}
+					class="rounded"
+				/>
+			</label>
+		{/each}
+	</div>
 </div>
