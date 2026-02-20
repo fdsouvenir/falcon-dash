@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Falcon Dash — web dashboard for the OpenClaw AI platform. Connects to the OpenClaw Gateway via WebSocket for real-time chat, project management, file browsing, password vault, cron jobs, and heartbeat monitoring.
+Falcon Dash is a web dashboard for the OpenClaw AI Agent platform. Falcon Dash is a product that makes it easy for users of OpenClaw to manage and interact with their agent(s). Falcon Dash is being purpose built by Frederic Souvenir for his business deploying and maintaining AI Agents for customers. The deployment infrastructure repo fredbot-hosting/fredbot-back is availble locally at ~/repos/fredbot-backend/ and via gh.
+
+OpenClaw is a new and rapidly evolving project. Rely on documentation from docs.openclaw.ai/llms.txt and the public repo at github.com/openclaw/openclaw for up to date information.
 
 ## Commands
 
