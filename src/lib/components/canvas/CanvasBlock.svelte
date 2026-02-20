@@ -20,24 +20,12 @@
 		if (surfaceId) {
 			const unsub = canvasStore.surfaces.subscribe((surfaces: Map<string, CanvasSurface>) => {
 				const found = surfaces.get(surfaceId) ?? null;
-				console.log('[CanvasBlock] surface lookup:', {
-					surfaceId,
-					found: !!found,
-					visible: found?.visible,
-					msgCount: found?.messages.length
-				});
 				surface = found;
 			});
 			return unsub;
 		} else if (runId) {
 			const derived = canvasStore.surfaceByRunId(runId);
 			const unsub = derived.subscribe((s: CanvasSurface | null) => {
-				console.log('[CanvasBlock] surface lookup:', {
-					runId,
-					found: !!s,
-					visible: s?.visible,
-					msgCount: s?.messages.length
-				});
 				surface = s;
 			});
 			return unsub;

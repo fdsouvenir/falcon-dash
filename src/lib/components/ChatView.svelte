@@ -72,7 +72,6 @@
 	$effect(() => {
 		const unsub = canvasStore.currentSurface.subscribe((v) => {
 			currentSurface = v;
-			console.log('[ChatView] currentSurface updated:', v?.surfaceId, 'visible:', v?.visible);
 		});
 		return unsub;
 	});
@@ -321,16 +320,6 @@
 			? messages.some((m) => m.role === 'assistant' && m.runId === currentSurface?.runId)
 			: false
 	);
-
-	// Debug: trace surfaceRenderedInline gating
-	$effect(() => {
-		console.log(
-			'[ChatView] surfaceRenderedInline:',
-			surfaceRenderedInline,
-			'currentSurface:',
-			currentSurface?.surfaceId
-		);
-	});
 
 	function getRenderedHtml(message: ChatMessage): string {
 		// For complete messages, use cache

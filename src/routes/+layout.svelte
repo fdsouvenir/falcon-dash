@@ -19,6 +19,8 @@
 	} from '$lib/pwa/service-worker-registration.js';
 	import InstallPrompt from '$lib/components/InstallPrompt.svelte';
 	import { browser } from '$app/environment';
+	import { measureWebVitals } from '$lib/performance/web-vitals.js';
+	import { preloadHighlighter } from '$lib/chat/highlighter.js';
 
 	let { children } = $props();
 
@@ -35,11 +37,13 @@
 		return unsub;
 	});
 
-	// Register service worker and install prompt listener
+	// Register service worker, install prompt listener, and performance tooling
 	$effect(() => {
 		if (browser) {
 			registerServiceWorker();
 			listenForInstallPrompt();
+			measureWebVitals();
+			preloadHighlighter();
 		}
 	});
 
