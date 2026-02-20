@@ -2,7 +2,6 @@
 	import { call, connection } from '$lib/stores/gateway.js';
 
 	type Skill = {
-		key: string;
 		name: string;
 		description: string;
 		version: string;
@@ -83,13 +82,13 @@
 	async function toggleEnabled(skill: Skill) {
 		const originalEnabled = skill.enabled;
 		skill.enabled = !skill.enabled;
-		delete skillErrors[skill.key];
+		delete skillErrors[skill.name];
 
 		try {
-			await call('skills.update', { skillKey: skill.key, enabled: skill.enabled });
+			await call('skills.update', { skillKey: skill.name, enabled: skill.enabled });
 		} catch (e) {
 			skill.enabled = originalEnabled;
-			skillErrors[skill.key] = e instanceof Error ? e.message : 'Failed to update skill';
+			skillErrors[skill.name] = e instanceof Error ? e.message : 'Failed to update skill';
 		}
 	}
 
@@ -112,7 +111,7 @@
 
 		try {
 			await call('skills.update', { skillKey: apiKeyModalSkill, apiKey: apiKeyInput });
-			const skill = skills.find((s) => s.key === apiKeyModalSkill);
+			const skill = skills.find((s) => s.name === apiKeyModalSkill);
 			if (skill) {
 				skill.hasApiKey = true;
 			}
@@ -175,7 +174,7 @@
 
 		try {
 			await call('skills.uninstall', { skillKey });
-			skills = skills.filter((s) => s.key !== skillKey);
+			skills = skills.filter((s) => s.name !== skillKey);
 			uninstallConfirmSkill = null;
 		} catch (e) {
 			skillErrors[skillKey] = e instanceof Error ? e.message : 'Failed to uninstall skill';
@@ -309,7 +308,7 @@
 		</div>
 	{:else}
 		<div class="flex flex-col gap-2">
-			{#each filteredSkills as skill (skill.key)}
+			{#each filteredSkills as skill (skill.name)}
 				<div class="rounded border border-gray-700 bg-gray-800/50 p-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex-1">
@@ -338,14 +337,14 @@
 						</div>
 						<div class="flex items-center gap-2">
 							<button
-								onclick={() => openApiKeyModal(skill.key)}
+								onclick={() => openApiKeyModal(skill.name)}
 								class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600"
 							>
 								API Key
 							</button>
-							{#if uninstallConfirmSkill === skill.key}
+							{#if uninstallConfirmSkill === skill.name}
 								<button
-									onclick={() => uninstallSkill(skill.key)}
+									onclick={() => uninstallSkill(skill.name)}
 									disabled={uninstallLoading}
 									class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
 								>
@@ -360,7 +359,7 @@
 								</button>
 							{:else}
 								<button
-									onclick={() => (uninstallConfirmSkill = skill.key)}
+									onclick={() => (uninstallConfirmSkill = skill.name)}
 									class="rounded bg-gray-700 px-2 py-1 text-xs text-red-400 hover:bg-gray-600"
 									title="Uninstall skill"
 								>
@@ -379,21 +378,21 @@
 						</div>
 					</div>
 
-					{#if skillErrors[skill.key]}
+					{#if skillErrors[skill.name]}
 						<div class="mt-2 rounded bg-red-900/20 px-2 py-1 text-xs text-red-400">
-							{skillErrors[skill.key]}
+							{skillErrors[skill.name]}
 						</div>
 					{/if}
 
 					{#if skill.docs}
 						<button
-							onclick={() => toggleExpanded(skill.key)}
+							onclick={() => toggleExpanded(skill.name)}
 							class="mt-2 text-xs text-blue-400 hover:text-blue-300"
 						>
-							{expandedSkill === skill.key ? 'Hide' : 'Show'} Details
+							{expandedSkill === skill.name ? 'Hide' : 'Show'} Details
 						</button>
 
-						{#if expandedSkill === skill.key}
+						{#if expandedSkill === skill.name}
 							<div class="mt-2 rounded bg-gray-900/50 p-2 text-xs text-gray-300">
 								{skill.docs}
 							</div>
