@@ -11,10 +11,12 @@
 	import ChatView from '$lib/components/ChatView.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
 	import AgentRail from './AgentRail.svelte';
+	import MobileNotificationSheet from './MobileNotificationSheet.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
 	let moreOpen = $state(false);
+	let notificationsOpen = $state(false);
 	let chatOpen = $state(false);
 	let pathname = $state('/');
 	let activeKey = $state<string | null>(null);
@@ -72,7 +74,11 @@
 </script>
 
 <div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
-	<MobileHeader chatOpen={isChatRoute && chatOpen} onBack={handleBack} />
+	<MobileHeader
+		chatOpen={isChatRoute && chatOpen}
+		onBack={handleBack}
+		onNotifications={() => (notificationsOpen = true)}
+	/>
 
 	{#if isChatRoute}
 		<!-- Chat route: two-panel slide architecture -->
@@ -110,4 +116,6 @@
 	<BottomSheet open={moreOpen} onclose={() => (moreOpen = false)}>
 		<MoreSheet />
 	</BottomSheet>
+
+	<MobileNotificationSheet open={notificationsOpen} onclose={() => (notificationsOpen = false)} />
 </div>

@@ -7,10 +7,12 @@
 
 	let {
 		chatOpen = false,
-		onBack
+		onBack,
+		onNotifications
 	}: {
 		chatOpen?: boolean;
 		onBack?: () => void;
+		onNotifications?: () => void;
 	} = $props();
 
 	let pathname = $state('/');
@@ -96,6 +98,7 @@
 		<button
 			class="touch-target relative flex items-center justify-center text-gray-400 hover:text-white"
 			aria-label="Notifications"
+			onclick={onNotifications}
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
