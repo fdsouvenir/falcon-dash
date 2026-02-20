@@ -4,15 +4,21 @@
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 
-	let { collapsed = false, onToggle }: { collapsed: boolean; onToggle: () => void } = $props();
+	let {
+		collapsed = false,
+		onToggle,
+		selectedAgentId = 'default'
+	}: { collapsed: boolean; onToggle: () => void; selectedAgentId?: string } = $props();
 
 	let agentName = $state('Falcon Dashboard');
 	let agentEmoji = $state<string | undefined>(undefined);
 
+	// Fetch identity when selected agent changes
 	$effect(() => {
+		const id = selectedAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'CONNECTED') return;
-			getAgentIdentity().then((identity) => {
+			getAgentIdentity(id).then((identity) => {
 				agentName = identity.name || 'Falcon Dashboard';
 				agentEmoji = identity.emoji;
 			});
