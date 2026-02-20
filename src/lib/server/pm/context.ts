@@ -7,8 +7,14 @@ export interface ContextResponse {
 	stats: Record<string, number>;
 }
 
+export interface DashboardContextResponse extends ContextResponse {
+	dueSoon: { type: string; id: number; title: string; due_date: string }[];
+	blocked: { id: number; title: string; blocker_count: number }[];
+	recentActivity: (Activity & { project_title: string })[];
+}
+
 // Dashboard context: overview of all active work
-export function generateDashboardContext(): ContextResponse {
+export function generateDashboardContext(): DashboardContextResponse {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 	const weekFromNow = now + 7 * 24 * 60 * 60;
@@ -110,7 +116,10 @@ export function generateDashboardContext(): ContextResponse {
 			dueSoon: dueSoon.length,
 			blocked: blocked.length,
 			recentActivity: recentActivity.length
-		}
+		},
+		dueSoon,
+		blocked,
+		recentActivity
 	};
 }
 

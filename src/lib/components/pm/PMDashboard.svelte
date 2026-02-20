@@ -65,11 +65,11 @@
 		<div class="grid grid-cols-5 gap-3">
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 				<div class="text-xs text-gray-500">Total Projects</div>
-				<div class="mt-1 text-2xl font-semibold text-white">{stats.totalProjects}</div>
+				<div class="mt-1 text-2xl font-semibold text-white">{stats.projects.total}</div>
 			</div>
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 				<div class="text-xs text-gray-500">Active</div>
-				<div class="mt-1 text-2xl font-semibold text-green-400">{context.activeProjects}</div>
+				<div class="mt-1 text-2xl font-semibold text-green-400">{context.stats.activeProjects}</div>
 			</div>
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 				<div class="text-xs text-gray-500">Due Soon</div>
@@ -117,7 +117,7 @@
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 				<h2 class="mb-3 text-sm font-semibold text-white">In Progress</h2>
 				<div class="space-y-2">
-					{#if stats.byStatus.in_progress}
+					{#if stats.tasks.byStatus.in_progress}
 						<div class="rounded border border-gray-700 bg-gray-900 p-3">
 							<div class="text-sm text-white">Active Tasks</div>
 							<div class="mt-2 flex items-center gap-2">
@@ -125,19 +125,23 @@
 									<div
 										class="h-full rounded-full bg-blue-500"
 										style="width: {Math.round(
-											(stats.byStatus.done / (stats.byStatus.done + stats.byStatus.in_progress)) *
+											((stats.tasks.byStatus.done ?? 0) /
+												((stats.tasks.byStatus.done ?? 0) + stats.tasks.byStatus.in_progress)) *
 												100
 										)}%"
 									></div>
 								</div>
 								<span class="text-xs text-gray-400"
 									>{Math.round(
-										(stats.byStatus.done / (stats.byStatus.done + stats.byStatus.in_progress)) * 100
+										((stats.tasks.byStatus.done ?? 0) /
+											((stats.tasks.byStatus.done ?? 0) + stats.tasks.byStatus.in_progress)) *
+											100
 									)}%</span
 								>
 							</div>
 							<div class="mt-1 text-xs text-gray-500">
-								{stats.byStatus.done} / {stats.byStatus.done + stats.byStatus.in_progress} tasks complete
+								{stats.tasks.byStatus.done ?? 0} / {(stats.tasks.byStatus.done ?? 0) +
+									stats.tasks.byStatus.in_progress} tasks complete
 							</div>
 						</div>
 					{:else}
@@ -157,7 +161,7 @@
 							<div class="rounded border border-gray-700 bg-gray-900 p-3">
 								<div class="text-sm text-white">{item.title}</div>
 								<div class="mt-1 text-xs text-gray-500">
-									Blocked by {item.blockers.length} item{item.blockers.length !== 1 ? 's' : ''}
+									Blocked by {item.blocker_count} item{item.blocker_count !== 1 ? 's' : ''}
 								</div>
 							</div>
 						{/each}

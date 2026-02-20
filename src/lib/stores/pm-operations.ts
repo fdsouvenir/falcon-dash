@@ -47,10 +47,17 @@ export interface PMSearchResult {
 
 // Dashboard context type (structured data for UI)
 export interface DashboardContext {
-	activeProjects: number;
+	markdown: string;
+	generated_at: number;
+	stats: {
+		activeProjects: number;
+		dueSoon: number;
+		blocked: number;
+		recentActivity: number;
+	};
 	dueSoon: { type: string; id: number; title: string; due_date: string }[];
-	blocked: { id: number; title: string; blockers: number[] }[];
-	recentActivity: Activity[];
+	blocked: { id: number; title: string; blocker_count: number }[];
+	recentActivity: (Activity & { project_title: string })[];
 }
 
 // Domain context type (structured data for UI)
@@ -93,11 +100,12 @@ export interface AIDashboardContext {
 
 // PM Stats type
 export interface PMStats {
-	totalProjects: number;
-	totalTasks: number;
-	byStatus: Record<string, number>;
+	projects: { total: number; byStatus: Record<string, number> };
+	tasks: { total: number; byStatus: Record<string, number> };
+	blocked: number;
 	overdue: number;
 	recentActivity: number;
+	dueSoon: number;
 }
 
 interface PaginatedResponse<T> {

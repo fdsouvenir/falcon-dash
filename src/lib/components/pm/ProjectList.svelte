@@ -9,6 +9,7 @@
 		domains,
 		focuses,
 		loadDomains,
+		loadFocuses,
 		type Domain,
 		type Focus
 	} from '$lib/stores/pm-domains.js';
@@ -19,7 +20,7 @@
 		type DashboardContext
 	} from '$lib/stores/pm-operations.js';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { formatRelativeTime, STATUS_BORDER, getPriorityIndicator } from './pm-utils.js';
+	import { getStatusPill, getPriorityTag, formatDueDate } from './pm-utils.js';
 
 	interface Props {
 		onselect?: (projectId: number) => void;
@@ -33,6 +34,7 @@
 	let loading = $state(false);
 	let filterMode = $state<'active' | 'all' | 'done' | 'archived'>('active');
 	let collapsedDomains = new SvelteSet<string>();
+	let collapsedFocuses = new SvelteSet<string>();
 	let dashStats = $state<PMStats | null>(null);
 	let dashContext = $state<DashboardContext | null>(null);
 
@@ -60,10 +62,15 @@
 	$effect(() => {
 		loadProjects();
 		loadDomains();
-		Promise.all([getPMStats(), getDashboardContext()]).then(([s, c]) => {
-			dashStats = s;
-			dashContext = c;
-		});
+		loadFocuses();
+		Promise.all([getPMStats(), getDashboardContext()])
+			.then(([s, c]) => {
+				dashStats = s;
+				dashContext = c;
+			})
+			.catch((err) => {
+				console.error('[PM] Failed to load dashboard stats/context:', err);
+			});
 	});
 
 	interface FocusGroup {
@@ -75,6 +82,17 @@
 		domain: Domain;
 		focusGroups: FocusGroup[];
 		projectCount: number;
+	}
+
+	function sortProjects(projs: Project[]): Project[] {
+		return [...projs].sort((a, b) => {
+			if (a.due_date && b.due_date) {
+				return a.due_date.localeCompare(b.due_date);
+			}
+			if (a.due_date && !b.due_date) return -1;
+			if (!a.due_date && b.due_date) return 1;
+			return b.last_activity_at - a.last_activity_at;
+		});
 	}
 
 	const filtered = $derived.by(() => {
@@ -110,7 +128,7 @@
 			projectsByFocus[p.focus_id] = list;
 		}
 		for (const key of Object.keys(projectsByFocus)) {
-			projectsByFocus[key].sort((a, b) => b.last_activity_at - a.last_activity_at);
+			projectsByFocus[key] = sortProjects(projectsByFocus[key]);
 		}
 
 		const result: DomainGroup[] = [];
@@ -147,9 +165,9 @@
 		for (const f of focusList) {
 			if (!knownDomainIds[f.domain_id]) orphanFocusIds[f.id] = true;
 		}
-		return filtered
-			.filter((p) => orphanFocusIds[p.focus_id] || !focusMap[p.focus_id])
-			.sort((a, b) => b.last_activity_at - a.last_activity_at);
+		return sortProjects(
+			filtered.filter((p) => orphanFocusIds[p.focus_id] || !focusMap[p.focus_id])
+		);
 	});
 
 	// Attention items: dueSoon + blocked, max 3
@@ -175,6 +193,14 @@
 		}
 	}
 
+	function toggleFocus(focusId: string) {
+		if (collapsedFocuses.has(focusId)) {
+			collapsedFocuses.delete(focusId);
+		} else {
+			collapsedFocuses.add(focusId);
+		}
+	}
+
 	const filters: Array<{ key: typeof filterMode; label: string }> = [
 		{ key: 'active', label: 'Active' },
 		{ key: 'all', label: 'All' },
@@ -182,6 +208,33 @@
 		{ key: 'archived', label: 'Archived' }
 	];
 </script>
+
+{#snippet projectRow(project: Project)}
+	{@const status = getStatusPill(project.status)}
+	{@const priority = getPriorityTag(project.priority)}
+	{@const due = formatDueDate(project.due_date)}
+	<button
+		class="flex min-h-[40px] w-full items-center gap-3 py-2 pl-12 pr-4 text-left transition-colors hover:bg-gray-800/60"
+		onclick={() => onselect?.(project.id)}
+	>
+		<span class="min-w-0 flex-1 truncate text-sm text-gray-200">
+			{project.title}
+		</span>
+		<span class="w-[72px] shrink-0 text-center rounded-full px-2 py-0.5 text-xs {status.classes}">
+			{status.label}
+		</span>
+		<span class="hidden w-[52px] shrink-0 text-center sm:inline-flex sm:justify-center">
+			{#if priority}
+				<span class="rounded-full px-1.5 py-0.5 text-xs {priority.classes}">
+					{priority.label}
+				</span>
+			{/if}
+		</span>
+		<span class="w-[72px] shrink-0 text-right text-xs {due?.color || 'text-gray-600'}">
+			{due?.text || '\u2014'}
+		</span>
+	</button>
+{/snippet}
 
 <div class="flex h-full flex-col overflow-auto">
 	{#if loading}
@@ -192,23 +245,23 @@
 			<!-- Stat cards -->
 			{#if dashStats}
 				<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
 						<div class="text-xs text-gray-500">Total</div>
-						<div class="text-lg font-semibold text-white">{dashStats.totalProjects}</div>
+						<div class="text-lg font-semibold text-white">{dashStats.projects.total}</div>
 					</div>
-					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
 						<div class="text-xs text-gray-500">Active</div>
 						<div class="text-lg font-semibold text-green-400">
-							{dashStats.byStatus.in_progress || 0}
+							{dashStats.projects.byStatus.in_progress || 0}
 						</div>
 					</div>
-					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
 						<div class="text-xs text-gray-500">Due Soon</div>
 						<div class="text-lg font-semibold text-amber-400">
-							{dashContext?.dueSoon.length ?? 0}
+							{dashContext?.dueSoon?.length ?? 0}
 						</div>
 					</div>
-					<div class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
+					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
 						<div class="text-xs text-gray-500">Overdue</div>
 						<div class="text-lg font-semibold text-red-400">{dashStats.overdue}</div>
 					</div>
@@ -218,9 +271,10 @@
 			<!-- Attention items -->
 			{#if attentionItems.length > 0}
 				<div class="mb-3 flex flex-wrap gap-1.5">
-					{#each attentionItems as item (item.id)}
+					{#each attentionItems as item, i (item.id)}
 						<button
-							class="flex items-center gap-1.5 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs transition-colors hover:border-gray-600"
+							class="attention-chip flex items-center gap-1.5 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs transition-colors hover:border-gray-600"
+							style="animation-delay: {200 + i * 50}ms"
 							onclick={() => onselect?.(item.id)}
 						>
 							<span class="truncate text-white">{item.title}</span>
@@ -234,7 +288,7 @@
 			<div class="flex gap-1.5">
 				{#each filters as f (f.key)}
 					<button
-						class="rounded-full px-3 py-1 text-xs font-medium transition-colors {filterMode ===
+						class="rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 {filterMode ===
 						f.key
 							? 'bg-gray-700 text-white'
 							: 'text-gray-400 hover:text-gray-200'}"
@@ -262,7 +316,7 @@
 						onclick={() => toggleDomain(group.domain.id)}
 					>
 						<svg
-							class="h-3 w-3 text-gray-500 transition-transform {collapsedDomains.has(
+							class="h-3 w-3 text-gray-500 transition-transform duration-200 {collapsedDomains.has(
 								group.domain.id
 							)
 								? '-rotate-90'
@@ -278,40 +332,42 @@
 						<span class="text-xs text-gray-600">({group.projectCount})</span>
 					</button>
 
-					{#if !collapsedDomains.has(group.domain.id)}
-						{#each group.focusGroups as fg (fg.focus.id)}
-							<!-- Focus sub-header -->
-							<div class="px-4 pb-0.5 pl-9 pt-1.5 text-xs text-gray-500">
-								{fg.focus.name}
-							</div>
-
-							<!-- Project rows -->
-							{#each fg.projects as project (project.id)}
-								{@const priority = getPriorityIndicator(project.priority)}
+					<div class="collapse-section {collapsedDomains.has(group.domain.id) ? 'collapsed' : ''}">
+						<div>
+							{#each group.focusGroups as fg (fg.focus.id)}
+								<!-- Focus sub-header -->
 								<button
-									class="flex min-h-[40px] w-full items-center gap-3 border-l-2 py-2 pl-8 pr-4 text-left transition-colors hover:bg-gray-800/60 {STATUS_BORDER[
-										project.status
-									] || 'border-l-gray-500'}"
-									onclick={() => onselect?.(project.id)}
+									class="flex w-full items-center gap-1.5 py-1 pl-9 pr-4 text-left text-xs text-gray-500 hover:bg-gray-800/30"
+									onclick={() => toggleFocus(fg.focus.id)}
 								>
-									<span class="min-w-0 flex-1 truncate text-sm text-gray-200">
-										{project.title}
-									</span>
-									<span class="shrink-0 text-xs text-gray-600">
-										{formatRelativeTime(project.last_activity_at)}
-									</span>
-									{#if priority}
-										<span
-											class="inline-block h-2 w-2 shrink-0 rounded-full {priority.dot} {priority.pulse
-												? 'animate-pulse'
-												: ''}"
-											title={priority.label}
-										></span>
-									{/if}
+									<svg
+										class="h-2.5 w-2.5 text-gray-600 transition-transform duration-200 {collapsedFocuses.has(
+											fg.focus.id
+										)
+											? '-rotate-90'
+											: ''}"
+										fill="currentColor"
+										viewBox="0 0 12 12"
+									>
+										<path d="M2 4l4 4 4-4z" />
+									</svg>
+									<span>{fg.focus.name}</span>
+									<span class="text-gray-600">({fg.projects.length})</span>
 								</button>
+
+								<!-- Project rows -->
+								<div
+									class="collapse-section {collapsedFocuses.has(fg.focus.id) ? 'collapsed' : ''}"
+								>
+									<div>
+										{#each fg.projects as project (project.id)}
+											{@render projectRow(project)}
+										{/each}
+									</div>
+								</div>
 							{/each}
-						{/each}
-					{/if}
+						</div>
+					</div>
 				{/each}
 
 				<!-- Orphan projects (not in any known domain) -->
@@ -319,28 +375,7 @@
 					<div class="mt-1 border-t border-gray-700 pt-1">
 						<div class="px-4 py-1.5 text-xs text-gray-500">Other</div>
 						{#each orphanProjects as project (project.id)}
-							{@const priority = getPriorityIndicator(project.priority)}
-							<button
-								class="flex min-h-[40px] w-full items-center gap-3 border-l-2 py-2 pl-8 pr-4 text-left transition-colors hover:bg-gray-800/60 {STATUS_BORDER[
-									project.status
-								] || 'border-l-gray-500'}"
-								onclick={() => onselect?.(project.id)}
-							>
-								<span class="min-w-0 flex-1 truncate text-sm text-gray-200">
-									{project.title}
-								</span>
-								<span class="shrink-0 text-xs text-gray-600">
-									{formatRelativeTime(project.last_activity_at)}
-								</span>
-								{#if priority}
-									<span
-										class="inline-block h-2 w-2 shrink-0 rounded-full {priority.dot} {priority.pulse
-											? 'animate-pulse'
-											: ''}"
-										title={priority.label}
-									></span>
-								{/if}
-							</button>
+							{@render projectRow(project)}
 						{/each}
 					</div>
 				{/if}
@@ -348,3 +383,45 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.collapse-section {
+		display: grid;
+		grid-template-rows: 1fr;
+		transition: grid-template-rows 200ms ease-out;
+	}
+	.collapse-section.collapsed {
+		grid-template-rows: 0fr;
+	}
+	.collapse-section > div {
+		overflow: hidden;
+	}
+
+	.stat-card {
+		animation: fadeSlideUp 300ms ease-out both;
+	}
+	.stat-card:nth-child(2) {
+		animation-delay: 50ms;
+	}
+	.stat-card:nth-child(3) {
+		animation-delay: 100ms;
+	}
+	.stat-card:nth-child(4) {
+		animation-delay: 150ms;
+	}
+
+	.attention-chip {
+		animation: fadeSlideUp 300ms ease-out both;
+	}
+
+	@keyframes fadeSlideUp {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+</style>
