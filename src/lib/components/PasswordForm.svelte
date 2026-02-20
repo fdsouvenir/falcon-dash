@@ -18,6 +18,14 @@
 	let error = $state<string | null>(null);
 	let isLoading = $state(false);
 
+	interface CustomAttr {
+		key: string;
+		value: string;
+	}
+
+	let customAttributes = $state<CustomAttr[]>([]);
+	let removedAttributes = $state<string[]>([]);
+
 	const isEdit = !!editPath;
 
 	// Load existing entry if editing
@@ -40,6 +48,11 @@
 			password = data.password ?? '';
 			url = data.url ?? '';
 			notes = data.notes ?? '';
+			if (data.customAttributes) {
+				customAttributes = Object.entries(data.customAttributes as Record<string, string>).map(
+					([key, value]) => ({ key, value })
+				);
+			}
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {
@@ -53,6 +66,12 @@
 		error = null;
 
 		const path = editPath ?? title.trim();
+		const attrs: Record<string, string> = {};
+		for (const attr of customAttributes) {
+			const k = attr.key.trim();
+			if (k) attrs[k] = attr.value;
+		}
+
 		try {
 			const res = await fetch(`/api/passwords/${encodeURIComponent(path)}`, {
 				method: 'PUT',
@@ -65,7 +84,9 @@
 					username: username.trim(),
 					password,
 					url: url.trim(),
-					notes: notes.trim()
+					notes: notes.trim(),
+					customAttributes: Object.keys(attrs).length > 0 ? attrs : undefined,
+					removedAttributes: removedAttributes.length > 0 ? removedAttributes : undefined
 				})
 			});
 			if (!res.ok) throw new Error('Failed to save entry');
@@ -84,6 +105,18 @@
 		crypto.getRandomValues(array);
 		password = Array.from(array, (b) => chars[b % chars.length]).join('');
 	}
+
+	function addAttribute() {
+		customAttributes.push({ key: '', value: '' });
+	}
+
+	function removeAttr(index: number) {
+		const attr = customAttributes[index];
+		if (attr.key.trim() && isEdit) {
+			removedAttributes.push(attr.key.trim());
+		}
+		customAttributes.splice(index, 1);
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -97,7 +130,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
-		class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5"
+		class="max-h-[80vh] w-96 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 p-5"
 		onclick={(e) => e.stopPropagation()}
 	>
 		<h3 class="mb-4 text-sm font-medium text-white">{isEdit ? 'Edit Entry' : 'New Entry'}</h3>
@@ -178,6 +211,42 @@
 						rows="3"
 						class="w-full resize-none rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
 					></textarea>
+				</div>
+
+				<!-- Custom Attributes -->
+				<div class="border-t border-gray-700 pt-3">
+					<div class="mb-2 flex items-center justify-between">
+						<label class="text-xs text-gray-400">Custom Attributes</label>
+						<button
+							onclick={addAttribute}
+							class="rounded px-2 py-0.5 text-xs text-blue-400 hover:text-blue-300"
+						>
+							+ Add
+						</button>
+					</div>
+					{#each customAttributes as attr, i (i)}
+						<div class="mb-2 flex gap-1">
+							<input
+								type="text"
+								bind:value={attr.key}
+								placeholder="Key"
+								class="w-1/3 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+							/>
+							<input
+								type="text"
+								bind:value={attr.value}
+								placeholder="Value"
+								class="flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+							/>
+							<button
+								onclick={() => removeAttr(i)}
+								class="rounded px-1.5 text-xs text-red-400 hover:text-red-300"
+								title="Remove attribute"
+							>
+								✕
+							</button>
+						</div>
+					{/each}
 				</div>
 			</div>
 

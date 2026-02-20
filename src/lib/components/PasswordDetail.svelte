@@ -16,6 +16,7 @@
 		url: string;
 		notes: string;
 		path: string;
+		customAttributes?: Record<string, string>;
 	}
 
 	let entry = $state<EntryDetail | null>(null);
@@ -114,6 +115,21 @@
 					<div>
 						<span class="text-[10px] font-medium uppercase tracking-wide text-gray-500">Notes</span>
 						<p class="mt-1 whitespace-pre-wrap text-xs text-gray-300">{entry.notes}</p>
+					</div>
+				{/if}
+				{#if entry.customAttributes && Object.keys(entry.customAttributes).length > 0}
+					<div class="border-t border-gray-800 pt-4">
+						<span class="text-[10px] font-medium uppercase tracking-wide text-gray-500"
+							>Custom Attributes</span
+						>
+						<div class="mt-2 space-y-2">
+							{#each Object.entries(entry.customAttributes) as [key, value] (key)}
+								<div class="flex items-start gap-2">
+									<span class="shrink-0 text-xs font-medium text-gray-400">{key}:</span>
+									<span class="text-xs text-white">{value}</span>
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
 			</div>
