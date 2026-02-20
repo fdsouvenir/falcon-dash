@@ -5,7 +5,7 @@
 		connectionState,
 		type AgentIdentity
 	} from '$lib/stores/agent-identity.js';
-	import { sessions } from '$lib/stores/sessions.js';
+	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 
 	let {
@@ -92,6 +92,7 @@
 				const defaultId = d.defaultAgentId ?? 'default';
 				if (!selectedAgentId || selectedAgentId === 'default') {
 					selectedAgentId = defaultId;
+					setSelectedAgent(defaultId);
 				}
 			});
 			defaultsUnsub();
@@ -123,7 +124,10 @@
 				></div>
 			{/if}
 			<button
-				onclick={() => (selectedAgentId = agent.agentId)}
+				onclick={() => {
+					selectedAgentId = agent.agentId;
+					setSelectedAgent(agent.agentId);
+				}}
 				class="{iconSize} flex items-center justify-center transition-all duration-200 {isActive
 					? 'rounded-2xl bg-blue-600'
 					: 'rounded-full bg-gray-800 hover:rounded-2xl hover:bg-blue-600/80'} {fontSize} font-bold text-white"
