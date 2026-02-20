@@ -13,7 +13,7 @@ import { buildSignMessage, signMessage } from './device-identity.js';
 
 const PROTOCOL_VERSION = 3;
 const CLIENT_ID = 'openclaw-control-ui';
-const CLIENT_MODE = 'operator';
+const CLIENT_MODE = 'ui';
 const CLIENT_VERSION = '0.1.0';
 
 export type DiagnosticCallback = (event: string, detail?: Record<string, unknown>) => void;
