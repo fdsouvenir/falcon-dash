@@ -71,7 +71,7 @@ function injectKatexCss() {
 	const link = document.createElement('link');
 	link.rel = 'stylesheet';
 	link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-	tlink.crossOrigin = 'anonymous';
+	link.crossOrigin = 'anonymous';
 	document.head.appendChild(link);
 }
 

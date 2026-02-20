@@ -95,6 +95,7 @@
 		"remark-rehype": "^11.1.2",
 		"shiki": "^3.22.0",
 		"svelte-gestures": "^5.2.2",
-		"unified": "^11.0.5"
+		"unified": "^11.0.5",
+		"web-vitals": "^5.1.0"
 	}
 }
