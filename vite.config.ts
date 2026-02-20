@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
 import pkg from './package.json' with { type: 'json' };
@@ -14,7 +15,24 @@ export default defineConfig(({ mode }) => {
 			__SENTRY_DSN__: JSON.stringify(envVars.SENTRY_DSN || ''),
 			__SENTRY_ENVIRONMENT__: JSON.stringify(envVars.SENTRY_ENVIRONMENT || 'production')
 		},
-		plugins: [tailwindcss(), sveltekit()],
+		plugins: [
+			tailwindcss(),
+			sveltekit(),
+			...(envVars.SENTRY_AUTH_TOKEN
+				? [
+						sentryVitePlugin({
+							org: envVars.SENTRY_ORG,
+							project: envVars.SENTRY_PROJECT,
+							authToken: envVars.SENTRY_AUTH_TOKEN,
+							release: { name: pkg.version },
+							sourcemaps: { filesToDeleteAfterUpload: ['./build/**/*.map'] }
+						})
+					]
+				: [])
+		],
+		build: {
+			sourcemap: !!envVars.SENTRY_AUTH_TOKEN
+		},
 		server: {
 			proxy: {
 				'/ws': {
