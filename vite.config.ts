@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig(({ mode }) => {
@@ -14,7 +15,20 @@ export default defineConfig(({ mode }) => {
 			__SENTRY_DSN__: JSON.stringify(envVars.SENTRY_DSN || ''),
 			__SENTRY_ENVIRONMENT__: JSON.stringify(envVars.SENTRY_ENVIRONMENT || 'production')
 		},
-		plugins: [tailwindcss(), sveltekit()],
+		plugins: [
+			tailwindcss(),
+			sveltekit(),
+			...(process.env.ANALYZE === 'true'
+				? [
+						visualizer({
+							filename: 'stats.html',
+							open: false,
+							gzipSize: true,
+							brotliSize: true
+						})
+					]
+				: [])
+		],
 		server: {
 			proxy: {
 				'/ws': {
