@@ -83,12 +83,22 @@ export function togglePin(sessionKey: string): void {
 	});
 }
 
-// Derived: filtered and sorted sessions (excludes automated sessions, pinned first then by updatedAt desc)
+function isSystemSession(s: ChatSessionInfo): boolean {
+	const key = s.sessionKey;
+	return (
+		key.includes(':cron:') ||
+		key.includes(':heartbeat:') ||
+		key.includes(':thread:') ||
+		s.kind === 'cron' ||
+		s.kind === 'heartbeat'
+	);
+}
+
+// Derived: filtered and sorted sessions (excludes system/thread sessions, pinned first then by updatedAt desc)
 export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	[_sessions, _searchQuery, _pinnedSessions],
 	([$sessions, $query, $pinned]) => {
-		let list = $sessions;
-		list = list.filter((s) => !s.sessionKey.includes(':cron:'));
+		let list = $sessions.filter((s) => !isSystemSession(s));
 		if ($query.trim()) {
 			const q = $query.toLowerCase();
 			list = list.filter((s) => s.displayName.toLowerCase().includes(q));
@@ -104,6 +114,77 @@ export const filteredSessions: Readable<ChatSessionInfo[]> = derived(
 	}
 );
 
+export interface SessionGroup {
+	label: string;
+	sessions: ChatSessionInfo[];
+}
+
+function getTimeGroupLabel(ts: number): string {
+	const now = new Date();
+	const date = new Date(ts);
+	const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+	const startOfYesterday = startOfToday - 86_400_000;
+	const dayOfWeek = now.getDay();
+	const startOfWeek = startOfToday - dayOfWeek * 86_400_000;
+	const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+	if (ts >= startOfToday) return 'Today';
+	if (ts >= startOfYesterday) return 'Yesterday';
+	if (ts >= startOfWeek) return 'This Week';
+	if (ts >= startOfMonth) return 'This Month';
+	const monthNames = [
+		'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December'
+	];
+	if (date.getFullYear() === now.getFullYear()) {
+		return monthNames[date.getMonth()];
+	}
+	return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+export const groupedSessions: Readable<{ pinned: ChatSessionInfo[]; groups: SessionGroup[] }> =
+	derived([filteredSessions, _pinnedSessions], ([$filtered, $pinned]) => {
+		const pinnedSet = new Set($pinned);
+		const pinned: ChatSessionInfo[] = [];
+		const unpinned: ChatSessionInfo[] = [];
+
+		for (const s of $filtered) {
+			if (pinnedSet.has(s.sessionKey)) {
+				pinned.push(s);
+			} else {
+				unpinned.push(s);
+			}
+		}
+
+		const groupMap = new Map<string, ChatSessionInfo[]>();
+		const groupOrder: string[] = [];
+		for (const s of unpinned) {
+			const label = getTimeGroupLabel(s.updatedAt);
+			if (!groupMap.has(label)) {
+				groupMap.set(label, []);
+				groupOrder.push(label);
+			}
+			groupMap.get(label)!.push(s);
+		}
+
+		const groups: SessionGroup[] = groupOrder.map((label) => ({
+			label,
+			sessions: groupMap.get(label)!
+		}));
+
+		return { pinned, groups };
+	});
+
 function originLabel(s: Record<string, unknown>): string | undefined {
 	const origin = s.origin as Record<string, unknown> | undefined;
 	return origin?.label as string | undefined;
@@ -113,9 +194,12 @@ export async function loadSessions(): Promise<void> {
 	try {
 		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
 		const labelless = new Set<string>();
-		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s) => {
+		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s, i) => {
 			const hasLabel = typeof s.label === 'string' && s.label.length > 0;
-			const displayName = (s.label ?? originLabel(s) ?? s.name ?? 'Untitled') as string;
+			// Avoid showing raw session keys as names — fall back to "Chat N"
+			const rawName = (s.label ?? originLabel(s) ?? s.name ?? '') as string;
+			const looksLikeKey = !rawName || rawName.includes(':') || /^[0-9a-f-]{20,}$/i.test(rawName);
+			const displayName = looksLikeKey ? `Chat ${i + 1}` : rawName;
 			const sessionKey = (s.sessionKey ?? s.key ?? '') as string;
 			if (!hasLabel) labelless.add(sessionKey);
 			return {
@@ -148,12 +232,6 @@ export async function loadSessions(): Promise<void> {
 					idx++;
 				}
 			}
-		}
-
-		// Persist friendly names for labelless sessions back to the gateway
-		for (const s of parsed) {
-			if (!labelless.has(s.sessionKey)) continue;
-			call('sessions.patch', { key: s.sessionKey, label: s.displayName }).catch(() => {});
 		}
 
 		_sessions.set(parsed);
@@ -195,27 +273,19 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
 	return `${base} ${n}`;
 }
 
-/**
- * Create a new chat session. Each session gets a unique key with a fresh UUID,
- * which means the gateway spawns a fresh agent context (no prior conversation).
- * This is expected gateway behavior — session key scopes the agent context.
- */
 export async function createSession(label?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
-	// Set as active immediately so UI switches
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
 
-	// Create on server, then refresh authoritative list
 	try {
 		await call('sessions.patch', { key: sessionKey, label: displayName });
 		await loadSessions();
 	} catch (err) {
-		// Revert active session on failure
 		_activeSessionKey.set(null);
 		persistSessionKey(null);
 		console.warn('[sessions] createSession failed:', err);
@@ -225,22 +295,15 @@ export async function createSession(label?: string): Promise<string> {
 	return sessionKey;
 }
 
-/**
- * Optimistic variant of createSession — returns the session key immediately
- * and fires the RPC in the background. The UI navigates instantly while the
- * gateway call completes asynchronously.
- */
 export function createSessionOptimistic(label?: string): string {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = defaults.defaultAgentId ?? 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
-	// Set as active immediately so UI switches
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
 
-	// Fire RPC in background — revert on failure
 	call('sessions.patch', { key: sessionKey, label: displayName })
 		.then(() => loadSessions())
 		.catch((err) => {
@@ -278,7 +341,6 @@ export function subscribeToEvents(): void {
 		})
 	);
 
-	// Increment unread counts for incoming messages on non-active sessions
 	unsubscribers.push(
 		eventBus.on('chat.message', (payload) => {
 			const msgSessionKey = payload.sessionKey as string;
@@ -297,10 +359,6 @@ export function unsubscribeFromEvents(): void {
 	unsubscribers = [];
 }
 
-/**
- * Load sessions and restore the previously active session if it still exists.
- * If no persisted session is found, activeSessionKey stays null (welcome page).
- */
 export async function restoreActiveSession(): Promise<void> {
 	await loadSessions();
 	const list = get(_sessions);
