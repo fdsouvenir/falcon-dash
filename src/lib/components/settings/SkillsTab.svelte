@@ -47,7 +47,12 @@
 		error = null;
 		skillErrors = {};
 		try {
-			const response = await call<SkillsStatusResponse>('skills.status');
+			const response = await Promise.race([
+				call<SkillsStatusResponse>('skills.status'),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error('Skills service not available')), 10_000)
+				)
+			]);
 			skills = response.skills;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load skills';
@@ -61,7 +66,12 @@
 		error = null;
 		skillErrors = {};
 		try {
-			const response = await call<SkillsStatusResponse>('skills.status');
+			const response = await Promise.race([
+				call<SkillsStatusResponse>('skills.status'),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error('Skills service not available')), 10_000)
+				)
+			]);
 			skills = response.skills;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load skills';

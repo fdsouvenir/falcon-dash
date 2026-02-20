@@ -75,7 +75,7 @@
 
 	let title = $derived(() => {
 		if (isChatRoute && chatOpen) return sessionName();
-		if (isChatRoute) return 'Falcon Dash';
+		if (isChatRoute) return 'Falcon Dash v' + __APP_VERSION__;
 		if (pathname === '/jobs') return `${agentName}'s Jobs`;
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
@@ -150,11 +150,45 @@
 			</svg>
 		</a>
 		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
-		<div class="h-6 w-6"></div>
+		<a
+			href="/settings"
+			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
+			aria-label="Settings"
+		>
+			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+				/>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+			</svg>
+		</a>
 	{:else}
 		<!-- Primary route (jobs, settings): title center -->
 		<div class="h-6 w-6"></div>
 		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
-		<div class="h-6 w-6"></div>
+		{#if pathname === '/settings'}
+			<div class="h-6 w-6"></div>
+		{:else}
+			<a
+				href="/settings"
+				class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
+				aria-label="Settings"
+			>
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+					/>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+					/>
+				</svg>
+			</a>
+		{/if}
 	{/if}
 </header>

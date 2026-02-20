@@ -159,8 +159,14 @@
 	<MobileCronJobForm job={editingJob} onback={handleFormBack} />
 {:else}
 	<div class="flex h-full flex-col bg-gray-950">
-		<!-- Header -->
-		<div class="flex items-center justify-end border-b border-gray-700 px-4 py-3">
+		<!-- Search + New -->
+		<div class="flex items-center gap-2 px-4 py-2">
+			<input
+				type="text"
+				placeholder="Search jobs..."
+				bind:value={search}
+				class="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+			/>
 			<button
 				onclick={handleCreate}
 				class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white active:bg-blue-700"
@@ -176,16 +182,6 @@
 				</svg>
 				New
 			</button>
-		</div>
-
-		<!-- Search -->
-		<div class="px-4 py-2">
-			<input
-				type="text"
-				placeholder="Search jobs..."
-				bind:value={search}
-				class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-			/>
 		</div>
 
 		<!-- Content -->
