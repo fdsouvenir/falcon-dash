@@ -5,6 +5,11 @@ import { listEntries, vaultExists, initVault } from '$lib/server/keepassxc.js';
 
 /** GET: List password entries (requires session token) */
 export const GET: RequestHandler = async ({ request }) => {
+	const exists = await vaultExists();
+	if (!exists) {
+		return error(404, 'No vault found. Initialize first.');
+	}
+
 	const token = request.headers.get('x-session-token') ?? '';
 	const password = getSession(token);
 	if (!password) {
