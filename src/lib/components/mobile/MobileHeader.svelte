@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { activeSessionKey, sessions, type ChatSessionInfo } from '$lib/stores/sessions.js';
 	import { totalUnreadCount } from '$lib/stores/mobile-chat-nav.js';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 
 	let {
 		chatOpen = false,
@@ -15,6 +16,7 @@
 	let activeKey = $state<string | null>(null);
 	let sessionList = $state<ChatSessionInfo[]>([]);
 	let unreadCount = $state(0);
+	let agentName = $state('Agent');
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
@@ -44,6 +46,16 @@
 		return unsub;
 	});
 
+	$effect(() => {
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+			});
+		});
+		return unsub;
+	});
+
 	let isChatRoute = $derived(pathname === '/');
 
 	let sessionName = $derived(() => {
@@ -53,7 +65,6 @@
 	});
 
 	const routeTitles: Record<string, string> = {
-		'/jobs': 'Agent Jobs',
 		'/settings': 'Settings',
 		'/documents': 'Documents',
 		'/projects': 'Projects',
@@ -65,6 +76,7 @@
 	let title = $derived(() => {
 		if (isChatRoute && chatOpen) return sessionName();
 		if (isChatRoute) return 'Falcon Dash';
+		if (pathname === '/jobs') return `${agentName}'s Jobs`;
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
 

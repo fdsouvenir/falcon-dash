@@ -8,6 +8,7 @@ export interface CronJob {
 	description?: string;
 	scheduleType: 'cron' | 'interval' | 'one-shot';
 	schedule: string;
+	rawSchedule?: Record<string, unknown>;
 	enabled: boolean;
 	nextRun: number | null;
 	lastRun: number | null;
@@ -31,7 +32,15 @@ export async function loadCronJobs(): Promise<void> {
 	_error.set(null);
 	try {
 		const result = await call<{ jobs: CronJob[] }>('cron.list', { includeDisabled: true });
-		_jobs.set(result.jobs ?? []);
+		const jobs = (result.jobs ?? []).map((j) => ({
+			...j,
+			rawSchedule:
+				typeof j.schedule === 'object' && j.schedule
+					? (j.schedule as Record<string, unknown>)
+					: undefined,
+			schedule: normalizeSchedule(j.schedule)
+		}));
+		_jobs.set(jobs);
 	} catch (err) {
 		_error.set((err as Error).message);
 		_jobs.set([]);
@@ -73,11 +82,26 @@ export function unsubscribeFromCronEvents(): void {
 	}
 }
 
+/** Coerce a schedule value (may be object from gateway) to a displayable string. */
+export function normalizeSchedule(schedule: unknown): string {
+	if (typeof schedule === 'string') return schedule;
+	if (schedule && typeof schedule === 'object') {
+		const rec = schedule as Record<string, unknown>;
+		if (typeof rec.expr === 'string') return rec.expr;
+		if (typeof rec.expression === 'string') return rec.expression;
+		if (typeof rec.everyMs === 'number') return `${rec.everyMs}ms`;
+		if (typeof rec.at === 'string') return rec.at;
+		return JSON.stringify(schedule);
+	}
+	return String(schedule ?? '');
+}
+
 export function formatSchedule(job: CronJob): string {
-	if (job.scheduleType === 'cron') return job.schedule;
-	if (job.scheduleType === 'interval') return `Every ${job.schedule}`;
+	const sched = normalizeSchedule(job.schedule);
+	if (job.scheduleType === 'cron') return sched;
+	if (job.scheduleType === 'interval') return `Every ${sched}`;
 	if (job.scheduleType === 'one-shot') return 'One-shot';
-	return job.schedule;
+	return sched;
 }
 
 export interface CronJobInput {

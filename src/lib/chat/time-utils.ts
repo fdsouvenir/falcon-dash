@@ -12,6 +12,23 @@ export function formatRelativeTime(timestamp: number): string {
 }
 
 /**
+ * Format a future timestamp as a countdown (e.g., "in 3h 12m", "in 2d").
+ */
+export function formatCountdown(timestamp: number): string {
+	const diff = timestamp - Date.now();
+	if (diff <= 0) return 'now';
+	if (diff < 60000) return 'in <1m';
+	if (diff < 3600000) return `in ${Math.floor(diff / 60000)}m`;
+	if (diff < 86400000) {
+		const h = Math.floor(diff / 3600000);
+		const m = Math.floor((diff % 3600000) / 60000);
+		return m > 0 ? `in ${h}h ${m}m` : `in ${h}h`;
+	}
+	if (diff < 604800000) return `in ${Math.floor(diff / 86400000)}d`;
+	return new Date(timestamp).toLocaleDateString();
+}
+
+/**
  * Format a timestamp as an absolute date/time string.
  */
 export function formatAbsoluteTime(timestamp: number): string {

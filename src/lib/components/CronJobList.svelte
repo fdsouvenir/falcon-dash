@@ -13,9 +13,13 @@
 		type CronJob
 	} from '$lib/stores/cron.js';
 	import { formatRelativeTime } from '$lib/chat/time-utils.js';
-	import { describeCron } from '$lib/cron-utils.js';
+	import { describeCron, describeScheduleObject } from '$lib/cron-utils.js';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import CronJobForm from './CronJobForm.svelte';
-	import CronRunHistory from './CronRunHistory.svelte';
+	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
+	import { setActiveSession } from '$lib/stores/sessions.js';
+	import { addToast } from '$lib/stores/toast.js';
 
 	let jobs = $state<CronJob[]>([]);
 	let loading = $state(false);
@@ -25,8 +29,7 @@
 	let editingJob = $state<CronJob | null>(null);
 	let showDeleteConfirm = $state(false);
 	let deleteTarget = $state<CronJob | null>(null);
-	let historyJob = $state<CronJob | null>(null);
-
+	let agentName = $state('Agent');
 	let searchQuery = $state('');
 	let sortBy = $state<'name' | 'schedule' | 'lastRun'>('name');
 	let sortAsc = $state(true);
@@ -91,6 +94,16 @@
 		};
 	});
 
+	$effect(() => {
+		const unsub = connectionState.subscribe((s) => {
+			if (s !== 'CONNECTED') return;
+			getAgentIdentity().then((identity) => {
+				agentName = identity.name || 'Agent';
+			});
+		});
+		return unsub;
+	});
+
 	function statusBadge(job: CronJob): { text: string; class: string } {
 		if (!job.enabled) return { text: 'Disabled', class: 'bg-gray-600 text-gray-300' };
 		if (job.lastStatus === 'error') return { text: 'Error', class: 'bg-red-600/50 text-red-300' };
@@ -113,11 +126,12 @@
 	}
 
 	function openHistory(job: CronJob) {
-		historyJob = job;
-	}
-
-	function closeHistory() {
-		historyJob = null;
+		if (job.sessionTarget) {
+			setActiveSession(job.sessionTarget);
+			goto(resolve('/'));
+		} else {
+			addToast('No chat session linked to this job', 'info');
+		}
 	}
 
 	function confirmDeleteJob(job: CronJob) {
@@ -150,187 +164,185 @@
 	}
 </script>
 
-{#if historyJob}
-	<CronRunHistory job={historyJob} onclose={closeHistory} />
-{:else}
-	<div class="flex h-full flex-col">
-		<!-- Header -->
-		<div class="border-b border-gray-800 px-4 py-3">
-			<div class="flex items-center justify-between">
-				<h2 class="text-sm font-medium text-white">Scheduled Jobs</h2>
-				<button
-					onclick={openCreateForm}
-					class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
-				>
-					+ Create Job
-				</button>
-			</div>
-			{#if jobs.length > 0}
-				<div class="mt-3">
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Search jobs..."
-						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					/>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Content -->
-		{#if loading}
-			<div class="flex flex-1 items-center justify-center text-sm text-gray-500">
-				Loading jobs...
-			</div>
-		{:else if error}
-			<div class="flex flex-1 items-center justify-center text-sm text-red-400">{error}</div>
-		{:else if jobs.length === 0}
-			<div class="flex flex-1 flex-col items-center justify-center gap-3 text-gray-500">
-				<svg class="h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<p class="text-sm">No scheduled jobs yet</p>
-				<button
-					onclick={openCreateForm}
-					class="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-				>
-					Create a job to automate agent tasks
-				</button>
-			</div>
-		{:else}
-			<!-- Column headers -->
-			<div
-				class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800 px-4 py-2 text-xs text-gray-500"
+<div class="flex h-full flex-col">
+	<!-- Header -->
+	<div class="border-b border-gray-800 px-4 py-3">
+		<div class="flex items-center justify-between">
+			<h2 class="text-sm font-medium text-white">{agentName}'s Jobs</h2>
+			<button
+				onclick={openCreateForm}
+				class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
 			>
-				<button
-					onclick={() => toggleSort('name')}
-					class="text-left hover:text-white"
-					title="Sort by name"
-				>
-					Name {sortBy === 'name' ? (sortAsc ? '▲' : '▼') : ''}
-				</button>
-				<button
-					onclick={() => toggleSort('schedule')}
-					class="text-left hover:text-white"
-					title="Sort by schedule"
-				>
-					Schedule {sortBy === 'schedule' ? (sortAsc ? '▲' : '▼') : ''}
-				</button>
-				<span>Next Run</span>
-				<button
-					onclick={() => toggleSort('lastRun')}
-					class="text-left hover:text-white"
-					title="Sort by last run"
-				>
-					Last Run {sortBy === 'lastRun' ? (sortAsc ? '▲' : '▼') : ''}
-				</button>
-				<span class="text-right">Status</span>
-				<span class="text-right">Actions</span>
-			</div>
-
-			<!-- Job rows -->
-			<div class="flex-1 overflow-y-auto">
-				{#each filteredAndSortedJobs as job (job.id)}
-					{@const badge = statusBadge(job)}
-					{@const humanSchedule = job.scheduleType === 'cron' ? describeCron(job.schedule) : null}
-					<div
-						class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800/50 px-4 py-2 text-xs transition-colors hover:bg-gray-800"
-					>
-						<div class="truncate">
-							<span class="font-medium text-white">{job.name}</span>
-							{#if job.description}
-								<span class="ml-1 text-gray-500">— {job.description}</span>
-							{/if}
-						</div>
-						<div class="truncate">
-							{#if humanSchedule && humanSchedule !== job.schedule}
-								<span class="text-gray-300" title={job.schedule}>{humanSchedule}</span>
-							{:else}
-								<span class="text-gray-400">{formatSchedule(job)}</span>
-							{/if}
-						</div>
-						<span
-							class="text-gray-400"
-							title={job.nextRun ? new Date(job.nextRun).toLocaleString() : ''}
-						>
-							{job.nextRun ? formatRelativeTime(job.nextRun) : '—'}
-						</span>
-						<span
-							class="text-gray-400"
-							title={job.lastRun ? new Date(job.lastRun).toLocaleString() : ''}
-						>
-							{job.lastRun ? formatRelativeTime(job.lastRun) : '—'}
-						</span>
-						<div class="flex justify-end">
-							<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {badge.class}">
-								{badge.text}
-							</span>
-						</div>
-						<div class="flex items-center justify-end gap-1">
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									handleToggle(job);
-								}}
-								class="rounded px-1.5 py-0.5 text-[10px] {job.enabled
-									? 'text-green-400 hover:text-green-300'
-									: 'text-gray-500 hover:text-gray-400'}"
-								title={job.enabled ? 'Disable' : 'Enable'}
-							>
-								{job.enabled ? 'ON' : 'OFF'}
-							</button>
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									handleRunNow(job);
-								}}
-								class="rounded px-1.5 py-0.5 text-[10px] text-blue-400 hover:text-blue-300"
-								title="Run Now"
-							>
-								▶
-							</button>
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									openHistory(job);
-								}}
-								class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-white"
-								title="Run History"
-							>
-								📊
-							</button>
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									openEditForm(job);
-								}}
-								class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-white"
-								title="Edit"
-							>
-								✏️
-							</button>
-							<button
-								onclick={(e) => {
-									e.stopPropagation();
-									confirmDeleteJob(job);
-								}}
-								class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-red-400"
-								title="Delete"
-							>
-								🗑️
-							</button>
-						</div>
-					</div>
-				{/each}
+				+ Create Job
+			</button>
+		</div>
+		{#if jobs.length > 0}
+			<div class="mt-3">
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Search jobs..."
+					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+				/>
 			</div>
 		{/if}
 	</div>
-{/if}
+
+	<!-- Content -->
+	{#if loading}
+		<div class="flex flex-1 items-center justify-center text-sm text-gray-500">Loading jobs...</div>
+	{:else if error}
+		<div class="flex flex-1 items-center justify-center text-sm text-red-400">{error}</div>
+	{:else if jobs.length === 0}
+		<div class="flex flex-1 flex-col items-center justify-center gap-3 text-gray-500">
+			<svg class="h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+			<p class="text-sm">No scheduled jobs yet</p>
+			<button
+				onclick={openCreateForm}
+				class="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+			>
+				Create a job to automate agent tasks
+			</button>
+		</div>
+	{:else}
+		<!-- Column headers -->
+		<div
+			class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800 px-4 py-2 text-xs text-gray-500"
+		>
+			<button
+				onclick={() => toggleSort('name')}
+				class="text-left hover:text-white"
+				title="Sort by name"
+			>
+				Name {sortBy === 'name' ? (sortAsc ? '▲' : '▼') : ''}
+			</button>
+			<button
+				onclick={() => toggleSort('schedule')}
+				class="text-left hover:text-white"
+				title="Sort by schedule"
+			>
+				Schedule {sortBy === 'schedule' ? (sortAsc ? '▲' : '▼') : ''}
+			</button>
+			<span>Next Run</span>
+			<button
+				onclick={() => toggleSort('lastRun')}
+				class="text-left hover:text-white"
+				title="Sort by last run"
+			>
+				Last Run {sortBy === 'lastRun' ? (sortAsc ? '▲' : '▼') : ''}
+			</button>
+			<span class="text-right">Status</span>
+			<span class="text-right">Actions</span>
+		</div>
+
+		<!-- Job rows -->
+		<div class="flex-1 overflow-y-auto">
+			{#each filteredAndSortedJobs as job (job.id)}
+				{@const badge = statusBadge(job)}
+				{@const humanSchedule = job.rawSchedule
+					? describeScheduleObject(job.rawSchedule)
+					: job.scheduleType === 'cron'
+						? describeCron(job.schedule)
+						: null}
+				<div
+					class="grid grid-cols-[1fr_140px_100px_100px_80px_140px] gap-2 border-b border-gray-800/50 px-4 py-2 text-xs transition-colors hover:bg-gray-800"
+				>
+					<div class="truncate">
+						<span class="font-medium text-white">{job.name}</span>
+						{#if job.description}
+							<span class="ml-1 text-gray-500">— {job.description}</span>
+						{/if}
+					</div>
+					<div class="truncate">
+						{#if humanSchedule && humanSchedule !== job.schedule}
+							<span class="text-gray-300" title={job.schedule}>{humanSchedule}</span>
+						{:else}
+							<span class="text-gray-400">{formatSchedule(job)}</span>
+						{/if}
+					</div>
+					<span
+						class="text-gray-400"
+						title={job.nextRun ? new Date(job.nextRun).toLocaleString() : ''}
+					>
+						{job.nextRun ? formatRelativeTime(job.nextRun) : '—'}
+					</span>
+					<span
+						class="text-gray-400"
+						title={job.lastRun ? new Date(job.lastRun).toLocaleString() : ''}
+					>
+						{job.lastRun ? formatRelativeTime(job.lastRun) : '—'}
+					</span>
+					<div class="flex justify-end">
+						<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {badge.class}">
+							{badge.text}
+						</span>
+					</div>
+					<div class="flex items-center justify-end gap-1">
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								handleToggle(job);
+							}}
+							class="rounded px-1.5 py-0.5 text-[10px] {job.enabled
+								? 'text-green-400 hover:text-green-300'
+								: 'text-gray-500 hover:text-gray-400'}"
+							title={job.enabled ? 'Disable' : 'Enable'}
+						>
+							{job.enabled ? 'ON' : 'OFF'}
+						</button>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								handleRunNow(job);
+							}}
+							class="rounded px-1.5 py-0.5 text-[10px] text-blue-400 hover:text-blue-300"
+							title="Run Now"
+						>
+							▶
+						</button>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								openHistory(job);
+							}}
+							class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-white"
+							title="Run History"
+						>
+							📊
+						</button>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								openEditForm(job);
+							}}
+							class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-white"
+							title="Edit"
+						>
+							✏️
+						</button>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								confirmDeleteJob(job);
+							}}
+							class="rounded px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-red-400"
+							title="Delete"
+						>
+							🗑️
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+</div>
 
 {#if showForm}
 	<CronJobForm job={editingJob} onclose={closeForm} />
