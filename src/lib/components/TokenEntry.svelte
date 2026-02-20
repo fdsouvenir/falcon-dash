@@ -42,6 +42,29 @@
 		return unsub;
 	});
 
+	let wsWarning = $state('');
+
+	function isLoopback(hostname: string): boolean {
+		return (
+			hostname === '127.0.0.1' ||
+			hostname === 'localhost' ||
+			hostname === '::1' ||
+			hostname === '[::1]'
+		);
+	}
+
+	function validateWsUrl(rawUrl: string): string | null {
+		try {
+			const parsed = new URL(rawUrl);
+			if (parsed.protocol === 'ws:' && !isLoopback(parsed.hostname)) {
+				return `Plaintext ws:// to non-loopback host "${parsed.hostname}" will be rejected by OpenClaw v2026.2.19+. Use wss:// for remote connections.`;
+			}
+		} catch {
+			// Invalid URL — let the WebSocket constructor handle the error
+		}
+		return null;
+	}
+
 	function handleSubmit() {
 		const trimmed = token.trim();
 		if (!trimmed) {
@@ -49,7 +72,9 @@
 			return;
 		}
 		error = '';
-		gatewayUrl.set(url.trim() || 'ws://127.0.0.1:18789');
+		const finalUrl = url.trim() || 'ws://127.0.0.1:18789';
+		wsWarning = validateWsUrl(finalUrl) ?? '';
+		gatewayUrl.set(finalUrl);
 		gatewayToken.set(trimmed);
 	}
 
@@ -124,6 +149,25 @@
 
 			{#if error}
 				<p class="text-sm text-red-400">{error}</p>
+			{/if}
+
+			{#if wsWarning}
+				<div class="flex gap-2 rounded-xl border border-yellow-500/20 bg-yellow-950/30 px-4 py-3">
+					<svg
+						class="mt-0.5 h-4 w-4 shrink-0 text-yellow-400"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+						/>
+					</svg>
+					<p class="text-xs text-yellow-300">{wsWarning}</p>
+				</div>
 			{/if}
 
 			<button

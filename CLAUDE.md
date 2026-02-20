@@ -145,7 +145,7 @@ Install: `openclaw plugins install ./openclaw-canvas-bridge` (then restart gatew
 
 - **URL:** `ws://127.0.0.1:18789` (proxied via Vite `/ws` in dev)
 - **client.id:** `"openclaw-control-ui"` (gateway validates this exact string)
-- **client.mode:** `"webchat"`
+- **client.mode:** `"operator"` (changed from `"webchat"` for OpenClaw v2026.2.19+ compatibility)
 - **Protocol version:** 3
 - **Frame types:** `req` (request), `res` (response), `event`
 - **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request (id `__connect`) → gateway responds with `hello-ok`
