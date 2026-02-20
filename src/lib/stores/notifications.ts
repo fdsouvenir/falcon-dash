@@ -1,5 +1,6 @@
 import { writable, readonly, derived, get, type Readable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
+import { eventBus } from '$lib/stores/gateway.js';
 
 // ---------------------------------------------------------------------------
 // Notification types & data model
@@ -236,4 +237,27 @@ export function notifyApproval(title: string, body: string): void {
 	addNotification('approval', title, body, { href: '/settings' });
 	playNotificationSound();
 	showBrowserNotification(title, body, 'falcon-dash-approval');
+}
+
+// ---------------------------------------------------------------------------
+// Global event subscriptions (wired in layout for app-wide notifications)
+// ---------------------------------------------------------------------------
+
+let _eventUnsubs: Array<() => void> = [];
+
+export function subscribeToNotificationEvents(): void {
+	unsubscribeFromNotificationEvents();
+
+	// Exec approval requests
+	_eventUnsubs.push(
+		eventBus.on('exec-approval.requested', (data: Record<string, unknown>) => {
+			const command = (data.command as string) ?? 'command';
+			notifyApproval('Approval requested', `${command} needs approval`);
+		})
+	);
+}
+
+export function unsubscribeFromNotificationEvents(): void {
+	for (const unsub of _eventUnsubs) unsub();
+	_eventUnsubs = [];
 }
