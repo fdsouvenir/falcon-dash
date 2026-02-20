@@ -1,6 +1,6 @@
 {
 	"name": "falcon-dash",
-	"version": "0.4.7",
+	"version": "0.4.9",
 	"private": true,
 	"description": "Web dashboard for the OpenClaw AI platform",
 	"repository": {
