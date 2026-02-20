@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
+	import { unreadNotificationCount } from '$lib/stores/notifications.js';
 
 	let { onmore, hidden = false }: { onmore: () => void; hidden?: boolean } = $props();
 
 	let pathname = $state('/');
 	let kbVisible = $state(false);
+	let unreadCount = $state(0);
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
@@ -17,6 +19,13 @@
 	$effect(() => {
 		const unsub = keyboardVisible.subscribe((v) => {
 			kbVisible = v;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = unreadNotificationCount.subscribe((v) => {
+			unreadCount = v;
 		});
 		return unsub;
 	});
@@ -34,7 +43,7 @@
 	>
 		<a
 			href="/"
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
+			class="touch-target relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
 				'/'
 			)
 				? 'text-blue-400'
@@ -48,6 +57,13 @@
 				/>
 			</svg>
 			<span>Chat</span>
+			{#if unreadCount > 0}
+				<span
+					class="absolute right-1/4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
+				>
+					{unreadCount > 99 ? '99+' : unreadCount}
+				</span>
+			{/if}
 		</a>
 
 		<a
