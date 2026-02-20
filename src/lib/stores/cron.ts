@@ -1,6 +1,7 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
 import { call, eventBus } from '$lib/stores/gateway.js';
 import { addToast } from '$lib/stores/toast.js';
+import { notifyCron } from '$lib/stores/notifications.js';
 
 export interface CronJob {
 	id: string;
@@ -59,8 +60,10 @@ export function subscribeToCronEvents(): void {
 			const status = payload.status as string;
 			if (status === 'error') {
 				addToast(`Job "${jobName}" failed`, 'error');
+				notifyCron(jobName, 'Job failed');
 			} else {
 				addToast(`Job "${jobName}" completed`, 'success');
+				notifyCron(jobName, 'Job completed successfully');
 			}
 		} else if (action === 'created') {
 			addToast(`Job "${jobName}" created`, 'info');

@@ -7,6 +7,10 @@
 		subscribeToEvents,
 		unsubscribeFromEvents
 	} from '$lib/stores/sessions.js';
+	import {
+		subscribeToNotificationEvents,
+		unsubscribeFromNotificationEvents
+	} from '$lib/stores/notifications.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import MobileShell from '$lib/components/mobile/MobileShell.svelte';
@@ -97,11 +101,13 @@
 			if (state === 'READY') {
 				restoreActiveSession();
 				subscribeToEvents();
+				subscribeToNotificationEvents();
 			}
 		});
 		return () => {
 			unsub();
 			unsubscribeFromEvents();
+			unsubscribeFromNotificationEvents();
 		};
 	});
 </script>
