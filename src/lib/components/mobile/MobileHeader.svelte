@@ -68,8 +68,6 @@
 		'/settings': 'Settings',
 		'/documents': 'Documents',
 		'/projects': 'Projects',
-		'/skills': 'Skills',
-		'/heartbeat': 'Heartbeat',
 		'/passwords': 'Passwords'
 	};
 
@@ -80,9 +78,7 @@
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
 
-	let isSecondaryRoute = $derived(
-		['/documents', '/projects', '/skills', '/heartbeat', '/passwords'].includes(pathname)
-	);
+	let isSecondaryRoute = $derived(['/documents', '/projects', '/passwords'].includes(pathname));
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->

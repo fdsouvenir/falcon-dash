@@ -15,10 +15,6 @@
 </script>
 
 <div class="flex h-full flex-col bg-gray-950">
-	<header class="border-b border-gray-700 px-4 py-3">
-		<h1 class="text-lg font-semibold text-white">Settings</h1>
-	</header>
-
 	<div class="flex-1 overflow-y-auto pb-[calc(1rem+var(--safe-bottom))]">
 		{#each settingsNavGroups as group (group.label)}
 			<div class="px-4 pt-4">
