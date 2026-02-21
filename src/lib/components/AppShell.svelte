@@ -2,14 +2,34 @@
 	import AgentRail from './AgentRail.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
+	import ExecApprovalPrompt from './ExecApprovalPrompt.svelte';
 	import { canvasStore } from '$lib/stores/gateway.js';
+	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
+	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
 	let sidebarCollapsed = $state(false);
 	let selectedAgentId = $state('default');
 	let currentSurface = $state<CanvasSurface | null>(null);
 	let canvasPanelMinimized = $state(false);
+	let approvals = $state<PendingApproval[]>([]);
+
+	$effect(() => {
+		const unsub = pendingApprovals.subscribe((v) => {
+			approvals = v;
+		});
+		return unsub;
+	});
+
+	function handleResolve(requestId: string, decision: 'allow-once' | 'allow-always' | 'deny') {
+		resolveApproval(requestId, decision).catch(() => {});
+	}
+
+	function handleAlwaysDeny(requestId: string, command: string) {
+		addToDenylist(command);
+		resolveApproval(requestId, 'deny').catch(() => {});
+	}
 
 	function toggleSidebar() {
 		sidebarCollapsed = !sidebarCollapsed;
@@ -62,6 +82,17 @@
 			</button>
 			<span class="ml-3 text-sm font-semibold">Falcon Dashboard</span>
 		</header>
+
+		{#if approvals.length > 0}
+			<div class="shrink-0 border-b border-gray-800 p-3">
+				<ExecApprovalPrompt
+					approval={approvals[0]}
+					pendingCount={approvals.length}
+					onResolve={handleResolve}
+					onAlwaysDeny={handleAlwaysDeny}
+				/>
+			</div>
+		{/if}
 
 		<div class="relative flex-1 overflow-y-auto">
 			{@render children()}

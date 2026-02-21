@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { call, eventBus, connection } from '$lib/stores/gateway.js';
+	import { call, connection } from '$lib/stores/gateway.js';
+	import {
+		pendingApprovals as pendingApprovalsStore,
+		resolveApproval as resolveApprovalStore,
+		denylist,
+		addToDenylist,
+		removeFromDenylist
+	} from '$lib/stores/exec-approvals.js';
+	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 
 	let allowlist = $state<string[]>([]);
 	let policy = $state<'off' | 'on-miss' | 'always'>('off');
@@ -7,15 +15,9 @@
 	let nodes = $state<string[]>([]);
 	let selectedNode = $state<string | null>(null);
 	let nodeAllowlist = $state<string[]>([]);
-	let pendingApprovals = $state<
-		Array<{
-			requestId: string;
-			command: string;
-			args: string[];
-			nodeId: string;
-			timestamp: number;
-		}>
-	>([]);
+	let localPendingApprovals = $state<PendingApproval[]>([]);
+	let localDenylist = $state<string[]>([]);
+	let newDenyPattern = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let unavailable = $state(false);
@@ -33,16 +35,17 @@
 	});
 
 	$effect(() => {
-		const unsubscribe = eventBus.on('exec-approval.requested', (data: Record<string, unknown>) => {
-			pendingApprovals.push({
-				requestId: data.requestId as string,
-				command: data.command as string,
-				args: (data.args as string[]) || [],
-				nodeId: data.nodeId as string,
-				timestamp: Date.now()
-			});
+		const unsub = pendingApprovalsStore.subscribe((list) => {
+			localPendingApprovals = list;
 		});
-		return unsubscribe;
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = denylist.subscribe((list) => {
+			localDenylist = list;
+		});
+		return unsub;
 	});
 
 	async function loadAllowlist() {
@@ -119,11 +122,25 @@
 		decision: 'allow-once' | 'allow-always' | 'deny'
 	) {
 		try {
-			await call('exec-approval.resolve', { requestId, decision });
-			pendingApprovals = pendingApprovals.filter((a) => a.requestId !== requestId);
+			await resolveApprovalStore(requestId, decision);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
+	}
+
+	async function alwaysDeny(command: string, requestId: string) {
+		try {
+			addToDenylist(command);
+			await resolveApprovalStore(requestId, 'deny');
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	function addDenyPattern() {
+		if (!newDenyPattern.trim()) return;
+		addToDenylist(newDenyPattern.trim());
+		newDenyPattern = '';
 	}
 
 	function selectNode(nodeId: string) {
@@ -248,11 +265,11 @@
 		<div class="bg-gray-800 rounded-lg p-4">
 			<h3 class="text-lg font-semibold text-gray-100 mb-3">Pending Approvals</h3>
 
-			{#if pendingApprovals.length === 0}
+			{#if localPendingApprovals.length === 0}
 				<div class="text-gray-400">No pending approvals</div>
 			{:else}
 				<ul class="space-y-3">
-					{#each pendingApprovals as approval (approval.requestId)}
+					{#each localPendingApprovals as approval (approval.requestId)}
 						<li class="bg-gray-700 p-3 rounded">
 							<div class="mb-2">
 								<div class="text-gray-100 font-mono text-sm">
@@ -282,7 +299,55 @@
 								>
 									Deny
 								</button>
+								<button
+									onclick={() => alwaysDeny(approval.command, approval.requestId)}
+									class="bg-red-950 hover:bg-red-900 text-red-300 px-3 py-1 rounded text-sm border border-red-800/50"
+								>
+									Always Deny
+								</button>
 							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+
+		<!-- Denylist Section -->
+		<div class="bg-gray-800 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-gray-100 mb-3">Denylist</h3>
+			<p class="text-sm text-gray-400 mb-4">
+				Commands that are automatically denied without prompting.
+			</p>
+
+			<div class="flex gap-2 mb-4">
+				<input
+					type="text"
+					bind:value={newDenyPattern}
+					placeholder="Command to deny (e.g., rm -rf)"
+					class="flex-1 bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2"
+					onkeydown={(e) => e.key === 'Enter' && addDenyPattern()}
+				/>
+				<button
+					onclick={addDenyPattern}
+					class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+				>
+					Add
+				</button>
+			</div>
+
+			{#if localDenylist.length === 0}
+				<div class="text-gray-400">No denied commands</div>
+			{:else}
+				<ul class="space-y-2">
+					{#each localDenylist as command (command)}
+						<li class="flex justify-between items-center bg-gray-700 px-3 py-2 rounded">
+							<code class="text-gray-100">{command}</code>
+							<button
+								onclick={() => removeFromDenylist(command)}
+								class="text-red-400 hover:text-red-300"
+							>
+								Remove
+							</button>
 						</li>
 					{/each}
 				</ul>

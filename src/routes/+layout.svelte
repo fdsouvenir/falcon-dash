@@ -11,6 +11,10 @@
 		subscribeToNotificationEvents,
 		unsubscribeFromNotificationEvents
 	} from '$lib/stores/notifications.js';
+	import {
+		subscribeToApprovalEvents,
+		unsubscribeFromApprovalEvents
+	} from '$lib/stores/exec-approvals.js';
 	import TokenEntry from '$lib/components/TokenEntry.svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import MobileShell from '$lib/components/mobile/MobileShell.svelte';
@@ -106,12 +110,14 @@
 				restoreActiveSession();
 				subscribeToEvents();
 				subscribeToNotificationEvents();
+				subscribeToApprovalEvents();
 			}
 		});
 		return () => {
 			unsub();
 			unsubscribeFromEvents();
 			unsubscribeFromNotificationEvents();
+			unsubscribeFromApprovalEvents();
 		};
 	});
 </script>

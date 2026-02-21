@@ -15,6 +15,9 @@
 	import ThreadList from '$lib/components/ThreadList.svelte';
 	import MobileChatSettings from './MobileChatSettings.svelte';
 	import { loadThreads } from '$lib/stores/threads.js';
+	import ExecApprovalPrompt from '$lib/components/ExecApprovalPrompt.svelte';
+	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
+	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -25,6 +28,24 @@
 	let chatOpen = $state(false);
 	let pathname = $state('/');
 	let activeKey = $state<string | null>(null);
+	let approvals = $state<PendingApproval[]>([]);
+	let approvalsSheetOpen = $derived(approvals.length > 0);
+
+	$effect(() => {
+		const unsub = pendingApprovals.subscribe((v) => {
+			approvals = v;
+		});
+		return unsub;
+	});
+
+	function handleResolve(requestId: string, decision: 'allow-once' | 'allow-always' | 'deny') {
+		resolveApproval(requestId, decision).catch(() => {});
+	}
+
+	function handleAlwaysDeny(requestId: string, command: string) {
+		addToDenylist(command);
+		resolveApproval(requestId, 'deny').catch(() => {});
+	}
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
@@ -141,6 +162,17 @@
 	</BottomSheet>
 
 	<MobileNotificationSheet open={notificationsOpen} onclose={() => (notificationsOpen = false)} />
+
+	<BottomSheet open={approvalsSheetOpen} onclose={() => {}}>
+		{#if approvals.length > 0}
+			<ExecApprovalPrompt
+				approval={approvals[0]}
+				pendingCount={approvals.length}
+				onResolve={handleResolve}
+				onAlwaysDeny={handleAlwaysDeny}
+			/>
+		{/if}
+	</BottomSheet>
 
 	{#if threadsOpen}
 		<div class="fixed inset-0 z-50 flex flex-col bg-gray-950">

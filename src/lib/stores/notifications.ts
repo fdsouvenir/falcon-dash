@@ -1,6 +1,5 @@
 import { writable, readonly, derived, get, type Readable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { eventBus } from '$lib/stores/gateway.js';
 
 // ---------------------------------------------------------------------------
 // Notification types & data model
@@ -243,18 +242,13 @@ export function notifyApproval(title: string, body: string): void {
 // Global event subscriptions (wired in layout for app-wide notifications)
 // ---------------------------------------------------------------------------
 
+// Exec approval events are now handled by exec-approvals store.
+// These functions remain for other future notification event subscriptions.
+
 let _eventUnsubs: Array<() => void> = [];
 
 export function subscribeToNotificationEvents(): void {
 	unsubscribeFromNotificationEvents();
-
-	// Exec approval requests
-	_eventUnsubs.push(
-		eventBus.on('exec-approval.requested', (data: Record<string, unknown>) => {
-			const command = (data.command as string) ?? 'command';
-			notifyApproval('Approval requested', `${command} needs approval`);
-		})
-	);
 }
 
 export function unsubscribeFromNotificationEvents(): void {
