@@ -94,7 +94,7 @@
 	}
 </script>
 
-<div class="markdown-content prose prose-invert prose-sm max-w-none">
+<div class="markdown-content prose prose-invert prose-sm max-w-none break-words">
 	{#each segments as segment (segment.id)}
 		{#if segment.type === 'mermaid'}
 			{#if isStreaming}

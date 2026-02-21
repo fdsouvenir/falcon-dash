@@ -465,7 +465,7 @@
 										{/if}
 									{/if}
 									<div class="text-sm text-gray-100 text-right md:text-left">
-										<div class="prose prose-invert prose-sm max-w-none">
+										<div class="prose prose-invert prose-sm max-w-none break-words">
 											<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 											{@html renderMarkdownSync(
 												typeof message.content === 'string'
