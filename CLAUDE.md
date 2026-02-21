@@ -21,6 +21,18 @@ npm run format:check # Prettier (check only)
 
 No test runner is configured. No single-test command exists.
 
+## Development Environment
+
+The dev server connects to the OpenClaw Gateway for live testing. Configuration:
+
+- **`.env` file** — set these to connect to a gateway:
+  - `GATEWAY_URL=ws://<host>:18789` — WebSocket URL of the gateway (default: `ws://127.0.0.1:18789`)
+  - `GATEWAY_TOKEN=<token>` — gateway auth token (auto-read from `~/.openclaw/openclaw.json` if not set)
+- **Gateway config fallback** — if env vars are not set, `/api/gateway-config` reads from `~/.openclaw/openclaw.json` (`gateway.auth.token`, `gateway.port`, `gateway.bind`)
+- **Dev auth** — set `gateway.controlUi.allowInsecureAuth: true` in the gateway's `openclaw.json` for token-only auth (no device pairing)
+- **Vite proxy** — dev server proxies `/ws` to `GATEWAY_URL` for WebSocket connections
+- **Production** — set `ORIGIN=https://your-domain.com` to derive `wss://` URLs for reverse proxy
+
 ## Tech Stack
 
 - **Framework:** SvelteKit with Svelte 5 (runes: `$state`, `$derived`, `$effect`, `$props`)

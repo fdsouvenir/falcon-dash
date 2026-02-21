@@ -429,15 +429,15 @@
 						{:else if message.role === 'user'}
 							<!-- User message (Discord-style: left-aligned with avatar) -->
 							<div
-								class="group/msg flex gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+								class="group/msg flex md:gap-3 rounded px-2 ml-12 md:ml-0 transition-colors duration-700 hover:bg-gray-800/30 {grouped
 									? 'py-0.5'
 									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
 									: ''}"
 								data-message-id={message.id}
 							>
-								<!-- Avatar or hover timestamp -->
-								<div class="w-10 shrink-0">
+								<!-- Avatar or hover timestamp (desktop only) -->
+								<div class="hidden w-10 shrink-0 md:block">
 									{#if !grouped}
 										<div
 											class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
@@ -459,8 +459,15 @@
 
 								<!-- Message body -->
 								<div class="min-w-0 flex-1">
+									{#if grouped}
+										<span
+											class="text-[10px] text-gray-600 opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
+										>
+											{formatMessageTime(message.timestamp)}
+										</span>
+									{/if}
 									{#if !grouped}
-										<div class="mb-0.5 flex items-baseline gap-2">
+										<div class="mb-0.5 flex items-baseline gap-2 justify-end md:justify-start">
 											<span class="text-sm font-semibold text-blue-400">You</span>
 											<span class="text-[10px] text-gray-500">
 												{formatMessageTime(message.timestamp)}
@@ -478,7 +485,7 @@
 											</div>
 										{/if}
 									{/if}
-									<div class="text-sm text-gray-100">
+									<div class="text-sm text-gray-100 text-right md:text-left">
 										<p class="whitespace-pre-wrap break-words">{message.content}</p>
 									</div>
 									{#if message.status === 'sending'}
@@ -499,15 +506,15 @@
 						{:else}
 							<!-- Assistant message (Discord-style: left-aligned with avatar) -->
 							<div
-								class="group/msg flex gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+								class="group/msg flex md:gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
 									? 'py-0.5'
 									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
 									: ''}"
 								data-message-id={message.id}
 							>
-								<!-- Avatar or hover timestamp -->
-								<div class="w-10 shrink-0">
+								<!-- Avatar or hover timestamp (desktop only) -->
+								<div class="hidden w-10 shrink-0 md:block">
 									{#if !grouped}
 										<div
 											class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white"
@@ -536,6 +543,12 @@
 												{formatMessageTime(message.timestamp)}
 											</span>
 										</div>
+									{:else}
+										<span
+											class="text-[10px] text-gray-600 opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
+										>
+											{formatMessageTime(message.timestamp)}
+										</span>
 									{/if}
 
 									<!-- Thinking block -->
