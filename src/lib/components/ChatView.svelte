@@ -16,6 +16,7 @@
 	import MessageComposer from './MessageComposer.svelte';
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallCard from './ToolCallCard.svelte';
+	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ReplyPreview from './ReplyPreview.svelte';
 	import ReactionPicker from './ReactionPicker.svelte';
@@ -33,10 +34,6 @@
 	let showSearch = $state(false);
 	let thread = $state<ThreadInfo | null>(null);
 	let connState = $state<ConnectionState>('DISCONNECTED');
-
-	// Plain Map for rendered HTML cache — intentionally non-reactive to avoid effect cycles
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity
-	const renderedCache = new Map<string, string>();
 
 	let scrollContainer: HTMLDivElement;
 	let shouldAutoScroll = $state(true);
@@ -76,7 +73,6 @@
 				chatSession = null;
 			}
 			messages = [];
-			renderedCache.clear();
 			return;
 		}
 
@@ -86,7 +82,6 @@
 			prev.destroy();
 		}
 
-		renderedCache.clear();
 		const session = createChatSession(sessionKey);
 		chatSession = session;
 
@@ -332,22 +327,6 @@
 			chatSession.addReaction(messageId, emoji);
 		}
 	}
-
-	function getRenderedHtml(message: ChatMessage): string {
-		// For complete messages, use cache
-		if (message.status === 'complete' && renderedCache.has(message.id)) {
-			return renderedCache.get(message.id)!;
-		}
-		// Guard: content may arrive as non-string from gateway history
-		const content =
-			typeof message.content === 'string' ? message.content : String(message.content ?? '');
-		if (!content) return '';
-		const html = renderMarkdownSync(content);
-		if (message.status === 'complete') {
-			renderedCache.set(message.id, html);
-		}
-		return html;
-	}
 </script>
 
 <div class="flex h-full">
@@ -486,7 +465,14 @@
 										{/if}
 									{/if}
 									<div class="text-sm text-gray-100 text-right md:text-left">
-										<p class="whitespace-pre-wrap break-words">{message.content}</p>
+										<div class="prose prose-invert prose-sm max-w-none">
+											<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+											{@html renderMarkdownSync(
+												typeof message.content === 'string'
+													? message.content
+													: String(message.content ?? '')
+											)}
+										</div>
 									</div>
 									{#if message.status === 'sending'}
 										<span class="text-xs text-gray-500">Sending...</span>
@@ -562,10 +548,12 @@
 
 									<!-- Content -->
 									{#if message.content}
-										<div class="prose prose-invert prose-sm max-w-none">
-											<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-											{@html getRenderedHtml(message)}
-										</div>
+										<MarkdownRenderer
+											content={typeof message.content === 'string'
+												? message.content
+												: String(message.content ?? '')}
+											isStreaming={message.status === 'streaming'}
+										/>
 									{:else if message.status === 'streaming' && !message.thinkingText}
 										<!-- Typing indicator -->
 										<div class="flex gap-1 py-1">

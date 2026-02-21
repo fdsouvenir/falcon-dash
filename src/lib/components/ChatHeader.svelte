@@ -4,6 +4,7 @@
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
+	import ChatSettingsForm from '$lib/components/ChatSettingsForm.svelte';
 
 	let {
 		onsearchToggle
@@ -195,61 +196,15 @@
 
 {#if showSettings}
 	<div class="border-b border-gray-800 bg-gray-900 px-4 py-3">
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-			<!-- Model override -->
-			<div>
-				<label for="model-input" class="mb-1 block text-xs text-gray-400">Model</label>
-				<input
-					id="model-input"
-					type="text"
-					value={model}
-					onchange={handleModelChange}
-					placeholder="Default model"
-					class="w-full rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none"
-				/>
-			</div>
-
-			<!-- Thinking level -->
-			<div>
-				<label for="thinking-select" class="mb-1 block text-xs text-gray-400">Thinking</label>
-				<select
-					id="thinking-select"
-					value={thinkingLevel}
-					onchange={handleThinkingChange}
-					class="w-full rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none"
-				>
-					<option value="off">Off</option>
-					<option value="minimal">Minimal</option>
-					<option value="low">Low</option>
-					<option value="medium">Medium</option>
-					<option value="high">High</option>
-					<option value="xhigh">X-High</option>
-				</select>
-			</div>
-		</div>
-
-		<div class="mt-3 flex items-center justify-between">
-			<!-- Verbose toggle -->
-			<label class="flex items-center gap-2 text-xs text-gray-400">
-				<input type="checkbox" checked={verbose} onchange={toggleVerbose} class="rounded" />
-				Verbose output
-			</label>
-
-			<!-- Action buttons -->
-			<div class="flex gap-2">
-				<button
-					onclick={resetSession}
-					class="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
-				>
-					Reset
-				</button>
-				<button
-					onclick={compactTranscript}
-					class="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
-				>
-					Compact
-				</button>
-			</div>
-		</div>
+		<ChatSettingsForm
+			{model}
+			{thinkingLevel}
+			{verbose}
+			onModelChange={handleModelChange}
+			onThinkingChange={handleThinkingChange}
+			onToggleVerbose={toggleVerbose}
+			onReset={resetSession}
+			onCompact={compactTranscript}
+		/>
 	</div>
 {/if}

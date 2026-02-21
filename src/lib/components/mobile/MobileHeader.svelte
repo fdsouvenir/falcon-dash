@@ -7,14 +7,18 @@
 
 	let {
 		chatOpen = false,
+		settingsOpen = false,
 		onBack,
 		onNotifications,
-		onThreads
+		onThreads,
+		onSettingsToggle
 	}: {
 		chatOpen?: boolean;
+		settingsOpen?: boolean;
 		onBack?: () => void;
 		onNotifications?: () => void;
 		onThreads?: () => void;
+		onSettingsToggle?: () => void;
 	} = $props();
 
 	let pathname = $state('/');
@@ -138,7 +142,23 @@
 				</span>
 			{/if}
 		</button>
-		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
+		<button
+			class="flex flex-1 items-center justify-center gap-1 truncate"
+			onclick={onSettingsToggle}
+			aria-label="Toggle session settings"
+		>
+			<span class="truncate text-sm font-semibold text-white">{title()}</span>
+			<svg
+				class="h-3 w-3 shrink-0 text-gray-400 transition-transform duration-200"
+				class:rotate-180={settingsOpen}
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+			</svg>
+		</button>
 		{@render notifBell()}
 		<button
 			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"

@@ -13,6 +13,7 @@
 	import AgentRail from './AgentRail.svelte';
 	import MobileNotificationSheet from './MobileNotificationSheet.svelte';
 	import ThreadList from '$lib/components/ThreadList.svelte';
+	import MobileChatSettings from './MobileChatSettings.svelte';
 	import { loadThreads } from '$lib/stores/threads.js';
 
 	let { children }: { children: Snippet } = $props();
@@ -20,6 +21,7 @@
 	let moreOpen = $state(false);
 	let notificationsOpen = $state(false);
 	let threadsOpen = $state(false);
+	let showMobileSettings = $state(false);
 	let chatOpen = $state(false);
 	let pathname = $state('/');
 	let activeKey = $state<string | null>(null);
@@ -49,6 +51,13 @@
 	$effect(() => {
 		if (chatOpen && activeKey === null) {
 			closeMobileChat();
+		}
+	});
+
+	// Close settings when chat panel closes
+	$effect(() => {
+		if (!chatOpen) {
+			showMobileSettings = false;
 		}
 	});
 
@@ -86,14 +95,17 @@
 <div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
 	<MobileHeader
 		chatOpen={isChatRoute && chatOpen}
+		settingsOpen={showMobileSettings}
 		onBack={handleBack}
 		onNotifications={() => (notificationsOpen = true)}
 		onThreads={handleThreads}
+		onSettingsToggle={() => (showMobileSettings = !showMobileSettings)}
 	/>
 
 	{#if isChatRoute}
 		<!-- Chat route: two-panel slide architecture -->
 		<ConnectionErrorBanner />
+		<MobileChatSettings open={showMobileSettings} />
 		<div class="relative flex-1 overflow-hidden">
 			<!-- Base layer: AgentRail + ChatList -->
 			<div class="absolute inset-0 flex">

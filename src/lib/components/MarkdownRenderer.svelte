@@ -3,7 +3,7 @@
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 
-	let { content = '' }: { content: string } = $props();
+	let { content = '', isStreaming = false }: { content: string; isStreaming?: boolean } = $props();
 
 	// Split content into segments: markdown text, mermaid blocks, and code blocks
 	interface BaseSegment {
@@ -94,10 +94,14 @@
 	}
 </script>
 
-<div class="markdown-content prose prose-invert max-w-none">
+<div class="markdown-content prose prose-invert prose-sm max-w-none">
 	{#each segments as segment (segment.id)}
 		{#if segment.type === 'mermaid'}
-			<MermaidDiagram code={segment.content} />
+			{#if isStreaming}
+				<pre class="rounded-lg bg-gray-900 p-4"><code>{segment.content}</code></pre>
+			{:else}
+				<MermaidDiagram code={segment.content} />
+			{/if}
 		{:else if segment.type === 'code'}
 			<CodeBlock code={segment.content} lang={segment.lang} />
 		{:else}
