@@ -9,6 +9,7 @@ export interface ChatSessionInfo {
 	updatedAt: number;
 	unreadCount: number;
 	kind: string;
+	name?: string;
 	channel?: string;
 	model?: string;
 	totalTokens?: number;
@@ -103,7 +104,9 @@ function isSystemSession(s: ChatSessionInfo): boolean {
 		key.includes(':heartbeat:') ||
 		key.includes(':thread:') ||
 		s.kind === 'cron' ||
-		s.kind === 'heartbeat'
+		s.kind === 'heartbeat' ||
+		s.name === 'heartbeat' ||
+		s.name === 'cron'
 	);
 }
 
@@ -223,6 +226,7 @@ export async function loadSessions(): Promise<void> {
 				updatedAt: (s.updatedAt ?? s.createdAt ?? 0) as number,
 				unreadCount: (s.unreadCount ?? 0) as number,
 				kind: (s.kind ?? 'group') as string,
+				name: s.name as string | undefined,
 				channel: s.channel as string | undefined,
 				model: s.model as string | undefined,
 				totalTokens: s.totalTokens as number | undefined,
