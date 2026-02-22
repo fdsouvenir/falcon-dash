@@ -7,6 +7,7 @@
 		type CommandContext
 	} from '$lib/chat/commands.js';
 	import { activeSessionKey } from '$lib/stores/sessions.js';
+	import { addToast } from '$lib/stores/toast.js';
 	import { get } from 'svelte/store';
 
 	let {
@@ -34,7 +35,14 @@
 
 	function updateCommandMenu() {
 		if (text.startsWith('/') && !text.includes('\n')) {
-			const query = text.slice(1).split(/\s/)[0] ?? '';
+			const afterSlash = text.slice(1);
+			const hasSpace = afterSlash.includes(' ');
+			if (hasSpace) {
+				// User is typing args — hide menu, let Enter trigger send()
+				showCommandMenu = false;
+				return;
+			}
+			const query = afterSlash;
 			commandQuery = query;
 			const matches = filterCommands(query);
 			showCommandMenu = matches.length > 0;
@@ -71,8 +79,13 @@
 		};
 		try {
 			await parsed.command.handler(parsed.args, ctx);
+			addToast(`/${parsed.command.name}${parsed.args ? ' ' + parsed.args : ''}`, 'success');
 		} catch (err) {
 			console.error(`[SlashCommand] /${parsed.command.name} failed:`, err);
+			addToast(
+				`/${parsed.command.name} failed: ${err instanceof Error ? err.message : String(err)}`,
+				'error'
+			);
 		}
 		text = '';
 		resize();

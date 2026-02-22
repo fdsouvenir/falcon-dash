@@ -15,14 +15,14 @@
 	let showSettings = $state(false);
 	let showThreads = $state(false);
 	let model = $state('');
-	let thinkingLevel = $state('off');
-	let verbose = $state(false);
+	let thinkingLevel = $state('low');
+	let verbose = $state(true);
 
 	// Read defaults from snapshot
 	$effect(() => {
 		const unsub = snapshot.sessionDefaults.subscribe((defaults) => {
 			model = defaults.model ?? '';
-			thinkingLevel = defaults.thinkingLevel ?? 'off';
+			thinkingLevel = defaults.thinkingLevel ?? 'low';
 		});
 		return unsub;
 	});
