@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 import { eventBus, connection } from '$lib/stores/gateway.js';
 import { call } from '$lib/stores/gateway.js';
 import { notifyApproval } from '$lib/stores/notifications.js';
+import { activeSessionKey } from '$lib/stores/sessions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,6 +49,22 @@ function persistDenylist(list: string[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Send a follow-up chat message so the agent knows the approval result. */
+function notifyAgent(command: string, label: string): void {
+	const sessionKey = get(activeSessionKey);
+	if (!sessionKey) return;
+	call('chat.send', {
+		sessionKey,
+		message: `[${label}] ${command}`,
+		idempotencyKey: crypto.randomUUID(),
+		deliver: false
+	}).catch(() => {});
+}
+
+// ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 
@@ -69,7 +86,9 @@ export function addPendingApproval(data: Record<string, unknown>): boolean {
 	unsub();
 
 	if (denied) {
-		call('exec.approval.resolve', { id: requestId, decision: 'deny' }).catch(() => {});
+		call('exec.approval.resolve', { id: requestId, decision: 'deny' })
+			.then(() => notifyAgent(command, 'Exec denied (denylist)'))
+			.catch(() => {});
 		return true;
 	}
 
@@ -85,8 +104,16 @@ export async function resolveApproval(
 	requestId: string,
 	decision: 'allow-once' | 'allow-always' | 'deny'
 ): Promise<void> {
+	// Look up command before removing from list
+	const pending = get(_pendingApprovals);
+	const approval = pending.find((a) => a.requestId === requestId);
+	const command = approval?.command ?? 'unknown';
+
 	await call('exec.approval.resolve', { id: requestId, decision });
 	_pendingApprovals.update((list) => list.filter((a) => a.requestId !== requestId));
+
+	const label = decision === 'deny' ? 'Exec denied' : 'Exec approved';
+	notifyAgent(command, label);
 }
 
 /** Add a command to the denylist. */
