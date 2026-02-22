@@ -1,8 +1,5 @@
 <script lang="ts">
 	import InformationTab from '$lib/components/settings/InformationTab.svelte';
-	import DeviceManagement from '$lib/components/settings/DeviceManagement.svelte';
-	import WorkspaceFiles from '$lib/components/settings/WorkspaceFiles.svelte';
-	import CanvasDiagnosticsTab from '$lib/components/settings/CanvasDiagnosticsTab.svelte';
 
 	let { onback }: { onback: () => void } = $props();
 </script>
@@ -20,27 +17,10 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
 			</svg>
 		</button>
-		<h1 class="text-base font-semibold text-white">Advanced</h1>
+		<h1 class="text-base font-semibold text-white">Gateway</h1>
 	</header>
 
 	<div class="flex-1 overflow-y-auto p-4">
-		<div class="space-y-6">
-			<section>
-				<h2 class="mb-3 text-sm font-semibold text-gray-400">Gateway</h2>
-				<InformationTab />
-			</section>
-			<section>
-				<h2 class="mb-3 text-sm font-semibold text-gray-400">Devices</h2>
-				<DeviceManagement />
-			</section>
-			<section>
-				<h2 class="mb-3 text-sm font-semibold text-gray-400">Workspace Files</h2>
-				<WorkspaceFiles />
-			</section>
-			<section>
-				<h2 class="mb-3 text-sm font-semibold text-gray-400">Canvas Diagnostics</h2>
-				<CanvasDiagnosticsTab />
-			</section>
-		</div>
+		<InformationTab />
 	</div>
 </div>
