@@ -28,6 +28,13 @@ export const settingsNavGroups: SettingsNavGroup[] = [
 					'M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6'
 			},
 			{
+				id: 'agent-files',
+				title: 'Agent Files',
+				subtitle: 'Instructions for your Agents',
+				iconPath:
+					'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+			},
+			{
 				id: 'skills',
 				title: 'Skills',
 				subtitle: 'Install capabilities and expertise',

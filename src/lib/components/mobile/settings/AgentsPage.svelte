@@ -1,5 +1,6 @@
 <script lang="ts">
-	import InformationTab from '$lib/components/settings/InformationTab.svelte';
+	import AgentsTab from '$lib/components/settings/AgentsTab.svelte';
+	import { addToast } from '$lib/stores/toast.js';
 
 	let { onback }: { onback: () => void } = $props();
 </script>
@@ -17,12 +18,25 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
 			</svg>
 		</button>
-		<h1 class="text-base font-semibold text-white">Agents</h1>
+		<h1 class="flex-1 text-base font-semibold text-white">Agents</h1>
+		<button
+			onclick={() => addToast('Multi-agent support coming soon', 'info')}
+			class="flex min-h-[44px] min-w-[44px] items-center justify-center"
+			aria-label="Add agent"
+		>
+			<svg
+				class="h-5 w-5 text-gray-400"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+			</svg>
+		</button>
 	</header>
 
-	<div class="flex-1 overflow-y-auto p-4">
-		<div class="space-y-6">
-			<InformationTab />
-		</div>
+	<div class="flex-1 overflow-y-auto">
+		<AgentsTab />
 	</div>
 </div>
