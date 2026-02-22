@@ -93,10 +93,10 @@
 		};
 	});
 
-	// Load history when connection becomes READY (handles race condition + reconnect)
+	// Load history when connection becomes READY or session changes
 	$effect(() => {
 		if (connState !== 'READY') return;
-		const session = untrack(() => chatSession);
+		const session = chatSession; // tracked — triggers on session switch
 		if (!session) return;
 		queueMicrotask(() => session.loadHistory());
 	});

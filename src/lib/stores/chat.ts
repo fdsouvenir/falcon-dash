@@ -522,8 +522,8 @@ export function createChatSession(sessionKey: string) {
 					return [...current, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
 				});
 			}
-		} catch {
-			// History load failed — keep existing messages
+		} catch (err) {
+			console.warn('[chat] loadHistory failed for', sessionKey, err);
 		} finally {
 			_isLoadingHistory.set(false);
 		}
