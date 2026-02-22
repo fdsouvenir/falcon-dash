@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Reply, MessageSquare, Copy, Check, Smile, Star } from 'lucide-svelte';
+	import { Reply, MessageSquare, Copy, Check, Smile, Star } from '@lucide/svelte';
 
 	let {
 		onreply,

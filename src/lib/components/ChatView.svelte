@@ -6,29 +6,33 @@
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection } from '$lib/stores/gateway.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
-	import { keyboardVisible } from '$lib/stores/viewport.js';
 	import { clearSearch } from '$lib/stores/chat-search.js';
 	import { watchConnectionForChat } from '$lib/stores/chat-resilience.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
-	import { ArrowDown } from 'lucide-svelte';
 	import ChatHeader from './ChatHeader.svelte';
 	import ChatSearch from './ChatSearch.svelte';
 	import MessageComposer from './MessageComposer.svelte';
-	import ThinkingBlock from './ThinkingBlock.svelte';
-	import ToolCallCard from './ToolCallCard.svelte';
+	import ReasoningAdapter from './ai/ReasoningAdapter.svelte';
+	import ToolAdapter from './ai/ToolAdapter.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import MessageActions from './MessageActions.svelte';
-	import PlanBlock from './PlanBlock.svelte';
-	import SourcesBlock from './SourcesBlock.svelte';
-	import SuggestionChips from './SuggestionChips.svelte';
+	import PlanAdapter from './ai/PlanAdapter.svelte';
+	import SourcesAdapter from './ai/SourcesAdapter.svelte';
+	import SuggestionAdapter from './ai/SuggestionAdapter.svelte';
 	import ExecApprovalPrompt from './ExecApprovalPrompt.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ReplyPreview from './ReplyPreview.svelte';
 	import ReactionPicker from './ReactionPicker.svelte';
 	import ReactionDisplay from './ReactionDisplay.svelte';
 	import ThreadPanel from './ThreadPanel.svelte';
+	import {
+		Conversation,
+		ConversationContent,
+		ConversationScrollButton
+	} from './ai-elements/conversation/index.js';
+	import { Loader } from './ai-elements/loader/index.js';
 	import type { ThreadInfo } from '$lib/stores/threads.js';
 	import type { ConnectionState } from '$lib/gateway/types.js';
 
@@ -43,7 +47,6 @@
 	let connState = $state<ConnectionState>('DISCONNECTED');
 
 	let scrollContainer: HTMLDivElement;
-	let shouldAutoScroll = $state(true);
 	let highlightedMessageId = $state<string | null>(null);
 	let pendingScrollToId = $state<string | null>(null);
 
@@ -141,36 +144,6 @@
 		return unsub;
 	});
 
-	// Auto-scroll to bottom on new messages
-	$effect(() => {
-		// Depend on messages length to trigger
-		const len = messages.length;
-		if (len && scrollContainer) {
-			const autoScroll = untrack(() => shouldAutoScroll);
-			if (autoScroll) {
-				requestAnimationFrame(() => {
-					if (scrollContainer) {
-						scrollContainer.scrollTop = scrollContainer.scrollHeight;
-					}
-				});
-			}
-		}
-	});
-
-	// Re-scroll when keyboard opens/closes (mobile)
-	$effect(() => {
-		const unsub = keyboardVisible.subscribe(() => {
-			if (shouldAutoScroll && scrollContainer) {
-				requestAnimationFrame(() => {
-					if (scrollContainer) {
-						scrollContainer.scrollTop = scrollContainer.scrollHeight;
-					}
-				});
-			}
-		});
-		return unsub;
-	});
-
 	// Read ?msg= URL param for deep-link jump-to-message
 	$effect(() => {
 		const unsub = page.subscribe(($page) => {
@@ -208,7 +181,6 @@
 		if (!scrollContainer) return;
 		const el = scrollContainer.querySelector(`[data-message-id="${messageId}"]`);
 		if (!el) return;
-		shouldAutoScroll = false;
 		el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		highlightedMessageId = messageId;
 		setTimeout(() => {
@@ -216,22 +188,9 @@
 		}, 2000);
 	}
 
-	function scrollToBottom() {
-		if (!scrollContainer) return;
-		shouldAutoScroll = true;
-		scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
-	}
-
-	function handleScroll() {
-		if (!scrollContainer) return;
-		const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-		shouldAutoScroll = scrollHeight - scrollTop - clientHeight < 100;
-	}
-
 	function handleSend(message: string) {
 		if (!chatSession) return;
 		chatSession.send(message);
-		shouldAutoScroll = true;
 	}
 
 	function handleAbort() {
@@ -340,8 +299,6 @@
 		navigator.clipboard.writeText(content).catch(() => {});
 	}
 
-	// Last completed assistant message for suggestion chips
-
 	let reactionPickerMessageId = $state<string | null>(null);
 	let isMobile = $state(false);
 
@@ -388,326 +345,322 @@
 			<ChatSearch onjump={handleSearchJump} />
 		{/if}
 
-		<!-- Message list -->
-		<div
-			bind:this={scrollContainer}
-			onscroll={handleScroll}
-			class="relative flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 md:px-4"
-		>
-			{#if messages.length === 0 && !isLoadingHistory}
-				<div class="flex h-full flex-col items-center justify-center px-4">
-					<!-- Avatar -->
-					<div
-						class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600"
-					>
-						<svg class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-							/>
-						</svg>
+		<!-- Message list wrapped in Conversation for auto-scroll -->
+		<Conversation class="flex-1">
+			<ConversationContent
+				bind:ref={scrollContainer}
+				class="overflow-x-hidden overscroll-y-contain px-3 py-4 md:px-4"
+			>
+				{#if messages.length === 0 && !isLoadingHistory}
+					<div class="flex h-full flex-col items-center justify-center px-4">
+						<!-- Avatar -->
+						<div
+							class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600"
+						>
+							<svg class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+								/>
+							</svg>
+						</div>
+						<h2 class="mb-1 text-lg font-semibold text-white">How can I help you today?</h2>
+						{#if connState === 'READY'}
+							<p class="mb-6 text-sm text-muted-foreground">Connected and ready</p>
+						{:else}
+							<p class="mb-6 text-sm text-muted-foreground">Send a message to start</p>
+						{/if}
+						<!-- Quick-action chips -->
+						<SuggestionAdapter
+							suggestions={[
+								'Summarize a document',
+								'Write some code',
+								'Explain a concept',
+								'Help me brainstorm'
+							]}
+							onselect={handleSend}
+						/>
 					</div>
-					<h2 class="mb-1 text-lg font-semibold text-white">How can I help you today?</h2>
-					{#if connState === 'READY'}
-						<p class="mb-6 text-sm text-gray-400">Connected and ready</p>
-					{:else}
-						<p class="mb-6 text-sm text-gray-500">Send a message to start</p>
-					{/if}
-					<!-- Quick-action chips using SuggestionChips -->
-					<SuggestionChips
-						suggestions={[
-							'Summarize a document',
-							'Write some code',
-							'Explain a concept',
-							'Help me brainstorm'
-						]}
-						onselect={handleSend}
-					/>
-				</div>
-			{:else}
-				<div class="mx-auto max-w-none space-y-0 md:max-w-3xl">
-					{#each messages as message, i (message.id ?? `msg-${i}`)}
-						{@const grouped = isGrouped(i)}
-						{#if message.role === 'divider'}
-							<!-- Divider message -->
-							<div class="flex items-center gap-3 py-2">
-								<div class="h-px flex-1 bg-gray-700"></div>
-								<span class="text-xs text-gray-500">{message.content}</span>
-								<div class="h-px flex-1 bg-gray-700"></div>
-							</div>
-						{:else if message.role === 'user'}
-							<!-- User message -->
-							<div
-								class="group/msg flex rounded px-2 ml-12 md:ml-0 md:gap-3 transition-colors duration-700 hover:bg-gray-800/30 {grouped
-									? 'py-0.5'
-									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
-									? 'bg-blue-500/10'
-									: ''}"
-								data-message-id={message.id}
-							>
-								<!-- Avatar or hover timestamp (desktop only) -->
-								<div class="hidden w-10 shrink-0 md:block">
-									{#if !grouped}
-										<div
-											class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
-										>
-											You
-										</div>
-									{:else}
-										<span
-											class="hidden text-[10px] text-gray-600 group-hover/msg:inline"
-											title={formatMessageTime(message.timestamp)}
-										>
-											{new Date(message.timestamp).toLocaleTimeString([], {
-												hour: '2-digit',
-												minute: '2-digit'
-											})}
-										</span>
-									{/if}
+				{:else}
+					<div class="mx-auto max-w-none space-y-0 md:max-w-3xl">
+						{#each messages as message, i (message.id ?? `msg-${i}`)}
+							{@const grouped = isGrouped(i)}
+							{#if message.role === 'divider'}
+								<!-- Divider message -->
+								<div class="flex items-center gap-3 py-2">
+									<div class="h-px flex-1 bg-border"></div>
+									<span class="text-xs text-muted-foreground">{message.content}</span>
+									<div class="h-px flex-1 bg-border"></div>
 								</div>
+							{:else if message.role === 'user'}
+								<!-- User message -->
+								<div
+									class="group/msg flex rounded px-2 ml-12 md:ml-0 md:gap-3 transition-colors duration-700 hover:bg-accent/30 {grouped
+										? 'py-0.5'
+										: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
+										? 'bg-blue-500/10'
+										: ''}"
+									data-message-id={message.id}
+								>
+									<!-- Avatar or hover timestamp (desktop only) -->
+									<div class="hidden w-10 shrink-0 md:block">
+										{#if !grouped}
+											<div
+												class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
+											>
+												You
+											</div>
+										{:else}
+											<span
+												class="hidden text-[10px] text-muted-foreground group-hover/msg:inline"
+												title={formatMessageTime(message.timestamp)}
+											>
+												{new Date(message.timestamp).toLocaleTimeString([], {
+													hour: '2-digit',
+													minute: '2-digit'
+												})}
+											</span>
+										{/if}
+									</div>
 
-								<!-- Message body -->
-								<div class="min-w-0 flex-1">
-									{#if grouped}
-										<span
-											class="text-[10px] text-gray-600 opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
-										>
-											{formatMessageTime(message.timestamp)}
-										</span>
-									{/if}
-									{#if !grouped}
-										<div class="mb-0.5 flex items-baseline gap-2 justify-end md:justify-start">
-											<span class="text-sm font-semibold text-blue-400">You</span>
-											<span class="text-[10px] text-gray-500">
+									<!-- Message body -->
+									<div class="min-w-0 flex-1">
+										{#if grouped}
+											<span
+												class="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
+											>
 												{formatMessageTime(message.timestamp)}
 											</span>
-										</div>
-									{/if}
-									{#if message.replyToMessageId}
-										{@const replyMsg = findMessageById(message.replyToMessageId)}
-										{#if replyMsg}
-											<div class="mb-1">
-												<ReplyPreview
-													message={replyMsg}
-													onclick={() => scrollToMessage(replyMsg.id)}
-												/>
+										{/if}
+										{#if !grouped}
+											<div class="mb-0.5 flex items-baseline gap-2 justify-end md:justify-start">
+												<span class="text-sm font-semibold text-blue-400">You</span>
+												<span class="text-[10px] text-muted-foreground">
+													{formatMessageTime(message.timestamp)}
+												</span>
 											</div>
 										{/if}
-									{/if}
-									<div class="text-sm text-gray-100 text-right md:text-left">
-										<MarkdownRenderer
-											content={typeof message.content === 'string'
-												? message.content
-												: String(message.content ?? '')}
-										/>
-									</div>
-									{#if message.status === 'sending'}
-										<span class="text-xs text-gray-500">Sending...</span>
-									{:else if message.status === 'error'}
-										<span class="text-xs text-red-400">
-											{message.errorMessage ?? 'Failed'}
-										</span>
-										<button
-											onclick={() => handleRetry(message.id)}
-											class="text-xs text-blue-400 transition-colors hover:text-blue-300"
-										>
-											Retry
-										</button>
-									{/if}
-
-									<!-- User message actions -->
-									{#if message.status === 'complete' || message.status === 'sent'}
-										<div class="mt-1">
-											<MessageActions
-												onreply={() => handleReply(message)}
-												onthread={() => handleReply(message)}
-												oncopy={() => copyMessageContent(message.content)}
-												onreact={() => toggleReactionPicker(message.id)}
-											/>
-											{#if reactionPickerMessageId === message.id}
-												<div class="relative">
-													<ReactionPicker
-														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
-														onClose={() => (reactionPickerMessageId = null)}
+										{#if message.replyToMessageId}
+											{@const replyMsg = findMessageById(message.replyToMessageId)}
+											{#if replyMsg}
+												<div class="mb-1">
+													<ReplyPreview
+														message={replyMsg}
+														onclick={() => scrollToMessage(replyMsg.id)}
 													/>
 												</div>
 											{/if}
+										{/if}
+										<div class="text-sm text-foreground text-right md:text-left">
+											<MarkdownRenderer
+												content={typeof message.content === 'string'
+													? message.content
+													: String(message.content ?? '')}
+											/>
 										</div>
-									{/if}
+										{#if message.status === 'sending'}
+											<span class="text-xs text-muted-foreground">Sending...</span>
+										{:else if message.status === 'error'}
+											<span class="text-xs text-destructive">
+												{message.errorMessage ?? 'Failed'}
+											</span>
+											<button
+												onclick={() => handleRetry(message.id)}
+												class="text-xs text-blue-400 transition-colors hover:text-blue-300"
+											>
+												Retry
+											</button>
+										{/if}
 
-									<!-- Reactions -->
-									{#if message.reactions?.length}
-										<ReactionDisplay
-											reactions={message.reactions}
-											onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
-										/>
-									{/if}
-								</div>
-							</div>
-						{:else}
-							<!-- Assistant message -->
-							<div
-								class="group/msg flex rounded px-2 md:gap-3 transition-colors duration-700 hover:bg-gray-800/30 {grouped
-									? 'py-0.5'
-									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
-									? 'bg-blue-500/10'
-									: ''}"
-								data-message-id={message.id}
-							>
-								<!-- Avatar or hover timestamp (desktop only) -->
-								<div class="hidden w-10 shrink-0 md:block">
-									{#if !grouped}
-										<div
-											class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white"
-										>
-											{agentInitial}
-										</div>
-									{:else}
-										<span
-											class="hidden text-[10px] text-gray-600 group-hover/msg:inline"
-											title={formatMessageTime(message.timestamp)}
-										>
-											{new Date(message.timestamp).toLocaleTimeString([], {
-												hour: '2-digit',
-												minute: '2-digit'
-											})}
-										</span>
-									{/if}
-								</div>
+										<!-- User message actions -->
+										{#if message.status === 'complete' || message.status === 'sent'}
+											<div class="mt-1">
+												<MessageActions
+													onreply={() => handleReply(message)}
+													onthread={() => handleReply(message)}
+													oncopy={() => copyMessageContent(message.content)}
+													onreact={() => toggleReactionPicker(message.id)}
+												/>
+												{#if reactionPickerMessageId === message.id}
+													<div class="relative">
+														<ReactionPicker
+															onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+															onClose={() => (reactionPickerMessageId = null)}
+														/>
+													</div>
+												{/if}
+											</div>
+										{/if}
 
-								<!-- Message body -->
-								<div class="min-w-0 flex-1">
-									{#if !grouped}
-										<div class="mb-0.5 flex items-baseline gap-2">
-											<span class="text-sm font-semibold text-purple-400">{agentName}</span>
-											<span class="text-[10px] text-gray-500">
+										<!-- Reactions -->
+										{#if message.reactions?.length}
+											<ReactionDisplay
+												reactions={message.reactions}
+												onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
+											/>
+										{/if}
+									</div>
+								</div>
+							{:else}
+								<!-- Assistant message -->
+								<div
+									class="group/msg flex rounded px-2 md:gap-3 transition-colors duration-700 hover:bg-accent/30 {grouped
+										? 'py-0.5'
+										: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
+										? 'bg-blue-500/10'
+										: ''}"
+									data-message-id={message.id}
+								>
+									<!-- Avatar or hover timestamp (desktop only) -->
+									<div class="hidden w-10 shrink-0 md:block">
+										{#if !grouped}
+											<div
+												class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white"
+											>
+												{agentInitial}
+											</div>
+										{:else}
+											<span
+												class="hidden text-[10px] text-muted-foreground group-hover/msg:inline"
+												title={formatMessageTime(message.timestamp)}
+											>
+												{new Date(message.timestamp).toLocaleTimeString([], {
+													hour: '2-digit',
+													minute: '2-digit'
+												})}
+											</span>
+										{/if}
+									</div>
+
+									<!-- Message body -->
+									<div class="min-w-0 flex-1">
+										{#if !grouped}
+											<div class="mb-0.5 flex items-baseline gap-2">
+												<span class="text-sm font-semibold text-purple-400">{agentName}</span>
+												<span class="text-[10px] text-muted-foreground">
+													{formatMessageTime(message.timestamp)}
+												</span>
+											</div>
+										{:else}
+											<span
+												class="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
+											>
 												{formatMessageTime(message.timestamp)}
 											</span>
-										</div>
-									{:else}
-										<span
-											class="text-[10px] text-gray-600 opacity-0 transition-opacity group-hover/msg:opacity-100 md:hidden"
-										>
-											{formatMessageTime(message.timestamp)}
-										</span>
-									{/if}
+										{/if}
 
-									<!-- Thinking block -->
-									{#if message.thinkingText}
-										<ThinkingBlock
-											thinkingText={message.thinkingText}
-											isStreaming={message.status === 'streaming'}
-											startedAt={message.thinkingStartedAt ?? message.timestamp}
-											completedAt={message.thinkingCompletedAt}
-										/>
-									{/if}
-
-									<!-- Content -->
-									{#if message.content}
-										<MarkdownRenderer
-											content={typeof message.content === 'string'
-												? message.content
-												: String(message.content ?? '')}
-											isStreaming={message.status === 'streaming'}
-										/>
-									{:else if message.status === 'streaming' && !message.thinkingText}
-										<span class="inline-block text-gray-400 animate-pulse">▌</span>
-									{/if}
-
-									<!-- Plan block -->
-									{#if message.plan?.length}
-										<PlanBlock steps={message.plan} isStreaming={message.status === 'streaming'} />
-									{/if}
-
-									<!-- Tool calls -->
-									{#if message.toolCalls?.length}
-										{#each message.toolCalls as toolCall (toolCall.toolCallId)}
-											<ToolCallCard {toolCall} />
-										{/each}
-									{/if}
-
-									<!-- Canvas content (inline A2UI) -->
-									{#if message.runId}
-										<CanvasBlock runId={message.runId} />
-									{/if}
-
-									<!-- Sources block -->
-									{#if message.sources?.length}
-										<SourcesBlock sources={message.sources} />
-									{/if}
-
-									<!-- Error display -->
-									{#if message.status === 'error'}
-										<span class="text-xs text-red-400">
-											{message.errorMessage ?? 'Error'}
-										</span>
-									{/if}
-
-									<!-- Actions (visible on hover) -->
-									{#if message.status === 'complete'}
-										<div class="mt-1">
-											<MessageActions
-												onreply={() => handleReply(message)}
-												onthread={() => handleReply(message)}
-												oncopy={() => copyMessageContent(message.content)}
-												onreact={() => toggleReactionPicker(message.id)}
+										<!-- Thinking block -->
+										{#if message.thinkingText}
+											<ReasoningAdapter
+												thinkingText={message.thinkingText}
+												isStreaming={message.status === 'streaming'}
+												startedAt={message.thinkingStartedAt ?? message.timestamp}
+												completedAt={message.thinkingCompletedAt}
 											/>
-											{#if reactionPickerMessageId === message.id}
-												<div class="relative">
-													<ReactionPicker
-														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
-														onClose={() => (reactionPickerMessageId = null)}
-													/>
-												</div>
-											{/if}
-										</div>
-									{/if}
+										{/if}
 
-									<!-- Reactions -->
-									{#if message.reactions?.length}
-										<ReactionDisplay
-											reactions={message.reactions}
-											onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
-										/>
-									{/if}
+										<!-- Content -->
+										{#if message.content}
+											<MarkdownRenderer
+												content={typeof message.content === 'string'
+													? message.content
+													: String(message.content ?? '')}
+												isStreaming={message.status === 'streaming'}
+											/>
+										{:else if message.status === 'streaming' && !message.thinkingText}
+											<Loader class="text-muted-foreground" size={16} />
+										{/if}
+
+										<!-- Plan block -->
+										{#if message.plan?.length}
+											<PlanAdapter
+												steps={message.plan}
+												isStreaming={message.status === 'streaming'}
+											/>
+										{/if}
+
+										<!-- Tool calls -->
+										{#if message.toolCalls?.length}
+											{#each message.toolCalls as toolCall (toolCall.toolCallId)}
+												<ToolAdapter {toolCall} />
+											{/each}
+										{/if}
+
+										<!-- Canvas content (inline A2UI) -->
+										{#if message.runId}
+											<CanvasBlock runId={message.runId} />
+										{/if}
+
+										<!-- Sources block -->
+										{#if message.sources?.length}
+											<SourcesAdapter sources={message.sources} />
+										{/if}
+
+										<!-- Error display -->
+										{#if message.status === 'error'}
+											<span class="text-xs text-destructive">
+												{message.errorMessage ?? 'Error'}
+											</span>
+										{/if}
+
+										<!-- Actions (visible on hover) -->
+										{#if message.status === 'complete'}
+											<div class="mt-1">
+												<MessageActions
+													onreply={() => handleReply(message)}
+													onthread={() => handleReply(message)}
+													oncopy={() => copyMessageContent(message.content)}
+													onreact={() => toggleReactionPicker(message.id)}
+												/>
+												{#if reactionPickerMessageId === message.id}
+													<div class="relative">
+														<ReactionPicker
+															onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+															onClose={() => (reactionPickerMessageId = null)}
+														/>
+													</div>
+												{/if}
+											</div>
+										{/if}
+
+										<!-- Reactions -->
+										{#if message.reactions?.length}
+											<ReactionDisplay
+												reactions={message.reactions}
+												onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
+											/>
+										{/if}
+									</div>
 								</div>
+							{/if}
+						{/each}
+
+						<!-- Inline exec approval prompts -->
+						{#if localPendingApprovals.length > 0}
+							<div class="mt-3 space-y-2">
+								{#each localPendingApprovals as approval (approval.requestId)}
+									<ExecApprovalPrompt
+										{approval}
+										pendingCount={localPendingApprovals.length}
+										onResolve={handleApprovalResolve}
+										onAlwaysDeny={handleApprovalAlwaysDeny}
+									/>
+								{/each}
 							</div>
 						{/if}
-					{/each}
-
-					<!-- Inline exec approval prompts -->
-					{#if localPendingApprovals.length > 0}
-						<div class="mt-3 space-y-2">
-							{#each localPendingApprovals as approval (approval.requestId)}
-								<ExecApprovalPrompt
-									{approval}
-									pendingCount={localPendingApprovals.length}
-									onResolve={handleApprovalResolve}
-									onAlwaysDeny={handleApprovalAlwaysDeny}
-								/>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/if}
+					</div>
+				{/if}
+			</ConversationContent>
 
 			<!-- Scroll-to-bottom button -->
-			{#if !shouldAutoScroll && messages.length > 0}
-				<button
-					onclick={scrollToBottom}
-					class="sticky bottom-4 left-1/2 -translate-x-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-700 bg-gray-800 text-gray-400 shadow-lg transition-all hover:bg-gray-700 hover:text-white"
-					aria-label="Scroll to bottom"
-				>
-					<ArrowDown size={18} />
-				</button>
-			{/if}
-		</div>
+			<ConversationScrollButton />
+		</Conversation>
 
 		<!-- Reply preview banner -->
 		{#if replyToMessage}
-			<div class="border-t border-gray-800 px-4 py-2">
+			<div class="border-t border-border px-4 py-2">
 				<ReplyPreview message={replyToMessage} showCancel oncancel={cancelReply} />
 			</div>
 		{/if}
@@ -724,12 +677,12 @@
 	<!-- Thread panel: full-screen overlay on mobile, side panel on desktop -->
 	{#if thread}
 		{#if isMobile}
-			<div class="fixed inset-0 z-50 flex flex-col bg-gray-950">
-				<div class="flex items-center justify-between border-b border-gray-800 px-3 py-2">
-					<span class="text-sm font-medium text-white">Thread</span>
+			<div class="fixed inset-0 z-50 flex flex-col bg-background">
+				<div class="flex items-center justify-between border-b border-border px-3 py-2">
+					<span class="text-sm font-medium text-foreground">Thread</span>
 					<button
 						onclick={() => closeThread()}
-						class="rounded p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+						class="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
 						aria-label="Close thread"
 					>
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

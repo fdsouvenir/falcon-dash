@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Monitor, Tablet, Smartphone, X, ExternalLink, AlertTriangle } from 'lucide-svelte';
+	import { Monitor, Tablet, Smartphone, X, ExternalLink, AlertTriangle } from '@lucide/svelte';
 
 	let { url, onclose }: { url: string; onclose?: () => void } = $props();
 
