@@ -615,6 +615,7 @@ export function createChatSession(sessionKey: string) {
 			id: (raw.id ?? raw.messageId ?? crypto.randomUUID()) as string,
 			role: (raw.role ?? 'assistant') as 'user' | 'assistant',
 			content: extractTextContent(raw.content),
+			thinkingText: extractThinkingContent(raw.content),
 			timestamp: (raw.timestamp ?? Date.now()) as number,
 			status: 'complete',
 			runId: raw.runId as string | undefined,
@@ -630,13 +631,31 @@ export function createChatSession(sessionKey: string) {
 				.map((block) => {
 					if (typeof block === 'string') return block;
 					if (block && typeof block === 'object') {
-						return (block as Record<string, unknown>).text ?? '';
+						const b = block as Record<string, unknown>;
+						if (b.type === 'thinking') return '';
+						return (b.text ?? '') as string;
 					}
 					return '';
 				})
 				.join('');
 		}
 		return String(content ?? '');
+	}
+
+	/** Extract thinking text from gateway content blocks */
+	function extractThinkingContent(content: unknown): string | undefined {
+		if (!Array.isArray(content)) return undefined;
+		const parts: string[] = [];
+		for (const block of content) {
+			if (block && typeof block === 'object') {
+				const b = block as Record<string, unknown>;
+				if (b.type === 'thinking' && typeof b.thinking === 'string') {
+					const text = (b.thinking as string).trim();
+					if (text) parts.push(text);
+				}
+			}
+		}
+		return parts.length > 0 ? parts.join('\n') : undefined;
 	}
 
 	/**
