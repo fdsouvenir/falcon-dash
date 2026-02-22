@@ -34,14 +34,14 @@ export async function checkVaultStatus(): Promise<void> {
 	}
 }
 
-export async function initVault(password: string): Promise<boolean> {
+export async function initVault(): Promise<boolean> {
 	_isLoading.set(true);
 	_error.set(null);
 	try {
 		const res = await fetch('/api/passwords', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ action: 'init', password })
+			body: JSON.stringify({ action: 'init' })
 		});
 		if (!res.ok) {
 			const data = await res.json();
@@ -59,18 +59,18 @@ export async function initVault(password: string): Promise<boolean> {
 	}
 }
 
-export async function unlockVault(password: string): Promise<boolean> {
+export async function unlockVault(): Promise<boolean> {
 	_isLoading.set(true);
 	_error.set(null);
 	try {
 		const res = await fetch('/api/passwords', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ action: 'unlock', password })
+			body: JSON.stringify({ action: 'unlock' })
 		});
 		if (!res.ok) {
 			const data = await res.json();
-			throw new Error(data.message ?? 'Invalid password');
+			throw new Error(data.message ?? 'Failed to unlock vault');
 		}
 		const data = await res.json();
 		_sessionToken.set(data.token);
@@ -104,12 +104,6 @@ export function getToken(): string | null {
 		token = v;
 	})();
 	return token;
-}
-
-export function validatePasswordStrength(password: string): { valid: boolean; errors: string[] } {
-	const errors: string[] = [];
-	if (password.length < 6) errors.push('At least 6 characters');
-	return { valid: errors.length === 0, errors };
 }
 
 let autoLockTimer: ReturnType<typeof setTimeout> | null = null;

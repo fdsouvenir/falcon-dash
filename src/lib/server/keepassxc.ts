@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
-import { access, mkdir } from 'fs/promises';
+import { access, mkdir, writeFile, chmod } from 'fs/promises';
 import { dirname } from 'path';
-import { VAULT_PATH } from './passwords-config.js';
+import { randomBytes } from 'crypto';
+import { VAULT_PATH, KEY_FILE_PATH } from './passwords-config.js';
 
 export interface PasswordEntry {
 	title: string;
@@ -46,8 +47,15 @@ function runKeepassxc(args: string[], input?: string): Promise<string> {
 		if (input) {
 			proc.stdin.write(input + '\n');
 			proc.stdin.end();
+		} else {
+			proc.stdin.end();
 		}
 	});
+}
+
+/** Prepend keyfile auth args for vault operations */
+function authArgs(command: string, vaultPath: string): string[] {
+	return [command, '--no-password', '--key-file', KEY_FILE_PATH, vaultPath];
 }
 
 export async function vaultExists(): Promise<boolean> {
@@ -59,16 +67,30 @@ export async function vaultExists(): Promise<boolean> {
 	}
 }
 
-export async function initVault(password: string): Promise<void> {
-	// Create directory if needed
-	const dir = dirname(VAULT_PATH);
-	await mkdir(dir, { recursive: true });
-	// keepassxc-cli db-create --set-password prompts for password twice (enter + confirm)
-	await runKeepassxc(['db-create', VAULT_PATH, '--set-password'], password + '\n' + password);
+export async function keyFileExists(): Promise<boolean> {
+	try {
+		await access(KEY_FILE_PATH);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
-export async function listEntries(password: string): Promise<PasswordEntry[]> {
-	const output = await runKeepassxc(['ls', '-R', '-f', VAULT_PATH], password);
+export async function initVault(): Promise<void> {
+	const dir = dirname(VAULT_PATH);
+	await mkdir(dir, { recursive: true });
+
+	// Generate a 64-byte random keyfile
+	const keyBytes = randomBytes(64);
+	await writeFile(KEY_FILE_PATH, keyBytes);
+	await chmod(KEY_FILE_PATH, 0o600);
+
+	// Create vault with keyfile auth (no password)
+	await runKeepassxc(['db-create', VAULT_PATH, '--set-key-file', KEY_FILE_PATH]);
+}
+
+export async function listEntries(): Promise<PasswordEntry[]> {
+	const output = await runKeepassxc(authArgs('ls', VAULT_PATH).concat('-R', '-f'));
 	const lines = output.split('\n').filter(Boolean);
 	const entries: PasswordEntry[] = [];
 
@@ -87,7 +109,7 @@ export async function listEntries(password: string): Promise<PasswordEntry[]> {
 	const detailed = await Promise.all(
 		entries.map(async (entry) => {
 			try {
-				const info = await runKeepassxc(['show', '-s', VAULT_PATH, entry.path], password);
+				const info = await runKeepassxc(authArgs('show', VAULT_PATH).concat('-s', entry.path));
 				const parsed = parseEntryOutput(info);
 				return {
 					...entry,
@@ -107,8 +129,8 @@ export async function listEntries(password: string): Promise<PasswordEntry[]> {
 	return detailed;
 }
 
-export async function getEntry(password: string, path: string): Promise<PasswordDetail> {
-	const output = await runKeepassxc(['show', VAULT_PATH, path], password);
+export async function getEntry(path: string): Promise<PasswordDetail> {
+	const output = await runKeepassxc(authArgs('show', VAULT_PATH).concat(path));
 	const parsed = parseEntryOutput(output);
 	return {
 		title: parsed.standard.title || path.split('/').pop() || path,
@@ -123,7 +145,6 @@ export async function getEntry(password: string, path: string): Promise<Password
 }
 
 export async function addEntry(
-	password: string,
 	path: string,
 	fields: {
 		username?: string;
@@ -133,25 +154,25 @@ export async function addEntry(
 		customAttributes?: Record<string, string>;
 	}
 ): Promise<void> {
-	const args = ['add', VAULT_PATH, path];
+	const args = authArgs('add', VAULT_PATH).concat(path);
 	if (fields.username) args.push('-u', fields.username);
 	if (fields.password) args.push('-p');
 	if (fields.url) args.push('--url', fields.url);
 
-	const input = fields.password ? `${password}\n${fields.password}` : password;
+	// With keyfile auth, stdin is only needed for the entry's password (via -p flag)
+	const input = fields.password ? fields.password : undefined;
 	await runKeepassxc(args, input);
 
 	if (fields.notes) {
-		await runKeepassxc(['edit', VAULT_PATH, path, '-n', fields.notes], password);
+		await runKeepassxc(authArgs('edit', VAULT_PATH).concat(path, '-n', fields.notes));
 	}
 
 	if (fields.customAttributes) {
-		await setCustomAttributes(password, path, fields.customAttributes);
+		await setCustomAttributes(path, fields.customAttributes);
 	}
 }
 
 export async function editEntry(
-	password: string,
 	path: string,
 	fields: {
 		username?: string;
@@ -162,47 +183,44 @@ export async function editEntry(
 		customAttributes?: Record<string, string>;
 	}
 ): Promise<void> {
-	const args = ['edit', VAULT_PATH, path];
+	const args = authArgs('edit', VAULT_PATH).concat(path);
 	if (fields.username) args.push('-u', fields.username);
 	if (fields.password) args.push('-p');
 	if (fields.url) args.push('--url', fields.url);
 	if (fields.title) args.push('-t', fields.title);
 
-	const input = fields.password ? `${password}\n${fields.password}` : password;
+	// With keyfile auth, stdin is only needed for the entry's password (via -p flag)
+	const input = fields.password ? fields.password : undefined;
 	await runKeepassxc(args, input);
 
 	if (fields.notes) {
-		await runKeepassxc(['edit', VAULT_PATH, path, '-n', fields.notes], password);
+		await runKeepassxc(authArgs('edit', VAULT_PATH).concat(path, '-n', fields.notes));
 	}
 
 	if (fields.customAttributes) {
-		await setCustomAttributes(password, path, fields.customAttributes);
+		await setCustomAttributes(path, fields.customAttributes);
 	}
 }
 
 async function setCustomAttributes(
-	password: string,
 	path: string,
 	attributes: Record<string, string>
 ): Promise<void> {
 	for (const [key, value] of Object.entries(attributes)) {
 		await runKeepassxc(
-			['edit', VAULT_PATH, path, '--set-attribute', key, '--attribute-value', value],
-			password
+			authArgs('edit', VAULT_PATH).concat('--set-attribute', key, '--attribute-value', value, path)
 		);
 	}
 }
 
-export async function removeAttribute(
-	password: string,
-	path: string,
-	attributeName: string
-): Promise<void> {
-	await runKeepassxc(['edit', VAULT_PATH, path, '--remove-attribute', attributeName], password);
+export async function removeAttribute(path: string, attributeName: string): Promise<void> {
+	await runKeepassxc(
+		authArgs('edit', VAULT_PATH).concat('--remove-attribute', attributeName, path)
+	);
 }
 
-export async function deleteEntry(password: string, path: string): Promise<void> {
-	await runKeepassxc(['rm', VAULT_PATH, path], password);
+export async function deleteEntry(path: string): Promise<void> {
+	await runKeepassxc(authArgs('rm', VAULT_PATH).concat(path));
 }
 
 const STANDARD_FIELDS = new Set([

@@ -17,8 +17,7 @@ interface SecretFile {
 /** GET: Preview .secrets/ files */
 export const GET: RequestHandler = async ({ request }) => {
 	const token = request.headers.get('x-session-token') ?? '';
-	const password = getSession(token);
-	if (!password) {
+	if (!getSession(token)) {
 		return error(401, 'Vault is locked. Unlock first.');
 	}
 
@@ -54,8 +53,7 @@ export const GET: RequestHandler = async ({ request }) => {
 /** POST: Import .secrets/ files into vault */
 export const POST: RequestHandler = async ({ request }) => {
 	const token = request.headers.get('x-session-token') ?? '';
-	const password = getSession(token);
-	if (!password) {
+	if (!getSession(token)) {
 		return error(401, 'Vault is locked. Unlock first.');
 	}
 
@@ -73,7 +71,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const content = await readFile(filePath, 'utf-8');
 					const title = entry.replace(/\.[^/.]+$/, ''); // Remove extension
 
-					await addEntry(password, title, {
+					await addEntry(title, {
 						username: '',
 						password: content.trim(),
 						url: '',

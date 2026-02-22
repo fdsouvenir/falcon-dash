@@ -1,16 +1,8 @@
 <script lang="ts">
-	import {
-		initVault,
-		validatePasswordStrength,
-		passwordError,
-		passwordLoading
-	} from '$lib/stores/passwords.js';
+	import { initVault, passwordError, passwordLoading } from '$lib/stores/passwords.js';
 
-	let password = $state('');
-	let confirmPassword = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
-	let showValidation = $state(false);
 
 	$effect(() => {
 		const u = passwordLoading.subscribe((v) => {
@@ -25,13 +17,8 @@
 		return u;
 	});
 
-	let strength = $derived(validatePasswordStrength(password));
-	let passwordsMatch = $derived(password === confirmPassword && password.length > 0);
-
 	async function handleCreate() {
-		showValidation = true;
-		if (!strength.valid || !passwordsMatch) return;
-		await initVault(password);
+		await initVault();
 	}
 </script>
 
@@ -49,7 +36,7 @@
 			<h2 class="text-base font-medium text-white">Create Password Vault</h2>
 		</div>
 		<p class="mb-5 text-xs text-gray-400">
-			Your vault will use KDBX4 format with AES-256 encryption and Argon2 key derivation.
+			A KDBX4 vault will be created with a randomly generated keyfile at ~/.openclaw/vault.key
 		</p>
 
 		{#if error}
@@ -58,71 +45,10 @@
 			</div>
 		{/if}
 
-		<div class="space-y-3">
-			<div>
-				<label class="mb-1 block text-xs text-gray-400">Master Password</label>
-				<input
-					type="password"
-					bind:value={password}
-					placeholder="Enter master password"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					onkeydown={(e) => {
-						if (e.key === 'Enter') handleCreate();
-					}}
-				/>
-			</div>
-
-			{#if showValidation && !strength.valid}
-				<ul class="space-y-0.5">
-					{#each strength.errors as err, i (i)}
-						<li class="text-[10px] text-red-400">- {err}</li>
-					{/each}
-				</ul>
-			{/if}
-
-			{#if password.length > 0}
-				<div class="flex gap-1">
-					{#each [0, 1, 2, 3] as i (i)}
-						<div
-							class="h-1 flex-1 rounded-full {i <
-							(strength.valid
-								? 4
-								: strength.errors.length <= 1
-									? 3
-									: strength.errors.length <= 2
-										? 2
-										: 1)
-								? strength.valid
-									? 'bg-green-500'
-									: 'bg-yellow-500'
-								: 'bg-gray-700'}"
-						></div>
-					{/each}
-				</div>
-			{/if}
-
-			<div>
-				<label class="mb-1 block text-xs text-gray-400">Confirm Password</label>
-				<input
-					type="password"
-					bind:value={confirmPassword}
-					placeholder="Confirm master password"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					onkeydown={(e) => {
-						if (e.key === 'Enter') handleCreate();
-					}}
-				/>
-			</div>
-
-			{#if showValidation && confirmPassword && !passwordsMatch}
-				<p class="text-[10px] text-red-400">Passwords do not match</p>
-			{/if}
-		</div>
-
 		<button
 			onclick={handleCreate}
 			disabled={loading}
-			class="mt-5 w-full rounded bg-blue-600 py-2 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+			class="w-full rounded bg-blue-600 py-2 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
 		>
 			{loading ? 'Creating Vault...' : 'Create Vault'}
 		</button>

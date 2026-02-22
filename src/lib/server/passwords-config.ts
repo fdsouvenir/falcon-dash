@@ -2,25 +2,26 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 export const VAULT_PATH = join(homedir(), '.openclaw', 'passwords.kdbx');
+export const KEY_FILE_PATH = join(homedir(), '.openclaw', 'vault.key');
 
-// In-memory session store (simple for dev; production would use signed tokens)
-const sessions = new Map<string, { password: string; expires: number }>();
+// In-memory session store — tracks that the vault is unlocked (no password stored)
+const sessions = new Map<string, { expires: number }>();
 
-export function createSession(password: string): string {
+export function createSession(): string {
 	const token = crypto.randomUUID();
 	// Session lasts 30 minutes
-	sessions.set(token, { password, expires: Date.now() + 30 * 60 * 1000 });
+	sessions.set(token, { expires: Date.now() + 30 * 60 * 1000 });
 	return token;
 }
 
-export function getSession(token: string): string | null {
+export function getSession(token: string): boolean {
 	const session = sessions.get(token);
-	if (!session) return null;
+	if (!session) return false;
 	if (Date.now() > session.expires) {
 		sessions.delete(token);
-		return null;
+		return false;
 	}
-	return session.password;
+	return true;
 }
 
 export function clearSession(token: string): void {

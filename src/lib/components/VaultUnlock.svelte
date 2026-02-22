@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { unlockVault, passwordError, passwordLoading } from '$lib/stores/passwords.js';
 
-	let password = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
@@ -19,8 +18,7 @@
 	});
 
 	async function handleUnlock() {
-		if (!password) return;
-		await unlockVault(password);
+		await unlockVault();
 	}
 </script>
 
@@ -44,25 +42,10 @@
 			</div>
 		{/if}
 
-		<div>
-			<label class="mb-1 block text-xs text-gray-400">Master Password</label>
-			<!-- svelte-ignore a11y_autofocus -->
-			<input
-				type="password"
-				bind:value={password}
-				placeholder="Enter master password"
-				autofocus
-				class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-				onkeydown={(e) => {
-					if (e.key === 'Enter') handleUnlock();
-				}}
-			/>
-		</div>
-
 		<button
 			onclick={handleUnlock}
-			disabled={loading || !password}
-			class="mt-4 w-full rounded bg-blue-600 py-2 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+			disabled={loading}
+			class="w-full rounded bg-blue-600 py-2 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
 		>
 			{loading ? 'Unlocking...' : 'Unlock'}
 		</button>

@@ -9,13 +9,11 @@ import {
 	removeAttribute
 } from '$lib/server/keepassxc.js';
 
-function requireSession(request: Request): string {
+function requireSession(request: Request): void {
 	const token = request.headers.get('x-session-token') ?? '';
-	const password = getSession(token);
-	if (!password) {
+	if (!getSession(token)) {
 		throw new Error('Vault is locked');
 	}
-	return password;
 }
 
 /** GET: Get entry with decrypted password */
@@ -23,15 +21,14 @@ export const GET: RequestHandler = async ({ params, request }) => {
 	const path = params.path || '';
 	if (!path) return error(400, 'Missing path');
 
-	let password: string;
 	try {
-		password = requireSession(request);
+		requireSession(request);
 	} catch {
 		return error(401, 'Vault is locked. Unlock first.');
 	}
 
 	try {
-		const entry = await getEntry(password, path);
+		const entry = await getEntry(path);
 		return json(entry, {
 			headers: {
 				'X-Secret-Content': 'true'
@@ -47,9 +44,8 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	const path = params.path || '';
 	if (!path) return error(400, 'Missing path');
 
-	let password: string;
 	try {
-		password = requireSession(request);
+		requireSession(request);
 	} catch {
 		return error(401, 'Vault is locked. Unlock first.');
 	}
@@ -69,15 +65,15 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	try {
 		// Try edit first, if entry doesn't exist, add it
 		try {
-			await editEntry(password, path, fields);
+			await editEntry(path, fields);
 		} catch {
-			await addEntry(password, path, fields);
+			await addEntry(path, fields);
 		}
 
 		// Remove deleted custom attributes
 		if (removedAttributes?.length) {
 			for (const attr of removedAttributes) {
-				await removeAttribute(password, path, attr);
+				await removeAttribute(path, attr);
 			}
 		}
 
@@ -92,15 +88,14 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	const path = params.path || '';
 	if (!path) return error(400, 'Missing path');
 
-	let password: string;
 	try {
-		password = requireSession(request);
+		requireSession(request);
 	} catch {
 		return error(401, 'Vault is locked. Unlock first.');
 	}
 
 	try {
-		await deleteEntry(password, path);
+		await deleteEntry(path);
 		return json({ deleted: true, path });
 	} catch (err) {
 		return error(500, (err as Error).message);
