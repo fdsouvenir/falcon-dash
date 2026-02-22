@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { setThemeConfig, getThemeConfig, applyTheme } from '$lib/theme/theme-manager.js';
 	import type { ThemeMode } from '$lib/theme/theme-manager.js';
-	import { gatewayToken } from '$lib/stores/token.js';
 
 	interface Preferences {
 		theme: ThemeMode;
@@ -227,21 +226,6 @@
 	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Session</h3>
 		<div class="space-y-3">
-			<div class="flex items-center justify-between">
-				<div>
-					<div class="text-sm font-medium text-gray-300">Disconnect from Gateway</div>
-					<div class="text-xs text-gray-400">
-						Clear your gateway token and return to the login screen
-					</div>
-				</div>
-				<button
-					onclick={() => gatewayToken.clear()}
-					class="rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
-				>
-					Disconnect
-				</button>
-			</div>
-			<div class="border-t border-gray-700"></div>
 			<div class="flex items-center justify-between">
 				<div>
 					<div class="text-sm font-medium text-gray-300">Log Out (Cloudflare)</div>
