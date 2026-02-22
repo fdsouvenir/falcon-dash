@@ -46,7 +46,7 @@
 	let thread = $state<ThreadInfo | null>(null);
 	let connState = $state<ConnectionState>('DISCONNECTED');
 
-	let scrollContainer: HTMLDivElement;
+	let scrollContainer: HTMLDivElement | null = $state(null);
 	let highlightedMessageId = $state<string | null>(null);
 	let pendingScrollToId = $state<string | null>(null);
 
