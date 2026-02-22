@@ -5,18 +5,25 @@
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection } from '$lib/stores/gateway.js';
-	import { renderMarkdownSync } from '$lib/chat/markdown.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
 	import { clearSearch } from '$lib/stores/chat-search.js';
 	import { watchConnectionForChat } from '$lib/stores/chat-resilience.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
+	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
+	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
+	import { ArrowDown } from 'lucide-svelte';
 	import ChatHeader from './ChatHeader.svelte';
 	import ChatSearch from './ChatSearch.svelte';
 	import MessageComposer from './MessageComposer.svelte';
 	import ThinkingBlock from './ThinkingBlock.svelte';
 	import ToolCallCard from './ToolCallCard.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
+	import MessageActions from './MessageActions.svelte';
+	import PlanBlock from './PlanBlock.svelte';
+	import SourcesBlock from './SourcesBlock.svelte';
+	import SuggestionChips from './SuggestionChips.svelte';
+	import ExecApprovalPrompt from './ExecApprovalPrompt.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ReplyPreview from './ReplyPreview.svelte';
 	import ReactionPicker from './ReactionPicker.svelte';
@@ -209,6 +216,12 @@
 		}, 2000);
 	}
 
+	function scrollToBottom() {
+		if (!scrollContainer) return;
+		shouldAutoScroll = true;
+		scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+	}
+
 	function handleScroll() {
 		if (!scrollContainer) return;
 		const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
@@ -293,6 +306,42 @@
 		return true;
 	}
 
+	// Exec approvals inline in chat
+	let localPendingApprovals = $state<PendingApproval[]>([]);
+
+	$effect(() => {
+		const unsub = pendingApprovals.subscribe((v) => {
+			localPendingApprovals = v;
+		});
+		return unsub;
+	});
+
+	async function handleApprovalResolve(
+		requestId: string,
+		decision: 'allow-once' | 'allow-always' | 'deny'
+	) {
+		try {
+			await resolveApproval(requestId, decision);
+		} catch (e) {
+			console.error('[ChatView] approval resolve error:', e);
+		}
+	}
+
+	async function handleApprovalAlwaysDeny(requestId: string, command: string) {
+		try {
+			addToDenylist(command);
+			await resolveApproval(requestId, 'deny');
+		} catch (e) {
+			console.error('[ChatView] approval always-deny error:', e);
+		}
+	}
+
+	function copyMessageContent(content: string) {
+		navigator.clipboard.writeText(content).catch(() => {});
+	}
+
+	// Last completed assistant message for suggestion chips
+
 	let reactionPickerMessageId = $state<string | null>(null);
 	let isMobile = $state(false);
 
@@ -343,7 +392,7 @@
 		<div
 			bind:this={scrollContainer}
 			onscroll={handleScroll}
-			class="flex-1 overflow-y-auto overscroll-y-contain px-3 py-4 md:px-4"
+			class="relative flex-1 overflow-y-auto overscroll-y-contain px-3 py-4 md:px-4"
 		>
 			{#if messages.length === 0 && !isLoadingHistory}
 				<div class="flex h-full flex-col items-center justify-center px-4">
@@ -366,33 +415,16 @@
 					{:else}
 						<p class="mb-6 text-sm text-gray-500">Send a message to start</p>
 					{/if}
-					<!-- Quick-action chips -->
-					<div class="grid w-full max-w-sm grid-cols-2 gap-2">
-						<button
-							onclick={() => handleSend('Summarize a document')}
-							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
-						>
-							Summarize a document
-						</button>
-						<button
-							onclick={() => handleSend('Write some code')}
-							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
-						>
-							Write some code
-						</button>
-						<button
-							onclick={() => handleSend('Explain a concept')}
-							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
-						>
-							Explain a concept
-						</button>
-						<button
-							onclick={() => handleSend('Help me brainstorm')}
-							class="rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-3 text-left text-xs text-gray-300 transition-colors hover:bg-gray-700"
-						>
-							Help me brainstorm
-						</button>
-					</div>
+					<!-- Quick-action chips using SuggestionChips -->
+					<SuggestionChips
+						suggestions={[
+							'Summarize a document',
+							'Write some code',
+							'Explain a concept',
+							'Help me brainstorm'
+						]}
+						onselect={handleSend}
+					/>
 				</div>
 			{:else}
 				<div class="mx-auto max-w-none space-y-0 md:max-w-3xl">
@@ -406,9 +438,9 @@
 								<div class="h-px flex-1 bg-gray-700"></div>
 							</div>
 						{:else if message.role === 'user'}
-							<!-- User message (Discord-style: left-aligned with avatar) -->
+							<!-- User message -->
 							<div
-								class="group/msg flex md:gap-3 rounded px-2 ml-12 md:ml-0 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+								class="group/msg flex rounded px-2 ml-12 md:ml-0 md:gap-3 transition-colors duration-700 hover:bg-gray-800/30 {grouped
 									? 'py-0.5'
 									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
@@ -465,14 +497,11 @@
 										{/if}
 									{/if}
 									<div class="text-sm text-gray-100 text-right md:text-left">
-										<div class="prose prose-invert prose-sm max-w-none break-words">
-											<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-											{@html renderMarkdownSync(
-												typeof message.content === 'string'
-													? message.content
-													: String(message.content ?? '')
-											)}
-										</div>
+										<MarkdownRenderer
+											content={typeof message.content === 'string'
+												? message.content
+												: String(message.content ?? '')}
+										/>
 									</div>
 									{#if message.status === 'sending'}
 										<span class="text-xs text-gray-500">Sending...</span>
@@ -487,12 +516,40 @@
 											Retry
 										</button>
 									{/if}
+
+									<!-- User message actions -->
+									{#if message.status === 'complete' || message.status === 'sent'}
+										<div class="mt-1">
+											<MessageActions
+												onreply={() => handleReply(message)}
+												onthread={() => handleReply(message)}
+												oncopy={() => copyMessageContent(message.content)}
+												onreact={() => toggleReactionPicker(message.id)}
+											/>
+											{#if reactionPickerMessageId === message.id}
+												<div class="relative">
+													<ReactionPicker
+														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+														onClose={() => (reactionPickerMessageId = null)}
+													/>
+												</div>
+											{/if}
+										</div>
+									{/if}
+
+									<!-- Reactions -->
+									{#if message.reactions?.length}
+										<ReactionDisplay
+											reactions={message.reactions}
+											onToggle={(emoji) => handleReactionToggle(message.id, emoji)}
+										/>
+									{/if}
 								</div>
 							</div>
 						{:else}
-							<!-- Assistant message (Discord-style: left-aligned with avatar) -->
+							<!-- Assistant message -->
 							<div
-								class="group/msg flex md:gap-3 rounded px-2 transition-colors duration-700 hover:bg-gray-800/30 {grouped
+								class="group/msg flex rounded px-2 md:gap-3 transition-colors duration-700 hover:bg-gray-800/30 {grouped
 									? 'py-0.5'
 									: 'mt-3 pb-0.5 pt-1'} {highlightedMessageId === message.id
 									? 'bg-blue-500/10'
@@ -542,7 +599,8 @@
 										<ThinkingBlock
 											thinkingText={message.thinkingText}
 											isStreaming={message.status === 'streaming'}
-											startedAt={message.timestamp}
+											startedAt={message.thinkingStartedAt ?? message.timestamp}
+											completedAt={message.thinkingCompletedAt}
 										/>
 									{/if}
 
@@ -555,21 +613,12 @@
 											isStreaming={message.status === 'streaming'}
 										/>
 									{:else if message.status === 'streaming' && !message.thinkingText}
-										<!-- Typing indicator -->
-										<div class="flex gap-1 py-1">
-											<span
-												class="h-2 w-2 animate-bounce rounded-full bg-gray-500"
-												style="animation-delay: 0ms"
-											></span>
-											<span
-												class="h-2 w-2 animate-bounce rounded-full bg-gray-500"
-												style="animation-delay: 150ms"
-											></span>
-											<span
-												class="h-2 w-2 animate-bounce rounded-full bg-gray-500"
-												style="animation-delay: 300ms"
-											></span>
-										</div>
+										<span class="inline-block text-gray-400 animate-pulse">▌</span>
+									{/if}
+
+									<!-- Plan block -->
+									{#if message.plan?.length}
+										<PlanBlock steps={message.plan} isStreaming={message.status === 'streaming'} />
 									{/if}
 
 									<!-- Tool calls -->
@@ -584,37 +633,36 @@
 										<CanvasBlock runId={message.runId} />
 									{/if}
 
-									<!-- Actions (visible on hover) -->
-									{#if message.status === 'complete'}
-										<div
-											class="mt-0.5 flex items-center gap-2 opacity-0 transition-opacity group-hover/msg:opacity-100"
-										>
-											<div class="relative">
-												<button
-													onclick={() => toggleReactionPicker(message.id)}
-													class="py-1.5 text-xs text-gray-600 transition-colors hover:text-gray-400 md:py-0"
-												>
-													React
-												</button>
-												{#if reactionPickerMessageId === message.id}
-													<ReactionPicker
-														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
-														onClose={() => (reactionPickerMessageId = null)}
-													/>
-												{/if}
-											</div>
-											<button
-												onclick={() => handleReply(message)}
-												class="py-1.5 text-xs text-gray-600 transition-colors hover:text-gray-400 md:py-0"
-											>
-												Reply
-											</button>
-										</div>
+									<!-- Sources block -->
+									{#if message.sources?.length}
+										<SourcesBlock sources={message.sources} />
 									{/if}
+
+									<!-- Error display -->
 									{#if message.status === 'error'}
 										<span class="text-xs text-red-400">
 											{message.errorMessage ?? 'Error'}
 										</span>
+									{/if}
+
+									<!-- Actions (visible on hover) -->
+									{#if message.status === 'complete'}
+										<div class="mt-1">
+											<MessageActions
+												onreply={() => handleReply(message)}
+												onthread={() => handleReply(message)}
+												oncopy={() => copyMessageContent(message.content)}
+												onreact={() => toggleReactionPicker(message.id)}
+											/>
+											{#if reactionPickerMessageId === message.id}
+												<div class="relative">
+													<ReactionPicker
+														onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+														onClose={() => (reactionPickerMessageId = null)}
+													/>
+												</div>
+											{/if}
+										</div>
 									{/if}
 
 									<!-- Reactions -->
@@ -628,7 +676,32 @@
 							</div>
 						{/if}
 					{/each}
+
+					<!-- Inline exec approval prompts -->
+					{#if localPendingApprovals.length > 0}
+						<div class="mt-3 space-y-2">
+							{#each localPendingApprovals as approval (approval.requestId)}
+								<ExecApprovalPrompt
+									{approval}
+									pendingCount={localPendingApprovals.length}
+									onResolve={handleApprovalResolve}
+									onAlwaysDeny={handleApprovalAlwaysDeny}
+								/>
+							{/each}
+						</div>
+					{/if}
 				</div>
+			{/if}
+
+			<!-- Scroll-to-bottom button -->
+			{#if !shouldAutoScroll && messages.length > 0}
+				<button
+					onclick={scrollToBottom}
+					class="sticky bottom-4 left-1/2 -translate-x-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-700 bg-gray-800 text-gray-400 shadow-lg transition-all hover:bg-gray-700 hover:text-white"
+					aria-label="Scroll to bottom"
+				>
+					<ArrowDown size={18} />
+				</button>
 			{/if}
 		</div>
 

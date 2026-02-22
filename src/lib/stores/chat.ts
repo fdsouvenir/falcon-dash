@@ -2,6 +2,7 @@ import { writable, readonly, derived, get, type Readable, type Writable } from '
 import { AgentStreamManager } from '$lib/gateway/stream.js';
 import type {
 	AnyStreamEvent,
+	MessageStartEvent,
 	DeltaEvent,
 	ToolCallEvent,
 	ToolResultEvent
@@ -17,7 +18,11 @@ export interface ChatMessage {
 	status: 'sending' | 'sent' | 'streaming' | 'complete' | 'error';
 	runId?: string;
 	thinkingText?: string;
+	thinkingStartedAt?: number;
+	thinkingCompletedAt?: number;
 	toolCalls?: ToolCallInfo[];
+	sources?: SourceInfo[];
+	plan?: PlanStep[];
 	errorMessage?: string;
 	replyToMessageId?: string;
 	reactions?: ReactionInfo[];
@@ -36,7 +41,22 @@ export interface ToolCallInfo {
 	name: string;
 	args: Record<string, unknown>;
 	output?: unknown;
-	status: 'running' | 'complete';
+	status: 'pending' | 'running' | 'complete' | 'error';
+	startedAt?: number;
+	completedAt?: number;
+	errorMessage?: string;
+}
+
+export interface SourceInfo {
+	title: string;
+	url: string;
+	snippet?: string;
+}
+
+export interface PlanStep {
+	label: string;
+	description?: string;
+	status: 'pending' | 'active' | 'complete';
 }
 
 // Session store
@@ -79,6 +99,9 @@ export function createChatSession(sessionKey: string) {
 	// Handle stream events
 	const unsubStream = streamManager.on((event: AnyStreamEvent) => {
 		switch (event.type) {
+			case 'messageStart':
+				handleMessageStart(event as MessageStartEvent);
+				break;
 			case 'delta':
 				handleDelta(event as DeltaEvent);
 				break;
@@ -109,17 +132,45 @@ export function createChatSession(sessionKey: string) {
 		handleReactionEvent(payload);
 	});
 
+	function handleMessageStart(event: MessageStartEvent): void {
+		// Ensure an assistant placeholder exists for this run.
+		// Agent events may arrive before the chat.send RPC response creates the placeholder.
+		_messages.update((msgs) => {
+			if (msgs.some((m) => m.runId === event.runId && m.role === 'assistant')) return msgs;
+			const assistantMessage: ChatMessage = {
+				id: `${event.runId}-response`,
+				role: 'assistant',
+				content: '',
+				timestamp: Date.now(),
+				status: 'streaming',
+				runId: event.runId
+			};
+			return [...msgs, assistantMessage];
+		});
+		_activeRunId.set(event.runId);
+		setCanvasActiveRunId(event.runId);
+		_isStreaming.set(true);
+	}
+
 	function handleDelta(event: DeltaEvent): void {
 		_messages.update((msgs) => {
 			const idx = msgs.findIndex((m) => m.runId === event.runId && m.role === 'assistant');
 			if (idx >= 0) {
 				const updated = [...msgs];
-				updated[idx] = {
-					...updated[idx],
+				const msg = updated[idx];
+				const patch: Partial<ChatMessage> = {
 					content: event.text,
 					thinkingText: event.thinkingText,
 					status: 'streaming'
 				};
+				// Track thinking timestamps
+				if (event.thinkingText && !msg.thinkingStartedAt) {
+					patch.thinkingStartedAt = Date.now();
+				}
+				if (event.text && msg.thinkingText && msg.thinkingStartedAt && !msg.thinkingCompletedAt) {
+					patch.thinkingCompletedAt = Date.now();
+				}
+				updated[idx] = { ...msg, ...patch };
 				return updated;
 			}
 			return msgs;
@@ -136,7 +187,8 @@ export function createChatSession(sessionKey: string) {
 					toolCallId: event.toolCallId,
 					name: event.name,
 					args: event.args,
-					status: 'running'
+					status: 'running',
+					startedAt: Date.now()
 				});
 				updated[idx] = { ...updated[idx], toolCalls };
 				return updated;
@@ -153,7 +205,17 @@ export function createChatSession(sessionKey: string) {
 				const toolCalls = [...(updated[idx].toolCalls ?? [])];
 				const tcIdx = toolCalls.findIndex((tc) => tc.toolCallId === event.toolCallId);
 				if (tcIdx >= 0) {
-					toolCalls[tcIdx] = { ...toolCalls[tcIdx], output: event.output, status: 'complete' };
+					const isError = !!(event as ToolResultEvent & { isError?: boolean }).isError;
+					toolCalls[tcIdx] = {
+						...toolCalls[tcIdx],
+						output: event.output,
+						status: isError ? 'error' : 'complete',
+						completedAt: Date.now(),
+						errorMessage: isError
+							? ((event as ToolResultEvent & { errorMessage?: string }).errorMessage ??
+								String(event.output ?? 'Tool error'))
+							: undefined
+					};
 				}
 				updated[idx] = { ...updated[idx], toolCalls };
 				return updated;
@@ -173,10 +235,23 @@ export function createChatSession(sessionKey: string) {
 			const idx = msgs.findIndex((m) => m.runId === event.runId && m.role === 'assistant');
 			if (idx >= 0) {
 				const updated = [...msgs];
+				const msg = updated[idx];
+				// Mark any still-running tool calls as error
+				const toolCalls = msg.toolCalls?.map((tc) =>
+					tc.status === 'running'
+						? {
+								...tc,
+								status: 'error' as const,
+								completedAt: Date.now(),
+								errorMessage: 'Run ended before tool completed'
+							}
+						: tc
+				);
 				updated[idx] = {
-					...updated[idx],
+					...msg,
 					status: event.status === 'ok' ? 'complete' : 'error',
-					errorMessage: event.errorMessage
+					errorMessage: event.errorMessage,
+					toolCalls
 				};
 				return updated;
 			}
@@ -447,16 +522,21 @@ export function createChatSession(sessionKey: string) {
 			// Notify stream manager of ack
 			streamManager.onAck(runId, sessionKey);
 
-			// Create placeholder assistant message
-			const assistantMessage: ChatMessage = {
-				id: `${runId}-response`,
-				role: 'assistant',
-				content: '',
-				timestamp: Date.now(),
-				status: 'streaming',
-				runId
-			};
-			_messages.update((msgs) => [...msgs, assistantMessage]);
+			// Create placeholder assistant message (skip if messageStart already created one)
+			_messages.update((msgs) => {
+				if (msgs.some((m) => m.runId === runId && m.role === 'assistant')) return msgs;
+				return [
+					...msgs,
+					{
+						id: `${runId}-response`,
+						role: 'assistant' as const,
+						content: '',
+						timestamp: Date.now(),
+						status: 'streaming' as const,
+						runId
+					}
+				];
+			});
 			_activeRunId.set(runId);
 			setCanvasActiveRunId(runId);
 			_isStreaming.set(true);

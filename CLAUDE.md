@@ -158,13 +158,14 @@ Install: `openclaw plugins install ./openclaw-canvas-bridge` (then restart gatew
 ## Gateway Protocol Quick Reference
 
 - **URL:** `ws://127.0.0.1:18789` (proxied via Vite `/ws` in dev)
-- **client.id:** `"openclaw-control-ui"` (gateway validates this exact string)
+- **client.id:** `"openclaw-control-ui"` (validated against hardcoded enum in gateway — custom IDs not supported)
 - **client.mode:** `"ui"` (valid modes: webchat, cli, ui, backend, node, probe, test)
 - **Protocol version:** 3
 - **Frame types:** `req` (request), `res` (response), `event`
 - **Auth flow:** gateway sends `connect.challenge` event → client replies with `connect` request (id `__connect`) → gateway responds with `hello-ok`
 - **Connect frame ID:** uses `'__connect'` (non-numeric) to avoid collision with `RequestCorrelator`'s monotonic counter — do NOT change to a numeric ID
-- **Canvas caps:** connect frame declares `caps: ['canvas', 'canvas.a2ui']` and `commands: ['canvas.present', 'canvas.hide', 'canvas.navigate', 'canvas.a2ui.pushJSONL', 'canvas.a2ui.reset']`
+- **Capabilities:** connect frame declares `caps: ['canvas', 'canvas.a2ui', 'tool-events']` — `tool-events` required to receive tool stream events from gateway
+- **Canvas commands:** `commands: ['canvas.present', 'canvas.hide', 'canvas.navigate', 'canvas.a2ui.pushJSONL', 'canvas.a2ui.reset']`
 - **Canvas host:** A2UI bundle served at `http://<host>:<gatewayPort>/__openclaw__/a2ui/a2ui.bundle.js` (default port 18789)
 - **Scopes:** `operator.read`, `operator.write`, `operator.admin`, `operator.approvals`, `operator.pairing`
 - **Thinking levels:** off/minimal/low/medium/high/xhigh (NOT off/on/stream)

@@ -53,7 +53,7 @@
 		error = null;
 		try {
 			const result = await call<{ allowlist: string[]; policy: string; nodes: string[] }>(
-				'exec-approvals.get',
+				'exec.approvals.get',
 				{}
 			);
 			allowlist = result.allowlist || [];
@@ -72,7 +72,7 @@
 		if (!newPattern.trim()) return;
 		try {
 			const updated = [...allowlist, newPattern.trim()];
-			await call('exec-approvals.set', { allowlist: updated, policy });
+			await call('exec.approvals.set', { allowlist: updated, policy });
 			allowlist = updated;
 			newPattern = '';
 		} catch (e) {
@@ -83,7 +83,7 @@
 	async function removePattern(pattern: string) {
 		try {
 			const updated = allowlist.filter((p) => p !== pattern);
-			await call('exec-approvals.set', { allowlist: updated, policy });
+			await call('exec.approvals.set', { allowlist: updated, policy });
 			allowlist = updated;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -92,7 +92,7 @@
 
 	async function updatePolicy(newPolicy: 'off' | 'on-miss' | 'always') {
 		try {
-			await call('exec-approvals.set', { allowlist, policy: newPolicy });
+			await call('exec.approvals.set', { allowlist, policy: newPolicy });
 			policy = newPolicy;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -101,7 +101,7 @@
 
 	async function loadNodeAllowlist(nodeId: string) {
 		try {
-			const result = await call<{ allowlist: string[] }>('exec-approvals-node.get', { nodeId });
+			const result = await call<{ allowlist: string[] }>('exec.approvals.node.get', { nodeId });
 			nodeAllowlist = result.allowlist || [];
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -111,7 +111,7 @@
 	async function updateNodeAllowlist() {
 		if (!selectedNode) return;
 		try {
-			await call('exec-approvals-node.set', { nodeId: selectedNode, allowlist: nodeAllowlist });
+			await call('exec.approvals.node.set', { nodeId: selectedNode, allowlist: nodeAllowlist });
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -274,10 +274,9 @@
 							<div class="mb-2">
 								<div class="text-gray-100 font-mono text-sm">
 									{approval.command}
-									{approval.args.join(' ')}
 								</div>
 								<div class="text-gray-400 text-xs mt-1">
-									Node: {approval.nodeId}
+									Agent: {approval.agentId}
 								</div>
 							</div>
 							<div class="flex gap-2">

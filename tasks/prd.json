@@ -25,7 +25,7 @@
 			"description": "As a developer, I want a low-level WebSocket connection manager so that all modules can communicate with the gateway.",
 			"acceptanceCriteria": [
 				"GatewayConnection class manages WS lifecycle (open, close, send, receive)",
-				"Sends client.id: 'openclaw-control-ui' and client.mode: 'webchat'",
+				"Sends client.id: 'openclaw-control-ui' and client.mode: 'ui'",
 				"Handles connect.challenge event on WS open",
 				"Sends connect request frame with protocol version 3",
 				"Parses hello-ok response and exposes snapshot, features, policy",

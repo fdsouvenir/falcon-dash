@@ -13,9 +13,7 @@
 		onAlwaysDeny: (requestId: string, command: string) => void;
 	} = $props();
 
-	let commandDisplay = $derived(
-		`$ ${approval.command}${approval.args.length ? ' ' + approval.args.join(' ') : ''}`
-	);
+	let commandDisplay = $derived(`$ ${approval.command}`);
 </script>
 
 <div class="exec-approval-prompt rounded-lg border border-amber-800/50 bg-gray-900 p-4">
@@ -52,7 +50,7 @@
 	</div>
 
 	<!-- Node ID -->
-	<p class="mb-4 text-xs text-gray-500">Node: {approval.nodeId}</p>
+	<p class="mb-4 text-xs text-gray-500">Agent: {approval.agentId}</p>
 
 	<!-- Action buttons -->
 	<div class="flex flex-wrap gap-2">

@@ -1,6 +1,6 @@
-import { writable, readonly, type Readable } from 'svelte/store';
+import { writable, readonly, get, type Readable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { eventBus } from '$lib/stores/gateway.js';
+import { eventBus, connection } from '$lib/stores/gateway.js';
 import { call } from '$lib/stores/gateway.js';
 import { notifyApproval } from '$lib/stores/notifications.js';
 
@@ -11,8 +11,7 @@ import { notifyApproval } from '$lib/stores/notifications.js';
 export interface PendingApproval {
 	requestId: string;
 	command: string;
-	args: string[];
-	nodeId: string;
+	agentId: string;
 	timestamp: number;
 }
 
@@ -57,10 +56,10 @@ function persistDenylist(list: string[]): void {
  * Returns true if auto-denied by denylist (no prompt shown).
  */
 export function addPendingApproval(data: Record<string, unknown>): boolean {
-	const command = (data.command as string) ?? '';
-	const args = (data.args as string[]) ?? [];
-	const requestId = data.requestId as string;
-	const nodeId = (data.nodeId as string) ?? '';
+	const requestId = data.id as string;
+	const request = data.request as Record<string, unknown> | undefined;
+	const command = (request?.command as string) ?? '';
+	const agentId = (request?.agentId as string) ?? '';
 
 	// Check denylist — auto-deny silently
 	let denied = false;
@@ -70,13 +69,13 @@ export function addPendingApproval(data: Record<string, unknown>): boolean {
 	unsub();
 
 	if (denied) {
-		call('exec-approval.resolve', { requestId, decision: 'deny' }).catch(() => {});
+		call('exec.approval.resolve', { id: requestId, decision: 'deny' }).catch(() => {});
 		return true;
 	}
 
 	_pendingApprovals.update((list) => [
 		...list,
-		{ requestId, command, args, nodeId, timestamp: Date.now() }
+		{ requestId, command, agentId, timestamp: Date.now() }
 	]);
 	return false;
 }
@@ -86,7 +85,7 @@ export async function resolveApproval(
 	requestId: string,
 	decision: 'allow-once' | 'allow-always' | 'deny'
 ): Promise<void> {
-	await call('exec-approval.resolve', { requestId, decision });
+	await call('exec.approval.resolve', { id: requestId, decision });
 	_pendingApprovals.update((list) => list.filter((a) => a.requestId !== requestId));
 }
 
@@ -117,10 +116,21 @@ let _eventUnsub: (() => void) | null = null;
 
 export function subscribeToApprovalEvents(): void {
 	unsubscribeFromApprovalEvents();
-	_eventUnsub = eventBus.on('exec-approval.requested', (data: Record<string, unknown>) => {
+
+	const helloOk = get(connection.helloOk);
+	const scopes = helloOk?.auth?.scopes ?? [];
+	if (!scopes.includes('operator.approvals') && !scopes.includes('operator.admin')) {
+		console.warn(
+			'[exec-approvals] Cannot subscribe: operator.approvals scope not granted by gateway'
+		);
+		return;
+	}
+
+	_eventUnsub = eventBus.on('exec.approval.requested', (data: Record<string, unknown>) => {
 		const autoDenied = addPendingApproval(data);
 		if (!autoDenied) {
-			const command = (data.command as string) ?? 'command';
+			const request = data.request as Record<string, unknown> | undefined;
+			const command = (request?.command as string) ?? 'command';
 			notifyApproval('Approval requested', `${command} needs approval`);
 		}
 	});

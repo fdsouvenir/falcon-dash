@@ -5,6 +5,69 @@
 
 	let { content = '', isStreaming = false }: { content: string; isStreaming?: boolean } = $props();
 
+	/**
+	 * Close unclosed markdown fences and inline markers during streaming
+	 * so partial content renders correctly.
+	 */
+	function streamSanitize(text: string): string {
+		// Count triple-backtick fences — if odd, close with a newline + ```
+		const fenceMatches = text.match(/```/g);
+		if (fenceMatches && fenceMatches.length % 2 !== 0) {
+			text += '\n```';
+		}
+
+		// Close unclosed bold ** markers (only full pairs count as closed)
+		const boldMatches = text.match(/\*\*/g);
+		if (boldMatches && boldMatches.length % 2 !== 0) {
+			text += '**';
+		}
+
+		// Close unclosed italic * markers (exclude ** which are bold)
+		const stripped = text.replace(/\*\*/g, '');
+		const italicMatches = stripped.match(/\*/g);
+		if (italicMatches && italicMatches.length % 2 !== 0) {
+			text += '*';
+		}
+
+		return text;
+	}
+
+	// Throttled content for rendering: ~60ms via rAF during streaming, immediate on completion
+	let renderedContent = $state(content);
+	let rafId: number | null = null;
+	let pendingContent: string | null = null;
+
+	$effect(() => {
+		const current = content;
+		const streaming = isStreaming;
+
+		if (!streaming) {
+			// Immediate render on completion
+			if (rafId !== null) {
+				cancelAnimationFrame(rafId);
+				rafId = null;
+			}
+			pendingContent = null;
+			renderedContent = current;
+			return;
+		}
+
+		// During streaming, throttle via rAF (~16ms, but effectively batches rapid updates)
+		pendingContent = current;
+		if (rafId === null) {
+			rafId = requestAnimationFrame(() => {
+				rafId = null;
+				if (pendingContent !== null) {
+					renderedContent = pendingContent;
+					pendingContent = null;
+				}
+			});
+		}
+	});
+
+	// Sanitize content for display during streaming
+	let displayContent = $derived(isStreaming ? streamSanitize(renderedContent) : renderedContent);
+
 	// Split content into segments: markdown text, mermaid blocks, and code blocks
 	interface BaseSegment {
 		id: string;
@@ -36,10 +99,10 @@
 		let match;
 		let segmentIndex = 0;
 
-		while ((match = regex.exec(content)) !== null) {
+		while ((match = regex.exec(displayContent)) !== null) {
 			// Add markdown before code block
 			if (match.index > lastIndex) {
-				const markdownContent = content.slice(lastIndex, match.index);
+				const markdownContent = displayContent.slice(lastIndex, match.index);
 				result.push({
 					type: 'markdown',
 					content: markdownContent,
@@ -66,16 +129,16 @@
 		}
 
 		// Add remaining markdown
-		if (lastIndex < content.length) {
+		if (lastIndex < displayContent.length) {
 			result.push({
 				type: 'markdown',
-				content: content.slice(lastIndex),
+				content: displayContent.slice(lastIndex),
 				id: `segment-${segmentIndex++}`
 			});
 		}
 
 		if (result.length === 0) {
-			result.push({ type: 'markdown', content, id: `segment-${segmentIndex++}` });
+			result.push({ type: 'markdown', content: displayContent, id: `segment-${segmentIndex++}` });
 		}
 
 		return result;
@@ -109,9 +172,28 @@
 			{@html renderMarkdownSync(preprocessMarkdown(segment.content))}
 		{/if}
 	{/each}
+	{#if isStreaming}
+		<span class="streaming-cursor">▌</span>
+	{/if}
 </div>
 
 <style>
+	.streaming-cursor {
+		display: inline;
+		color: rgb(156 163 175);
+		animation: blink 1s step-end infinite;
+	}
+
+	@keyframes blink {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
+	}
+
 	.markdown-content :global(table) {
 		border-collapse: collapse;
 		width: 100%;

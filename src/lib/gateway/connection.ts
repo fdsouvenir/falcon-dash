@@ -217,7 +217,7 @@ export class GatewayConnection {
 				'operator.approvals',
 				'operator.pairing'
 			],
-			caps: ['canvas', 'canvas.a2ui'],
+			caps: ['canvas', 'canvas.a2ui', 'tool-events'],
 			commands: [
 				'canvas.present',
 				'canvas.hide',

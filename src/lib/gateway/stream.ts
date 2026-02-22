@@ -32,6 +32,8 @@ export interface ToolResultEvent extends StreamEvent {
 	toolCallId: string;
 	name: string;
 	output: unknown;
+	isError?: boolean;
+	errorMessage?: string;
 }
 
 export interface MessageEndEvent extends StreamEvent {
@@ -212,60 +214,63 @@ export class AgentStreamManager {
 		const stream = payload.stream as string;
 		const data = (payload.data ?? {}) as Record<string, unknown>;
 
-		if (stream === 'assistant') {
-			// Text or thinking delta
-			if (data.type === 'thinking' || data.type === 'thinking_delta') {
-				const thinkingText = (data.thinking ?? data.text ?? '') as string;
-				if (thinkingText.length >= run.thinkingText.length) {
-					run.thinkingText = thinkingText;
-				}
-				this.emit({
-					type: 'delta',
-					runId,
-					sessionKey: run.sessionKey,
-					ts: (payload.ts as number) ?? Date.now(),
-					text: run.text,
-					thinkingText: run.thinkingText
-				});
-			} else {
-				// text_delta, text_end, etc.
-				const text = (data.text ?? '') as string;
-				if (text.length >= run.text.length) {
-					run.text = text;
-				}
-				this.emit({
-					type: 'delta',
-					runId,
-					sessionKey: run.sessionKey,
-					ts: (payload.ts as number) ?? Date.now(),
-					text: run.text,
-					thinkingText: run.thinkingText
-				});
+		if (stream === 'thinking') {
+			// Thinking stream: data.text (accumulated), data.delta (incremental)
+			const thinkingText = (data.text ?? '') as string;
+			if (thinkingText.length >= run.thinkingText.length) {
+				run.thinkingText = thinkingText;
 			}
+			this.emit({
+				type: 'delta',
+				runId,
+				sessionKey: run.sessionKey,
+				ts: (payload.ts as number) ?? Date.now(),
+				text: run.text,
+				thinkingText: run.thinkingText
+			});
+		} else if (stream === 'assistant') {
+			// Text delta: data.text (accumulated), data.delta (incremental)
+			const text = (data.text ?? '') as string;
+			if (text.length >= run.text.length) {
+				run.text = text;
+			}
+			this.emit({
+				type: 'delta',
+				runId,
+				sessionKey: run.sessionKey,
+				ts: (payload.ts as number) ?? Date.now(),
+				text: run.text,
+				thinkingText: run.thinkingText
+			});
 		} else if (stream === 'tool') {
-			if (data.type === 'tool_start' || data.type === 'tool_use') {
+			// Tool events use data.phase: "start" | "update" | "result"
+			const phase = data.phase as string;
+			if (phase === 'start') {
 				this.emit({
 					type: 'toolCall',
 					runId,
 					sessionKey: run.sessionKey,
 					ts: (payload.ts as number) ?? Date.now(),
-					toolCallId: (data.toolCallId ?? data.id ?? '') as string,
+					toolCallId: (data.toolCallId ?? '') as string,
 					name: (data.name ?? '') as string,
-					args: (data.args ?? data.input ?? {}) as Record<string, unknown>
+					args: (data.args ?? {}) as Record<string, unknown>
 				});
-			} else if (data.type === 'tool_result') {
+			} else if (phase === 'result') {
+				const isError = !!data.isError;
 				this.emit({
 					type: 'toolResult',
 					runId,
 					sessionKey: run.sessionKey,
 					ts: (payload.ts as number) ?? Date.now(),
-					toolCallId: (data.toolCallId ?? data.id ?? '') as string,
+					toolCallId: (data.toolCallId ?? '') as string,
 					name: (data.name ?? '') as string,
-					output: data.output ?? data.result
+					output: data.result,
+					isError,
+					errorMessage: isError ? ((data.meta ?? '') as string) : undefined
 				});
 			}
 		} else if (stream === 'lifecycle') {
-			if (data.type === 'end') {
+			if (data.phase === 'end') {
 				// Lifecycle end — final response should follow
 			}
 		}

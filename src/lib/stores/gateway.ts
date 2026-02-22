@@ -224,6 +224,25 @@ connection.setOnHelloOk((helloOk) => {
 	snapshot.hydrate(helloOk);
 	snapshot.subscribe(eventBus);
 	canvasStore.subscribe(eventBus, call);
+	if (helloOk.auth) {
+		console.log('[gateway] Effective auth:', helloOk.auth);
+		diagnosticLog.log(
+			'auth',
+			'info',
+			`Scopes granted: ${(helloOk.auth.scopes ?? []).join(', ')}`,
+			helloOk.auth as unknown as Record<string, unknown>
+		);
+		if (!helloOk.auth.scopes?.includes('operator.approvals')) {
+			console.warn(
+				'[gateway] operator.approvals scope NOT granted — exec approval events will not be received'
+			);
+			diagnosticLog.log(
+				'auth',
+				'warn',
+				'operator.approvals scope missing — exec approvals disabled'
+			);
+		}
+	}
 	const gwUrl = get(gatewayUrl);
 	const gatewayHost = (() => {
 		try {

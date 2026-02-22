@@ -1133,18 +1133,18 @@ _The "General" session concept was removed in favor of a flat session list. User
 
 ### Connection & Protocol
 
-| #     | Requirement                                                                                                                   |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------- |
-| FR-01 | Dashboard connects to OpenClaw Gateway via WebSocket on configurable URL (default `ws://127.0.0.1:18789`)                     |
-| FR-02 | First frame must be a `connect` request with `client.id: "openclaw-control-ui"`, `client.mode: "webchat"`, protocol version 3 |
-| FR-03 | Dashboard reads `policy.tickIntervalMs` from `hello-ok` dynamically; never hardcodes tick interval                            |
-| FR-04 | Connection timeout set to 2x `tickIntervalMs` (miss 2 ticks = connection lost)                                                |
-| FR-05 | Reconnection uses exponential backoff: 800ms base, 1.7x multiplier, 15s cap                                                   |
-| FR-06 | Dashboard parses `features.methods` from `hello-ok` for runtime feature detection                                             |
-| FR-07 | Dashboard checks `features.methods` before enabling UI for optional modules (e.g., PM methods when pm-skill installed)        |
-| FR-08 | All mutating WS requests include an `idempotencyKey` for safe retry                                                           |
-| FR-09 | Token stored in localStorage; device keypair + token stored in IndexedDB                                                      |
-| FR-10 | Dashboard handles `shutdown` event and uses `restartExpectedMs` for reconnection delay                                        |
+| #     | Requirement                                                                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| FR-01 | Dashboard connects to OpenClaw Gateway via WebSocket on configurable URL (default `ws://127.0.0.1:18789`)                |
+| FR-02 | First frame must be a `connect` request with `client.id: "openclaw-control-ui"`, `client.mode: "ui"`, protocol version 3 |
+| FR-03 | Dashboard reads `policy.tickIntervalMs` from `hello-ok` dynamically; never hardcodes tick interval                       |
+| FR-04 | Connection timeout set to 2x `tickIntervalMs` (miss 2 ticks = connection lost)                                           |
+| FR-05 | Reconnection uses exponential backoff: 800ms base, 1.7x multiplier, 15s cap                                              |
+| FR-06 | Dashboard parses `features.methods` from `hello-ok` for runtime feature detection                                        |
+| FR-07 | Dashboard checks `features.methods` before enabling UI for optional modules (e.g., PM methods when pm-skill installed)   |
+| FR-08 | All mutating WS requests include an `idempotencyKey` for safe retry                                                      |
+| FR-09 | Token stored in localStorage; device keypair + token stored in IndexedDB                                                 |
+| FR-10 | Dashboard handles `shutdown` event and uses `restartExpectedMs` for reconnection delay                                   |
 
 ### Chat
 
@@ -1298,8 +1298,8 @@ All layouts use Tailwind responsive breakpoints and flex/grid from day one. Prim
 
 ### Gateway Protocol Constraints
 
-- `client.id` must be `"openclaw-control-ui"` (gateway validates against enum)
-- `client.mode` must be `"webchat"`
+- `client.id` must be `"openclaw-control-ui"` (validated against hardcoded enum — custom IDs not supported)
+- `client.mode` must be `"ui"`
 - Protocol version: 3
 - Events are NOT replayed — client must detect gaps and refresh
 - `stateVersion` is per-domain: `{ presence: N, health: N }`
