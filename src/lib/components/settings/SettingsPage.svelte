@@ -7,10 +7,14 @@
 	import DeviceManagement from './DeviceManagement.svelte';
 	import LiveLogs from './LiveLogs.svelte';
 	import ExecApprovals from './ExecApprovals.svelte';
+	import UserTab from './UserTab.svelte';
+	import AgentsTab from './AgentsTab.svelte';
 	import WorkspaceFiles from './WorkspaceFiles.svelte';
 	import CanvasDiagnosticsTab from './CanvasDiagnosticsTab.svelte';
 
 	const tabs = [
+		{ id: 'user', label: 'User', component: UserTab },
+		{ id: 'agents', label: 'Agents', component: AgentsTab },
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
 		{ id: 'information', label: 'Information', component: InformationTab },
 		{ id: 'config', label: 'Config', component: ConfigEditor },
@@ -23,7 +27,7 @@
 		{ id: 'about', label: 'About', component: AboutTab }
 	] as const;
 
-	let activeTab = $state<string>('preferences');
+	let activeTab = $state<string>('user');
 
 	function selectTab(id: string) {
 		activeTab = id;
