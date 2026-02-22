@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SkillsTab from '$lib/components/settings/SkillsTab.svelte';
+
 	let { onback }: { onback: () => void } = $props();
 </script>
 
@@ -18,25 +20,7 @@
 		<h1 class="text-base font-semibold text-white">Skills</h1>
 	</header>
 
-	<div class="flex flex-1 flex-col items-center justify-center p-4 text-center">
-		<div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-900">
-			<svg
-				class="h-8 w-8 text-gray-600"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="1.5"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
-				/>
-			</svg>
-		</div>
-		<p class="mt-4 text-sm font-medium text-gray-400">Coming Soon</p>
-		<p class="mt-1 text-xs text-gray-600">
-			Skills management will be available in a future update.
-		</p>
+	<div class="flex-1 overflow-y-auto p-4">
+		<SkillsTab />
 	</div>
 </div>
