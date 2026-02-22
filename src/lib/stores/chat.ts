@@ -160,9 +160,13 @@ export function createChatSession(sessionKey: string) {
 				const msg = updated[idx];
 				const patch: Partial<ChatMessage> = {
 					content: event.text,
-					thinkingText: event.thinkingText,
 					status: 'streaming'
 				};
+				// Only update thinkingText if the event carries a non-empty value
+				// (never overwrite accumulated thinking with empty string)
+				if (event.thinkingText) {
+					patch.thinkingText = event.thinkingText;
+				}
 				// Track thinking timestamps
 				if (event.thinkingText && !msg.thinkingStartedAt) {
 					patch.thinkingStartedAt = Date.now();

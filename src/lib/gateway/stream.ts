@@ -286,10 +286,27 @@ export class AgentStreamManager {
 		const state = payload.state as string;
 
 		if (state === 'delta') {
-			const message = payload.message as { content?: Array<{ text?: string }> } | undefined;
-			const text = message?.content?.[0]?.text ?? '';
+			const message = payload.message as
+				| {
+						content?: Array<{ type?: string; text?: string; thinking?: string }>;
+				  }
+				| undefined;
+			const contentBlocks = message?.content ?? [];
+			// Extract text from non-thinking blocks
+			const text = contentBlocks
+				.filter((b) => b.type !== 'thinking')
+				.map((b) => b.text ?? '')
+				.join('');
 			if (text.length >= run.text.length) {
 				run.text = text;
+			}
+			// Extract thinking from thinking blocks
+			const thinking = contentBlocks
+				.filter((b) => b.type === 'thinking' && b.thinking)
+				.map((b) => b.thinking!)
+				.join('\n');
+			if (thinking.length > run.thinkingText.length) {
+				run.thinkingText = thinking;
 			}
 			this.emit({
 				type: 'delta',
