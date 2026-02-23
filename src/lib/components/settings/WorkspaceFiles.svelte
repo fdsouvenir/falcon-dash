@@ -1,5 +1,12 @@
 <script lang="ts">
 	import MarkdownRenderer from '../MarkdownRenderer.svelte';
+	import * as Avatar from '$lib/components/ui/avatar/index.js';
+
+	interface AgentEntry {
+		id: string;
+		workspace: string;
+		identity?: { name: string; emoji?: string; theme?: string };
+	}
 
 	const TABS = [
 		{ path: 'SOUL.md', label: 'Soul' },
@@ -7,6 +14,10 @@
 		{ path: 'IDENTITY.md', label: 'Identity' },
 		{ path: 'MEMORY.md', label: 'Memory' }
 	];
+
+	let agents = $state<AgentEntry[]>([]);
+	let selectedAgentId = $state('');
+	let loadingAgents = $state(true);
 
 	let activeTab = $state(TABS[0].path);
 	let fileContent = $state('');
@@ -17,14 +28,42 @@
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 
-	async function loadTab(path: string) {
+	async function fetchAgents() {
+		loadingAgents = true;
+		try {
+			const res = await fetch('/api/agents');
+			if (!res.ok) throw new Error('Failed to load agents');
+			const data = await res.json();
+			agents = data.agents;
+			if (agents.length > 0 && !selectedAgentId) {
+				selectedAgentId = agents[0].id;
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to load agents';
+		} finally {
+			loadingAgents = false;
+		}
+	}
+
+	function agentDisplayName(agent: AgentEntry): string {
+		return agent.identity?.name || agent.id;
+	}
+
+	function agentInitial(agent: AgentEntry): string {
+		const name = agentDisplayName(agent);
+		return name.charAt(0).toUpperCase();
+	}
+
+	async function loadTab(path: string, agentId: string) {
+		if (!agentId) return;
 		loadingContent = true;
 		fileContent = '';
 		fileExists = false;
 		isEditing = false;
 		error = null;
 		try {
-			const res = await fetch(`/api/workspace-file?path=${encodeURIComponent(path)}`);
+			const params = new URLSearchParams({ path, agentId });
+			const res = await fetch(`/api/workspace-file?${params}`);
 			if (res.status === 404) {
 				fileExists = false;
 			} else if (!res.ok) {
@@ -43,7 +82,13 @@
 
 	function selectTab(path: string) {
 		activeTab = path;
-		loadTab(path);
+		loadTab(path, selectedAgentId);
+	}
+
+	function selectAgent(agentId: string) {
+		selectedAgentId = agentId;
+		isEditing = false;
+		loadTab(activeTab, agentId);
 	}
 
 	function startEditing() {
@@ -63,7 +108,7 @@
 			const res = await fetch('/api/workspace-file', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ path: activeTab, content: editContent })
+				body: JSON.stringify({ path: activeTab, content: editContent, agentId: selectedAgentId })
 			});
 			if (!res.ok) throw new Error(await res.text());
 			fileContent = editContent;
@@ -84,7 +129,7 @@
 			const res = await fetch('/api/workspace-file', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ path: activeTab, content: template })
+				body: JSON.stringify({ path: activeTab, content: template, agentId: selectedAgentId })
 			});
 			if (!res.ok) throw new Error(await res.text());
 			fileContent = template;
@@ -98,14 +143,47 @@
 		}
 	}
 
-	// Load first tab on mount
+	// Fetch agents on mount, then load first tab
 	$effect(() => {
-		loadTab(TABS[0].path);
+		fetchAgents();
+	});
+
+	// Load tab when selectedAgentId becomes available
+	$effect(() => {
+		if (selectedAgentId) {
+			loadTab(activeTab, selectedAgentId);
+		}
 	});
 </script>
 
 <div class="flex h-full flex-col overflow-hidden">
-	<!-- Tabs -->
+	<!-- Agent Picker -->
+	{#if loadingAgents}
+		<div class="border-b border-gray-700/50 px-4 py-3">
+			<div class="text-sm text-gray-500">Loading agents...</div>
+		</div>
+	{:else if agents.length > 1}
+		<div class="flex gap-2 overflow-x-auto border-b border-gray-700/50 px-4 py-3">
+			{#each agents as agent (agent.id)}
+				<button
+					onclick={() => selectAgent(agent.id)}
+					class="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors {selectedAgentId ===
+					agent.id
+						? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+						: 'border-gray-700/50 text-gray-400 hover:border-gray-600'}"
+				>
+					<Avatar.Root class="h-5 w-5 rounded-lg text-xs">
+						<Avatar.Fallback class="rounded-lg bg-gray-700 text-[10px]">
+							{agent.identity?.emoji || agentInitial(agent)}
+						</Avatar.Fallback>
+					</Avatar.Root>
+					{agentDisplayName(agent)}
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	<!-- File Tabs -->
 	<div class="flex border-b border-gray-700/50">
 		{#each TABS as tab (tab.path)}
 			<button
