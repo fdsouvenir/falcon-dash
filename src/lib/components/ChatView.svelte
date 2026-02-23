@@ -188,9 +188,9 @@
 		}, 2000);
 	}
 
-	function handleSend(message: string) {
+	function handleSend(message: string, attachments?: File[]) {
 		if (!chatSession) return;
-		chatSession.send(message);
+		chatSession.send(message, attachments);
 	}
 
 	function handleAbort() {
