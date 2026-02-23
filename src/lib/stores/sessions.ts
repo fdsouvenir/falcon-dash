@@ -286,8 +286,11 @@ export async function deleteSession(sessionKey: string): Promise<void> {
 	}
 }
 
-function uniqueLabel(base: string, existing: ChatSessionInfo[]): string {
-	const names = new Set(existing.map((s) => s.displayName));
+function uniqueLabel(base: string, existing: ChatSessionInfo[], agentId?: string): string {
+	const scoped = agentId
+		? existing.filter((s) => s.sessionKey.startsWith(`agent:${agentId}:`))
+		: existing;
+	const names = new Set(scoped.map((s) => s.displayName));
 	if (!names.has(base)) return base;
 	let n = 2;
 	while (names.has(`${base} ${n}`)) n++;
@@ -299,7 +302,7 @@ export async function createSession(label?: string): Promise<string> {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
-	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
+	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
@@ -322,7 +325,7 @@ export function createSessionOptimistic(label?: string): string {
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
-	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
+	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
