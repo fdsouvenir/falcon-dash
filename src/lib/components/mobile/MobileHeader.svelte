@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { activeSessionKey, sessions, type ChatSessionInfo } from '$lib/stores/sessions.js';
+	import {
+		activeSessionKey,
+		sessions,
+		selectedAgentId,
+		type ChatSessionInfo
+	} from '$lib/stores/sessions.js';
 	import { totalUnreadCount } from '$lib/stores/mobile-chat-nav.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import { unreadNotificationCount } from '$lib/stores/notifications.js';
@@ -55,10 +60,20 @@
 		return unsub;
 	});
 
+	let currentAgentId = $state<string | null>(null);
+
 	$effect(() => {
+		const unsub = selectedAgentId.subscribe((id) => {
+			currentAgentId = id;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const _id = currentAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'READY') return;
-			getAgentIdentity().then((identity) => {
+			getAgentIdentity(_id ?? undefined).then((identity) => {
 				agentName = identity.name || 'Agent';
 			});
 		});

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { snapshot, call } from '$lib/stores/gateway.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
-	import { activeSessionKey } from '$lib/stores/sessions.js';
+	import { activeSessionKey, selectedAgentId } from '$lib/stores/sessions.js';
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
 	import ChatSettingsForm from '$lib/components/ChatSettingsForm.svelte';
@@ -36,10 +36,20 @@
 	});
 
 	let agentName = $state('Agent');
+	let currentAgentId = $state<string | null>(null);
+
 	$effect(() => {
+		const unsub = selectedAgentId.subscribe((id) => {
+			currentAgentId = id;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const _id = currentAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'READY') return;
-			getAgentIdentity().then((identity) => {
+			getAgentIdentity(_id ?? undefined).then((identity) => {
 				agentName = identity.name || 'Agent';
 			});
 		});

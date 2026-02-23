@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { page } from '$app/stores';
-	import { activeSessionKey, setActiveSession } from '$lib/stores/sessions.js';
+	import { activeSessionKey, setActiveSession, selectedAgentId } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection } from '$lib/stores/gateway.js';
@@ -239,11 +239,20 @@
 
 	let agentName = $state('Agent');
 	let agentInitial = $derived(agentName.charAt(0).toUpperCase());
+	let currentAgentId = $state<string | null>(null);
 
 	$effect(() => {
+		const unsub = selectedAgentId.subscribe((id) => {
+			currentAgentId = id;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const _id = currentAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'READY') return;
-			getAgentIdentity().then((identity) => {
+			getAgentIdentity(_id ?? undefined).then((identity) => {
 				agentName = identity.name || 'Agent';
 			});
 		});

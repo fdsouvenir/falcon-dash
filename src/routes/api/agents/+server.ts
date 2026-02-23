@@ -12,26 +12,19 @@ export const GET: RequestHandler = async () => {
 	}
 };
 
-/** POST: Create a new agent */
+/** POST: Create a new agent (auto-generates ID if not provided) */
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const { id, identity, hash } = body;
 
-		if (!id || typeof id !== 'string') {
-			return json({ error: 'Agent ID is required', code: 'AGENT_INVALID' }, { status: 400 });
-		}
-		if (!identity?.name || typeof identity.name !== 'string') {
-			return json(
-				{ error: 'Agent display name is required', code: 'AGENT_INVALID' },
-				{ status: 400 }
-			);
-		}
 		if (!hash || typeof hash !== 'string') {
 			return json({ error: 'Config hash is required', code: 'AGENT_INVALID' }, { status: 400 });
 		}
 
-		const result = await createAgent({ id, identity }, hash);
+		const params =
+			id || identity ? { id: id as string | undefined, identity: identity } : undefined;
+		const result = await createAgent(params, hash);
 		return json(result, { status: 201 });
 	} catch (err) {
 		return handleAgentError(err);

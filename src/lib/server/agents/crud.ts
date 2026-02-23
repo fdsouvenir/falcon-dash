@@ -13,6 +13,7 @@ import { createWorkspace, triggerSyncPeers } from './sync.js';
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/;
 const RESERVED_IDS = new Set(['default']);
+const AUTO_ID_PATTERN = /^agent-(\d{3})$/;
 
 function validateId(id: string): void {
 	if (!ID_PATTERN.test(id)) {
@@ -51,6 +52,15 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
 	current[keys[keys.length - 1]] = value;
 }
 
+function nextAgentId(list: AgentListEntry[]): string {
+	const nums = list
+		.map((a) => AUTO_ID_PATTERN.exec(a.id))
+		.filter((m): m is RegExpExecArray => m !== null)
+		.map((m) => parseInt(m[1], 10));
+	const next = Math.max(0, ...nums) + 1;
+	return `agent-${String(next).padStart(3, '0')}`;
+}
+
 export function listAgents(): { agents: AgentListEntry[]; hash: string } {
 	const { config, hash } = readConfig();
 	return { agents: getAgentList(config), hash };
@@ -62,11 +72,9 @@ export function getAgent(id: string): AgentListEntry | null {
 }
 
 export async function createAgent(
-	params: { id: string; identity: AgentIdentityConfig },
+	params: { id?: string; identity?: AgentIdentityConfig } | undefined,
 	expectedHash: string
 ): Promise<{ agent: AgentListEntry; hash: string; syncTriggered: boolean }> {
-	validateId(params.id);
-
 	const { config, hash } = readConfig();
 	if (hash !== expectedHash) {
 		throw new AgentError(
@@ -77,15 +85,18 @@ export async function createAgent(
 
 	const list = ensureAgentsList(config);
 
-	if (list.some((a) => a.id === params.id)) {
-		throw new AgentError(AGENT_ERRORS.DUPLICATE, `Agent "${params.id}" already exists.`);
+	const id = params?.id ?? nextAgentId(list);
+	validateId(id);
+
+	if (list.some((a) => a.id === id)) {
+		throw new AgentError(AGENT_ERRORS.DUPLICATE, `Agent "${id}" already exists.`);
 	}
 
-	const workspace = join(homedir(), '.openclaw', `workspace-${params.id}`);
+	const workspace = join(homedir(), '.openclaw', `workspace-${id}`);
 	const agent: AgentListEntry = {
-		id: params.id,
+		id,
 		workspace,
-		identity: params.identity
+		...(params?.identity ? { identity: params.identity } : {})
 	};
 
 	list.push(agent);
@@ -97,9 +108,8 @@ export async function createAgent(
 
 	const newHash = writeConfig(config, hash);
 
-	// Workspace setup (non-blocking for config write)
-	const mainWorkspace = getDefaultWorkspace(config);
-	await createWorkspace(workspace, mainWorkspace);
+	// Workspace setup
+	await createWorkspace(workspace);
 
 	const syncTriggered = await triggerSyncPeers();
 

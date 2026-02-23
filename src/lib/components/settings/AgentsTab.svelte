@@ -27,7 +27,6 @@
 	let error = $state<string | null>(null);
 
 	// Modal states
-	let showCreateModal = $state(false);
 	let showEditModal = $state(false);
 	let showDeleteConfirm = $state(false);
 	let selectedAgent = $state<AgentEntry | null>(null);
@@ -39,6 +38,10 @@
 	let formTheme = $state('');
 	let formSaving = $state(false);
 	let formError = $state<string | null>(null);
+
+	// Spawn state
+	let spawning = $state(false);
+	let showSpawnConfirm = $state(false);
 
 	// Restart banner
 	let needsRestart = $state(false);
@@ -94,13 +97,40 @@
 		}
 	}
 
-	function openCreate() {
-		formId = '';
-		formName = '';
-		formEmoji = '';
-		formTheme = '';
-		formError = null;
-		showCreateModal = true;
+	function requestSpawn() {
+		if (!configHash || spawning) return;
+		showSpawnConfirm = true;
+	}
+
+	async function handleSpawn() {
+		showSpawnConfirm = false;
+		spawning = true;
+		try {
+			const res = await fetch('/api/agents', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ hash: configHash })
+			});
+
+			if (!res.ok) {
+				const data = await res.json();
+				if (data.code === 'AGENT_CONFLICT') {
+					await fetchAgents();
+					addToast('Config changed externally. Please try again.', 'error');
+					return;
+				}
+				throw new Error(data.error || 'Failed to spawn agent');
+			}
+
+			const data = await res.json();
+			needsRestart = true;
+			await fetchAgents();
+			addToast(`Agent "${data.agent.id}" created`, 'success');
+		} catch (e) {
+			addToast(e instanceof Error ? e.message : 'Failed to spawn agent', 'error');
+		} finally {
+			spawning = false;
+		}
 	}
 
 	function openEdit(agent: AgentEntry) {
@@ -119,60 +149,12 @@
 	}
 
 	function closeModals() {
-		showCreateModal = false;
 		showEditModal = false;
 		showDeleteConfirm = false;
+		showSpawnConfirm = false;
 		selectedAgent = null;
 		formSaving = false;
 		formError = null;
-	}
-
-	async function handleCreate() {
-		if (!formId.trim() || !formName.trim()) {
-			formError = 'Agent ID and display name are required.';
-			return;
-		}
-		if (!/^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$/.test(formId.trim())) {
-			formError = 'ID must be 2-32 lowercase alphanumeric chars and hyphens.';
-			return;
-		}
-
-		formSaving = true;
-		formError = null;
-		try {
-			const res = await fetch('/api/agents', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					id: formId.trim(),
-					identity: {
-						name: formName.trim(),
-						emoji: formEmoji.trim() || undefined,
-						theme: formTheme.trim() || undefined
-					},
-					hash: configHash
-				})
-			});
-
-			if (!res.ok) {
-				const data = await res.json();
-				if (data.code === 'AGENT_CONFLICT') {
-					await fetchAgents();
-					formError = 'Config changed externally. Please try again.';
-					return;
-				}
-				throw new Error(data.error || 'Failed to create agent');
-			}
-
-			closeModals();
-			needsRestart = true;
-			await fetchAgents();
-			addToast(`Agent "${formName.trim()}" created`, 'success');
-		} catch (e) {
-			formError = e instanceof Error ? e.message : 'Failed to create agent';
-		} finally {
-			formSaving = false;
-		}
 	}
 
 	async function handleUpdate() {
@@ -293,14 +275,29 @@
 			<p class="mt-1 text-sm text-gray-400">Manage your configured agents</p>
 		</div>
 		<button
-			onclick={openCreate}
-			class="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-400 transition-colors hover:border-gray-600 hover:bg-gray-700 hover:text-white"
-			aria-label="Add agent"
-			title="Add agent"
+			onclick={requestSpawn}
+			disabled={spawning || !configHash}
+			class="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-gray-600 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+			aria-label="Spawn agent"
+			title="Spawn agent"
 		>
-			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-			</svg>
+			{#if spawning}
+				<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+					></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+					></path>
+				</svg>
+				Spawning...
+			{:else}
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+				</svg>
+				Spawn Agent
+			{/if}
 		</button>
 	</div>
 
@@ -419,88 +416,33 @@
 	{/if}
 </div>
 
-<!-- Create Agent Modal -->
-{#if showCreateModal}
+<!-- Spawn Confirm Modal -->
+{#if showSpawnConfirm}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		onclick={handleBackdropClick}
 		onkeydown={handleDialogKeydown}
 		role="dialog"
 		aria-modal="true"
-		aria-label="Create new agent"
+		aria-label="Confirm spawn agent"
 	>
-		<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
-			<h3 class="mb-4 text-sm font-semibold text-white">New Agent</h3>
-
-			{#if formError}
-				<div class="mb-3 rounded bg-red-900/30 px-3 py-2 text-xs text-red-400">{formError}</div>
-			{/if}
-
-			<div class="space-y-3">
-				<div>
-					<label for="agent-id" class="mb-1 block text-xs text-gray-400">Agent ID</label>
-					<input
-						id="agent-id"
-						bind:value={formId}
-						type="text"
-						placeholder="research"
-						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 font-mono text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					/>
-					<p class="mt-1 text-xs text-gray-500">Lowercase letters, numbers, hyphens</p>
-				</div>
-
-				<div>
-					<label for="agent-name" class="mb-1 block text-xs text-gray-400">Display Name</label>
-					<input
-						id="agent-name"
-						bind:value={formName}
-						type="text"
-						placeholder="Research Agent"
-						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					/>
-				</div>
-
-				<div class="flex gap-3">
-					<div class="w-20">
-						<label for="agent-emoji" class="mb-1 block text-xs text-gray-400">Emoji</label>
-						<input
-							id="agent-emoji"
-							bind:value={formEmoji}
-							type="text"
-							placeholder="🔬"
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-center text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-						/>
-					</div>
-					<div class="flex-1">
-						<label for="agent-theme" class="mb-1 block text-xs text-gray-400">
-							Theme
-							<span class="text-gray-600">(optional)</span>
-						</label>
-						<input
-							id="agent-theme"
-							bind:value={formTheme}
-							type="text"
-							placeholder="research assistant"
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div class="mt-5 flex justify-end gap-2">
+		<div class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
+			<h3 class="mb-2 text-sm font-semibold text-white">Spawn Agent</h3>
+			<p class="mb-5 text-sm text-gray-300">
+				Create a new agent with an auto-generated ID? You can set its name and identity afterwards.
+			</p>
+			<div class="flex justify-end gap-2">
 				<button
-					onclick={closeModals}
-					disabled={formSaving}
+					onclick={() => (showSpawnConfirm = false)}
 					class="rounded px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-white"
 				>
 					Cancel
 				</button>
 				<button
-					onclick={handleCreate}
-					disabled={formSaving}
-					class="rounded bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+					onclick={handleSpawn}
+					class="rounded bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
 				>
-					{formSaving ? 'Creating...' : 'Create'}
+					Spawn
 				</button>
 			</div>
 		</div>

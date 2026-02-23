@@ -90,11 +90,13 @@ SvelteKit server code using better-sqlite3:
   - **`context-generator.ts`** — writes `PROJECTS.md`, per-project files, and `PM-API.md` to shared dir (`~/.openclaw/data/pm-context/`), then symlinks into all agent workspaces
   - **`context-scheduler.ts`** — debounced (5s) regeneration via PM events + 60s max staleness interval; `triggerContextGeneration()` for synchronous regen on individual mutations
   - **`workspace-discovery.ts`** — reads `~/.openclaw/openclaw.json` → `agents.list[]` to discover agent workspace paths for symlink targets
+- **`agents/`** — Agent CRUD against `~/.openclaw/openclaw.json` → `agents.list[]`. `createAgent()` auto-generates `agent-NNN` IDs (zero-padded, auto-increment) when no ID is provided; identity (name/emoji/theme) is optional. `createWorkspace()` creates an empty workspace dir — agents self-onboard via AGENTS.md on first conversation. Config writes use optimistic concurrency (hash check). `triggerSyncPeers()` runs `~/.openclaw/sync-peers.sh` after mutations.
 - **`files-config.ts`** — File system configuration for document browsing
 - **`keepassxc.ts`**, **`password-security.ts`**, **`passwords-config.ts`** — KeePassXC vault integration
 
 ### API Routes (`src/routes/api/`)
 
+- `agents/` — agent CRUD. GET lists agents + config hash. POST creates agent (only `hash` required; `id` and `identity` optional — server auto-generates `agent-NNN` ID). `agents/[id]` supports PATCH (update identity) and DELETE.
 - `pm/**` — full PM REST API (domains, focuses, projects, tasks, milestones, comments, blocks, activities, attachments, search, bulk, stats, context). Individual mutations call `triggerContextGeneration()` synchronously; bulk endpoint uses debounced regeneration via PM events. Auto-generated API reference at `~/.openclaw/data/pm-context/PM-API.md`.
 - `files/[...path]` — file CRUD operations
 - `files-bulk` — bulk file operations
@@ -113,7 +115,12 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - `/heartbeat` — system health monitoring
 - `/passwords` — password vault (KeePassXC)
 - `/projects` — project management dashboard (stat cards, domain/focus grouped list, project detail modal, task detail panel). Uses `history.pushState` for browser back navigation between views.
-- `/settings` — settings page (config editor, devices, Discord, exec approvals, live logs, models, skills, workspace files)
+- `/settings` — settings page (agents, config editor, devices, Discord, exec approvals, live logs, models, skills, workspace files)
+
+### Agent UI (`src/lib/components/`)
+
+- **`AgentRail.svelte`** — left sidebar agent switcher. Shows agent icons sourced from config API, overlays session counts from gateway. '+' button spawns a new agent with one-click confirm (auto-generated ID, no form). Tracks `configHash` for optimistic concurrency.
+- **`settings/AgentsTab.svelte`** — agent management in settings. Lists agents as cards with edit/delete actions. "Spawn Agent" button for one-click creation. Edit modal allows setting name/emoji/theme after creation. Delete modal with confirmation (primary agent protected).
 
 ### Specialized Modules
 

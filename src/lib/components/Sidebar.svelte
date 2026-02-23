@@ -18,7 +18,7 @@
 	$effect(() => {
 		const id = selectedAgentId;
 		const unsub = connectionState.subscribe((s) => {
-			if (s !== 'CONNECTED') return;
+			if (s !== 'READY') return;
 			getAgentIdentity(id).then((identity) => {
 				agentName = identity.name || 'Falcon Dashboard';
 				agentEmoji = identity.emoji;

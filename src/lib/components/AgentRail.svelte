@@ -3,6 +3,7 @@
 	import { connectionState } from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
+	import { addToast } from '$lib/stores/toast.js';
 
 	let {
 		selectedAgentId = $bindable('default'),
@@ -26,6 +27,9 @@
 
 	// Config agents fetched from /api/agents
 	let configAgents = $state<ConfigAgent[]>([]);
+	let configHash = $state('');
+	let spawning = $state(false);
+	let showSpawnConfirm = $state(false);
 
 	// Session counts (written by sessions effect)
 	let sessionCounts = $state<Record<string, number>>({});
@@ -38,8 +42,39 @@
 			if (Array.isArray(data.agents)) {
 				configAgents = data.agents;
 			}
+			if (data.hash) {
+				configHash = data.hash;
+			}
 		} catch {
 			// Silently fail — rail will be empty until next attempt
+		}
+	}
+
+	function requestSpawn() {
+		if (!configHash || spawning) return;
+		showSpawnConfirm = true;
+	}
+
+	async function confirmSpawn() {
+		showSpawnConfirm = false;
+		spawning = true;
+		try {
+			const res = await fetch('/api/agents', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ hash: configHash })
+			});
+			if (!res.ok) {
+				const data = await res.json();
+				throw new Error(data.error || 'Failed to spawn agent');
+			}
+			const data = await res.json();
+			await fetchConfigAgents();
+			addToast(`Agent "${data.agent.id}" created`, 'success');
+		} catch (e) {
+			addToast(e instanceof Error ? e.message : 'Failed to spawn agent', 'error');
+		} finally {
+			spawning = false;
 		}
 	}
 
@@ -171,18 +206,50 @@
 		<div class="agent-separator"></div>
 	{/if}
 
-	<!-- Settings link -->
-	<a
-		href="/settings"
-		class="agent-icon agent-icon--add"
-		class:agent-icon--mobile={isMobile}
-		aria-label="Agent settings"
-		title="Agent settings"
-	>
-		<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-		</svg>
-	</a>
+	<!-- Spawn agent button + confirm popover -->
+	<div class="agent-slot group relative">
+		<button
+			onclick={requestSpawn}
+			disabled={spawning || !configHash}
+			class="agent-icon agent-icon--add"
+			class:agent-icon--mobile={isMobile}
+			aria-label="Spawn new agent"
+			title="Spawn new agent"
+		>
+			{#if spawning}
+				<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+					></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+					></path>
+				</svg>
+			{:else}
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+				</svg>
+			{/if}
+		</button>
+
+		{#if showSpawnConfirm}
+			<div class="spawn-confirm" role="dialog" aria-label="Confirm spawn">
+				<p class="spawn-confirm__text">Spawn agent?</p>
+				<div class="spawn-confirm__actions">
+					<button
+						class="spawn-confirm__btn spawn-confirm__btn--cancel"
+						onclick={() => (showSpawnConfirm = false)}
+					>
+						Cancel
+					</button>
+					<button class="spawn-confirm__btn spawn-confirm__btn--go" onclick={confirmSpawn}>
+						Spawn
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <style>
@@ -351,5 +418,73 @@
 		background: var(--color-gray-700);
 		margin: 4px 0;
 		border-radius: 1px;
+	}
+
+	/* Spawn confirm popover */
+	.spawn-confirm {
+		position: absolute;
+		left: 100%;
+		top: 50%;
+		transform: translateY(-50%);
+		margin-left: 14px;
+		padding: 10px 12px;
+		background: var(--color-gray-900);
+		border: 1px solid var(--color-gray-700);
+		border-radius: 8px;
+		white-space: nowrap;
+		z-index: 50;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		box-shadow:
+			0 4px 24px rgba(0, 0, 0, 0.5),
+			0 0 0 1px rgba(255, 255, 255, 0.03);
+		animation: spawn-confirm-in 0.12s ease-out;
+	}
+	@keyframes spawn-confirm-in {
+		from {
+			opacity: 0;
+			transform: translateY(-50%) translateX(-4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(-50%) translateX(0);
+		}
+	}
+	.spawn-confirm__text {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--color-gray-300);
+		line-height: 1;
+	}
+	.spawn-confirm__actions {
+		display: flex;
+		gap: 6px;
+	}
+	.spawn-confirm__btn {
+		padding: 4px 10px;
+		border-radius: 5px;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		border: none;
+		cursor: pointer;
+		transition:
+			background-color 0.15s ease,
+			color 0.15s ease;
+		line-height: 1.4;
+	}
+	.spawn-confirm__btn--cancel {
+		background: transparent;
+		color: var(--color-gray-500);
+	}
+	.spawn-confirm__btn--cancel:hover {
+		color: var(--color-gray-300);
+	}
+	.spawn-confirm__btn--go {
+		background: var(--color-emerald-600);
+		color: white;
+	}
+	.spawn-confirm__btn--go:hover {
+		background: var(--color-emerald-500);
 	}
 </style>
