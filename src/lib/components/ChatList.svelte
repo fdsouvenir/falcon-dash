@@ -12,6 +12,7 @@
 		createSessionOptimistic,
 		togglePin,
 		pinnedSessions,
+		selectedAgentId,
 		type ChatSessionInfo,
 		type SessionGroup
 	} from '$lib/stores/sessions.js';
@@ -46,12 +47,22 @@
 
 	let agentName = $state('Agent');
 	let agentEmoji = $state<string | undefined>(undefined);
+	let currentAgentId = $state<string | null>(null);
 
 	$effect(() => {
 		if (variant !== 'mobile') return;
+		const unsub = selectedAgentId.subscribe((id) => {
+			currentAgentId = id;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		if (variant !== 'mobile') return;
+		const _id = currentAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'READY') return;
-			getAgentIdentity().then((identity) => {
+			getAgentIdentity(_id ?? undefined).then((identity) => {
 				agentName = identity.name || 'Agent';
 				agentEmoji = identity.emoji;
 			});
