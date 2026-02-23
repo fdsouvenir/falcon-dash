@@ -480,7 +480,7 @@ export function createChatSession(sessionKey: string) {
 	/**
 	 * Send a message to the agent. Optimistic: user message appears immediately.
 	 */
-	async function send(message: string): Promise<void> {
+	async function send(message: string, files?: File[]): Promise<void> {
 		const idempotencyKey = crypto.randomUUID();
 		const currentReplyTo = get(_replyTo);
 		const userMessage: ChatMessage = {
@@ -508,12 +508,32 @@ export function createChatSession(sessionKey: string) {
 		}
 
 		try {
+			// Encode file attachments as base64 for the gateway
+			let attachments: Array<{ type: string; mimeType: string; content: string }> | undefined;
+			if (files && files.length > 0) {
+				attachments = await Promise.all(
+					files.map(async (file) => {
+						const buffer = await file.arrayBuffer();
+						const bytes = new Uint8Array(buffer);
+						let binary = '';
+						for (let i = 0; i < bytes.length; i++) {
+							binary += String.fromCharCode(bytes[i]);
+						}
+						const base64 = btoa(binary);
+						const mimeType = file.type || 'application/octet-stream';
+						const kind = mimeType.startsWith('image/') ? 'image' : 'file';
+						return { type: kind, mimeType, content: base64 };
+					})
+				);
+			}
+
 			const result = await call<{ runId: string; status: string }>('chat.send', {
 				sessionKey,
 				message,
 				idempotencyKey,
 				deliver: false,
-				replyToMessageId: currentReplyTo?.id
+				replyToMessageId: currentReplyTo?.id,
+				...(attachments ? { attachments } : {})
 			});
 
 			const runId = result.runId;
