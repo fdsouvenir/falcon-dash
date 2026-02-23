@@ -77,7 +77,7 @@ Svelte writable/readable stores that provide reactive state to components. Key s
 - `sessions.ts` — session lifecycle (create, rename, delete, reorder, event subscriptions)
 - `files.ts`, `editor.ts` — document browser state
 - `passwords.ts` — password vault state
-- `pm-store.ts`, `pm-domains.ts`, `pm-projects.ts`, `pm-operations.ts`, `pm-events.ts` — project management stores
+- `pm-store.ts`, `pm-domains.ts`, `pm-projects.ts`, `pm-operations.ts` — project management stores
 - `heartbeat.ts`, `cron.ts`, `toast.ts`, `notifications.ts`, `discord.ts` — utility stores
 - `diagnostics.ts` — connection health metrics (tick health tracking)
 - `token.ts` — gateway token + URL persistence
@@ -86,7 +86,7 @@ Svelte writable/readable stores that provide reactive state to components. Key s
 
 SvelteKit server code using better-sqlite3:
 
-- **`pm/`** — Project management CRUD, search, validation, events, stats, bulk operations, context. Schema: domains → focuses → projects → tasks (with subtasks), plus milestones, comments, blocks, activities, attachments, sync_mappings.
+- **`pm/`** — Project management CRUD, search, validation, events, stats, context. Schema: domains → focuses → projects (with markdown `body`), plus activities. Projects are markdown documents — agents write rich-formatted content to the `body` field via PATCH.
   - **`context-generator.ts`** — writes `PROJECTS.md`, per-project files, and `PM-API.md` to shared dir (`~/.openclaw/data/pm-context/`), then symlinks into all agent workspaces
   - **`context-scheduler.ts`** — debounced (5s) regeneration via PM events + 60s max staleness interval; `triggerContextGeneration()` for synchronous regen on individual mutations
   - **`workspace-discovery.ts`** — reads `~/.openclaw/openclaw.json` → `agents.list[]` to discover agent workspace paths for symlink targets
@@ -97,7 +97,7 @@ SvelteKit server code using better-sqlite3:
 ### API Routes (`src/routes/api/`)
 
 - `agents/` — agent CRUD. GET lists agents + config hash. POST creates agent (only `hash` required; `id` and `identity` optional — server auto-generates `agent-NNN` ID). `agents/[id]` supports PATCH (update identity) and DELETE.
-- `pm/**` — full PM REST API (domains, focuses, projects, tasks, milestones, comments, blocks, activities, attachments, search, bulk, stats, context). Individual mutations call `triggerContextGeneration()` synchronously; bulk endpoint uses debounced regeneration via PM events. Auto-generated API reference at `~/.openclaw/data/pm-context/PM-API.md`.
+- `pm/**` — PM REST API (domains, focuses, projects, activities, search, stats, context). Mutations call `triggerContextGeneration()` synchronously. Auto-generated API reference at `~/.openclaw/data/pm-context/PM-API.md`.
 - `files/[...path]` — file CRUD operations
 - `files-bulk` — bulk file operations
 - `gateway-config` — gateway configuration proxy
@@ -114,7 +114,7 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 - `/jobs` — cron job management
 - `/heartbeat` — system health monitoring
 - `/passwords` — password vault (KeePassXC)
-- `/projects` — project management dashboard (stat cards, domain/focus grouped list, project detail modal, task detail panel). Uses `history.pushState` for browser back navigation between views.
+- `/projects` — project management dashboard (stat cards, category/sub-category grouped list, project detail modal). Uses `history.pushState` for browser back navigation between views.
 - `/settings` — settings page (agents, config editor, devices, Discord, exec approvals, live logs, models, skills, workspace files)
 
 ### Agent UI (`src/lib/components/`)
@@ -134,12 +134,10 @@ Root layout (`+layout.svelte`) handles auth gating: shows `TokenEntry` if no tok
 ### PM UI Components (`src/lib/components/pm/`)
 
 - **`pm-utils.ts`** — shared formatting utilities: `STATUS_BORDER`/`STATUS_DOT`/`STATUS_BADGE` maps, `getPriorityIndicator()` (dot indicators), `getPriorityBadge()` (labeled badges), `formatRelativeTime()` (wraps chat time-utils for unix seconds), `formatStatusLabel()`
-- **`ProjectList.svelte`** — dashboard view with stat cards (Total/Active/Due Soon/Overdue from `getPMStats`/`getDashboardContext`), attention chips, filter pills (Active/All/Done/Archived), projects grouped by Domain → Focus with collapsible domain headers. Orphan projects (no known domain) render in a flat "Other" section.
-- **`ProjectDetail.svelte`** — modal overlay for project detail. Compact single-row toolbar header (back arrow + breadcrumb + title + status/priority). Three tabs: Tasks (table layout with expand/collapse subtasks via `SvelteSet`), Comments, Activity (clickable targets navigate to tasks/comments). Fetches subtasks for each root task and merges into taskList.
-- **`TaskDetailPanel.svelte`** — right-side panel (500px desktop, full mobile) for task detail. Back arrow navigation, ancestry breadcrumb, subtask list with priority badges. Reloads on `taskId` prop change via `$effect`.
-- **`PMDashboard.svelte`** — standalone dashboard view (currently unused, superseded by dashboard header in ProjectList)
+- **`ProjectList.svelte`** — dashboard view with stat cards (Total/Active/Due Soon/Overdue from `getPMStats`/`getDashboardContext`), filter pills (Active/All/Done/Archived), projects grouped by Category → Sub-Category with collapsible headers. Orphan projects (no known domain) render in a flat "Other" section.
+- **`ProjectDetail.svelte`** — modal overlay for project detail. Compact single-row toolbar header (back arrow + breadcrumb + title + status/priority). Two tabs: Status (renders project `body` markdown via `MarkdownRenderer` with full Shiki/KaTeX/mermaid pipeline) and Activity (project feed).
 
-**Navigation flow:** `+page.svelte` manages `selectedProjectId`/`selectedTaskId` state with `history.pushState`/`popstate` integration. Browser back navigates: task → project → list → exit. All close/navigate callbacks route through `navigateBack()`/`navigateToProject()`/`navigateToTask()`.
+**Navigation flow:** `+page.svelte` manages `selectedProjectId` state with `history.pushState`/`popstate` integration. Browser back navigates: project → list → exit.
 
 ### PM Context Pipeline
 
@@ -148,7 +146,7 @@ Auto-generated markdown files that give agents read access to PM data:
 - **Shared dir:** `~/.openclaw/data/pm-context/` (override via `PM_CONTEXT_DIR` env var)
 - **Files generated:** `PROJECTS.md` (active project summary table + dashboard), `Projects/{id}.md` (per-project detail), `PM-API.md` (REST API reference)
 - **Symlinks:** created in each agent workspace discovered from `~/.openclaw/openclaw.json` → `agents.list[].workspace`
-- **Regen triggers:** synchronous after individual mutations (via `triggerContextGeneration()`), debounced (5s) for bulk operations and PM events, 60s max staleness interval
+- **Regen triggers:** synchronous after individual mutations (via `triggerContextGeneration()`), debounced (5s) for PM events, 60s max staleness interval
 - **Agent writes:** agents `curl` the REST API at `localhost:3000/api/pm/*` directly — documented in `PM-API.md`
 
 ### Gateway Plugin (`openclaw-canvas-bridge/`)

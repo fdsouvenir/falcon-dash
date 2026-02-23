@@ -10,7 +10,7 @@ Falcon Dash is designed to be installed alongside OpenClaw and serves as the mai
 ## Features
 
 - **Chat** — Real-time conversation with the OpenClaw agent. Supports streaming responses, thinking blocks, tool call visualization, slash commands, threads, bookmarks, and search. Markdown rendering includes syntax highlighting (Shiki), math (KaTeX), and diagrams (Mermaid).
-- **Project Management** — Full PM system with domains, focuses, projects, tasks, and subtasks. Includes a navigation tree, project list with filtering, project detail overlays, and task detail panels. Powered by the `openclaw-pm` gateway plugin.
+- **Project Management** — PM system with categories, sub-categories, and projects. Each project is a rich markdown document that agents write freely. Includes a project list with filtering, stat cards, and project detail overlays with rendered markdown and activity feed.
 - **Documents** — Browse and edit files in the OpenClaw workspace. Supports creating, renaming, and deleting files and directories.
 - **Agent Jobs** — Create and manage cron jobs that run on a schedule (cron expressions, intervals, or one-shot timestamps). View run history and job status.
 - **Heartbeat** — Monitor system health with heartbeat history and status indicators.
@@ -79,16 +79,6 @@ Routes the agent's canvas commands (present, hide, navigate, push A2UI) to the d
 cd openclaw-canvas-bridge
 npm install && npm run build
 openclaw plugins install ./openclaw-canvas-bridge
-```
-
-### Project Management (openclaw-pm)
-
-Provides the PM backend — domains, projects, tasks, milestones, comments, dependencies, and search. Data is stored in a local SQLite database at `~/.openclaw/data/pm.db`.
-
-```bash
-cd openclaw-pm
-npm install && npm run build
-openclaw plugins install ./openclaw-pm
 ```
 
 Restart the gateway after installing plugins.
