@@ -1,11 +1,6 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-	import {
-		getAgentIdentity,
-		connectionState,
-		type AgentIdentity
-	} from '$lib/stores/agent-identity.js';
+	import { connectionState } from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 
@@ -14,26 +9,55 @@
 		variant = 'desktop'
 	}: { selectedAgentId: string; variant?: 'desktop' | 'mobile' } = $props();
 
+	interface ConfigAgent {
+		id: string;
+		workspace: string;
+		identity?: { name?: string; emoji?: string; theme?: string };
+	}
+
 	interface AgentEntry {
 		agentId: string;
 		name: string;
 		emoji: string | undefined;
 		initial: string;
 		sessionCount: number;
+		hasIdentity: boolean;
 	}
 
-	// Separate state for session counts (written by sessions effect)
+	// Config agents fetched from /api/agents
+	let configAgents = $state<ConfigAgent[]>([]);
+
+	// Session counts (written by sessions effect)
 	let sessionCounts = $state<Record<string, number>>({});
 
-	// Identity cache (written only by fetch effect)
-	let identityMap = new SvelteMap<string, AgentIdentity>();
-	let loadingIds = new SvelteSet<string>();
+	async function fetchConfigAgents() {
+		try {
+			const res = await fetch('/api/agents');
+			if (!res.ok) return;
+			const data = await res.json();
+			if (Array.isArray(data.agents)) {
+				configAgents = data.agents;
+			}
+		} catch {
+			// Silently fail — rail will be empty until next attempt
+		}
+	}
+
+	// Fetch on mount
+	fetchConfigAgents();
+
+	// Re-fetch when connection becomes READY (reconnect)
+	$effect(() => {
+		const unsub = connectionState.subscribe((s) => {
+			if (s === 'READY') fetchConfigAgents();
+		});
+		return unsub;
+	});
 
 	// Effect: subscribe to sessions store, compute counts
 	$effect(() => {
 		const unsub = sessions.subscribe(($sessions) => {
-			const defId = get(snapshot.sessionDefaults).defaultAgentId ?? 'default';
-			const counts: Record<string, number> = { [defId]: 0 };
+			const counts: Record<string, number> = {};
 			for (const s of $sessions) {
 				const match = s.sessionKey.match(/^agent:([^:]+):/);
 				if (match) counts[match[1]] = (counts[match[1]] ?? 0) + 1;
@@ -43,32 +67,38 @@
 		return unsub;
 	});
 
-	// Effect: fetch identities for newly seen agent IDs
-	$effect(() => {
+	// Derive agents from config, overlay session counts
+	let agents = $derived.by(() => {
+		// Map config agents as primary source
+		const entries: AgentEntry[] = configAgents.map((ca) => {
+			const name = ca.identity?.name || ca.id;
+			return {
+				agentId: ca.id,
+				name,
+				emoji: ca.identity?.emoji,
+				initial: name.charAt(0).toUpperCase(),
+				sessionCount: sessionCounts[ca.id] ?? 0,
+				hasIdentity: !!ca.identity?.name
+			};
+		});
+
+		// Add any session-only agents not in config (edge case: stale sessions)
+		const configIds = new Set(configAgents.map((ca) => ca.id));
 		for (const id of Object.keys(sessionCounts)) {
-			if (!identityMap.has(id) && !loadingIds.has(id)) {
-				loadingIds.add(id);
-				getAgentIdentity(id).then((identity) => {
-					identityMap.set(id, identity);
+			if (!configIds.has(id)) {
+				entries.push({
+					agentId: id,
+					name: id,
+					emoji: undefined,
+					initial: id.charAt(0).toUpperCase(),
+					sessionCount: sessionCounts[id],
+					hasIdentity: false
 				});
 			}
 		}
-	});
 
-	// Pure derivation: agents list from counts + identities
-	let agents = $derived(
-		Object.keys(sessionCounts).map((id) => {
-			const identity = identityMap.get(id);
-			const name = identity?.name || id;
-			return {
-				agentId: id,
-				name,
-				emoji: identity?.emoji,
-				initial: name.charAt(0).toUpperCase(),
-				sessionCount: sessionCounts[id] ?? 0
-			} as AgentEntry;
-		})
-	);
+		return entries;
+	});
 
 	// Auto-select default agent on connection
 	$effect(() => {
@@ -83,50 +113,54 @@
 		return unsub;
 	});
 
-	let railWidth = $derived(variant === 'mobile' ? 'w-14' : 'w-[72px]');
-	let iconSize = $derived(variant === 'mobile' ? 'h-10 w-10' : 'h-12 w-12');
-	let fontSize = $derived(variant === 'mobile' ? 'text-sm' : 'text-base');
+	let isMobile = $derived(variant === 'mobile');
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static route -->
 <div
-	class="flex {railWidth} shrink-0 flex-col items-center gap-2 border-r border-gray-800 bg-gray-900 pb-3 pt-3"
+	class="agent-rail flex shrink-0 flex-col items-center gap-1 pb-3 pt-3"
+	class:agent-rail--mobile={isMobile}
 >
 	<!-- Agent icons -->
 	{#each agents as agent (agent.agentId)}
 		{@const isActive = selectedAgentId === agent.agentId}
-		<div class="group relative">
-			<!-- Active pill indicator (left edge) -->
-			{#if isActive}
-				<div
-					class="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white"
-				></div>
-			{:else}
-				<div
-					class="absolute -left-1 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-white opacity-0 transition-opacity group-hover:opacity-100"
-				></div>
-			{/if}
+		{@const hasActivity = agent.sessionCount > 0}
+		<div class="agent-slot group relative">
+			<!-- Active indicator — left edge pill -->
+			<div
+				class="agent-pill"
+				class:agent-pill--active={isActive}
+				class:agent-pill--hover={!isActive}
+			></div>
+
 			<button
 				onclick={() => {
 					selectedAgentId = agent.agentId;
 					setSelectedAgent(agent.agentId);
 				}}
-				class="{iconSize} flex items-center justify-center transition-all duration-200 {isActive
-					? 'rounded-2xl bg-blue-600'
-					: 'rounded-full bg-gray-800 hover:rounded-2xl hover:bg-blue-600/80'} {fontSize} font-bold text-white"
+				class="agent-icon"
+				class:agent-icon--active={isActive}
+				class:agent-icon--mobile={isMobile}
 				title={agent.name}
 				aria-label="Switch to {agent.name}"
 			>
-				{agent.emoji || agent.initial}
+				<span class="agent-icon__label">
+					{agent.emoji || agent.initial}
+				</span>
+
+				<!-- Online dot — bottom-right -->
+				{#if hasActivity}
+					<span class="agent-dot" class:agent-dot--active={isActive}></span>
+				{/if}
 			</button>
 
 			<!-- Tooltip -->
-			<div
-				class="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded bg-gray-950 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
-			>
-				{agent.name}
+			<div class="agent-tooltip">
+				<span class="agent-tooltip__name">{agent.name}</span>
 				{#if agent.sessionCount > 0}
-					<span class="ml-1 text-gray-400">({agent.sessionCount})</span>
+					<span class="agent-tooltip__count">
+						{agent.sessionCount} session{agent.sessionCount === 1 ? '' : 's'}
+					</span>
 				{/if}
 			</div>
 		</div>
@@ -134,13 +168,14 @@
 
 	<!-- Separator -->
 	{#if agents.length > 0}
-		<div class="h-px w-8 bg-gray-700"></div>
+		<div class="agent-separator"></div>
 	{/if}
 
-	<!-- Add / settings button -->
+	<!-- Settings link -->
 	<a
 		href="/settings"
-		class="{iconSize} flex items-center justify-center rounded-full bg-gray-800 text-green-500 transition-all duration-200 hover:rounded-2xl hover:bg-green-600 hover:text-white"
+		class="agent-icon agent-icon--add"
+		class:agent-icon--mobile={isMobile}
 		aria-label="Agent settings"
 		title="Agent settings"
 	>
@@ -149,3 +184,172 @@
 		</svg>
 	</a>
 </div>
+
+<style>
+	/* Rail container */
+	.agent-rail {
+		width: 72px;
+		background: color-mix(in oklab, var(--color-gray-900) 94%, black);
+		border-right: 1px solid var(--color-gray-800);
+	}
+	.agent-rail--mobile {
+		width: 56px;
+	}
+
+	/* Slot — wraps pill + icon + tooltip */
+	.agent-slot {
+		padding: 2px 0;
+	}
+
+	/* Left-edge pill indicator */
+	.agent-pill {
+		position: absolute;
+		left: -1px;
+		top: 50%;
+		width: 4px;
+		border-radius: 0 4px 4px 0;
+		background: var(--color-white);
+		transition:
+			height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+			opacity 0.15s ease;
+	}
+	.agent-pill--active {
+		height: 24px;
+		transform: translateY(-50%);
+		opacity: 1;
+	}
+	.agent-pill--hover {
+		height: 8px;
+		transform: translateY(-50%);
+		opacity: 0;
+	}
+	.group:hover .agent-pill--hover {
+		opacity: 1;
+	}
+
+	/* Icon button */
+	.agent-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: var(--color-gray-800);
+		cursor: pointer;
+		position: relative;
+		transition:
+			border-radius 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+			background-color 0.2s ease,
+			box-shadow 0.2s ease;
+		border: none;
+		color: var(--color-white);
+		font-weight: 700;
+	}
+	.agent-icon--mobile {
+		width: 40px;
+		height: 40px;
+	}
+	.agent-icon:hover {
+		border-radius: 16px;
+		background: var(--color-blue-600);
+		box-shadow: 0 2px 12px color-mix(in oklab, var(--color-blue-600) 40%, transparent);
+	}
+	.agent-icon--active {
+		border-radius: 16px;
+		background: var(--color-blue-600);
+		box-shadow:
+			0 2px 12px color-mix(in oklab, var(--color-blue-600) 35%, transparent),
+			inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+	}
+	.agent-icon--active:hover {
+		background: var(--color-blue-500);
+	}
+
+	/* Icon label (emoji or initial) */
+	.agent-icon__label {
+		font-size: 1.125rem;
+		line-height: 1;
+		user-select: none;
+	}
+	.agent-icon--mobile .agent-icon__label {
+		font-size: 0.9375rem;
+	}
+
+	/* Online dot */
+	.agent-dot {
+		position: absolute;
+		bottom: -1px;
+		right: -1px;
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--color-emerald-500);
+		border: 2.5px solid color-mix(in oklab, var(--color-gray-900) 94%, black);
+		transition: border-color 0.2s ease;
+	}
+	.agent-dot--active {
+		border-color: color-mix(in oklab, var(--color-blue-600) 100%, black 6%);
+	}
+
+	/* Add button */
+	.agent-icon--add {
+		background: transparent;
+		color: var(--color-gray-500);
+		border: 2px dashed var(--color-gray-700);
+		text-decoration: none;
+	}
+	.agent-icon--add:hover {
+		background: transparent;
+		color: var(--color-emerald-400);
+		border-color: var(--color-emerald-500);
+		box-shadow: 0 2px 12px color-mix(in oklab, var(--color-emerald-500) 25%, transparent);
+	}
+
+	/* Tooltip */
+	.agent-tooltip {
+		position: absolute;
+		left: 100%;
+		top: 50%;
+		transform: translateY(-50%);
+		margin-left: 14px;
+		padding: 6px 10px;
+		background: var(--color-gray-950);
+		border: 1px solid var(--color-gray-800);
+		border-radius: 6px;
+		white-space: nowrap;
+		pointer-events: none;
+		opacity: 0;
+		transition:
+			opacity 0.15s ease,
+			transform 0.15s ease;
+		z-index: 50;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	}
+	.group:hover .agent-tooltip {
+		opacity: 1;
+	}
+	.agent-tooltip__name {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-white);
+		line-height: 1.3;
+	}
+	.agent-tooltip__count {
+		font-size: 0.6875rem;
+		color: var(--color-gray-400);
+		line-height: 1.3;
+	}
+
+	/* Separator */
+	.agent-separator {
+		width: 32px;
+		height: 1px;
+		background: var(--color-gray-700);
+		margin: 4px 0;
+		border-radius: 1px;
+	}
+</style>
