@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import { join, dirname } from 'path';
 import { discoverAgentWorkspaces } from '$lib/server/pm/workspace-discovery.js';
 
-const ALLOWED_FILES = new Set(['SOUL.md', 'AGENTS.md', 'IDENTITY.md', 'MEMORY.md']);
+const ALLOWED_FILES = new Set(['SOUL.md', 'AGENTS.md', 'IDENTITY.md', 'MEMORY.md', 'USER.md']);
 
 function computeHash(content: string): string {
 	return createHash('sha256').update(content).digest('hex');
