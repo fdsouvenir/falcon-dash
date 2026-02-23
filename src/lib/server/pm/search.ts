@@ -66,24 +66,10 @@ export function rebuildSearchIndex(): void {
 
 	db.exec(`DELETE FROM pm_search`);
 
-	// Re-index projects
+	// Re-index projects (title + description + body)
 	db.exec(`
 		INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-		SELECT 'project', id, id, title, COALESCE(description, '')
+		SELECT 'project', id, id, title, COALESCE(description, '') || ' ' || COALESCE(body, '')
 		FROM projects;
-	`);
-
-	// Re-index tasks
-	db.exec(`
-		INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-		SELECT 'task', id, COALESCE(parent_project_id, 0), title, COALESCE(body, '')
-		FROM tasks;
-	`);
-
-	// Re-index comments
-	db.exec(`
-		INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-		SELECT 'comment', id, 0, '', body
-		FROM comments;
 	`);
 }

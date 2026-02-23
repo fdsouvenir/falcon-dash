@@ -2,15 +2,7 @@
 // Handles PM mutations broadcasting and state versioning
 
 export type PMAction = 'created' | 'updated' | 'deleted' | 'moved' | 'reordered' | 'status_changed';
-export type PMEntityType =
-	| 'domain'
-	| 'focus'
-	| 'milestone'
-	| 'project'
-	| 'task'
-	| 'comment'
-	| 'block'
-	| 'attachment';
+export type PMEntityType = 'domain' | 'focus' | 'project';
 
 export interface PMEvent {
 	action: PMAction;

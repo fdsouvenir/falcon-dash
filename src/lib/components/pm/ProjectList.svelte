@@ -178,10 +178,6 @@
 			if (items.length >= 3) break;
 			items.push({ id: d.id, title: d.title, tag: 'due soon', tagColor: 'text-amber-400' });
 		}
-		for (const b of dashContext.blocked) {
-			if (items.length >= 3) break;
-			items.push({ id: b.id, title: b.title, tag: 'blocked', tagColor: 'text-red-400' });
-		}
 		return items;
 	});
 

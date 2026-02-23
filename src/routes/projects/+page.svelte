@@ -1,12 +1,10 @@
 <script lang="ts">
 	import ProjectList from '$lib/components/pm/ProjectList.svelte';
 	import ProjectDetail from '$lib/components/pm/ProjectDetail.svelte';
-	import TaskDetailPanel from '$lib/components/pm/TaskDetailPanel.svelte';
 
 	import { pmAvailable, checkPMAvailability, hydratePMStores } from '$lib/stores/pm-store.js';
 
 	let selectedProjectId = $state<number | null>(null);
-	let selectedTaskId = $state<number | null>(null);
 	let available = $derived($pmAvailable);
 	let checked = $state(false);
 
@@ -22,18 +20,11 @@
 	// --- History state management ---
 	interface PMNavState {
 		projectId: number | null;
-		taskId: number | null;
 	}
 
 	function navigateToProject(projectId: number) {
 		selectedProjectId = projectId;
-		selectedTaskId = null;
-		history.pushState({ pmNav: { projectId, taskId: null } satisfies PMNavState }, '');
-	}
-
-	function navigateToTask(taskId: number) {
-		selectedTaskId = taskId;
-		history.pushState({ pmNav: { projectId: selectedProjectId, taskId } satisfies PMNavState }, '');
+		history.pushState({ pmNav: { projectId } satisfies PMNavState }, '');
 	}
 
 	function navigateBack() {
@@ -45,10 +36,8 @@
 			const nav = (e.state as { pmNav?: PMNavState } | null)?.pmNav;
 			if (nav) {
 				selectedProjectId = nav.projectId;
-				selectedTaskId = nav.taskId;
 			} else {
 				selectedProjectId = null;
-				selectedTaskId = null;
 			}
 		}
 		window.addEventListener('popstate', handlePopState);
@@ -80,15 +69,7 @@
 		</div>
 
 		{#if selectedProjectId !== null}
-			<ProjectDetail
-				projectId={selectedProjectId}
-				onClose={navigateBack}
-				onTaskClick={navigateToTask}
-			/>
-		{/if}
-
-		{#if selectedTaskId !== null}
-			<TaskDetailPanel taskId={selectedTaskId} onClose={navigateBack} onNavigate={navigateToTask} />
+			<ProjectDetail projectId={selectedProjectId} onClose={navigateBack} />
 		{/if}
 	</div>
 {/if}

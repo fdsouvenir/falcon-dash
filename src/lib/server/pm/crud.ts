@@ -1,37 +1,5 @@
 import { getDb } from './database.js';
-import type {
-	Domain,
-	Focus,
-	Milestone,
-	Project,
-	Task,
-	Comment,
-	Block,
-	Activity,
-	Attachment
-} from './database.js';
-
-// Helper function to resolve project_id from a task_id
-function resolveProjectId(taskId: number): number | null {
-	const db = getDb();
-	const stmt = db.prepare('SELECT parent_project_id, parent_task_id FROM tasks WHERE id = ?');
-	let currentId = taskId;
-
-	while (currentId) {
-		const task = stmt.get(currentId) as
-			| { parent_project_id: number | null; parent_task_id: number | null }
-			| undefined;
-		if (!task) return null;
-		if (task.parent_project_id) return task.parent_project_id;
-		if (task.parent_task_id) {
-			currentId = task.parent_task_id;
-		} else {
-			return null;
-		}
-	}
-
-	return null;
-}
+import type { Domain, Focus, Project, Activity } from './database.js';
 
 // ============================================================================
 // DOMAINS
@@ -206,80 +174,10 @@ export function moveFocus(id: string, newDomainId: string): Focus | undefined {
 }
 
 // ============================================================================
-// MILESTONES
-// ============================================================================
-
-export function listMilestones(): Milestone[] {
-	const db = getDb();
-	return db
-		.prepare('SELECT * FROM milestones ORDER BY due_date ASC NULLS LAST, name ASC')
-		.all() as Milestone[];
-}
-
-export function getMilestone(id: number): Milestone | undefined {
-	const db = getDb();
-	return db.prepare('SELECT * FROM milestones WHERE id = ?').get(id) as Milestone | undefined;
-}
-
-export function createMilestone(data: {
-	name: string;
-	due_date?: string;
-	description?: string;
-}): Milestone {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-
-	const result = db
-		.prepare('INSERT INTO milestones (name, due_date, description, created_at) VALUES (?, ?, ?, ?)')
-		.run(data.name, data.due_date ?? null, data.description ?? null, now);
-
-	return getMilestone(result.lastInsertRowid as number)!;
-}
-
-export function updateMilestone(
-	id: number,
-	data: { name?: string; due_date?: string; description?: string }
-): Milestone | undefined {
-	const db = getDb();
-	const updates: string[] = [];
-	const values: unknown[] = [];
-
-	if (data.name !== undefined) {
-		updates.push('name = ?');
-		values.push(data.name);
-	}
-	if (data.due_date !== undefined) {
-		updates.push('due_date = ?');
-		values.push(data.due_date);
-	}
-	if (data.description !== undefined) {
-		updates.push('description = ?');
-		values.push(data.description);
-	}
-
-	if (updates.length === 0) return getMilestone(id);
-
-	values.push(id);
-	db.prepare(`UPDATE milestones SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-
-	return getMilestone(id);
-}
-
-export function deleteMilestone(id: number): boolean {
-	const db = getDb();
-	const result = db.prepare('DELETE FROM milestones WHERE id = ?').run(id);
-	return result.changes > 0;
-}
-
-// ============================================================================
 // PROJECTS
 // ============================================================================
 
-export function listProjects(filters?: {
-	focus_id?: string;
-	status?: string;
-	milestone_id?: number;
-}): Project[] {
+export function listProjects(filters?: { focus_id?: string; status?: string }): Project[] {
 	const db = getDb();
 
 	if (!filters || Object.keys(filters).length === 0) {
@@ -297,10 +195,6 @@ export function listProjects(filters?: {
 		conditions.push('status = ?');
 		values.push(filters.status);
 	}
-	if (filters.milestone_id !== undefined) {
-		conditions.push('milestone_id = ?');
-		values.push(filters.milestone_id);
-	}
 
 	const query = `SELECT * FROM projects WHERE ${conditions.join(' AND ')} ORDER BY last_activity_at DESC`;
 	return db.prepare(query).all(...values) as Project[];
@@ -315,8 +209,8 @@ export function createProject(data: {
 	focus_id: string;
 	title: string;
 	description?: string;
+	body?: string;
 	status?: string;
-	milestone_id?: number;
 	due_date?: string;
 	priority?: string;
 }): Project {
@@ -326,7 +220,7 @@ export function createProject(data: {
 	const result = db
 		.prepare(
 			`
-		INSERT INTO projects (focus_id, title, description, status, milestone_id, due_date, priority, created_at, updated_at, last_activity_at)
+		INSERT INTO projects (focus_id, title, description, body, status, due_date, priority, created_at, updated_at, last_activity_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 		)
@@ -334,8 +228,8 @@ export function createProject(data: {
 			data.focus_id,
 			data.title,
 			data.description ?? null,
+			data.body ?? null,
 			data.status ?? 'todo',
-			data.milestone_id ?? null,
 			data.due_date ?? null,
 			data.priority ?? null,
 			now,
@@ -364,7 +258,7 @@ export function updateProject(
 	data: Partial<
 		Pick<
 			Project,
-			'title' | 'description' | 'status' | 'milestone_id' | 'due_date' | 'priority' | 'focus_id'
+			'title' | 'description' | 'body' | 'status' | 'due_date' | 'priority' | 'focus_id'
 		>
 	>
 ): Project | undefined {
@@ -381,13 +275,13 @@ export function updateProject(
 		updates.push('description = ?');
 		values.push(data.description);
 	}
+	if (data.body !== undefined) {
+		updates.push('body = ?');
+		values.push(data.body);
+	}
 	if (data.status !== undefined) {
 		updates.push('status = ?');
 		values.push(data.status);
-	}
-	if (data.milestone_id !== undefined) {
-		updates.push('milestone_id = ?');
-		values.push(data.milestone_id);
 	}
 	if (data.due_date !== undefined) {
 		updates.push('due_date = ?');
@@ -425,338 +319,6 @@ export function updateProject(
 export function deleteProject(id: number): boolean {
 	const db = getDb();
 	const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id);
-	return result.changes > 0;
-}
-
-// ============================================================================
-// TASKS
-// ============================================================================
-
-export function listTasks(filters?: {
-	parent_project_id?: number;
-	parent_task_id?: number;
-	status?: string;
-}): Task[] {
-	const db = getDb();
-
-	if (!filters || Object.keys(filters).length === 0) {
-		return db.prepare('SELECT * FROM tasks ORDER BY sort_order ASC').all() as Task[];
-	}
-
-	const conditions: string[] = [];
-	const values: unknown[] = [];
-
-	if (filters.parent_project_id !== undefined) {
-		conditions.push('parent_project_id = ?');
-		values.push(filters.parent_project_id);
-	}
-	if (filters.parent_task_id !== undefined) {
-		conditions.push('parent_task_id = ?');
-		values.push(filters.parent_task_id);
-	}
-	if (filters.status !== undefined) {
-		conditions.push('status = ?');
-		values.push(filters.status);
-	}
-
-	const query = `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY sort_order ASC`;
-	return db.prepare(query).all(...values) as Task[];
-}
-
-export function getTask(id: number): Task | undefined {
-	const db = getDb();
-	return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
-}
-
-export function createTask(data: {
-	title: string;
-	body?: string;
-	parent_project_id?: number;
-	parent_task_id?: number;
-	status?: string;
-	due_date?: string;
-	priority?: string;
-	milestone_id?: number;
-}): Task {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-
-	// Determine sort order
-	let maxOrder: { max: number | null };
-	if (data.parent_project_id) {
-		maxOrder = db
-			.prepare('SELECT MAX(sort_order) as max FROM tasks WHERE parent_project_id = ?')
-			.get(data.parent_project_id) as { max: number | null };
-	} else if (data.parent_task_id) {
-		maxOrder = db
-			.prepare('SELECT MAX(sort_order) as max FROM tasks WHERE parent_task_id = ?')
-			.get(data.parent_task_id) as { max: number | null };
-	} else {
-		maxOrder = { max: null };
-	}
-	const sortOrder = (maxOrder.max ?? -1) + 1;
-
-	const result = db
-		.prepare(
-			`
-		INSERT INTO tasks (title, body, parent_project_id, parent_task_id, status, due_date, priority, milestone_id, sort_order, created_at, updated_at, last_activity_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
-		)
-		.run(
-			data.title,
-			data.body ?? null,
-			data.parent_project_id ?? null,
-			data.parent_task_id ?? null,
-			data.status ?? 'todo',
-			data.due_date ?? null,
-			data.priority ?? null,
-			data.milestone_id ?? null,
-			sortOrder,
-			now,
-			now,
-			now
-		);
-
-	const taskId = result.lastInsertRowid as number;
-	const task = getTask(taskId)!;
-
-	// Resolve project and log activity
-	const projectId = data.parent_project_id ?? resolveProjectId(taskId);
-	if (projectId) {
-		// Update project's last_activity_at
-		db.prepare('UPDATE projects SET last_activity_at = ? WHERE id = ?').run(now, projectId);
-
-		logActivity({
-			project_id: projectId,
-			actor: 'system',
-			action: 'created',
-			target_type: 'task',
-			target_id: taskId,
-			target_title: data.title
-		});
-	}
-
-	return task;
-}
-
-export function updateTask(
-	id: number,
-	data: Partial<Pick<Task, 'title' | 'body' | 'status' | 'due_date' | 'priority' | 'milestone_id'>>
-): Task | undefined {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-	const task = getTask(id);
-	if (!task) return undefined;
-
-	const updates: string[] = ['updated_at = ?', 'last_activity_at = ?'];
-	const values: unknown[] = [now, now];
-
-	if (data.title !== undefined) {
-		updates.push('title = ?');
-		values.push(data.title);
-	}
-	if (data.body !== undefined) {
-		updates.push('body = ?');
-		values.push(data.body);
-	}
-	if (data.status !== undefined) {
-		updates.push('status = ?');
-		values.push(data.status);
-	}
-	if (data.due_date !== undefined) {
-		updates.push('due_date = ?');
-		values.push(data.due_date);
-	}
-	if (data.priority !== undefined) {
-		updates.push('priority = ?');
-		values.push(data.priority);
-	}
-	if (data.milestone_id !== undefined) {
-		updates.push('milestone_id = ?');
-		values.push(data.milestone_id);
-	}
-
-	if (updates.length === 2) return getTask(id);
-
-	values.push(id);
-	db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-
-	const updatedTask = getTask(id)!;
-
-	// Resolve project and log activity
-	const projectId = task.parent_project_id ?? resolveProjectId(id);
-	if (projectId) {
-		// Update project's last_activity_at
-		db.prepare('UPDATE projects SET last_activity_at = ? WHERE id = ?').run(now, projectId);
-
-		const action =
-			data.status !== undefined && data.status !== task.status ? 'status_changed' : 'updated';
-		logActivity({
-			project_id: projectId,
-			actor: 'system',
-			action,
-			target_type: 'task',
-			target_id: id,
-			target_title: updatedTask.title,
-			details:
-				data.status !== undefined && data.status !== task.status
-					? `${task.status} → ${data.status}`
-					: undefined
-		});
-	}
-
-	return updatedTask;
-}
-
-export function moveTask(
-	id: number,
-	target: { parent_project_id?: number; parent_task_id?: number }
-): Task | undefined {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-
-	// Determine new sort order
-	let maxOrder: { max: number | null };
-	if (target.parent_project_id) {
-		maxOrder = db
-			.prepare('SELECT MAX(sort_order) as max FROM tasks WHERE parent_project_id = ?')
-			.get(target.parent_project_id) as { max: number | null };
-	} else if (target.parent_task_id) {
-		maxOrder = db
-			.prepare('SELECT MAX(sort_order) as max FROM tasks WHERE parent_task_id = ?')
-			.get(target.parent_task_id) as { max: number | null };
-	} else {
-		return undefined;
-	}
-	const sortOrder = (maxOrder.max ?? -1) + 1;
-
-	db.prepare(
-		`
-		UPDATE tasks
-		SET parent_project_id = ?, parent_task_id = ?, sort_order = ?, updated_at = ?, last_activity_at = ?
-		WHERE id = ?
-	`
-	).run(target.parent_project_id ?? null, target.parent_task_id ?? null, sortOrder, now, now, id);
-
-	return getTask(id);
-}
-
-export function reorderTasks(ids: number[]): void {
-	const db = getDb();
-	const transaction = db.transaction(() => {
-		const stmt = db.prepare('UPDATE tasks SET sort_order = ? WHERE id = ?');
-		ids.forEach((id, index) => {
-			stmt.run(index, id);
-		});
-	});
-	transaction();
-}
-
-export function deleteTask(id: number): boolean {
-	const db = getDb();
-	const result = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
-	return result.changes > 0;
-}
-
-// ============================================================================
-// COMMENTS
-// ============================================================================
-
-export function listComments(targetType: string, targetId: number): Comment[] {
-	const db = getDb();
-	return db
-		.prepare(
-			'SELECT * FROM comments WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC'
-		)
-		.all(targetType, targetId) as Comment[];
-}
-
-export function getComment(id: number): Comment | undefined {
-	const db = getDb();
-	return db.prepare('SELECT * FROM comments WHERE id = ?').get(id) as Comment | undefined;
-}
-
-export function createComment(data: {
-	target_type: string;
-	target_id: number;
-	body: string;
-	author: string;
-}): Comment {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-
-	const result = db
-		.prepare(
-			'INSERT INTO comments (target_type, target_id, body, author, created_at) VALUES (?, ?, ?, ?, ?)'
-		)
-		.run(data.target_type, data.target_id, data.body, data.author, now);
-
-	const commentId = result.lastInsertRowid as number;
-	const comment = getComment(commentId)!;
-
-	// Update parent's last_activity_at and log activity
-	if (data.target_type === 'project') {
-		db.prepare('UPDATE projects SET last_activity_at = ? WHERE id = ?').run(now, data.target_id);
-		logActivity({
-			project_id: data.target_id,
-			actor: data.author,
-			action: 'commented',
-			target_type: 'comment',
-			target_id: commentId
-		});
-	} else if (data.target_type === 'task') {
-		db.prepare('UPDATE tasks SET last_activity_at = ? WHERE id = ?').run(now, data.target_id);
-		const projectId = resolveProjectId(data.target_id);
-		if (projectId) {
-			db.prepare('UPDATE projects SET last_activity_at = ? WHERE id = ?').run(now, projectId);
-			logActivity({
-				project_id: projectId,
-				actor: data.author,
-				action: 'commented',
-				target_type: 'comment',
-				target_id: commentId
-			});
-		}
-	}
-
-	return comment;
-}
-
-export function updateComment(id: number, body: string): Comment | undefined {
-	const db = getDb();
-	db.prepare('UPDATE comments SET body = ? WHERE id = ?').run(body, id);
-	return getComment(id);
-}
-
-export function deleteComment(id: number): boolean {
-	const db = getDb();
-	const result = db.prepare('DELETE FROM comments WHERE id = ?').run(id);
-	return result.changes > 0;
-}
-
-// ============================================================================
-// BLOCKS
-// ============================================================================
-
-export function listBlocks(taskId: number): { blocking: Block[]; blockedBy: Block[] } {
-	const db = getDb();
-	const blocking = db.prepare('SELECT * FROM blocks WHERE blocker_id = ?').all(taskId) as Block[];
-	const blockedBy = db.prepare('SELECT * FROM blocks WHERE blocked_id = ?').all(taskId) as Block[];
-	return { blocking, blockedBy };
-}
-
-export function createBlock(blockerId: number, blockedId: number): Block {
-	const db = getDb();
-	db.prepare('INSERT INTO blocks (blocker_id, blocked_id) VALUES (?, ?)').run(blockerId, blockedId);
-	return { blocker_id: blockerId, blocked_id: blockedId };
-}
-
-export function deleteBlock(blockerId: number, blockedId: number): boolean {
-	const db = getDb();
-	const result = db
-		.prepare('DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?')
-		.run(blockerId, blockedId);
 	return result.changes > 0;
 }
 
@@ -807,55 +369,4 @@ export function logActivity(data: {
 
 	const activityId = result.lastInsertRowid as number;
 	return db.prepare('SELECT * FROM activities WHERE id = ?').get(activityId) as Activity;
-}
-
-// ============================================================================
-// ATTACHMENTS
-// ============================================================================
-
-export function listAttachments(targetType: string, targetId: number): Attachment[] {
-	const db = getDb();
-	return db
-		.prepare(
-			'SELECT * FROM attachments WHERE target_type = ? AND target_id = ? ORDER BY created_at DESC'
-		)
-		.all(targetType, targetId) as Attachment[];
-}
-
-export function createAttachment(data: {
-	target_type: string;
-	target_id: number;
-	file_path: string;
-	file_name: string;
-	description?: string;
-	added_by: string;
-}): Attachment {
-	const db = getDb();
-	const now = Math.floor(Date.now() / 1000);
-
-	const result = db
-		.prepare(
-			`
-		INSERT INTO attachments (target_type, target_id, file_path, file_name, description, added_by, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`
-		)
-		.run(
-			data.target_type,
-			data.target_id,
-			data.file_path,
-			data.file_name,
-			data.description ?? null,
-			data.added_by,
-			now
-		);
-
-	const attachmentId = result.lastInsertRowid as number;
-	return db.prepare('SELECT * FROM attachments WHERE id = ?').get(attachmentId) as Attachment;
-}
-
-export function deleteAttachment(id: number): boolean {
-	const db = getDb();
-	const result = db.prepare('DELETE FROM attachments WHERE id = ?').run(id);
-	return result.changes > 0;
 }

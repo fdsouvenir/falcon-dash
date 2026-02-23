@@ -1,7 +1,6 @@
 import { writable, derived, readonly, type Readable, type Writable } from 'svelte/store';
 import { pmGet } from './pm-api.js';
 import type { Project } from './pm-projects.js';
-import type { Task } from './pm-projects.js';
 import type { Domain, Focus } from './pm-domains.js';
 
 // Feature detection via HTTP
@@ -21,7 +20,6 @@ export async function checkPMAvailability(): Promise<void> {
 const _domainCache: Writable<Map<string, Domain>> = writable(new Map());
 const _focusCache: Writable<Map<string, Focus>> = writable(new Map());
 const _projectCache: Writable<Map<number, Project>> = writable(new Map());
-const _taskCache: Writable<Map<number, Task>> = writable(new Map());
 
 interface PaginatedResponse<T> {
 	items: T[];
@@ -54,84 +52,7 @@ export async function hydratePMStores(): Promise<void> {
 	}
 }
 
-// Load tasks for a specific project
-export async function loadProjectTasks(projectId: number): Promise<void> {
-	const res = await pmGet<PaginatedResponse<Task>>('/api/pm/tasks', {
-		parent_project_id: projectId,
-		limit: '500'
-	});
-	_taskCache.update((cache) => {
-		for (const t of res.items) cache.set(t.id, t);
-		return cache;
-	});
-}
-
-// Derived: Kanban view (tasks grouped by status)
-export const kanbanView: Readable<Record<string, Task[]>> = derived(_taskCache, ($cache) => {
-	const groups: Record<string, Task[]> = {
-		todo: [],
-		in_progress: [],
-		review: [],
-		done: []
-	};
-	for (const task of $cache.values()) {
-		const status = task.status || 'todo';
-		if (groups[status]) groups[status].push(task);
-		else groups[status] = [task];
-	}
-	for (const key of Object.keys(groups)) {
-		groups[key].sort((a, b) => a.sort_order - b.sort_order);
-	}
-	return groups;
-});
-
 // Derived: List view (flat sorted list)
 export const listView: Readable<Project[]> = derived(_projectCache, ($cache) => {
 	return Array.from($cache.values()).sort((a, b) => b.last_activity_at - a.last_activity_at);
 });
-
-// Derived: Tree view (projects with nested tasks)
-export interface ProjectTreeNode {
-	project: Project;
-	tasks: TaskTreeNode[];
-}
-
-export interface TaskTreeNode {
-	task: Task;
-	children: TaskTreeNode[];
-}
-
-export const treeView: Readable<ProjectTreeNode[]> = derived(
-	[_projectCache, _taskCache],
-	([$projects, $tasks]) => {
-		const tasksByProject = new Map<number, Task[]>();
-		const tasksByParent = new Map<number, Task[]>();
-
-		for (const task of $tasks.values()) {
-			if (task.parent_project_id) {
-				const list = tasksByProject.get(task.parent_project_id) || [];
-				list.push(task);
-				tasksByProject.set(task.parent_project_id, list);
-			}
-			if (task.parent_task_id) {
-				const list = tasksByParent.get(task.parent_task_id) || [];
-				list.push(task);
-				tasksByParent.set(task.parent_task_id, list);
-			}
-		}
-
-		function buildTaskTree(task: Task): TaskTreeNode {
-			const children = (tasksByParent.get(task.id) || [])
-				.sort((a, b) => a.sort_order - b.sort_order)
-				.map(buildTaskTree);
-			return { task, children };
-		}
-
-		return Array.from($projects.values()).map((project) => ({
-			project,
-			tasks: (tasksByProject.get(project.id) || [])
-				.sort((a, b) => a.sort_order - b.sort_order)
-				.map(buildTaskTree)
-		}));
-	}
-);

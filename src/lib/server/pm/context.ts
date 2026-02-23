@@ -1,5 +1,5 @@
 import { getDb } from './database.js';
-import type { Project, Task, Activity, Comment } from './database.js';
+import type { Project, Activity } from './database.js';
 
 export interface ContextResponse {
 	markdown: string;
@@ -9,7 +9,6 @@ export interface ContextResponse {
 
 export interface DashboardContextResponse extends ContextResponse {
 	dueSoon: { type: string; id: number; title: string; due_date: string }[];
-	blocked: { id: number; title: string; blocker_count: number }[];
 	recentActivity: (Activity & { project_title: string })[];
 }
 
@@ -35,35 +34,21 @@ export function generateDashboardContext(): DashboardContextResponse {
 		)
 		.all() as (Project & { focus_name: string; domain_name: string })[];
 
-	// Due soon (next 7 days)
+	// Due soon (next 7 days) — projects only
 	const dueSoon = db
 		.prepare(
 			`
 		SELECT 'project' as type, id, title, due_date FROM projects
 		WHERE due_date IS NOT NULL AND due_date <= ? AND status NOT IN ('done', 'cancelled', 'archived')
-		UNION ALL
-		SELECT 'task' as type, id, title, due_date FROM tasks
-		WHERE due_date IS NOT NULL AND due_date <= ? AND status NOT IN ('done', 'cancelled', 'archived')
 		ORDER BY due_date
 	`
 		)
-		.all(
-			new Date(weekFromNow * 1000).toISOString().split('T')[0],
-			new Date(weekFromNow * 1000).toISOString().split('T')[0]
-		) as { type: string; id: number; title: string; due_date: string }[];
-
-	// Blocked tasks
-	const blocked = db
-		.prepare(
-			`
-		SELECT t.id, t.title, COUNT(b.blocker_id) as blocker_count
-		FROM tasks t
-		JOIN blocks b ON b.blocked_id = t.id
-		WHERE t.status NOT IN ('done', 'cancelled')
-		GROUP BY t.id
-	`
-		)
-		.all() as { id: number; title: string; blocker_count: number }[];
+		.all(new Date(weekFromNow * 1000).toISOString().split('T')[0]) as {
+		type: string;
+		id: number;
+		title: string;
+		due_date: string;
+	}[];
 
 	// Recent activity
 	const recentActivity = db
@@ -90,14 +75,7 @@ export function generateDashboardContext(): DashboardContextResponse {
 	if (dueSoon.length > 0) {
 		md += `\n## Due Soon (${dueSoon.length})\n`;
 		for (const d of dueSoon) {
-			md += `- ${d.type === 'project' ? 'P' : 'T'}-${d.id}: ${d.title} (due ${d.due_date})\n`;
-		}
-	}
-
-	if (blocked.length > 0) {
-		md += `\n## Blocked (${blocked.length})\n`;
-		for (const b of blocked) {
-			md += `- T-${b.id}: ${b.title} (${b.blocker_count} blocker${b.blocker_count > 1 ? 's' : ''})\n`;
+			md += `- P-${d.id}: ${d.title} (due ${d.due_date})\n`;
 		}
 	}
 
@@ -114,11 +92,9 @@ export function generateDashboardContext(): DashboardContextResponse {
 		stats: {
 			activeProjects: activeProjects.length,
 			dueSoon: dueSoon.length,
-			blocked: blocked.length,
 			recentActivity: recentActivity.length
 		},
 		dueSoon,
-		blocked,
 		recentActivity
 	};
 }
@@ -156,17 +132,15 @@ export function generateDomainContext(domainId: string): ContextResponse {
 		const projects = db
 			.prepare(
 				`
-			SELECT p.*, (SELECT COUNT(*) FROM tasks WHERE parent_project_id = p.id) as task_count,
-			       (SELECT COUNT(*) FROM tasks WHERE parent_project_id = p.id AND status = 'done') as done_count
+			SELECT p.*
 			FROM projects p WHERE p.focus_id = ? ORDER BY p.last_activity_at DESC
 		`
 			)
-			.all(focus.id) as (Project & { task_count: number; done_count: number })[];
+			.all(focus.id) as Project[];
 
 		for (const p of projects) {
 			md += `\n### P-${p.id}: ${p.title} [${p.status}]\n`;
 			if (p.description) md += `${p.description}\n`;
-			md += `Progress: ${p.done_count}/${p.task_count} tasks done\n`;
 			if (p.due_date) md += `Due: ${p.due_date}\n`;
 		}
 		md += '\n';
@@ -201,51 +175,9 @@ export function generateProjectContext(projectId: number): ContextResponse {
 
 	if (!project) throw new Error('Project not found');
 
-	const tasks = db
-		.prepare('SELECT * FROM tasks WHERE parent_project_id = ? ORDER BY sort_order, created_at')
-		.all(projectId) as Task[];
-	const subtasks = db
-		.prepare(
-			`
-		SELECT t.* FROM tasks t
-		JOIN tasks parent ON t.parent_task_id = parent.id
-		WHERE parent.parent_project_id = ?
-		ORDER BY t.sort_order, t.created_at
-	`
-		)
-		.all(projectId) as Task[];
-
-	const comments = db
-		.prepare(
-			`
-		SELECT c.* FROM comments c
-		WHERE (c.target_type = 'project' AND c.target_id = ?)
-		OR (c.target_type = 'task' AND c.target_id IN (SELECT id FROM tasks WHERE parent_project_id = ?))
-		ORDER BY c.created_at DESC LIMIT 20
-	`
-		)
-		.all(projectId, projectId) as Comment[];
-
 	const activities = db
 		.prepare('SELECT * FROM activities WHERE project_id = ? ORDER BY created_at DESC LIMIT 20')
 		.all(projectId) as Activity[];
-
-	const blocks = db
-		.prepare(
-			`
-		SELECT b.*, t1.title as blocker_title, t2.title as blocked_title
-		FROM blocks b
-		JOIN tasks t1 ON b.blocker_id = t1.id
-		JOIN tasks t2 ON b.blocked_id = t2.id
-		WHERE t1.parent_project_id = ? OR t2.parent_project_id = ?
-	`
-		)
-		.all(projectId, projectId) as {
-		blocker_id: number;
-		blocked_id: number;
-		blocker_title: string;
-		blocked_title: string;
-	}[];
 
 	// Build markdown
 	let md = `# P-${project.id}: ${project.title}\n`;
@@ -254,38 +186,14 @@ export function generateProjectContext(projectId: number): ContextResponse {
 	if (project.due_date) md += `**Due:** ${project.due_date}\n`;
 	md += '\n';
 
-	// Tasks
-	md += `## Tasks (${tasks.length})\n`;
-	for (const t of tasks) {
-		const status = t.status === 'done' ? '[x]' : '[ ]';
-		md += `- ${status} T-${t.id}: ${t.title} [${t.status}]${t.priority ? ' !' + t.priority : ''}\n`;
-		// Show subtasks
-		const subs = subtasks.filter((s) => s.parent_task_id === t.id);
-		for (const s of subs) {
-			const subStatus = s.status === 'done' ? '[x]' : '[ ]';
-			md += `  - ${subStatus} T-${s.id}: ${s.title} [${s.status}]\n`;
-		}
-	}
-
-	// Blocks
-	if (blocks.length > 0) {
-		md += `\n## Dependencies (${blocks.length})\n`;
-		for (const b of blocks) {
-			md += `- T-${b.blocker_id} (${b.blocker_title}) blocks T-${b.blocked_id} (${b.blocked_title})\n`;
-		}
-	}
-
-	// Comments
-	if (comments.length > 0) {
-		md += `\n## Recent Comments (${comments.length})\n`;
-		for (const c of comments) {
-			md += `- **${c.author}** on ${c.target_type} ${c.target_id}: ${c.body.substring(0, 200)}${c.body.length > 200 ? '...' : ''}\n`;
-		}
+	// Body
+	if (project.body) {
+		md += `## Status\n\n${project.body}\n\n`;
 	}
 
 	// Activity
 	if (activities.length > 0) {
-		md += `\n## Recent Activity (${activities.length})\n`;
+		md += `## Recent Activity (${activities.length})\n`;
 		for (const a of activities) {
 			md += `- ${a.actor} ${a.action} ${a.target_type}${a.target_title ? ' "' + a.target_title + '"' : ''}\n`;
 		}
@@ -295,11 +203,7 @@ export function generateProjectContext(projectId: number): ContextResponse {
 		markdown: md,
 		generated_at: now,
 		stats: {
-			tasks: tasks.length,
-			subtasks: subtasks.length,
-			comments: comments.length,
-			activities: activities.length,
-			blocks: blocks.length
+			activities: activities.length
 		}
 	};
 }

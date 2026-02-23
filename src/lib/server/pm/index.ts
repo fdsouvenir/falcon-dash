@@ -1,17 +1,6 @@
 // Barrel re-exports for PM server module
 export { getDb, closeDb } from './database.js';
-export type {
-	Domain,
-	Focus,
-	Milestone,
-	Project,
-	Task,
-	Comment,
-	Block,
-	Activity,
-	Attachment,
-	SyncMapping
-} from './database.js';
+export type { Domain, Focus, Project, Activity } from './database.js';
 
 export {
 	listDomains,
@@ -27,36 +16,13 @@ export {
 	deleteFocus,
 	reorderFocuses,
 	moveFocus,
-	listMilestones,
-	getMilestone,
-	createMilestone,
-	updateMilestone,
-	deleteMilestone,
 	listProjects,
 	getProject,
 	createProject,
 	updateProject,
 	deleteProject,
-	listTasks,
-	getTask,
-	createTask,
-	updateTask,
-	moveTask,
-	reorderTasks,
-	deleteTask,
-	listComments,
-	getComment,
-	createComment,
-	updateComment,
-	deleteComment,
-	listBlocks,
-	createBlock,
-	deleteBlock,
 	listActivities,
-	logActivity,
-	listAttachments,
-	createAttachment,
-	deleteAttachment
+	logActivity
 } from './crud.js';
 
 export { searchPM, rebuildSearchIndex } from './search.js';
@@ -71,9 +37,6 @@ export {
 	generateProjectContext
 } from './context.js';
 export type { ContextResponse } from './context.js';
-
-export { bulkUpdate, bulkMove } from './bulk.js';
-export type { BulkResult } from './bulk.js';
 
 export {
 	emitPMEvent,

@@ -1,18 +1,5 @@
-import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
+import { pmGet } from './pm-api.js';
 
-// Re-export types for UI
-export interface Comment {
-	id: number;
-	target_type: string;
-	target_id: number;
-	body: string;
-	author: string;
-	created_at: number;
-}
-export interface Block {
-	blocker_id: number;
-	blocked_id: number;
-}
 export interface Activity {
 	id: number;
 	project_id: number;
@@ -22,16 +9,6 @@ export interface Activity {
 	target_id: number;
 	target_title: string | null;
 	details: string | null;
-	created_at: number;
-}
-export interface Attachment {
-	id: number;
-	target_type: string;
-	target_id: number;
-	file_path: string;
-	file_name: string;
-	description: string | null;
-	added_by: string;
 	created_at: number;
 }
 
@@ -52,11 +29,9 @@ export interface DashboardContext {
 	stats: {
 		activeProjects: number;
 		dueSoon: number;
-		blocked: number;
 		recentActivity: number;
 	};
 	dueSoon: { type: string; id: number; title: string; due_date: string }[];
-	blocked: { id: number; title: string; blocker_count: number }[];
 	recentActivity: (Activity & { project_title: string })[];
 }
 
@@ -64,7 +39,7 @@ export interface DashboardContext {
 export interface DomainContext {
 	domain: { id: string; name: string };
 	focuses: { id: string; name: string; projectCount: number }[];
-	projects: { id: number; title: string; status: string; taskCount: number }[];
+	projects: { id: number; title: string; status: string }[];
 }
 
 // Project context type (structured data for UI)
@@ -75,10 +50,7 @@ export interface ProjectContext {
 		status: string;
 		description: string | null;
 	};
-	tasks: { id: number; title: string; status: string; priority: string | null }[];
-	comments: Comment[];
 	activities: Activity[];
-	blocks: { blocker_id: number; blocked_id: number }[];
 }
 
 // AI Context types (markdown summaries for agents)
@@ -93,7 +65,6 @@ export interface AIDashboardContext {
 	stats: {
 		activeProjects: number;
 		dueSoon: number;
-		blocked: number;
 		overdue: number;
 	};
 }
@@ -101,8 +72,6 @@ export interface AIDashboardContext {
 // PM Stats type
 export interface PMStats {
 	projects: { total: number; byStatus: Record<string, number> };
-	tasks: { total: number; byStatus: Record<string, number> };
-	blocked: number;
 	overdue: number;
 	recentActivity: number;
 	dueSoon: number;
@@ -111,68 +80,6 @@ export interface PMStats {
 interface PaginatedResponse<T> {
 	items: T[];
 	total: number;
-}
-
-// --- COMMENT methods ---
-export async function listComments(targetType: string, targetId: number): Promise<Comment[]> {
-	const res = await pmGet<PaginatedResponse<Comment>>('/api/pm/comments', {
-		target_type: targetType,
-		target_id: targetId,
-		limit: '500'
-	});
-	return res.items;
-}
-export async function createComment(data: {
-	target_type: string;
-	target_id: number;
-	body: string;
-	author: string;
-}): Promise<Comment> {
-	return pmPost<Comment>('/api/pm/comments', data);
-}
-export async function updateComment(id: number, body: string): Promise<Comment> {
-	return pmPatch<Comment>(`/api/pm/comments/${id}`, { body });
-}
-export async function deleteComment(id: number): Promise<void> {
-	await pmDelete(`/api/pm/comments/${id}`);
-}
-
-// --- BLOCK methods ---
-export async function listBlocks(
-	taskId: number
-): Promise<{ blocking: Block[]; blockedBy: Block[] }> {
-	return pmGet<{ blocking: Block[]; blockedBy: Block[] }>('/api/pm/blocks', {
-		task_id: taskId
-	});
-}
-export async function createBlock(blockerId: number, blockedId: number): Promise<Block> {
-	return pmPost<Block>('/api/pm/blocks', { blocker_id: blockerId, blocked_id: blockedId });
-}
-export async function deleteBlock(blockerId: number, blockedId: number): Promise<void> {
-	await pmDelete('/api/pm/blocks', { blocker_id: blockerId, blocked_id: blockedId });
-}
-
-// --- ATTACHMENT methods ---
-export async function listAttachments(targetType: string, targetId: number): Promise<Attachment[]> {
-	const res = await pmGet<PaginatedResponse<Attachment>>('/api/pm/attachments', {
-		target_type: targetType,
-		target_id: targetId,
-		limit: '500'
-	});
-	return res.items;
-}
-export async function createAttachment(data: {
-	target_type: string;
-	target_id: number;
-	file_path: string;
-	file_name: string;
-	description?: string;
-	added_by: string;
-}): Promise<Attachment> {
-	return pmPost<Attachment>('/api/pm/attachments', data);
-}
-export async function deleteAttachment(id: number): Promise<void> {
-	await pmDelete(`/api/pm/attachments/${id}`);
 }
 
 // --- ACTIVITY methods ---
@@ -220,22 +127,6 @@ export async function searchPM(
 	if (options?.offset !== undefined) params.offset = options.offset;
 	const res = await pmGet<{ results: PMSearchResult[] }>('/api/pm/search', params);
 	return res.results;
-}
-
-// --- BULK methods ---
-export async function bulkUpdateStatus(
-	ids: number[],
-	entityType: 'project' | 'task',
-	status: string
-): Promise<void> {
-	await pmPost('/api/pm/bulk', { action: 'update', ids, entityType, fields: { status } });
-}
-export async function bulkMove(
-	ids: number[],
-	entityType: 'project' | 'task',
-	target: Record<string, unknown>
-): Promise<void> {
-	await pmPost('/api/pm/bulk', { action: 'move', ids, entityType, target });
 }
 
 // --- STATS ---

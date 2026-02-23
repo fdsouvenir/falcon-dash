@@ -19,14 +19,6 @@ export interface Focus {
 	created_at: number;
 }
 
-export interface Milestone {
-	id: number;
-	name: string;
-	due_date: string | null;
-	description: string | null;
-	created_at: number;
-}
-
 interface PaginatedResponse<T> {
 	items: T[];
 	total: number;
@@ -35,14 +27,12 @@ interface PaginatedResponse<T> {
 // Internal stores
 const _domains: Writable<Domain[]> = writable([]);
 const _focuses: Writable<Focus[]> = writable([]);
-const _milestones: Writable<Milestone[]> = writable([]);
 const _loading: Writable<boolean> = writable(false);
 const _error: Writable<string | null> = writable(null);
 
 // Public readonly
 export const domains: Readable<Domain[]> = readonly(_domains);
 export const focuses: Readable<Focus[]> = readonly(_focuses);
-export const milestones: Readable<Milestone[]> = readonly(_milestones);
 export const pmLoading: Readable<boolean> = readonly(_loading);
 export const pmError: Readable<string | null> = readonly(_error);
 
@@ -213,75 +203,6 @@ export async function reorderFocuses(ids: string[]): Promise<void> {
 	try {
 		await pmPost('/api/pm/focuses/reorder', { ids });
 		await loadFocuses();
-	} catch (err) {
-		_error.set((err as Error).message);
-		throw err;
-	}
-}
-
-// Milestone methods
-export async function loadMilestones(): Promise<void> {
-	_loading.set(true);
-	_error.set(null);
-	try {
-		const result = await pmGet<PaginatedResponse<Milestone>>('/api/pm/milestones', {
-			limit: '500'
-		});
-		_milestones.set(result.items);
-	} catch (err) {
-		_error.set((err as Error).message);
-		_milestones.set([]);
-	} finally {
-		_loading.set(false);
-	}
-}
-
-export async function getMilestone(id: number): Promise<Milestone> {
-	_error.set(null);
-	try {
-		return await pmGet<Milestone>(`/api/pm/milestones/${id}`);
-	} catch (err) {
-		_error.set((err as Error).message);
-		throw err;
-	}
-}
-
-export async function createMilestone(data: {
-	name: string;
-	due_date?: string;
-	description?: string;
-}): Promise<Milestone> {
-	_error.set(null);
-	try {
-		const milestone = await pmPost<Milestone>('/api/pm/milestones', data);
-		await loadMilestones();
-		return milestone;
-	} catch (err) {
-		_error.set((err as Error).message);
-		throw err;
-	}
-}
-
-export async function updateMilestone(
-	id: number,
-	data: { name?: string; due_date?: string; description?: string }
-): Promise<Milestone> {
-	_error.set(null);
-	try {
-		const milestone = await pmPatch<Milestone>(`/api/pm/milestones/${id}`, data);
-		await loadMilestones();
-		return milestone;
-	} catch (err) {
-		_error.set((err as Error).message);
-		throw err;
-	}
-}
-
-export async function deleteMilestone(id: number): Promise<void> {
-	_error.set(null);
-	try {
-		await pmDelete(`/api/pm/milestones/${id}`);
-		await loadMilestones();
 	} catch (err) {
 		_error.set((err as Error).message);
 		throw err;

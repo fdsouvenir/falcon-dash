@@ -76,7 +76,7 @@ function generatePMApiDoc(): string {
 > Base URL: \`${base}\`
 
 All list endpoints return: \`{ items: [...], total, page, limit, hasMore }\`
-All IDs: projects/tasks/milestones/comments/attachments use numeric IDs; domains/focuses use string slug IDs.
+All IDs: projects use numeric IDs; domains/focuses use string slug IDs.
 Statuses: \`todo\`, \`in_progress\`, \`review\`, \`done\`, \`cancelled\`, \`archived\`
 Priorities: \`low\`, \`normal\`, \`high\`, \`urgent\`
 Dates: ISO 8601 date format \`YYYY-MM-DD\`
@@ -181,7 +181,7 @@ Content-Type: application/json
 
 ### List projects
 \`\`\`
-GET ${base}/projects?focus_id=my-focus&status=in_progress&milestone_id=1&page=1&limit=50
+GET ${base}/projects?focus_id=my-focus&status=in_progress&page=1&limit=50
 \`\`\`
 
 ### Create project
@@ -189,9 +189,9 @@ GET ${base}/projects?focus_id=my-focus&status=in_progress&milestone_id=1&page=1&
 POST ${base}/projects
 Content-Type: application/json
 
-{"focus_id": "my-focus", "title": "Project Title", "description": "Optional", "status": "todo", "priority": "normal", "due_date": "2025-12-31", "milestone_id": 1}
+{"focus_id": "my-focus", "title": "Project Title", "description": "Optional", "body": "Rich markdown content", "status": "todo", "priority": "normal", "due_date": "2025-12-31"}
 \`\`\`
-Required: \`focus_id\`, \`title\`. Optional: \`description\`, \`status\` (default: todo), \`priority\`, \`due_date\`, \`milestone_id\`.
+Required: \`focus_id\`, \`title\`. Optional: \`description\`, \`body\` (rich markdown), \`status\` (default: todo), \`priority\`, \`due_date\`.
 
 ### Get project
 \`\`\`
@@ -203,171 +203,12 @@ GET ${base}/projects/{id}
 PATCH ${base}/projects/{id}
 Content-Type: application/json
 
-{"title": "New Title", "status": "in_progress", "priority": "high", "due_date": "2025-12-31", "focus_id": "new-focus", "milestone_id": 2, "description": "Updated"}
+{"title": "New Title", "status": "in_progress", "priority": "high", "due_date": "2025-12-31", "focus_id": "new-focus", "description": "Updated", "body": "Updated rich markdown content"}
 \`\`\`
 
 ### Delete project
 \`\`\`
 DELETE ${base}/projects/{id}
-\`\`\`
-
----
-
-## Tasks
-
-### List tasks
-\`\`\`
-GET ${base}/tasks?parent_project_id=1&parent_task_id=5&status=todo&page=1&limit=50
-\`\`\`
-
-### Create task (top-level under project)
-\`\`\`
-POST ${base}/tasks
-Content-Type: application/json
-
-{"parent_project_id": 1, "title": "Task Title", "body": "Optional details", "status": "todo", "priority": "normal", "due_date": "2025-12-31", "milestone_id": 1}
-\`\`\`
-
-### Create subtask (under another task)
-\`\`\`
-POST ${base}/tasks
-Content-Type: application/json
-
-{"parent_task_id": 5, "title": "Subtask Title"}
-\`\`\`
-Required: \`title\` + one of \`parent_project_id\` or \`parent_task_id\`. Optional: \`body\`, \`status\` (default: todo), \`priority\`, \`due_date\`, \`milestone_id\`.
-
-### Get task
-\`\`\`
-GET ${base}/tasks/{id}
-\`\`\`
-
-### Update task
-\`\`\`
-PATCH ${base}/tasks/{id}
-Content-Type: application/json
-
-{"title": "Updated", "body": "New body", "status": "done", "priority": "high", "due_date": "2025-12-31", "milestone_id": 1}
-\`\`\`
-
-### Delete task
-\`\`\`
-DELETE ${base}/tasks/{id}
-\`\`\`
-
-### Move task (change parent)
-\`\`\`
-POST ${base}/tasks/{id}/move
-Content-Type: application/json
-
-{"parent_project_id": 2}
-\`\`\`
-or
-\`\`\`json
-{"parent_task_id": 10}
-\`\`\`
-
-### Reorder tasks
-\`\`\`
-POST ${base}/tasks/reorder
-Content-Type: application/json
-
-{"ids": [3, 1, 2]}
-\`\`\`
-
----
-
-## Milestones
-
-### List milestones
-\`\`\`
-GET ${base}/milestones?page=1&limit=50
-\`\`\`
-
-### Create milestone
-\`\`\`
-POST ${base}/milestones
-Content-Type: application/json
-
-{"name": "v1.0 Release", "due_date": "2025-12-31", "description": "Optional"}
-\`\`\`
-Required: \`name\`. Optional: \`due_date\`, \`description\`.
-
-### Get milestone
-\`\`\`
-GET ${base}/milestones/{id}
-\`\`\`
-
-### Update milestone
-\`\`\`
-PATCH ${base}/milestones/{id}
-Content-Type: application/json
-
-{"name": "v1.1", "due_date": "2026-01-15", "description": "Updated"}
-\`\`\`
-
-### Delete milestone
-\`\`\`
-DELETE ${base}/milestones/{id}
-\`\`\`
-
----
-
-## Comments
-
-### List comments
-\`\`\`
-GET ${base}/comments?target_type=project&target_id=1&page=1&limit=50
-\`\`\`
-Required query params: \`target_type\` (\`project\` or \`task\`), \`target_id\`.
-
-### Create comment
-\`\`\`
-POST ${base}/comments
-Content-Type: application/json
-
-{"target_type": "task", "target_id": 5, "body": "Comment text", "author": "agent"}
-\`\`\`
-Required: \`target_type\`, \`target_id\`, \`body\`, \`author\`.
-
-### Update comment
-\`\`\`
-PATCH ${base}/comments/{id}
-Content-Type: application/json
-
-{"body": "Updated comment text"}
-\`\`\`
-
-### Delete comment
-\`\`\`
-DELETE ${base}/comments/{id}
-\`\`\`
-
----
-
-## Blocks (Task Dependencies)
-
-### List blocks for a task
-\`\`\`
-GET ${base}/blocks?task_id=5
-\`\`\`
-Returns: \`{ blocking: [...], blockedBy: [...] }\`
-
-### Create block
-\`\`\`
-POST ${base}/blocks
-Content-Type: application/json
-
-{"blocker_id": 3, "blocked_id": 5}
-\`\`\`
-Means task 3 blocks task 5 (task 5 cannot proceed until task 3 is done).
-
-### Delete block
-\`\`\`
-DELETE ${base}/blocks
-Content-Type: application/json
-
-{"blocker_id": 3, "blocked_id": 5}
 \`\`\`
 
 ---
@@ -382,55 +223,13 @@ Required: \`project_id\`. Read-only — activities are auto-generated by mutatio
 
 ---
 
-## Attachments
-
-### List attachments
-\`\`\`
-GET ${base}/attachments?target_type=project&target_id=1&page=1&limit=50
-\`\`\`
-
-### Create attachment
-\`\`\`
-POST ${base}/attachments
-Content-Type: application/json
-
-{"target_type": "task", "target_id": 5, "file_path": "/path/to/file", "file_name": "doc.pdf", "description": "Optional", "added_by": "agent"}
-\`\`\`
-
-### Delete attachment
-\`\`\`
-DELETE ${base}/attachments/{id}
-\`\`\`
-
----
-
 ## Search
 
 ### Full-text search
 \`\`\`
-GET ${base}/search?q=search+terms&entity_type=task&project_id=1&limit=20&offset=0
+GET ${base}/search?q=search+terms&entity_type=project&project_id=1&limit=20&offset=0
 \`\`\`
 Required: \`q\`. Optional: \`entity_type\`, \`project_id\`, \`limit\` (default: 20), \`offset\` (default: 0).
-
----
-
-## Bulk Operations
-
-### Bulk status update
-\`\`\`
-POST ${base}/bulk
-Content-Type: application/json
-
-{"action": "update", "entityType": "task", "ids": [1, 2, 3], "fields": {"status": "done"}}
-\`\`\`
-
-### Bulk move tasks
-\`\`\`
-POST ${base}/bulk
-Content-Type: application/json
-
-{"action": "move", "ids": [1, 2, 3], "target": {"parent_project_id": 2}}
-\`\`\`
 
 ---
 
@@ -483,9 +282,7 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 	const activeProjects = db
 		.prepare(
 			`
-			SELECT p.*, f.name as focus_name, d.name as domain_name,
-				(SELECT COUNT(*) FROM tasks WHERE parent_project_id = p.id) as task_count,
-				(SELECT COUNT(*) FROM tasks WHERE parent_project_id = p.id AND status = 'done') as done_count
+			SELECT p.*, f.name as focus_name, d.name as domain_name
 			FROM projects p
 			JOIN focuses f ON p.focus_id = f.id
 			JOIN domains d ON f.domain_id = d.id
@@ -496,19 +293,16 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 		.all() as (Project & {
 		focus_name: string;
 		domain_name: string;
-		task_count: number;
-		done_count: number;
 	})[];
 
 	let projectsMd = '# Active Projects\n\n';
 	projectsMd += `> Generated: ${new Date().toISOString()}\n\n`;
 
 	if (activeProjects.length > 0) {
-		projectsMd += '| ID | Title | Status | Domain/Focus | Progress | Due |\n';
-		projectsMd += '|---|---|---|---|---|---|\n';
+		projectsMd += '| ID | Title | Status | Domain/Focus | Due |\n';
+		projectsMd += '|---|---|---|---|---|\n';
 		for (const p of activeProjects) {
-			const progress = p.task_count > 0 ? `${p.done_count}/${p.task_count}` : '-';
-			projectsMd += `| P-${p.id} | ${p.title} | ${p.status} | ${p.domain_name}/${p.focus_name} | ${progress} | ${p.due_date ?? '-'} |\n`;
+			projectsMd += `| P-${p.id} | ${p.title} | ${p.status} | ${p.domain_name}/${p.focus_name} | ${p.due_date ?? '-'} |\n`;
 		}
 	} else {
 		projectsMd += 'No active projects.\n';

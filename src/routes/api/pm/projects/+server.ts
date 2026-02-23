@@ -11,13 +11,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		const limit = parseInt(url.searchParams.get('limit') ?? '50');
 		const focusId = url.searchParams.get('focus_id') ?? undefined;
 		const status = url.searchParams.get('status') ?? undefined;
-		const milestoneIdParam = url.searchParams.get('milestone_id');
-		const milestoneId = milestoneIdParam ? parseInt(milestoneIdParam) : undefined;
 
-		const filters: { focus_id?: string; status?: string; milestone_id?: number } = {};
+		const filters: { focus_id?: string; status?: string } = {};
 		if (focusId) filters.focus_id = focusId;
 		if (status) filters.status = status;
-		if (milestoneId !== undefined) filters.milestone_id = milestoneId;
 
 		const items = listProjects(Object.keys(filters).length > 0 ? filters : undefined);
 		const total = items.length;

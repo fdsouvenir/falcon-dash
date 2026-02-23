@@ -22,58 +22,19 @@ export interface Focus {
 	created_at: number;
 }
 
-export interface Milestone {
-	id: number;
-	name: string;
-	due_date: string | null;
-	description: string | null;
-	created_at: number;
-}
-
 export interface Project {
 	id: number;
 	focus_id: string;
 	title: string;
 	description: string | null;
-	status: string;
-	milestone_id: number | null;
-	due_date: string | null;
-	priority: string | null;
-	external_ref: string | null;
-	created_at: number;
-	updated_at: number;
-	last_activity_at: number;
-}
-
-export interface Task {
-	id: number;
-	parent_project_id: number | null;
-	parent_task_id: number | null;
-	title: string;
 	body: string | null;
 	status: string;
 	due_date: string | null;
 	priority: string | null;
-	milestone_id: number | null;
 	external_ref: string | null;
-	sort_order: number;
 	created_at: number;
 	updated_at: number;
 	last_activity_at: number;
-}
-
-export interface Comment {
-	id: number;
-	target_type: string;
-	target_id: number;
-	body: string;
-	author: string;
-	created_at: number;
-}
-
-export interface Block {
-	blocker_id: number;
-	blocked_id: number;
 }
 
 export interface Activity {
@@ -85,30 +46,6 @@ export interface Activity {
 	target_id: number;
 	target_title: string | null;
 	details: string | null;
-	created_at: number;
-}
-
-export interface Attachment {
-	id: number;
-	target_type: string;
-	target_id: number;
-	file_path: string;
-	file_name: string;
-	description: string | null;
-	added_by: string;
-	created_at: number;
-}
-
-export interface SyncMapping {
-	id: number;
-	entity_type: string;
-	entity_id: number;
-	external_system: string;
-	external_id: string;
-	external_url: string | null;
-	synced_at: number | null;
-	sync_state: string;
-	sync_metadata: string | null;
 	created_at: number;
 }
 
@@ -133,23 +70,14 @@ CREATE TABLE IF NOT EXISTS focuses (
   created_at INTEGER DEFAULT (unixepoch())
 );
 
--- Milestones (M-# IDs)
-CREATE TABLE IF NOT EXISTS milestones (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  due_date TEXT,
-  description TEXT,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-
 -- Projects (P-# IDs)
 CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   focus_id TEXT NOT NULL REFERENCES focuses(id),
   title TEXT NOT NULL,
   description TEXT,
+  body TEXT,
   status TEXT CHECK(status IN ('todo','in_progress','review','done','cancelled','archived')) DEFAULT 'todo',
-  milestone_id INTEGER REFERENCES milestones(id),
   due_date TEXT,
   priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
   external_ref TEXT,
@@ -158,83 +86,17 @@ CREATE TABLE IF NOT EXISTS projects (
   last_activity_at INTEGER DEFAULT (unixepoch())
 );
 
--- Tasks (T-# IDs, also subtasks via parent_task_id)
-CREATE TABLE IF NOT EXISTS tasks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  parent_project_id INTEGER REFERENCES projects(id),
-  parent_task_id INTEGER REFERENCES tasks(id),
-  title TEXT NOT NULL,
-  body TEXT,
-  status TEXT CHECK(status IN ('todo','in_progress','review','done','cancelled','archived')) DEFAULT 'todo',
-  due_date TEXT,
-  priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
-  milestone_id INTEGER REFERENCES milestones(id),
-  external_ref TEXT,
-  sort_order INTEGER DEFAULT 0,
-  created_at INTEGER DEFAULT (unixepoch()),
-  updated_at INTEGER DEFAULT (unixepoch()),
-  last_activity_at INTEGER DEFAULT (unixepoch()),
-  CHECK (
-    (parent_project_id IS NOT NULL AND parent_task_id IS NULL) OR
-    (parent_project_id IS NULL AND parent_task_id IS NOT NULL)
-  )
-);
-
--- Comments (C-# IDs)
-CREATE TABLE IF NOT EXISTS comments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  target_type TEXT CHECK(target_type IN ('project','task')) NOT NULL,
-  target_id INTEGER NOT NULL,
-  body TEXT NOT NULL,
-  author TEXT NOT NULL,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-
--- Blocks (dependencies between tasks)
-CREATE TABLE IF NOT EXISTS blocks (
-  blocker_id INTEGER NOT NULL REFERENCES tasks(id),
-  blocked_id INTEGER NOT NULL REFERENCES tasks(id),
-  PRIMARY KEY (blocker_id, blocked_id)
-);
-
 -- Activities (A-# IDs, project feed)
 CREATE TABLE IF NOT EXISTS activities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id),
   actor TEXT NOT NULL,
   action TEXT CHECK(action IN ('created','updated','commented','status_changed','reopened','closed')) NOT NULL,
-  target_type TEXT CHECK(target_type IN ('project','task','comment')) NOT NULL,
+  target_type TEXT CHECK(target_type IN ('project')) NOT NULL,
   target_id INTEGER NOT NULL,
   target_title TEXT,
   details TEXT,
   created_at INTEGER DEFAULT (unixepoch())
-);
-
--- Attachments (file references on projects/tasks)
-CREATE TABLE IF NOT EXISTS attachments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  target_type TEXT CHECK(target_type IN ('project','task')) NOT NULL,
-  target_id INTEGER NOT NULL,
-  file_path TEXT NOT NULL,
-  file_name TEXT NOT NULL,
-  description TEXT,
-  added_by TEXT NOT NULL,
-  created_at INTEGER DEFAULT (unixepoch())
-);
-
--- Sync Mappings (for external system integration)
-CREATE TABLE IF NOT EXISTS sync_mappings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  entity_type TEXT CHECK(entity_type IN ('domain','focus','milestone','project','task','comment')) NOT NULL,
-  entity_id INTEGER NOT NULL,
-  external_system TEXT NOT NULL,
-  external_id TEXT NOT NULL,
-  external_url TEXT,
-  synced_at INTEGER,
-  sync_state TEXT CHECK(sync_state IN ('synced','pending_push','pending_pull','conflict')) DEFAULT 'synced',
-  sync_metadata TEXT,
-  created_at INTEGER DEFAULT (unixepoch()),
-  UNIQUE(entity_type, entity_id, external_system)
 );
 
 -- Indexes
@@ -243,26 +105,10 @@ CREATE INDEX IF NOT EXISTS idx_projects_focus ON projects(focus_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_due ON projects(due_date);
 CREATE INDEX IF NOT EXISTS idx_projects_activity ON projects(last_activity_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(parent_project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
-CREATE INDEX IF NOT EXISTS idx_tasks_activity ON tasks(last_activity_at);
-CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_activities_project ON activities(project_id);
 CREATE INDEX IF NOT EXISTS idx_activities_created ON activities(created_at);
-CREATE INDEX IF NOT EXISTS idx_attachments_target ON attachments(target_type, target_id);
-CREATE INDEX IF NOT EXISTS idx_sync_entity ON sync_mappings(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_sync_system ON sync_mappings(external_system);
-CREATE INDEX IF NOT EXISTS idx_sync_state ON sync_mappings(sync_state);
 
 -- Views
-CREATE VIEW IF NOT EXISTS v_blocked_tasks AS
-SELECT t.*, b.blocker_id
-FROM tasks t
-JOIN blocks b ON b.blocked_id = t.id
-WHERE t.status NOT IN ('done', 'cancelled');
-
 CREATE VIEW IF NOT EXISTS v_active_projects AS
 SELECT p.*, d.name as domain_name, f.name as focus_name
 FROM projects p
@@ -283,49 +129,17 @@ CREATE VIRTUAL TABLE IF NOT EXISTS pm_search USING fts5(
 -- FTS triggers for projects
 CREATE TRIGGER IF NOT EXISTS trg_projects_insert AFTER INSERT ON projects BEGIN
   INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('project', NEW.id, NEW.id, NEW.title, COALESCE(NEW.description, ''));
+  VALUES ('project', NEW.id, NEW.id, NEW.title, COALESCE(NEW.description, '') || ' ' || COALESCE(NEW.body, ''));
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_projects_update AFTER UPDATE ON projects BEGIN
   DELETE FROM pm_search WHERE entity_type = 'project' AND entity_id = OLD.id;
   INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('project', NEW.id, NEW.id, NEW.title, COALESCE(NEW.description, ''));
+  VALUES ('project', NEW.id, NEW.id, NEW.title, COALESCE(NEW.description, '') || ' ' || COALESCE(NEW.body, ''));
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_projects_delete AFTER DELETE ON projects BEGIN
   DELETE FROM pm_search WHERE entity_type = 'project' AND entity_id = OLD.id;
-END;
-
--- FTS triggers for tasks
-CREATE TRIGGER IF NOT EXISTS trg_tasks_insert AFTER INSERT ON tasks BEGIN
-  INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('task', NEW.id, COALESCE(NEW.parent_project_id, 0), NEW.title, COALESCE(NEW.body, ''));
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_tasks_update AFTER UPDATE ON tasks BEGIN
-  DELETE FROM pm_search WHERE entity_type = 'task' AND entity_id = OLD.id;
-  INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('task', NEW.id, COALESCE(NEW.parent_project_id, 0), NEW.title, COALESCE(NEW.body, ''));
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_tasks_delete AFTER DELETE ON tasks BEGIN
-  DELETE FROM pm_search WHERE entity_type = 'task' AND entity_id = OLD.id;
-END;
-
--- FTS triggers for comments
-CREATE TRIGGER IF NOT EXISTS trg_comments_insert AFTER INSERT ON comments BEGIN
-  INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('comment', NEW.id, 0, '', NEW.body);
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_comments_update AFTER UPDATE ON comments BEGIN
-  DELETE FROM pm_search WHERE entity_type = 'comment' AND entity_id = OLD.id;
-  INSERT INTO pm_search(entity_type, entity_id, project_id, title, body)
-  VALUES ('comment', NEW.id, 0, '', NEW.body);
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_comments_delete AFTER DELETE ON comments BEGIN
-  DELETE FROM pm_search WHERE entity_type = 'comment' AND entity_id = OLD.id;
 END;
 `;
 
@@ -347,6 +161,92 @@ function getDbPath(): string {
 }
 
 /**
+ * Migrate from old schema: drop tasks, comments, blocks, attachments,
+ * milestones, sync_mappings tables and add body column to projects.
+ */
+function migrateIfNeeded(database: Database.Database): void {
+	const hasTasksTable = database
+		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
+		.get();
+
+	if (!hasTasksTable) return;
+
+	// Add body column to projects if it doesn't exist
+	const projectCols = database.prepare("PRAGMA table_info('projects')").all() as {
+		name: string;
+	}[];
+	if (!projectCols.some((c) => c.name === 'body')) {
+		database.exec('ALTER TABLE projects ADD COLUMN body TEXT');
+	}
+
+	// Remove milestone_id column reference from projects by recreating without it
+	if (projectCols.some((c) => c.name === 'milestone_id')) {
+		database.exec(`
+			CREATE TABLE projects_new (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				focus_id TEXT NOT NULL REFERENCES focuses(id),
+				title TEXT NOT NULL,
+				description TEXT,
+				body TEXT,
+				status TEXT CHECK(status IN ('todo','in_progress','review','done','cancelled','archived')) DEFAULT 'todo',
+				due_date TEXT,
+				priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
+				external_ref TEXT,
+				created_at INTEGER DEFAULT (unixepoch()),
+				updated_at INTEGER DEFAULT (unixepoch()),
+				last_activity_at INTEGER DEFAULT (unixepoch())
+			);
+			INSERT INTO projects_new (id, focus_id, title, description, body, status, due_date, priority, external_ref, created_at, updated_at, last_activity_at)
+			SELECT id, focus_id, title, description, body, status, due_date, priority, external_ref, created_at, updated_at, last_activity_at FROM projects;
+			DROP TABLE projects;
+			ALTER TABLE projects_new RENAME TO projects;
+		`);
+	}
+
+	// Drop old FTS triggers
+	database.exec(`
+		DROP TRIGGER IF EXISTS trg_tasks_insert;
+		DROP TRIGGER IF EXISTS trg_tasks_update;
+		DROP TRIGGER IF EXISTS trg_tasks_delete;
+		DROP TRIGGER IF EXISTS trg_comments_insert;
+		DROP TRIGGER IF EXISTS trg_comments_update;
+		DROP TRIGGER IF EXISTS trg_comments_delete;
+		DROP TRIGGER IF EXISTS trg_projects_insert;
+		DROP TRIGGER IF EXISTS trg_projects_update;
+		DROP TRIGGER IF EXISTS trg_projects_delete;
+	`);
+
+	// Drop old FTS table
+	database.exec('DROP TABLE IF EXISTS pm_search');
+
+	// Drop views
+	database.exec('DROP VIEW IF EXISTS v_blocked_tasks');
+	database.exec('DROP VIEW IF EXISTS v_active_projects');
+
+	// Drop tables
+	database.exec('DROP TABLE IF EXISTS blocks');
+	database.exec('DROP TABLE IF EXISTS attachments');
+	database.exec('DROP TABLE IF EXISTS sync_mappings');
+	database.exec('DROP TABLE IF EXISTS comments');
+	database.exec('DROP TABLE IF EXISTS tasks');
+	database.exec('DROP TABLE IF EXISTS milestones');
+
+	// Drop old indexes
+	database.exec(`
+		DROP INDEX IF EXISTS idx_tasks_project;
+		DROP INDEX IF EXISTS idx_tasks_parent;
+		DROP INDEX IF EXISTS idx_tasks_status;
+		DROP INDEX IF EXISTS idx_tasks_due;
+		DROP INDEX IF EXISTS idx_tasks_activity;
+		DROP INDEX IF EXISTS idx_comments_target;
+		DROP INDEX IF EXISTS idx_attachments_target;
+		DROP INDEX IF EXISTS idx_sync_entity;
+		DROP INDEX IF EXISTS idx_sync_system;
+		DROP INDEX IF EXISTS idx_sync_state;
+	`);
+}
+
+/**
  * Get singleton database instance
  */
 export function getDb(): Database.Database {
@@ -365,6 +265,9 @@ export function getDb(): Database.Database {
 
 		// Enable foreign key constraints
 		db.pragma('foreign_keys = ON');
+
+		// Run migration before schema init
+		migrateIfNeeded(db);
 
 		// Initialize schema
 		db.exec(SCHEMA);
