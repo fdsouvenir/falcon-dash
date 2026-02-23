@@ -2,6 +2,7 @@
 	import { get } from 'svelte/store';
 	import { sessions } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
+	import { getAgentIdentity, type AgentIdentity } from '$lib/stores/agent-identity.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
@@ -15,6 +16,7 @@
 
 	interface EnrichedAgent extends AgentEntry {
 		displayName: string;
+		emoji: string | undefined;
 		initial: string;
 		sessionCount: number;
 		isDefault: boolean;
@@ -26,6 +28,9 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
+	// Gateway-sourced identities (name/emoji set by agent itself)
+	let gatewayIdentities = $state<Record<string, AgentIdentity>>({});
+
 	// Modal states
 	let showEditModal = $state(false);
 	let showDeleteConfirm = $state(false);
@@ -33,8 +38,6 @@
 
 	// Form fields
 	let formId = $state('');
-	let formName = $state('');
-	let formEmoji = $state('');
 	let formTheme = $state('');
 	let formSaving = $state(false);
 	let formError = $state<string | null>(null);
@@ -65,10 +68,13 @@
 
 	let enrichedAgents = $derived<EnrichedAgent[]>(
 		agents.map((agent, idx) => {
-			const displayName = agent.identity?.name || agent.id;
+			const gw = gatewayIdentities[agent.id];
+			const displayName = agent.identity?.name || gw?.name || agent.id;
+			const emoji = agent.identity?.emoji || gw?.emoji;
 			return {
 				...agent,
 				displayName,
+				emoji,
 				initial: displayName.charAt(0).toUpperCase(),
 				sessionCount: sessionCounts[agent.id] ?? 0,
 				isDefault: agent.id === defaultAgentId,
@@ -90,6 +96,19 @@
 			const data = await res.json();
 			agents = data.agents;
 			configHash = data.hash;
+
+			// Fetch gateway identities for agents missing config identity
+			const toFetch = (data.agents as AgentEntry[]).filter(
+				(a) => !a.identity?.name || !a.identity?.emoji
+			);
+			const results = await Promise.allSettled(toFetch.map((a) => getAgentIdentity(a.id)));
+			const identities: Record<string, AgentIdentity> = {};
+			results.forEach((r, i) => {
+				if (r.status === 'fulfilled' && r.value.agentId) {
+					identities[toFetch[i].id] = r.value;
+				}
+			});
+			gatewayIdentities = identities;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load agents';
 		} finally {
@@ -133,18 +152,25 @@
 		}
 	}
 
-	function openEdit(agent: AgentEntry) {
+	// Resolved display values for the edit modal (config + gateway fallback)
+	let editDisplayName = $state('');
+	let editDisplayEmoji = $state('');
+
+	function openEdit(agent: EnrichedAgent) {
 		selectedAgent = agent;
 		formId = agent.id;
-		formName = agent.identity?.name || '';
-		formEmoji = agent.identity?.emoji || '';
 		formTheme = agent.identity?.theme || '';
+		editDisplayName = agent.displayName;
+		editDisplayEmoji = agent.emoji || '';
 		formError = null;
 		showEditModal = true;
 	}
 
-	function openDelete(agent: AgentEntry) {
+	let deleteDisplayName = $state('');
+
+	function openDelete(agent: EnrichedAgent) {
 		selectedAgent = agent;
+		deleteDisplayName = agent.displayName;
 		showDeleteConfirm = true;
 	}
 
@@ -158,11 +184,6 @@
 	}
 
 	async function handleUpdate() {
-		if (!formName.trim()) {
-			formError = 'Display name is required.';
-			return;
-		}
-
 		formSaving = true;
 		formError = null;
 		try {
@@ -171,8 +192,6 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					identity: {
-						name: formName.trim(),
-						emoji: formEmoji.trim() || undefined,
 						theme: formTheme.trim() || undefined
 					},
 					hash: configHash
@@ -192,7 +211,7 @@
 			closeModals();
 			needsRestart = true;
 			await fetchAgents();
-			addToast(`Agent "${formName.trim()}" updated`, 'success');
+			addToast(`Agent "${editDisplayName}" updated`, 'success');
 		} catch (e) {
 			formError = e instanceof Error ? e.message : 'Failed to update agent';
 		} finally {
@@ -222,11 +241,10 @@
 				throw new Error(data.error || 'Failed to delete agent');
 			}
 
-			const name = selectedAgent.identity?.name || selectedAgent.id;
 			closeModals();
 			needsRestart = true;
 			await fetchAgents();
-			addToast(`Agent "${name}" removed`, 'success');
+			addToast(`Agent "${deleteDisplayName}" removed`, 'success');
 		} catch (e) {
 			addToast(e instanceof Error ? e.message : 'Failed to delete agent', 'error');
 			closeModals();
@@ -323,7 +341,7 @@
 					<div class="flex items-center gap-4">
 						<Avatar.Root class="h-11 w-11 rounded-xl">
 							<Avatar.Fallback class="rounded-xl bg-rose-900/70 text-lg">
-								{agent.identity?.emoji || agent.initial}
+								{agent.emoji || agent.initial}
 							</Avatar.Fallback>
 						</Avatar.Root>
 
@@ -478,43 +496,42 @@
 					/>
 				</div>
 
-				<div>
-					<label for="edit-agent-name" class="mb-1 block text-xs text-gray-400">
-						Display Name
-					</label>
-					<input
-						id="edit-agent-name"
-						bind:value={formName}
-						type="text"
-						placeholder="Agent Name"
-						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-					/>
-				</div>
-
 				<div class="flex gap-3">
 					<div class="w-20">
 						<label for="edit-agent-emoji" class="mb-1 block text-xs text-gray-400">Emoji</label>
 						<input
 							id="edit-agent-emoji"
-							bind:value={formEmoji}
+							value={editDisplayEmoji || '\u2014'}
 							type="text"
-							placeholder="🔬"
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-center text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+							disabled
+							class="w-full rounded border border-gray-700 bg-gray-900/50 px-3 py-1.5 text-center text-sm text-gray-500"
 						/>
 					</div>
 					<div class="flex-1">
-						<label for="edit-agent-theme" class="mb-1 block text-xs text-gray-400">
-							Theme
-							<span class="text-gray-600">(optional)</span>
+						<label for="edit-agent-name" class="mb-1 block text-xs text-gray-400">
+							Display Name
 						</label>
 						<input
-							id="edit-agent-theme"
-							bind:value={formTheme}
+							id="edit-agent-name"
+							value={editDisplayName}
 							type="text"
-							placeholder="research assistant"
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+							disabled
+							class="w-full rounded border border-gray-700 bg-gray-900/50 px-3 py-1.5 text-sm text-gray-500"
 						/>
 					</div>
+				</div>
+				<p class="text-xs text-gray-600">Want to change my name or emoji? Just ask me in chat!</p>
+
+				<div>
+					<label for="edit-agent-role" class="mb-1 block text-xs text-gray-400">Role</label>
+					<input
+						id="edit-agent-role"
+						bind:value={formTheme}
+						type="text"
+						placeholder="research assistant"
+						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					/>
+					<p class="mt-1 text-xs text-gray-600">Tells the other agents why I'm here</p>
 				</div>
 			</div>
 
@@ -551,7 +568,7 @@
 		<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
 			<h3 class="mb-2 text-sm font-semibold text-white">Delete Agent</h3>
 			<p class="mb-1 text-sm text-gray-300">
-				Remove <strong>{selectedAgent.identity?.name || selectedAgent.id}</strong> from the configuration?
+				Remove <strong>{deleteDisplayName}</strong> from the configuration?
 			</p>
 			<p class="mb-5 text-xs text-gray-500">The workspace directory will not be deleted.</p>
 

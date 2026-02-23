@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { connectionState } from '$lib/stores/agent-identity.js';
+	import {
+		connectionState,
+		getAgentIdentity,
+		type AgentIdentity
+	} from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 	import { addToast } from '$lib/stores/toast.js';
@@ -31,6 +35,9 @@
 	let spawning = $state(false);
 	let showSpawnConfirm = $state(false);
 
+	// Gateway-sourced identities (name/emoji set by agent itself)
+	let gatewayIdentities = $state<Record<string, AgentIdentity>>({});
+
 	// Session counts (written by sessions effect)
 	let sessionCounts = $state<Record<string, number>>({});
 
@@ -45,6 +52,19 @@
 			if (data.hash) {
 				configHash = data.hash;
 			}
+
+			// Fetch gateway identities for agents missing config identity
+			const toFetch = (data.agents as ConfigAgent[]).filter(
+				(a) => !a.identity?.name || !a.identity?.emoji
+			);
+			const results = await Promise.allSettled(toFetch.map((a) => getAgentIdentity(a.id)));
+			const identities: Record<string, AgentIdentity> = {};
+			results.forEach((r, i) => {
+				if (r.status === 'fulfilled' && r.value.agentId) {
+					identities[toFetch[i].id] = r.value;
+				}
+			});
+			gatewayIdentities = identities;
 		} catch {
 			// Silently fail — rail will be empty until next attempt
 		}
@@ -102,18 +122,20 @@
 		return unsub;
 	});
 
-	// Derive agents from config, overlay session counts
+	// Derive agents from config, overlay session counts + gateway identities
 	let agents = $derived.by(() => {
 		// Map config agents as primary source
 		const entries: AgentEntry[] = configAgents.map((ca) => {
-			const name = ca.identity?.name || ca.id;
+			const gw = gatewayIdentities[ca.id];
+			const name = ca.identity?.name || gw?.name || ca.id;
+			const emoji = ca.identity?.emoji || gw?.emoji;
 			return {
 				agentId: ca.id,
 				name,
-				emoji: ca.identity?.emoji,
+				emoji,
 				initial: name.charAt(0).toUpperCase(),
 				sessionCount: sessionCounts[ca.id] ?? 0,
-				hasIdentity: !!ca.identity?.name
+				hasIdentity: !!(ca.identity?.name || gw?.name)
 			};
 		});
 
