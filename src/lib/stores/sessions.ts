@@ -1,6 +1,7 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
 import { notifyNewMessage } from '$lib/stores/notifications.js';
+import { shortId } from '$lib/utils.js';
 
 export interface ChatSessionInfo {
 	sessionKey: string;
@@ -106,7 +107,9 @@ function isSystemSession(s: ChatSessionInfo): boolean {
 		s.kind === 'cron' ||
 		s.kind === 'heartbeat' ||
 		s.name === 'heartbeat' ||
-		s.name === 'cron'
+		s.displayName === 'heartbeat' ||
+		s.name === 'cron' ||
+		s.displayName === 'cron'
 	);
 }
 
@@ -295,7 +298,7 @@ export async function createSession(label?: string): Promise<string> {
 	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
-	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
+	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
 	_activeSessionKey.set(sessionKey);
@@ -318,7 +321,7 @@ export function createSessionOptimistic(label?: string): string {
 	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
-	const sessionKey = `agent:${agentId}:webchat:dm:${crypto.randomUUID()}`;
+	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions));
 
 	_activeSessionKey.set(sessionKey);

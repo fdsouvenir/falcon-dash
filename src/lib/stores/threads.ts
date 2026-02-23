@@ -1,6 +1,7 @@
 import { writable, readonly, get, type Readable, type Writable } from 'svelte/store';
 import { call, snapshot, eventBus } from '$lib/stores/gateway.js';
 import { createChatSession, type ChatSessionStore } from '$lib/stores/chat.js';
+import { shortId } from '$lib/utils.js';
 
 export type ThreadState = 'active' | 'archived' | 'locked';
 
@@ -45,7 +46,7 @@ export async function openThread(
 	const agentId = defaults.defaultAgentId ?? 'default';
 	// Extract parentId from parentSessionKey (last segment before any :thread:)
 	const parentId = parentSessionKey.split(':').pop() ?? parentSessionKey;
-	const threadKey = `agent:${agentId}:webchat:dm:${parentId}:thread:${crypto.randomUUID()}`;
+	const threadKey = `agent:${agentId}:webchat:dm:${parentId}:thread:fd-chat-${shortId()}`;
 	const name = displayName ?? 'Thread';
 
 	// Create thread session on server

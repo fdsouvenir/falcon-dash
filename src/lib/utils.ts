@@ -11,3 +11,10 @@ export type WithElementRef<T, E extends HTMLElement = HTMLElement> = T & {
 };
 
 export type WithoutChild<T> = Omit<T, 'child'>;
+
+/** Generate an 8-character random hex string for session IDs */
+export function shortId(): string {
+	return Array.from(crypto.getRandomValues(new Uint8Array(4)))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
