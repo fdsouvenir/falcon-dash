@@ -161,92 +161,6 @@ function getDbPath(): string {
 }
 
 /**
- * Migrate from old schema: drop tasks, comments, blocks, attachments,
- * milestones, sync_mappings tables and add body column to projects.
- */
-function migrateIfNeeded(database: Database.Database): void {
-	const hasTasksTable = database
-		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
-		.get();
-
-	if (!hasTasksTable) return;
-
-	// Add body column to projects if it doesn't exist
-	const projectCols = database.prepare("PRAGMA table_info('projects')").all() as {
-		name: string;
-	}[];
-	if (!projectCols.some((c) => c.name === 'body')) {
-		database.exec('ALTER TABLE projects ADD COLUMN body TEXT');
-	}
-
-	// Remove milestone_id column reference from projects by recreating without it
-	if (projectCols.some((c) => c.name === 'milestone_id')) {
-		database.exec(`
-			CREATE TABLE projects_new (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				focus_id TEXT NOT NULL REFERENCES focuses(id),
-				title TEXT NOT NULL,
-				description TEXT,
-				body TEXT,
-				status TEXT CHECK(status IN ('todo','in_progress','review','done','cancelled','archived')) DEFAULT 'todo',
-				due_date TEXT,
-				priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
-				external_ref TEXT,
-				created_at INTEGER DEFAULT (unixepoch()),
-				updated_at INTEGER DEFAULT (unixepoch()),
-				last_activity_at INTEGER DEFAULT (unixepoch())
-			);
-			INSERT INTO projects_new (id, focus_id, title, description, body, status, due_date, priority, external_ref, created_at, updated_at, last_activity_at)
-			SELECT id, focus_id, title, description, body, status, due_date, priority, external_ref, created_at, updated_at, last_activity_at FROM projects;
-			DROP TABLE projects;
-			ALTER TABLE projects_new RENAME TO projects;
-		`);
-	}
-
-	// Drop old FTS triggers
-	database.exec(`
-		DROP TRIGGER IF EXISTS trg_tasks_insert;
-		DROP TRIGGER IF EXISTS trg_tasks_update;
-		DROP TRIGGER IF EXISTS trg_tasks_delete;
-		DROP TRIGGER IF EXISTS trg_comments_insert;
-		DROP TRIGGER IF EXISTS trg_comments_update;
-		DROP TRIGGER IF EXISTS trg_comments_delete;
-		DROP TRIGGER IF EXISTS trg_projects_insert;
-		DROP TRIGGER IF EXISTS trg_projects_update;
-		DROP TRIGGER IF EXISTS trg_projects_delete;
-	`);
-
-	// Drop old FTS table
-	database.exec('DROP TABLE IF EXISTS pm_search');
-
-	// Drop views
-	database.exec('DROP VIEW IF EXISTS v_blocked_tasks');
-	database.exec('DROP VIEW IF EXISTS v_active_projects');
-
-	// Drop tables
-	database.exec('DROP TABLE IF EXISTS blocks');
-	database.exec('DROP TABLE IF EXISTS attachments');
-	database.exec('DROP TABLE IF EXISTS sync_mappings');
-	database.exec('DROP TABLE IF EXISTS comments');
-	database.exec('DROP TABLE IF EXISTS tasks');
-	database.exec('DROP TABLE IF EXISTS milestones');
-
-	// Drop old indexes
-	database.exec(`
-		DROP INDEX IF EXISTS idx_tasks_project;
-		DROP INDEX IF EXISTS idx_tasks_parent;
-		DROP INDEX IF EXISTS idx_tasks_status;
-		DROP INDEX IF EXISTS idx_tasks_due;
-		DROP INDEX IF EXISTS idx_tasks_activity;
-		DROP INDEX IF EXISTS idx_comments_target;
-		DROP INDEX IF EXISTS idx_attachments_target;
-		DROP INDEX IF EXISTS idx_sync_entity;
-		DROP INDEX IF EXISTS idx_sync_system;
-		DROP INDEX IF EXISTS idx_sync_state;
-	`);
-}
-
-/**
  * Get singleton database instance
  */
 export function getDb(): Database.Database {
@@ -258,19 +172,23 @@ export function getDb(): Database.Database {
 		mkdirSync(dbDir, { recursive: true });
 
 		// Open database
-		db = new Database(dbPath);
+		const instance = new Database(dbPath);
 
-		// Enable WAL mode for better concurrency
-		db.pragma('journal_mode = WAL');
+		try {
+			// Enable WAL mode for better concurrency
+			instance.pragma('journal_mode = WAL');
 
-		// Enable foreign key constraints
-		db.pragma('foreign_keys = ON');
+			// Enable foreign key constraints
+			instance.pragma('foreign_keys = ON');
 
-		// Run migration before schema init
-		migrateIfNeeded(db);
+			// Initialize schema
+			instance.exec(SCHEMA);
+		} catch (err) {
+			instance.close();
+			throw err;
+		}
 
-		// Initialize schema
-		db.exec(SCHEMA);
+		db = instance;
 	}
 
 	return db;

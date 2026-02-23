@@ -11,7 +11,8 @@ export async function checkPMAvailability(): Promise<void> {
 	try {
 		await pmGet('/api/pm/stats');
 		_pmAvailable.set(true);
-	} catch {
+	} catch (err) {
+		console.error('[PM] Availability check failed:', err);
 		_pmAvailable.set(false);
 	}
 }
