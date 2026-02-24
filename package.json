@@ -1,7 +1,6 @@
 {
-	"name": "falcon-dash",
+	"name": "@fdsouvenir/falcon-dash",
 	"version": "0.7.1",
-	"private": true,
 	"description": "Web dashboard for the OpenClaw AI platform",
 	"repository": {
 		"type": "git",
@@ -21,6 +20,21 @@
 		"websocket"
 	],
 	"type": "module",
+	"bin": {
+		"falcon-dash": "./bin/falcon-dash.js"
+	},
+	"files": [
+		"bin/",
+		"src/",
+		"static/",
+		"svelte.config.js",
+		"vite.config.ts",
+		"tsconfig.json",
+		"package.json"
+	],
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
 	"engines": {
 		"node": ">=20"
 	},
@@ -39,6 +53,7 @@
 		"test:coverage": "vitest run --coverage",
 		"test:ui": "vitest --ui",
 		"prepare": "husky",
+		"postinstall": "svelte-kit sync",
 		"release": "npm version"
 	},
 	"lint-staged": {
@@ -53,10 +68,6 @@
 	"devDependencies": {
 		"@eslint/js": "^9.0.0",
 		"@sentry/vite-plugin": "^4.9.1",
-		"@sveltejs/adapter-node": "^5.5.3",
-		"@sveltejs/kit": "^2.15.0",
-		"@sveltejs/vite-plugin-svelte": "^5.0.0",
-		"@tailwindcss/vite": "^4.0.0",
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/katex": "^0.16.8",
 		"@types/node": "^25.2.2",
@@ -72,17 +83,16 @@
 		"prettier": "^3.4.0",
 		"prettier-plugin-svelte": "^3.3.0",
 		"rollup-plugin-visualizer": "^7.0.0",
-		"svelte": "^5.0.0",
-		"svelte-check": "^4.0.0",
-		"tailwindcss": "^4.0.0",
-		"typescript": "^5.7.0",
 		"typescript-eslint": "^8.0.0",
-		"vite": "^6.0.0",
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
 		"@lucide/svelte": "^0.575.0",
 		"@sentry/sveltekit": "^10.39.0",
+		"@sveltejs/adapter-node": "^5.5.3",
+		"@sveltejs/kit": "^2.15.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@tailwindcss/vite": "^4.0.0",
 		"better-sqlite3": "^12.6.2",
 		"bits-ui": "^2.16.2",
 		"clsx": "^2.1.1",
@@ -98,12 +108,17 @@
 		"remark-rehype": "^11.1.2",
 		"runed": "^0.37.1",
 		"shiki": "^3.22.0",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.0.0",
 		"svelte-gestures": "^5.2.2",
 		"svelte-toolbelt": "^0.10.6",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
+		"tailwindcss": "^4.0.0",
 		"tw-animate-css": "^1.4.0",
+		"typescript": "^5.7.0",
 		"unified": "^11.0.5",
+		"vite": "^6.0.0",
 		"web-vitals": "^5.1.0"
 	}
 }

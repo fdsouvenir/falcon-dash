@@ -45,6 +45,7 @@ export default defineConfig(({ mode }) => {
 			sourcemap: !!envVars.SENTRY_AUTH_TOKEN
 		},
 		server: {
+			host: '0.0.0.0',
 			proxy: {
 				'/ws': {
 					target: gatewayTarget,
