@@ -27,6 +27,10 @@
 	let editContent = $state('');
 	let saving = $state(false);
 	let error = $state<string | null>(null);
+	let currentHash = $state('');
+	let pollTimer = $state<ReturnType<typeof setInterval> | null>(null);
+
+	const POLL_INTERVAL_MS = 30_000;
 
 	async function fetchAgents() {
 		loadingAgents = true;
@@ -60,6 +64,7 @@
 		fileContent = '';
 		fileExists = false;
 		isEditing = false;
+		currentHash = '';
 		error = null;
 		try {
 			const params = new URLSearchParams({ path, agentId });
@@ -71,12 +76,50 @@
 			} else {
 				const data: { content: string; hash: string } = await res.json();
 				fileContent = data.content;
+				currentHash = data.hash;
 				fileExists = true;
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load file';
 		} finally {
 			loadingContent = false;
+			resetPollTimer();
+		}
+	}
+
+	async function pollForChanges() {
+		if (isEditing || !selectedAgentId || !activeTab) return;
+		try {
+			const params = new URLSearchParams({ path: activeTab, agentId: selectedAgentId });
+			const res = await fetch(`/api/workspace-file?${params}`);
+			if (res.status === 404) {
+				if (fileExists) {
+					fileExists = false;
+					fileContent = '';
+					currentHash = '';
+				}
+			} else if (res.ok) {
+				const data: { content: string; hash: string } = await res.json();
+				if (data.hash !== currentHash) {
+					fileContent = data.content;
+					currentHash = data.hash;
+					fileExists = true;
+				}
+			}
+		} catch {
+			// Silent — don't show poll errors to user
+		}
+	}
+
+	function resetPollTimer() {
+		if (pollTimer) clearInterval(pollTimer);
+		pollTimer = setInterval(pollForChanges, POLL_INTERVAL_MS);
+	}
+
+	function handleVisibilityChange() {
+		if (document.visibilityState === 'visible' && !isEditing) {
+			pollForChanges();
+			resetPollTimer();
 		}
 	}
 
@@ -114,6 +157,14 @@
 			fileContent = editContent;
 			fileExists = true;
 			isEditing = false;
+			// Re-fetch to get the new hash
+			const params = new URLSearchParams({ path: activeTab, agentId: selectedAgentId });
+			const hashRes = await fetch(`/api/workspace-file?${params}`);
+			if (hashRes.ok) {
+				const data: { content: string; hash: string } = await hashRes.json();
+				currentHash = data.hash;
+			}
+			resetPollTimer();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to save file';
 		} finally {
@@ -146,6 +197,11 @@
 	// Fetch agents on mount, then load first tab
 	$effect(() => {
 		fetchAgents();
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			if (pollTimer) clearInterval(pollTimer);
+		};
 	});
 
 	// Load tab when selectedAgentId becomes available
