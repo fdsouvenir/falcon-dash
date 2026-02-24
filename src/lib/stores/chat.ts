@@ -240,6 +240,15 @@ export function createChatSession(sessionKey: string) {
 			if (idx >= 0) {
 				const updated = [...msgs];
 				const msg = updated[idx];
+
+				// Remove empty assistant bubbles (NO_REPLY, HEARTBEAT_OK, or truly empty)
+				const hasContent = msg.content && msg.content.trim().length > 0;
+				const hasToolCalls = msg.toolCalls && msg.toolCalls.length > 0;
+				if (!hasContent && !hasToolCalls && event.status === 'ok') {
+					updated.splice(idx, 1);
+					return updated;
+				}
+
 				// Mark any still-running tool calls as error
 				const toolCalls = msg.toolCalls?.map((tc) =>
 					tc.status === 'running'
@@ -271,10 +280,16 @@ export function createChatSession(sessionKey: string) {
 		const msgSessionKey = payload.sessionKey as string;
 		if (msgSessionKey !== sessionKey) return;
 
+		// Skip system/internal messages — they should never appear in the UI
+		const role = (payload.role ?? 'user') as string;
+		if (role === 'system') return;
+		const rawContent = (payload.content ?? payload.text ?? '') as string;
+		if (isInternalMessage(rawContent)) return;
+
 		const message: ChatMessage = {
 			id: (payload.messageId ?? payload.id ?? crypto.randomUUID()) as string,
-			role: (payload.role ?? 'user') as 'user' | 'assistant',
-			content: (payload.content ?? payload.text ?? '') as string,
+			role: role as 'user' | 'assistant',
+			content: rawContent,
 			timestamp: (payload.timestamp ?? Date.now()) as number,
 			status: 'complete',
 			replyToMessageId: payload.replyToMessageId as string | undefined
@@ -621,7 +636,8 @@ export function createChatSession(sessionKey: string) {
 					const existingIds = new Set(current.map((m) => m.id));
 					const newMessages = result.messages
 						.filter((m) => !existingIds.has(m.id as string))
-						.map((m) => normalizeMessage(m));
+						.map((m) => normalizeMessage(m))
+						.filter((m): m is ChatMessage => m !== null);
 					// Merge and sort by timestamp
 					return [...current, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
 				});
@@ -633,12 +649,28 @@ export function createChatSession(sessionKey: string) {
 		}
 	}
 
-	/** Normalize a raw gateway message into a ChatMessage */
-	function normalizeMessage(raw: Record<string, unknown>): ChatMessage {
+	/** Check if a message is internal/system and should be hidden from the UI */
+	function isInternalMessage(content: string): boolean {
+		if (!content) return false;
+		const trimmed = content.trimStart();
+		return trimmed.startsWith('[System Message]') || trimmed.startsWith('[system]');
+	}
+
+	/** Normalize a raw gateway message into a ChatMessage, or null if it should be filtered */
+	function normalizeMessage(raw: Record<string, unknown>): ChatMessage | null {
+		// Filter out system/internal messages from history
+		const role = (raw.role ?? 'assistant') as string;
+		if (role === 'system') return null;
+		const content = extractTextContent(raw.content);
+		if (isInternalMessage(content)) return null;
+
+		// Filter out empty assistant messages (NO_REPLY / HEARTBEAT_OK responses that were stripped)
+		if (role === 'assistant' && !content.trim()) return null;
+
 		return {
 			id: (raw.id ?? raw.messageId ?? crypto.randomUUID()) as string,
-			role: (raw.role ?? 'assistant') as 'user' | 'assistant',
-			content: extractTextContent(raw.content),
+			role: role as 'user' | 'assistant',
+			content,
 			thinkingText: extractThinkingContent(raw.content),
 			timestamp: (raw.timestamp ?? Date.now()) as number,
 			status: 'complete',
@@ -668,7 +700,14 @@ export function createChatSession(sessionKey: string) {
 
 	/** Extract thinking text from gateway content blocks */
 	function extractThinkingContent(content: unknown): string | undefined {
-		if (!Array.isArray(content)) return undefined;
+		if (!Array.isArray(content)) {
+			// Handle string content that may contain thinking markers
+			if (typeof content === 'string') {
+				const thinkMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+				if (thinkMatch) return thinkMatch[1].trim() || undefined;
+			}
+			return undefined;
+		}
 		const parts: string[] = [];
 		for (const block of content) {
 			if (block && typeof block === 'object') {

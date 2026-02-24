@@ -25,7 +25,7 @@
 		...props
 	}: Props = $props();
 
-	let AUTO_CLOSE_DELAY = 1000;
+	let AUTO_CLOSE_DELAY = 4000;
 	let MS_IN_S = 1000;
 
 	let reasoningContext = new ReasoningContext({
