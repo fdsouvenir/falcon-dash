@@ -16,6 +16,7 @@
 	import MessageComposer from './MessageComposer.svelte';
 	import ReasoningAdapter from './ai/ReasoningAdapter.svelte';
 	import ToolAdapter from './ai/ToolAdapter.svelte';
+	import ToolGroup from './ai/ToolGroup.svelte';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import MessageActions from './MessageActions.svelte';
 	import PlanAdapter from './ai/PlanAdapter.svelte';
@@ -592,9 +593,11 @@
 
 										<!-- Tool calls -->
 										{#if message.toolCalls?.length}
-											{#each message.toolCalls as toolCall (toolCall.toolCallId)}
-												<ToolAdapter {toolCall} />
-											{/each}
+											{#if message.toolCalls.length === 1}
+												<ToolAdapter toolCall={message.toolCalls[0]} />
+											{:else}
+												<ToolGroup toolCalls={message.toolCalls} />
+											{/if}
 										{/if}
 
 										<!-- Canvas content (inline A2UI) -->
