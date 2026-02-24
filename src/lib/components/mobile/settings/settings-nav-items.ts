@@ -86,6 +86,12 @@ export const settingsNavGroups: SettingsNavGroup[] = [
 		label: 'ADVANCED',
 		items: [
 			{
+				id: 'devices',
+				title: 'Devices',
+				subtitle: 'Pairing and access',
+				iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'
+			},
+			{
 				id: 'api-keys',
 				title: 'API Keys',
 				subtitle: 'AI providers',

@@ -9,6 +9,7 @@
 	import LogsPage from './settings/LogsPage.svelte';
 	import AdvancedPage from './settings/AdvancedPage.svelte';
 	import SubscriptionPage from './settings/SubscriptionPage.svelte';
+	import DevicesPage from './settings/DevicesPage.svelte';
 	import WorkspaceFiles from '$lib/components/settings/WorkspaceFiles.svelte';
 
 	let activeSettingsPage = $state<string | null>(null);
@@ -46,6 +47,8 @@
 			<WorkspaceFiles />
 		</div>
 	</div>
+{:else if activeSettingsPage === 'devices'}
+	<DevicesPage onback={goBack} />
 {:else if activeSettingsPage === 'skills'}
 	<SkillsPage onback={goBack} />
 {:else if activeSettingsPage === 'tools'}
