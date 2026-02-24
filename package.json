@@ -1,6 +1,6 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"description": "Web dashboard for the OpenClaw AI platform",
 	"repository": {
 		"type": "git",
@@ -25,6 +25,7 @@
 	},
 	"files": [
 		"bin/",
+		"build/",
 		"src/",
 		"static/",
 		"svelte.config.js",
@@ -53,7 +54,7 @@
 		"test:coverage": "vitest run --coverage",
 		"test:ui": "vitest --ui",
 		"prepare": "husky",
-		"postinstall": "svelte-kit sync",
+		"prepublishOnly": "npm run build",
 		"release": "npm version"
 	},
 	"lint-staged": {

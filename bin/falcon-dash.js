@@ -22,14 +22,11 @@ switch (command) {
 			process.env.FALCON_DASH_HOST ||
 			'0.0.0.0';
 
-		const child = spawn(
-			resolve(packageRoot, 'node_modules/.bin/vite'),
-			['dev', '--port', port, '--host', host],
-			{
-				cwd: packageRoot,
-				stdio: 'inherit'
-			}
-		);
+		const child = spawn(process.execPath, [resolve(packageRoot, 'build', 'index.js')], {
+			cwd: packageRoot,
+			stdio: 'inherit',
+			env: { ...process.env, PORT: port, HOST: host }
+		});
 
 		process.on('SIGINT', () => child.kill('SIGINT'));
 		process.on('SIGTERM', () => child.kill('SIGTERM'));
