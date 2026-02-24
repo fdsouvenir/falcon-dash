@@ -101,7 +101,13 @@
 			<WrenchIcon class="text-muted-foreground size-4" />
 			<span class="text-sm font-medium">Tools</span>
 			<Badge class="gap-1.5 rounded-full text-xs" variant="secondary">
-				<statusConfig.Icon class={cn('size-4', statusConfig.iconClass)} />
+				{#if groupState === 'running'}
+					<ClockIcon class="size-4 animate-pulse" />
+				{:else if groupState === 'error'}
+					<XCircleIcon class="size-4 text-red-600" />
+				{:else}
+					<CheckCircleIcon class="size-4 text-green-600" />
+				{/if}
 				{statusConfig.label}
 			</Badge>
 			{#if durationLabel}
