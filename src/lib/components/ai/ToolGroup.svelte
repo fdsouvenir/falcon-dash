@@ -2,6 +2,7 @@
 	import ToolAdapter from './ToolAdapter.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { cn } from '$lib/utils.js';
+	import { SvelteMap } from 'svelte/reactivity';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ClockIcon from '@lucide/svelte/icons/clock';
@@ -73,7 +74,7 @@
 
 	// Compact pill data — deduplicate tool names with counts
 	let toolPills = $derived.by(() => {
-		const counts = new Map<string, { total: number; done: number; error: number }>();
+		const counts = new SvelteMap<string, { total: number; done: number; error: number }>();
 		for (const t of toolCalls) {
 			const entry = counts.get(t.name) ?? { total: 0, done: 0, error: 0 };
 			entry.total++;
@@ -122,7 +123,7 @@
 	<!-- Compact pills row (visible when collapsed) -->
 	{#if !expanded}
 		<div class="flex flex-wrap gap-1.5 px-3 pb-3">
-			{#each toolPills as pill}
+			{#each toolPills as pill (pill.name)}
 				<span
 					class={cn(
 						'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
