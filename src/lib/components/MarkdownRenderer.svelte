@@ -138,7 +138,7 @@
 		}
 
 		if (result.length === 0) {
-			result.push({ type: 'markdown', content: displayContent, id: `segment-${segmentIndex++}` });
+			result.push({ type: 'markdown', content: displayContent, id: `segment-${segmentIndex}` });
 		}
 
 		return result;

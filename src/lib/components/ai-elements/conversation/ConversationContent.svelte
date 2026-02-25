@@ -11,12 +11,14 @@
 		[key: string]: unknown;
 	}
 
+	/* eslint-disable no-useless-assignment -- $bindable default is reactive */
 	let {
 		class: className,
 		children,
 		ref = $bindable(null),
 		...restProps
 	}: ConversationContentProps = $props();
+	/* eslint-enable no-useless-assignment */
 
 	const context = getStickToBottomContext();
 	let element: HTMLDivElement;
