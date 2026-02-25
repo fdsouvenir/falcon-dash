@@ -304,7 +304,7 @@
 </script>
 
 <div class="flex flex-col">
-	{#if variant === 'mobile'}
+	{#if variant === 'mobile' && !legacy}
 		<!-- Mobile: Agent name header -->
 		<div class="flex items-center gap-1 px-3 pb-2 pt-3">
 			<span class="text-base font-bold text-white"

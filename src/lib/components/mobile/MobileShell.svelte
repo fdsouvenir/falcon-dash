@@ -7,6 +7,7 @@
 	import BottomTabBar from './BottomTabBar.svelte';
 	import BottomSheet from './BottomSheet.svelte';
 	import MoreSheet from './MoreSheet.svelte';
+	import ChannelList from '$lib/components/ChannelList.svelte';
 	import ChatList from '$lib/components/ChatList.svelte';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
@@ -15,11 +16,22 @@
 	import ThreadList from '$lib/components/ThreadList.svelte';
 	import MobileChatSettings from './MobileChatSettings.svelte';
 	import { loadThreads } from '$lib/stores/threads.js';
+	import { filteredSessions } from '$lib/stores/sessions.js';
 	import ExecApprovalPrompt from '$lib/components/ExecApprovalPrompt.svelte';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 
 	let { children }: { children: Snippet } = $props();
+
+	let legacyCount = $state(0);
+	let oldChatsExpanded = $state(false);
+
+	$effect(() => {
+		const unsub = filteredSessions.subscribe((list) => {
+			legacyCount = list.length;
+		});
+		return unsub;
+	});
 
 	let moreOpen = $state(false);
 	let notificationsOpen = $state(false);
@@ -128,11 +140,52 @@
 		<ConnectionErrorBanner />
 		<MobileChatSettings open={showMobileSettings} />
 		<div class="relative flex-1 overflow-hidden">
-			<!-- Base layer: AgentRail + ChatList -->
+			<!-- Base layer: AgentRail + ChannelList + Old Chats -->
 			<div class="absolute inset-0 flex">
 				<AgentRail />
 				<div class="flex-1 overflow-y-auto pl-1.5">
-					<ChatList variant="mobile" onselect={() => openMobileChat()} />
+					<div class="px-3 py-3">
+						<ChannelList onselect={() => openMobileChat()} />
+					</div>
+
+					<!-- Old Chats (legacy fd-chat sessions) -->
+					{#if legacyCount > 0}
+						<div class="px-3 pb-1">
+							<button
+								onclick={() => (oldChatsExpanded = !oldChatsExpanded)}
+								class="flex w-full items-center gap-1.5 px-2 py-1 text-left"
+							>
+								<svg
+									class="h-3 w-3 text-gray-500 transition-transform {oldChatsExpanded
+										? ''
+										: '-rotate-90'}"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 9l-7 7-7-7"
+									/>
+								</svg>
+								<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+									>Old Chats</span
+								>
+								<span
+									class="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-gray-700 px-1 text-[10px] text-gray-400"
+								>
+									{legacyCount}
+								</span>
+							</button>
+							{#if oldChatsExpanded}
+								<div class="pt-1">
+									<ChatList variant="mobile" legacy={true} onselect={() => openMobileChat()} />
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 

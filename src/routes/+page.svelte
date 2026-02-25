@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { activeSessionKey, selectedAgentId } from '$lib/stores/sessions.js';
-	import { connectionState } from '$lib/stores/agent-identity.js';
-	import { ensureDefaultChannel, activeChannelId, setActiveChannel } from '$lib/stores/channels.js';
+	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import PresenceList from '$lib/components/PresenceList.svelte';
 
@@ -12,41 +10,6 @@
 			sessionKey = v;
 		});
 		return unsub;
-	});
-
-	// Auto-create #general when connection is ready and agent is selected
-	// Guard set tracks which agents already had ensureDefaultChannel called
-	const autoCreated: Record<string, boolean> = {};
-
-	$effect(() => {
-		let agentId: string | null = null;
-		const unsubAgent = selectedAgentId.subscribe((id) => {
-			agentId = id;
-		});
-
-		const unsubConn = connectionState.subscribe((state) => {
-			if (state !== 'READY' || !agentId) return;
-			if (autoCreated[agentId]) return;
-			autoCreated[agentId] = true;
-
-			const currentAgent = agentId;
-			ensureDefaultChannel(currentAgent).then((channel) => {
-				// Auto-select if no channel is active
-				let currentActiveId: string | null = null;
-				const unsubActive = activeChannelId.subscribe((v) => {
-					currentActiveId = v;
-				});
-				unsubActive();
-				if (!currentActiveId) {
-					setActiveChannel(channel.id);
-				}
-			});
-		});
-
-		return () => {
-			unsubAgent();
-			unsubConn();
-		};
 	});
 </script>
 

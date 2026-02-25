@@ -5,8 +5,16 @@
 	import {
 		restoreActiveSession,
 		subscribeToEvents,
-		unsubscribeFromEvents
+		unsubscribeFromEvents,
+		selectedAgentId
 	} from '$lib/stores/sessions.js';
+	import {
+		ensureDefaultChannel,
+		activeChannelId,
+		setActiveChannel,
+		restoreActiveChannel
+	} from '$lib/stores/channels.js';
+	import { connectionState } from '$lib/stores/agent-identity.js';
 	import {
 		subscribeToNotificationEvents,
 		unsubscribeFromNotificationEvents
@@ -119,6 +127,49 @@
 			unsubscribeFromNotificationEvents();
 			unsubscribeFromApprovalEvents();
 		};
+	});
+
+	// Auto-create #general channel per agent when connection is ready
+	const channelAutoCreated: Record<string, boolean> = {};
+
+	$effect(() => {
+		let agentId: string | null = null;
+		const unsubAgent = selectedAgentId.subscribe((id) => {
+			agentId = id;
+		});
+
+		const unsubConn = connectionState.subscribe((state) => {
+			if (state !== 'READY' || !agentId) return;
+			if (channelAutoCreated[agentId]) return;
+			channelAutoCreated[agentId] = true;
+
+			const currentAgent = agentId;
+			ensureDefaultChannel(currentAgent).then((channel) => {
+				let currentActiveId: string | null = null;
+				const unsubActive = activeChannelId.subscribe((v) => {
+					currentActiveId = v;
+				});
+				unsubActive();
+				if (!currentActiveId) {
+					setActiveChannel(channel.id);
+				}
+			});
+		});
+
+		return () => {
+			unsubAgent();
+			unsubConn();
+		};
+	});
+
+	// Restore persisted channel on reconnect
+	$effect(() => {
+		const unsub = connection.state.subscribe((state) => {
+			if (state === 'READY') {
+				restoreActiveChannel();
+			}
+		});
+		return unsub;
 	});
 </script>
 
