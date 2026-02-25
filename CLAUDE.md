@@ -149,16 +149,18 @@ Auto-generated markdown files that give agents read access to PM data:
 - **Regen triggers:** synchronous after individual mutations (via `triggerContextGeneration()`), debounced (5s) for PM events, 60s max staleness interval
 - **Agent writes:** agents `curl` the REST API at `localhost:3000/api/pm/*` directly — documented in `PM-API.md`
 
-### Gateway Plugin (`openclaw-canvas-bridge/`)
+### Gateway Plugin (`falcon-dash-plugin/`)
 
-Standalone OpenClaw gateway plugin that bridges operators into the canvas pipeline. Registers operators as virtual canvas nodes so the agent's `node.list`/`node.invoke` flow can route canvas commands to the dashboard.
+OpenClaw gateway plugin (ID: `falcon-dash`) with two registrations:
 
-- **`canvas.bridge.register`** — registers calling operator as virtual canvas node via `nodeRegistry.register()` with synthetic `role: "node"` client
-- **`canvas.bridge.invokeResult`** — proxies invoke results to `nodeRegistry.handleInvokeResult()`, bypassing `NODE_ROLE_METHODS` authorization
-- **`canvas.bridge.unregister`** — explicit cleanup via `nodeRegistry.unregister()`
+1. **Channel** (`channel.ts`) — registers `falcon-dash` channel so sessions use `falcon-dash:dm:` keys instead of generic `webchat` keys. Capabilities: direct chat + threads, gateway delivery mode.
+2. **Canvas bridge** (`canvas-bridge.ts`) — bridges operators into the canvas pipeline. Registers operators as virtual canvas nodes so the agent's `node.list`/`node.invoke` flow can route canvas commands to the dashboard.
+   - **`canvas.bridge.register`** — registers calling operator as virtual canvas node via `nodeRegistry.register()` with synthetic `role: "node"` client
+   - **`canvas.bridge.invokeResult`** — proxies invoke results to `nodeRegistry.handleInvokeResult()`, bypassing `NODE_ROLE_METHODS` authorization
+   - **`canvas.bridge.unregister`** — explicit cleanup via `nodeRegistry.unregister()`
 
-Build: `cd openclaw-canvas-bridge && npm install && npm run build`
-Install: `openclaw plugins install ./openclaw-canvas-bridge` (then restart gateway)
+Build: `cd falcon-dash-plugin && npm install && npm run build`
+Install: `openclaw plugins install ./falcon-dash-plugin` (then restart gateway)
 
 ## Gateway Protocol Quick Reference
 
