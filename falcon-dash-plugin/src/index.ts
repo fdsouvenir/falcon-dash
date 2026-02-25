@@ -1,6 +1,7 @@
 import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 import { registerFalconDashChannel } from './channel.js';
 import { registerCanvasBridge } from './canvas-bridge.js';
+import { buildContext } from './context.js';
 
 type OpenClawPluginDefinition = {
 	id?: string;
@@ -19,6 +20,13 @@ const plugin: OpenClawPluginDefinition = {
 	activate(api) {
 		registerFalconDashChannel(api);
 		registerCanvasBridge(api);
+
+		api.on('before_prompt_build', (_event, ctx) => {
+			return {
+				prependContext: buildContext(api, ctx.agentId)
+			};
+		});
+
 		api.logger.info('Falcon Dashboard plugin activated');
 	}
 };
