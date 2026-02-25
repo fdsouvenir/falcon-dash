@@ -11,7 +11,7 @@ type OpenClawPluginDefinition = {
 };
 
 const plugin: OpenClawPluginDefinition = {
-	id: 'falcon-dash',
+	id: 'falcon-dash-plugin',
 	name: 'Falcon Dashboard',
 	description: 'Channel plugin and canvas operator bridge for Falcon Dash',
 	version: '0.2.0',
