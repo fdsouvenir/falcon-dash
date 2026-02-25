@@ -1,7 +1,7 @@
 {
-	"name": "openclaw-canvas-bridge",
-	"version": "0.1.0",
-	"description": "Routes canvas commands to operator connections with canvas capabilities",
+	"name": "falcon-dash-plugin",
+	"version": "0.2.0",
+	"description": "Channel plugin and canvas operator bridge for Falcon Dash",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",

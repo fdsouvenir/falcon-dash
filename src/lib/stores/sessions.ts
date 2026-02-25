@@ -301,7 +301,7 @@ export async function createSession(label?: string): Promise<string> {
 	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
-	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
+	const sessionKey = `agent:${agentId}:falcon-dash:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 
 	_activeSessionKey.set(sessionKey);
@@ -324,7 +324,7 @@ export function createSessionOptimistic(label?: string): string {
 	const selected = get(_selectedAgentId);
 	const defaults = get(snapshot.sessionDefaults);
 	const agentId = selected || defaults.defaultAgentId || 'default';
-	const sessionKey = `agent:${agentId}:webchat:dm:fd-chat-${shortId()}`;
+	const sessionKey = `agent:${agentId}:falcon-dash:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 
 	_activeSessionKey.set(sessionKey);

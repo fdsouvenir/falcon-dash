@@ -1,0 +1,11 @@
+{
+	"id": "falcon-dash",
+	"name": "Falcon Dashboard",
+	"description": "Channel plugin and canvas operator bridge for Falcon Dash",
+	"channels": ["falcon-dash"],
+	"configSchema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {}
+	}
+}
