@@ -6,7 +6,7 @@ import { homedir } from 'os';
 export function getDocumentsRoot(): string {
 	const configured = env.FALCON_DOCUMENTS_PATH;
 	if (configured) return resolve(configured);
-	return join(homedir(), 'Documents');
+	return join(homedir(), '.openclaw');
 }
 
 /** Resolve a relative path to an absolute path within the documents root.
