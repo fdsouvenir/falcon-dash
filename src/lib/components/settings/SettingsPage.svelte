@@ -11,6 +11,7 @@
 	import AgentsTab from './AgentsTab.svelte';
 	import WorkspaceFiles from './WorkspaceFiles.svelte';
 	import CanvasDiagnosticsTab from './CanvasDiagnosticsTab.svelte';
+	import GatewayControlTab from './GatewayControlTab.svelte';
 
 	const tabs = [
 		{ id: 'user', label: 'User', component: UserTab },
@@ -24,6 +25,7 @@
 		{ id: 'approvals', label: 'Approvals', component: ExecApprovals },
 		{ id: 'workspace', label: 'Workspace', component: WorkspaceFiles },
 		{ id: 'canvas', label: 'Canvas', component: CanvasDiagnosticsTab },
+		{ id: 'gateway-control', label: 'Gateway Control', component: GatewayControlTab },
 		{ id: 'about', label: 'About', component: AboutTab }
 	] as const;
 
