@@ -1,9 +1,11 @@
 <script lang="ts">
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
 	import NotificationCenter from '$lib/components/NotificationCenter.svelte';
+	import ChannelList from './ChannelList.svelte';
 	import ChatList from './ChatList.svelte';
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
+	import { filteredSessions } from '$lib/stores/sessions.js';
 
 	let {
 		collapsed = false,
@@ -23,6 +25,16 @@
 				agentName = identity.name || 'Falcon Dashboard';
 				agentEmoji = identity.emoji;
 			});
+		});
+		return unsub;
+	});
+
+	let oldChatsExpanded = $state(false);
+	let legacyCount = $state(0);
+
+	$effect(() => {
+		const unsub = filteredSessions.subscribe((list) => {
+			legacyCount = list.length;
 		});
 		return unsub;
 	});
@@ -114,10 +126,49 @@
 
 	<!-- Scrollable content -->
 	<nav class="flex flex-1 flex-col overflow-y-auto">
-		<!-- Channel list (sessions) -->
+		<!-- Channels -->
 		<div class="px-3 py-3">
-			<ChatList />
+			<ChannelList />
 		</div>
+
+		<!-- Old Chats (legacy fd-chat sessions) -->
+		{#if legacyCount > 0}
+			<div class="px-3 pb-1">
+				<button
+					onclick={() => (oldChatsExpanded = !oldChatsExpanded)}
+					class="flex w-full items-center gap-1.5 px-2 py-1 text-left"
+				>
+					<svg
+						class="h-3 w-3 text-gray-500 transition-transform {oldChatsExpanded
+							? ''
+							: '-rotate-90'}"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 9l-7 7-7-7"
+						/>
+					</svg>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+						>Old Chats</span
+					>
+					<span
+						class="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-gray-700 px-1 text-[10px] text-gray-400"
+					>
+						{legacyCount}
+					</span>
+				</button>
+				{#if oldChatsExpanded}
+					<div class="pt-1">
+						<ChatList legacy={true} />
+					</div>
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Apps section -->
 		<div class="px-3 py-3">

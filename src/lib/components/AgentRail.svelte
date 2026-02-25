@@ -6,6 +6,7 @@
 		type AgentIdentity
 	} from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
+	import { channelCounts } from '$lib/stores/channels.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 	import { addToast } from '$lib/stores/toast.js';
 
@@ -26,6 +27,7 @@
 		emoji: string | undefined;
 		initial: string;
 		sessionCount: number;
+		channelCount: number;
 		hasIdentity: boolean;
 	}
 
@@ -40,6 +42,16 @@
 
 	// Session counts (written by sessions effect)
 	let sessionCounts = $state<Record<string, number>>({});
+
+	// Channel counts
+	let chanCounts = $state<Record<string, number>>({});
+
+	$effect(() => {
+		const unsub = channelCounts.subscribe((v) => {
+			chanCounts = v;
+		});
+		return unsub;
+	});
 
 	async function fetchConfigAgents() {
 		try {
@@ -122,7 +134,7 @@
 		return unsub;
 	});
 
-	// Derive agents from config, overlay session counts + gateway identities
+	// Derive agents from config, overlay session/channel counts + gateway identities
 	let agents = $derived.by(() => {
 		// Map config agents as primary source
 		const entries: AgentEntry[] = configAgents.map((ca) => {
@@ -135,6 +147,7 @@
 				emoji,
 				initial: name.charAt(0).toUpperCase(),
 				sessionCount: sessionCounts[ca.id] ?? 0,
+				channelCount: chanCounts[ca.id] ?? 0,
 				hasIdentity: !!(ca.identity?.name || gw?.name)
 			};
 		});
@@ -149,6 +162,7 @@
 					emoji: undefined,
 					initial: id.charAt(0).toUpperCase(),
 					sessionCount: sessionCounts[id],
+					channelCount: chanCounts[id] ?? 0,
 					hasIdentity: false
 				});
 			}
@@ -181,7 +195,7 @@
 	<!-- Agent icons -->
 	{#each agents as agent (agent.agentId)}
 		{@const isActive = selectedAgentId === agent.agentId}
-		{@const hasActivity = agent.sessionCount > 0}
+		{@const hasActivity = agent.channelCount > 0 || agent.sessionCount > 0}
 		<div class="agent-slot group relative">
 			<!-- Active indicator — left edge pill -->
 			<div
@@ -214,7 +228,11 @@
 			<!-- Tooltip -->
 			<div class="agent-tooltip">
 				<span class="agent-tooltip__name">{agent.name}</span>
-				{#if agent.sessionCount > 0}
+				{#if agent.channelCount > 0}
+					<span class="agent-tooltip__count">
+						{agent.channelCount} channel{agent.channelCount === 1 ? '' : 's'}
+					</span>
+				{:else if agent.sessionCount > 0}
 					<span class="agent-tooltip__count">
 						{agent.sessionCount} session{agent.sessionCount === 1 ? '' : 's'}
 					</span>

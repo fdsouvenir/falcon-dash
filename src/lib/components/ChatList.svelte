@@ -27,8 +27,11 @@
 	import { loadThreads, threadsForSession } from '$lib/stores/threads.js';
 	import CreateChatDialog from './CreateChatDialog.svelte';
 
-	let { onselect, variant = 'desktop' }: { onselect?: () => void; variant?: 'desktop' | 'mobile' } =
-		$props();
+	let {
+		onselect,
+		variant = 'desktop',
+		legacy = false
+	}: { onselect?: () => void; variant?: 'desktop' | 'mobile'; legacy?: boolean } = $props();
 
 	function formatRelativeTime(ts: number): string {
 		const diff = Date.now() - ts;
@@ -351,7 +354,7 @@
 				New
 			</button>
 		</div>
-	{:else}
+	{:else if !legacy}
 		<!-- Desktop: existing layout -->
 		<!-- New Chat button -->
 		<div class="px-2 pb-2">

@@ -104,6 +104,7 @@ function isSystemSession(s: ChatSessionInfo): boolean {
 		key.includes(':cron:') ||
 		key.includes(':heartbeat:') ||
 		key.includes(':thread:') ||
+		key.includes(':fd-chan-') ||
 		s.kind === 'cron' ||
 		s.kind === 'heartbeat' ||
 		s.name === 'heartbeat' ||

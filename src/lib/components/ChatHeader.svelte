@@ -2,6 +2,7 @@
 	import { snapshot, call } from '$lib/stores/gateway.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import { activeSessionKey, selectedAgentId } from '$lib/stores/sessions.js';
+	import { activeChannel, type Channel } from '$lib/stores/channels.js';
 	import { loadThreads } from '$lib/stores/threads.js';
 	import ThreadList from '$lib/components/ThreadList.svelte';
 	import ChatSettingsForm from '$lib/components/ChatSettingsForm.svelte';
@@ -37,6 +38,14 @@
 
 	let agentName = $state('Agent');
 	let currentAgentId = $state<string | null>(null);
+	let currentChannel = $state<Channel | null>(null);
+
+	$effect(() => {
+		const unsub = activeChannel.subscribe((v) => {
+			currentChannel = v;
+		});
+		return unsub;
+	});
 
 	$effect(() => {
 		const unsub = selectedAgentId.subscribe((id) => {
@@ -102,6 +111,10 @@
 			{agentName.charAt(0).toUpperCase()}
 		</div>
 		<span class="text-sm font-semibold text-white">{agentName}</span>
+		{#if currentChannel}
+			<span class="text-sm text-gray-500">/</span>
+			<span class="text-sm font-medium text-gray-300">#{currentChannel.name}</span>
+		{/if}
 	</div>
 	<div class="flex items-center gap-3">
 		{#if model}
