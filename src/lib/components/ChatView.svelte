@@ -2,12 +2,7 @@
 	import { tick, untrack } from 'svelte';
 	import { page } from '$app/stores';
 	import { activeSessionKey, setActiveSession, selectedAgentId } from '$lib/stores/sessions.js';
-	import {
-		createChatSession,
-		type ChatSessionStore,
-		type ChatMessage,
-		type SendEffect
-	} from '$lib/stores/chat.js';
+	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection } from '$lib/stores/gateway.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
@@ -369,11 +364,6 @@
 	function handlePollVote(messageId: string, optionIndices: number[]) {
 		if (!chatSession) return;
 		chatSession.votePoll(messageId, optionIndices);
-	}
-
-	function handleSendWithEffect(message: string, effect: SendEffect, attachments?: File[]) {
-		if (!chatSession) return;
-		chatSession.sendWithEffect(message, effect, attachments);
 	}
 
 	// Watch for new screen effect messages and trigger overlay
@@ -771,7 +761,6 @@
 			onSend={handleSend}
 			onAbort={handleAbort}
 			onPoll={() => (showPollCreator = true)}
-			onSendWithEffect={handleSendWithEffect}
 			disabled={isStreaming}
 			{isStreaming}
 		/>

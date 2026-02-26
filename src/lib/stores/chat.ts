@@ -928,107 +928,6 @@ export function createChatSession(sessionKey: string) {
 	}
 
 	/**
-	 * Send a message with a visual effect.
-	 */
-	async function sendWithEffect(
-		message: string,
-		effect: SendEffect,
-		files?: File[]
-	): Promise<void> {
-		const idempotencyKey = crypto.randomUUID();
-		const currentReplyTo = get(_replyTo);
-		const userMessage: ChatMessage = {
-			id: idempotencyKey,
-			role: 'user',
-			content: message,
-			timestamp: Date.now(),
-			status: 'sending',
-			replyToMessageId: currentReplyTo?.id,
-			sendEffect: { ...effect, played: false }
-		};
-
-		_messages.update((msgs) => [...msgs, userMessage]);
-		_replyTo.set(null);
-
-		const state = get(connection.state);
-		if (state !== 'READY') {
-			_pendingQueue.update((q) => [...q, message]);
-			return;
-		}
-
-		try {
-			let attachments: Array<{ type: string; mimeType: string; content: string }> | undefined;
-			if (files && files.length > 0) {
-				attachments = await Promise.all(
-					files.map(async (file) => {
-						const buffer = await file.arrayBuffer();
-						const bytes = new Uint8Array(buffer);
-						let binary = '';
-						for (let i = 0; i < bytes.length; i++) {
-							binary += String.fromCharCode(bytes[i]);
-						}
-						const base64 = btoa(binary);
-						const mimeType = file.type || 'application/octet-stream';
-						const kind = mimeType.startsWith('image/') ? 'image' : 'file';
-						return { type: kind, mimeType, content: base64 };
-					})
-				);
-			}
-
-			// Send as plain text — effect data is client-side only
-			const result = await call<{ runId: string; status: string }>('chat.send', {
-				sessionKey,
-				message,
-				idempotencyKey,
-				deliver: false,
-				replyToMessageId: currentReplyTo?.id,
-				...(attachments ? { attachments } : {})
-			});
-
-			const runId = result.runId;
-
-			_messages.update((msgs) =>
-				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
-			);
-
-			streamManager.onAck(runId, sessionKey);
-
-			_messages.update((msgs) => {
-				if (msgs.some((m) => m.runId === runId && m.role === 'assistant')) return msgs;
-				return [
-					...msgs,
-					{
-						id: `${runId}-response`,
-						role: 'assistant' as const,
-						content: '',
-						timestamp: Date.now(),
-						status: 'streaming' as const,
-						runId
-					}
-				];
-			});
-			_activeRunId.set(runId);
-			setCanvasActiveRunId(runId);
-			_isStreaming.set(true);
-
-			clearSafetyTimer();
-			_safetyTimer = setTimeout(() => {
-				if (streamManager.isActive(runId)) {
-					streamManager.onFinal(runId, 'error', undefined, 'Response timed out');
-				}
-			}, 60_000);
-		} catch (err) {
-			_messages.update((msgs) =>
-				msgs.map((m) =>
-					m.id === idempotencyKey
-						? { ...m, status: 'error' as const, errorMessage: (err as Error).message }
-						: m
-				)
-			);
-		}
-	}
-
-	/**
 	 * Reconcile state after reconnection.
 	 * Loads history, flushes queued messages, resumes active runs.
 	 */
@@ -1103,7 +1002,6 @@ export function createChatSession(sessionKey: string) {
 		send,
 		sendPoll,
 		votePoll,
-		sendWithEffect,
 		setReplyTo,
 		addReaction,
 		removeReaction,
