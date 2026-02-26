@@ -41,8 +41,7 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-02-25 (Claude):** `prefers-reduced-motion: reduce` is respected by both bubble effects (skipping animation) and screen effects (not generating particles at all via early `ondone()` call).
 - **2026-02-25 (Claude):** Poll and sendWithEffect actions added to channel plugin's `SUPPORTED_ACTIONS` array. `polls: true` capability flag enables poll tool availability for agents.
 - **2026-02-25 (Claude):** Gateway has a dedicated `poll` RPC method (params: `to`, `question`, `options`, `maxSelections`, `durationHours`, `channel`, `idempotencyKey`). Do NOT pass poll data via `chat.send` — the gateway rejects unknown properties with strict schema validation.
-- **2026-02-25 (Claude):** `sendWithEffect` data is client-side only — the gateway `chat.send` RPC also rejects `sendEffect` as an unknown property. Effects are stored on the optimistic message and rendered locally.
-- **2026-02-25 (Claude):** EffectPicker popover needs `z-50` to appear above the sidebar (`z-40`). Without it, the picker renders behind the sidebar's `<nav>` overlay on desktop.
+- **2026-02-25 (Claude):** `sendWithEffect` is agent→frontend only (no user-facing EffectPicker). The channel plugin's `handleAction` broadcasts a `chat.message` event with `sendEffect: { type, name }` metadata. The frontend's `handleIncomingMessage` picks up the metadata and triggers BubbleEffect/ScreenEffect rendering. The broadcast function is captured from gateway context via `canvas.bridge.register` and stored module-level in `channel.ts`.
 
 ## Channels & Session Management
 

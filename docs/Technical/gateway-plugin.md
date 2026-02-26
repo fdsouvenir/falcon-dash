@@ -138,6 +138,12 @@ actions: {
 
 **Supported actions:** `send`, `react`, `reactions`, `reply`, `edit`, `thread-create`, `thread-reply`, `thread-list`, `search`, `read`, `sendAttachment`, `pin`, `unpin`, `list-pins`, `poll`, `sendWithEffect`
 
+**Custom-handled actions:**
+
+- `sendWithEffect` -- resolves the effect name to bubble/screen type, then broadcasts a `chat.message` event with `sendEffect` metadata attached. The broadcast function is captured from the gateway context via `canvas.bridge.register`. The frontend's `handleIncomingMessage` picks up the metadata and triggers the corresponding visual effect (BubbleEffect or ScreenEffect component).
+
+**Gateway-routed actions:** All other actions return a success result and let the gateway handle routing (appropriate for `deliveryMode: 'gateway'`).
+
 **Excluded:** `unsend` (no delete-for-everyone UI), `broadcast` (no broadcast UI), group management actions (`chatTypes: ['direct']` only), Discord-specific actions.
 
 ### Streaming adapter
