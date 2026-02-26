@@ -50,6 +50,21 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-02-25 (Claude):** `sendWithEffect` data is client-side only — the gateway `chat.send` RPC also rejects `sendEffect` as an unknown property. Effects are stored on the optimistic message and rendered locally.
 - **2026-02-25 (Claude):** EffectPicker popover needs `z-50` to appear above the sidebar (`z-40`). Without it, the picker renders behind the sidebar's `<nav>` overlay on desktop.
 
+## Channels & Session Management
+
+- **2026-02-25 (Claude):** Channel data is stored in localStorage (`falcon-dash:channels`), NOT synced from the gateway. If localStorage is cleared, `ensureDefaultChannel()` must check `sessions.list` for existing `#general` sessions on the gateway before creating new ones — otherwise `sessions.patch` rejects the duplicate label.
+- **2026-02-25 (Claude):** `selectedAgentId` store starts as `null` and is set by `AgentRail` after connection. The channel auto-creation `$effect` in `+layout.svelte` must trigger on BOTH `connectionState` and `selectedAgentId` changes — a subscribe-inside-subscribe pattern misses the case where one fires before the other.
+- **2026-02-25 (Claude):** Switching agents in the rail must also switch the active channel to the new agent's default channel. Without this, the chat view shows the previous agent's messages with the new agent's name in the header.
+
+## Chat History
+
+- **2026-02-25 (Claude):** Gateway `chat.history` returns tool calls as `{ type: "toolCall", id, name, arguments }` content blocks on assistant messages, with separate `role: "toolResult"` messages containing `toolCallId`, `toolName`, `content`, `isError`. The `normalizeMessage()` function must pair these and build `ToolCallInfo[]` — otherwise they render as raw JSON.
+- **2026-02-25 (Claude):** `extractTextContent()` must skip `toolCall` blocks (same as `thinking` blocks) to avoid empty string artifacts in the message content.
+
+## Svelte 5 Gotchas
+
+- **2026-02-25 (Claude):** `Math.random()` as an `{#each}` key causes `each_key_volatile` runtime errors in Svelte 5. Use index-based fallback keys like `` `prefix-${i}` `` instead.
+
 ## Decisions
 
 _(Add architectural and design decisions here as they are made.)_
