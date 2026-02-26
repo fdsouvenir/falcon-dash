@@ -79,6 +79,15 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 
 		outbound: {
 			deliveryMode: 'gateway',
+			resolveTarget: (params) => {
+				// Single-operator dashboard: accept any target and pass through.
+				// The gateway routes by session key, not by user/group ID.
+				const to = params.to?.trim();
+				if (!to) {
+					return { ok: false, error: new Error('Target is required') };
+				}
+				return { ok: true, to };
+			},
 			sendText: async () => ({
 				channel: 'falcon-dash' as 'falcon-dash' & Record<never, never>,
 				messageId: `fd-${Date.now()}`
@@ -195,10 +204,11 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 		// Step 5: Agent prompt adapter
 		agentPrompt: {
 			messageToolHints: () => [
+				'Falcon Dash is a single-operator dashboard. For message tool actions, use target: "operator" (the dashboard always resolves to the connected operator).',
 				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and visual effects.',
 				'Use thread-create to start a threaded conversation. Use thread-reply to reply within an existing thread.',
 				'Use poll to create interactive polls with multiple options.',
-				'Use sendWithEffect to send messages with visual effects. Pass "effect" param with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). The effect plays on the operator\'s dashboard when the message arrives.',
+				'To send a message with a visual effect, use action: "sendWithEffect" (NOT action: "send" with an effect param). Pass "effect" with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). Example: { "action": "sendWithEffect", "target": "operator", "message": "Hello!", "effect": "fireworks", "channel": "falcon-dash" }',
 				'The operator sees rich markdown including code blocks, math (KaTeX), and Mermaid diagrams.'
 			]
 		},
