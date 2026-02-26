@@ -140,7 +140,7 @@ actions: {
 
 **Custom-handled actions:**
 
-- `sendWithEffect` -- resolves the effect name to bubble/screen type, then broadcasts a `chat.message` event with `sendEffect` metadata attached. The broadcast function is captured from the gateway context via `canvas.bridge.register`. The frontend's `handleIncomingMessage` picks up the metadata and triggers the corresponding visual effect (BubbleEffect or ScreenEffect component).
+- `sendWithEffect` -- resolves the effect name to bubble/screen type, then broadcasts a `falcon.sendEffect` event with `sendEffect` metadata attached. The broadcast function is captured from the gateway context via `canvas.bridge.register`. The frontend's `ChatView.svelte` subscribes to `falcon.sendEffect` events globally and injects the message into the active chat session via `injectMessage()`, which triggers the corresponding visual effect (BubbleEffect or ScreenEffect component). A custom event is used instead of `chat.message` because the plugin doesn't have access to the frontend's active session key.
 
 **Gateway-routed actions:** All other actions return a success result and let the gateway handle routing (appropriate for `deliveryMode: 'gateway'`).
 
