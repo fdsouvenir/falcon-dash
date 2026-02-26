@@ -14,7 +14,9 @@ const SUPPORTED_ACTIONS = [
 	'sendAttachment',
 	'pin',
 	'unpin',
-	'list-pins'
+	'list-pins',
+	'poll',
+	'sendWithEffect'
 ] as const;
 
 export function registerFalconDashChannel(api: OpenClawPluginApi): void {
@@ -36,7 +38,8 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			reply: true,
 			edit: true,
 			media: true,
-			blockStreaming: true
+			blockStreaming: true,
+			polls: true
 		},
 
 		config: {
@@ -52,6 +55,10 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			sendText: async () => ({
 				channel: 'falcon-dash' as 'falcon-dash' & Record<never, never>,
 				messageId: `fd-${Date.now()}`
+			}),
+			sendPoll: async () => ({
+				channel: 'falcon-dash' as 'falcon-dash' & Record<never, never>,
+				messageId: `fd-poll-${Date.now()}`
 			})
 		},
 
@@ -94,8 +101,9 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 		// Step 5: Agent prompt adapter
 		agentPrompt: {
 			messageToolHints: () => [
-				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, and pin/unpin.',
+				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and send effects.',
 				'Use thread-create to start a threaded conversation. Use thread-reply to reply within an existing thread.',
+				'Use poll to create interactive polls with multiple options. Use sendWithEffect to send messages with visual effects (bubble: slam, loud, gentle, invisible-ink; screen: confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo).',
 				'The operator sees rich markdown including code blocks, math (KaTeX), and Mermaid diagrams.'
 			]
 		},

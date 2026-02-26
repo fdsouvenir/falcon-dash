@@ -9,6 +9,39 @@ import type {
 } from '$lib/gateway/stream.js';
 import { call, eventBus, connection, setCanvasActiveRunId } from '$lib/stores/gateway.js';
 
+// Poll types
+export interface PollData {
+	question: string;
+	options: PollOption[];
+	maxSelections: number;
+	closed: boolean;
+	totalVotes: number;
+}
+
+export interface PollOption {
+	text: string;
+	votes: number;
+	votedBySelf: boolean;
+}
+
+// Send effect types
+export type BubbleEffect = 'slam' | 'loud' | 'gentle' | 'invisible-ink';
+export type ScreenEffect =
+	| 'confetti'
+	| 'fireworks'
+	| 'hearts'
+	| 'balloons'
+	| 'celebration'
+	| 'lasers'
+	| 'spotlight'
+	| 'echo';
+
+export interface SendEffect {
+	type: 'bubble' | 'screen';
+	name: BubbleEffect | ScreenEffect;
+	played?: boolean;
+}
+
 // Message types
 export interface ChatMessage {
 	id: string;
@@ -27,6 +60,8 @@ export interface ChatMessage {
 	replyToMessageId?: string;
 	reactions?: ReactionInfo[];
 	edited?: boolean;
+	poll?: PollData;
+	sendEffect?: SendEffect;
 }
 
 export interface ReactionInfo {
@@ -130,6 +165,11 @@ export function createChatSession(sessionKey: string) {
 	// Handle reaction events
 	const unsubReactionEvent = eventBus.on('chat.reaction', (payload) => {
 		handleReactionEvent(payload);
+	});
+
+	// Handle poll update events
+	const unsubPollEvent = eventBus.on('chat.poll', (payload) => {
+		handlePollEvent(payload);
 	});
 
 	function handleMessageStart(event: MessageStartEvent): void {
@@ -721,6 +761,229 @@ export function createChatSession(sessionKey: string) {
 		return parts.length > 0 ? parts.join('\n') : undefined;
 	}
 
+	/** Handle a poll update event from the gateway */
+	function handlePollEvent(payload: Record<string, unknown>): void {
+		const msgSessionKey = payload.sessionKey as string;
+		if (msgSessionKey !== sessionKey) return;
+
+		const messageId = payload.messageId as string;
+		if (!messageId) return;
+
+		_messages.update((msgs) => {
+			const idx = msgs.findIndex((m) => m.id === messageId);
+			if (idx < 0) return msgs;
+			const updated = [...msgs];
+			const pollUpdate = payload.poll as PollData | undefined;
+			if (pollUpdate) {
+				updated[idx] = { ...updated[idx], poll: pollUpdate };
+			}
+			return updated;
+		});
+	}
+
+	/**
+	 * Send a poll message. Optimistic: poll appears immediately.
+	 */
+	async function sendPoll(pollInput: {
+		question: string;
+		options: string[];
+		maxSelections?: number;
+		duration?: number;
+	}): Promise<void> {
+		const idempotencyKey = crypto.randomUUID();
+		const poll: PollData = {
+			question: pollInput.question,
+			options: pollInput.options.map((text) => ({ text, votes: 0, votedBySelf: false })),
+			maxSelections: pollInput.maxSelections ?? 1,
+			closed: false,
+			totalVotes: 0
+		};
+
+		const userMessage: ChatMessage = {
+			id: idempotencyKey,
+			role: 'user',
+			content: `📊 ${pollInput.question}`,
+			timestamp: Date.now(),
+			status: 'sending',
+			poll
+		};
+
+		_messages.update((msgs) => [...msgs, userMessage]);
+
+		try {
+			await call('chat.send', {
+				sessionKey,
+				message: `📊 ${pollInput.question}`,
+				idempotencyKey,
+				deliver: false,
+				poll: {
+					question: pollInput.question,
+					options: pollInput.options,
+					maxSelections: pollInput.maxSelections ?? 1,
+					...(pollInput.duration ? { duration: pollInput.duration } : {})
+				}
+			});
+
+			_messages.update((msgs) =>
+				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
+			);
+		} catch (err) {
+			_messages.update((msgs) =>
+				msgs.map((m) =>
+					m.id === idempotencyKey
+						? { ...m, status: 'error' as const, errorMessage: (err as Error).message }
+						: m
+				)
+			);
+		}
+	}
+
+	/**
+	 * Vote on a poll option. Optimistic: vote appears immediately.
+	 */
+	async function votePoll(messageId: string, optionIndices: number[]): Promise<void> {
+		// Snapshot for rollback
+		const msgs = get(_messages);
+		const msgIdx = msgs.findIndex((m) => m.id === messageId);
+		if (msgIdx < 0) return;
+		const originalPoll = msgs[msgIdx].poll;
+		if (!originalPoll || originalPoll.closed) return;
+
+		// Optimistic update
+		_messages.update((list) => {
+			const idx = list.findIndex((m) => m.id === messageId);
+			if (idx < 0) return list;
+			const updated = [...list];
+			const poll = { ...updated[idx].poll! };
+			const options = poll.options.map((opt, i) => {
+				const wasVoted = opt.votedBySelf;
+				const shouldVote = optionIndices.includes(i);
+				return {
+					...opt,
+					votedBySelf: shouldVote,
+					votes: opt.votes + (shouldVote && !wasVoted ? 1 : !shouldVote && wasVoted ? -1 : 0)
+				};
+			});
+			const totalVotes = options.reduce((sum, o) => sum + o.votes, 0);
+			updated[idx] = { ...updated[idx], poll: { ...poll, options, totalVotes } };
+			return updated;
+		});
+
+		try {
+			await call('chat.poll.vote', { sessionKey, messageId, optionIndices });
+		} catch {
+			// Rollback
+			_messages.update((list) => {
+				const idx = list.findIndex((m) => m.id === messageId);
+				if (idx < 0) return list;
+				const updated = [...list];
+				updated[idx] = { ...updated[idx], poll: originalPoll };
+				return updated;
+			});
+		}
+	}
+
+	/**
+	 * Send a message with a visual effect.
+	 */
+	async function sendWithEffect(
+		message: string,
+		effect: SendEffect,
+		files?: File[]
+	): Promise<void> {
+		const idempotencyKey = crypto.randomUUID();
+		const currentReplyTo = get(_replyTo);
+		const userMessage: ChatMessage = {
+			id: idempotencyKey,
+			role: 'user',
+			content: message,
+			timestamp: Date.now(),
+			status: 'sending',
+			replyToMessageId: currentReplyTo?.id,
+			sendEffect: { ...effect, played: false }
+		};
+
+		_messages.update((msgs) => [...msgs, userMessage]);
+		_replyTo.set(null);
+
+		const state = get(connection.state);
+		if (state !== 'READY') {
+			_pendingQueue.update((q) => [...q, message]);
+			return;
+		}
+
+		try {
+			let attachments: Array<{ type: string; mimeType: string; content: string }> | undefined;
+			if (files && files.length > 0) {
+				attachments = await Promise.all(
+					files.map(async (file) => {
+						const buffer = await file.arrayBuffer();
+						const bytes = new Uint8Array(buffer);
+						let binary = '';
+						for (let i = 0; i < bytes.length; i++) {
+							binary += String.fromCharCode(bytes[i]);
+						}
+						const base64 = btoa(binary);
+						const mimeType = file.type || 'application/octet-stream';
+						const kind = mimeType.startsWith('image/') ? 'image' : 'file';
+						return { type: kind, mimeType, content: base64 };
+					})
+				);
+			}
+
+			const result = await call<{ runId: string; status: string }>('chat.send', {
+				sessionKey,
+				message,
+				idempotencyKey,
+				deliver: false,
+				replyToMessageId: currentReplyTo?.id,
+				sendEffect: { type: effect.type, name: effect.name },
+				...(attachments ? { attachments } : {})
+			});
+
+			const runId = result.runId;
+
+			_messages.update((msgs) =>
+				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
+			);
+
+			streamManager.onAck(runId, sessionKey);
+
+			_messages.update((msgs) => {
+				if (msgs.some((m) => m.runId === runId && m.role === 'assistant')) return msgs;
+				return [
+					...msgs,
+					{
+						id: `${runId}-response`,
+						role: 'assistant' as const,
+						content: '',
+						timestamp: Date.now(),
+						status: 'streaming' as const,
+						runId
+					}
+				];
+			});
+			_activeRunId.set(runId);
+			setCanvasActiveRunId(runId);
+			_isStreaming.set(true);
+
+			clearSafetyTimer();
+			_safetyTimer = setTimeout(() => {
+				if (streamManager.isActive(runId)) {
+					streamManager.onFinal(runId, 'error', undefined, 'Response timed out');
+				}
+			}, 60_000);
+		} catch (err) {
+			_messages.update((msgs) =>
+				msgs.map((m) =>
+					m.id === idempotencyKey
+						? { ...m, status: 'error' as const, errorMessage: (err as Error).message }
+						: m
+				)
+			);
+		}
+	}
+
 	/**
 	 * Reconcile state after reconnection.
 	 * Loads history, flushes queued messages, resumes active runs.
@@ -754,6 +1017,7 @@ export function createChatSession(sessionKey: string) {
 		unsubChatEvent();
 		unsubUpdateEvent();
 		unsubReactionEvent();
+		unsubPollEvent();
 		streamManager.clear();
 	}
 
@@ -793,6 +1057,9 @@ export function createChatSession(sessionKey: string) {
 		pendingQueue: readonly(_pendingQueue) as Readable<string[]>,
 		replyTo,
 		send,
+		sendPoll,
+		votePoll,
+		sendWithEffect,
 		setReplyTo,
 		addReaction,
 		removeReaction,
