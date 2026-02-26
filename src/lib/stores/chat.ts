@@ -674,9 +674,25 @@ export function createChatSession(sessionKey: string) {
 			if (result.messages) {
 				_messages.update((current) => {
 					const existingIds = new Set(current.map((m) => m.id));
-					const newMessages = result.messages
-						.filter((m) => !existingIds.has(m.id as string))
-						.map((m) => normalizeMessage(m))
+					const rawMessages = result.messages.filter((m) => !existingIds.has(m.id as string));
+
+					// Build a map of toolCallId → toolResult for pairing
+					const toolResults = new Map<
+						string,
+						{ content: string; isError: boolean; toolName: string }
+					>();
+					for (const m of rawMessages) {
+						if ((m.role as string) === 'toolResult' && m.toolCallId) {
+							toolResults.set(m.toolCallId as string, {
+								content: extractTextContent(m.content),
+								isError: !!m.isError,
+								toolName: (m.toolName ?? '') as string
+							});
+						}
+					}
+
+					const newMessages = rawMessages
+						.map((m) => normalizeMessage(m, toolResults))
 						.filter((m): m is ChatMessage => m !== null);
 					// Merge and sort by timestamp
 					return [...current, ...newMessages].sort((a, b) => a.timestamp - b.timestamp);
@@ -697,21 +713,30 @@ export function createChatSession(sessionKey: string) {
 	}
 
 	/** Normalize a raw gateway message into a ChatMessage, or null if it should be filtered */
-	function normalizeMessage(raw: Record<string, unknown>): ChatMessage | null {
-		// Filter out system/internal messages from history
+	function normalizeMessage(
+		raw: Record<string, unknown>,
+		toolResults?: Map<string, { content: string; isError: boolean; toolName: string }>
+	): ChatMessage | null {
+		// Filter out system/internal messages and tool results (paired with assistant messages)
 		const role = (raw.role ?? 'assistant') as string;
-		if (role === 'system') return null;
+		if (role === 'system' || role === 'toolResult') return null;
 		const content = extractTextContent(raw.content);
 		if (isInternalMessage(content)) return null;
 
+		// Extract tool calls from content blocks
+		const toolCalls = extractToolCalls(raw.content, toolResults);
+
 		// Filter out empty assistant messages (NO_REPLY / HEARTBEAT_OK responses that were stripped)
-		if (role === 'assistant' && !content.trim()) return null;
+		// But keep them if they have tool calls
+		if (role === 'assistant' && !content.trim() && (!toolCalls || toolCalls.length === 0))
+			return null;
 
 		return {
 			id: (raw.id ?? raw.messageId ?? crypto.randomUUID()) as string,
 			role: role as 'user' | 'assistant',
 			content,
 			thinkingText: extractThinkingContent(raw.content),
+			...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
 			timestamp: (raw.timestamp ?? Date.now()) as number,
 			status: 'complete',
 			runId: raw.runId as string | undefined,
@@ -728,7 +753,7 @@ export function createChatSession(sessionKey: string) {
 					if (typeof block === 'string') return block;
 					if (block && typeof block === 'object') {
 						const b = block as Record<string, unknown>;
-						if (b.type === 'thinking') return '';
+						if (b.type === 'thinking' || b.type === 'toolCall') return '';
 						return (b.text ?? '') as string;
 					}
 					return '';
@@ -759,6 +784,32 @@ export function createChatSession(sessionKey: string) {
 			}
 		}
 		return parts.length > 0 ? parts.join('\n') : undefined;
+	}
+
+	/** Extract tool calls from gateway content blocks and pair with results */
+	function extractToolCalls(
+		content: unknown,
+		toolResults?: Map<string, { content: string; isError: boolean; toolName: string }>
+	): ToolCallInfo[] | undefined {
+		if (!Array.isArray(content)) return undefined;
+		const calls: ToolCallInfo[] = [];
+		for (const block of content) {
+			if (block && typeof block === 'object') {
+				const b = block as Record<string, unknown>;
+				if (b.type === 'toolCall' && typeof b.id === 'string' && typeof b.name === 'string') {
+					const result = toolResults?.get(b.id);
+					calls.push({
+						toolCallId: b.id,
+						name: b.name,
+						args: (b.arguments as Record<string, unknown>) ?? {},
+						output: result?.content,
+						status: result ? (result.isError ? 'error' : 'complete') : 'complete',
+						errorMessage: result?.isError ? result.content : undefined
+					});
+				}
+			}
+		}
+		return calls.length > 0 ? calls : undefined;
 	}
 
 	/** Handle a poll update event from the gateway */
