@@ -121,7 +121,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 				if (ctx.action === 'sendWithEffect') {
 					const text = (ctx.params.message ?? ctx.params.text ?? '') as string;
 					const effectName = (ctx.params.effect ?? ctx.params.effectId ?? '') as string;
-					const sessionKey = (ctx.params.to ?? '') as string;
 
 					if (!effectName) {
 						return {
@@ -159,8 +158,10 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 					}
 
 					const messageId = `fd-effect-${Date.now()}`;
-					gatewayBroadcast('chat.message', {
-						sessionKey,
+					// Broadcast via custom event — the frontend handles routing
+					// to the active session (no session key needed here since the
+					// gateway doesn't know which frontend session is active).
+					gatewayBroadcast('falcon.sendEffect', {
 						messageId,
 						role: 'assistant',
 						content: text,
@@ -172,7 +173,7 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 					});
 
 					api.logger.info(
-						`sendWithEffect: broadcast ${effectType}/${effectName} to session ${sessionKey}`
+						`sendWithEffect: broadcast ${effectType}/${effectName} via falcon.sendEffect`
 					);
 					return {
 						content: [
@@ -209,7 +210,7 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and visual effects.',
 				'Use thread-create to start a threaded conversation. Use thread-reply to reply within an existing thread.',
 				'Use poll to create interactive polls with multiple options.',
-				'To send a message with a visual effect, use action: "sendWithEffect" (NOT action: "send" with an effect param). Pass "effect" with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). Example: { "action": "sendWithEffect", "target": "operator", "message": "Hello!", "effect": "fireworks", "channel": "falcon" }',
+				'IMPORTANT: To send a message with a visual effect, you MUST use action: "sendWithEffect" via the message tool. Do NOT use node.invoke, canvas, or HTML rendering for effects. Pass "effect" with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). Example: { "action": "sendWithEffect", "target": "operator", "message": "Hello!", "effect": "fireworks", "channel": "falcon" }',
 				'The operator sees rich markdown including code blocks, math (KaTeX), and Mermaid diagrams.'
 			]
 		},

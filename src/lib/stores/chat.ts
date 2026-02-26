@@ -994,6 +994,14 @@ export function createChatSession(sessionKey: string) {
 		_messages.update((msgs) => [...msgs, dividerMessage]);
 	}
 
+	/**
+	 * Inject an external message into this session (e.g., from a gateway broadcast).
+	 * The payload is treated as if it arrived via `chat.message` for this session.
+	 */
+	function injectMessage(payload: Record<string, unknown>): void {
+		handleIncomingMessage({ ...payload, sessionKey });
+	}
+
 	return {
 		messages,
 		activeRunId,
@@ -1011,6 +1019,7 @@ export function createChatSession(sessionKey: string) {
 		abort,
 		retry,
 		insertDivider,
+		injectMessage,
 		loadHistory,
 		reconcile,
 		destroy,

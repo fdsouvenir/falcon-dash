@@ -4,7 +4,7 @@
 	import { activeSessionKey, setActiveSession, selectedAgentId } from '$lib/stores/sessions.js';
 	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
-	import { connection } from '$lib/stores/gateway.js';
+	import { connection, eventBus } from '$lib/stores/gateway.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
 	import { clearSearch } from '$lib/stores/chat-search.js';
 	import { watchConnectionForChat } from '$lib/stores/chat-resilience.js';
@@ -106,6 +106,18 @@
 		return () => {
 			unwatchConnection();
 		};
+	});
+
+	// Handle sendWithEffect broadcasts from the gateway plugin.
+	// These arrive as falcon.sendEffect events (no session key) and are
+	// injected into the active chat session as assistant messages with effect metadata.
+	$effect(() => {
+		const session = chatSession;
+		if (!session) return;
+		const unsub = eventBus.on('falcon.sendEffect', (payload) => {
+			session.injectMessage(payload as Record<string, unknown>);
+		});
+		return unsub;
 	});
 
 	// Load history when connection becomes READY or session changes
