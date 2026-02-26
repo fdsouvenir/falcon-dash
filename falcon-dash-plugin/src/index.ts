@@ -1,23 +1,26 @@
 import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
+import { emptyPluginConfigSchema } from 'openclaw/plugin-sdk';
 import { registerFalconDashChannel } from './channel.js';
 import { registerCanvasBridge } from './canvas-bridge.js';
 import { buildContext } from './context.js';
 
-type OpenClawPluginDefinition = {
-	id?: string;
-	name?: string;
-	description?: string;
-	version?: string;
-	activate?: (api: OpenClawPluginApi) => void | Promise<void>;
+type PluginDefinition = {
+	id: string;
+	name: string;
+	description: string;
+	version: string;
+	configSchema: ReturnType<typeof emptyPluginConfigSchema>;
+	register: (api: OpenClawPluginApi) => void;
 };
 
-const plugin: OpenClawPluginDefinition = {
+const plugin: PluginDefinition = {
 	id: 'falcon-dash-plugin',
 	name: 'Falcon Dashboard',
 	description: 'Channel plugin and canvas operator bridge for Falcon Dash',
 	version: '0.2.0',
+	configSchema: emptyPluginConfigSchema(),
 
-	activate(api) {
+	register(api: OpenClawPluginApi) {
 		registerFalconDashChannel(api);
 		registerCanvasBridge(api);
 

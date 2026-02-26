@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
+import type { OpenClawPluginApi, ChannelPlugin } from 'openclaw/plugin-sdk';
 
 // Broadcast function captured from gateway context (set by canvas-bridge on first register)
 type BroadcastFn = (event: string, payload: unknown) => void;
@@ -46,7 +46,7 @@ const SUPPORTED_ACTIONS = [
 ] as const;
 
 export function registerFalconDashChannel(api: OpenClawPluginApi): void {
-	api.registerChannel({
+	const falconPlugin: ChannelPlugin = {
 		id: 'falcon',
 		meta: {
 			id: 'falcon',
@@ -57,7 +57,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			blurb: 'Web dashboard channel for Falcon Dash'
 		},
 
-		// Step 1: Expanded capabilities
 		capabilities: {
 			chatTypes: ['direct'],
 			threads: true,
@@ -74,15 +73,15 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			listAccountIds: () => ['default'],
 			resolveAccount: (_cfg, accountId) => ({
 				accountId: accountId ?? 'default',
-				enabled: true
+				enabled: true,
+				configured: true,
+				name: 'Falcon Dashboard'
 			})
 		},
 
 		outbound: {
 			deliveryMode: 'gateway',
 			resolveTarget: (params) => {
-				// Single-operator dashboard: accept any target and pass through.
-				// The gateway routes by session key, not by user/group ID.
 				const to = params.to?.trim();
 				if (!to) {
 					return { ok: false, error: new Error('Target is required') };
@@ -99,7 +98,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			})
 		},
 
-		// Step 2: Threading adapter
 		threading: {
 			resolveReplyToMode: () => 'all',
 			allowExplicitReplyTagsWhenOff: true,
@@ -113,7 +111,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			})
 		},
 
-		// Step 3: Message actions adapter
 		actions: {
 			listActions: () => [...SUPPORTED_ACTIONS],
 			supportsAction: ({ action }) => (SUPPORTED_ACTIONS as readonly string[]).includes(action),
@@ -158,9 +155,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 					}
 
 					const messageId = `fd-effect-${Date.now()}`;
-					// Broadcast via custom event — the frontend handles routing
-					// to the active session (no session key needed here since the
-					// gateway doesn't know which frontend session is active).
 					gatewayBroadcast('falcon.sendEffect', {
 						messageId,
 						role: 'assistant',
@@ -186,7 +180,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 					};
 				}
 
-				// For all other actions, gateway handles routing
 				api.logger.info(`Message action '${ctx.action}' routed via gateway`);
 				return {
 					content: [{ type: 'text' as const, text: 'Routed via gateway' }],
@@ -195,7 +188,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			}
 		},
 
-		// Step 4: Streaming adapter
 		streaming: {
 			blockStreamingCoalesceDefaults: {
 				minChars: 20,
@@ -203,7 +195,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			}
 		},
 
-		// Step 5: Agent prompt adapter
 		agentPrompt: {
 			messageToolHints: () => [
 				'Falcon Dash is a single-operator dashboard. For message tool actions, use target: "operator" (the dashboard always resolves to the connected operator).',
@@ -215,7 +206,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			]
 		},
 
-		// Step 6: Status adapter
 		status: {
 			buildAccountSnapshot: ({ account }) => ({
 				accountId: (account as { accountId: string }).accountId,
@@ -225,7 +215,6 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			})
 		},
 
-		// Step 7: Heartbeat adapter
 		heartbeat: {
 			checkReady: async ({ deps }) => {
 				if (deps?.hasActiveWebListener?.()) {
@@ -238,17 +227,16 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			}
 		},
 
-		// Step 8: Gateway lifecycle adapter
 		gateway: {
-			startAccount: async ({ abortSignal }) => {
-				// Falcon is gateway-native — no external connection needed.
-				// Keep the channel alive until the gateway stops it.
+			startAccount: async (ctx) => {
+				ctx.log?.info('[falcon] channel started (gateway-native)');
 				await new Promise<void>((resolve) => {
-					abortSignal.addEventListener('abort', () => resolve(), { once: true });
+					ctx.abortSignal.addEventListener('abort', () => resolve(), { once: true });
 				});
 			}
 		}
-	});
+	};
 
+	api.registerChannel({ plugin: falconPlugin });
 	api.logger.info('Falcon Dashboard channel registered');
 }
