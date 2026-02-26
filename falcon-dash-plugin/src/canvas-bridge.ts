@@ -1,6 +1,7 @@
 import type { OpenClawPluginApi, GatewayRequestHandlerOptions } from 'openclaw/plugin-sdk';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { setGatewayBroadcast } from './channel.js';
 
 // Track virtual nodes: connId → virtualNodeId
 const virtualNodes = new Map<string, string>();
@@ -32,6 +33,11 @@ export function registerCanvasBridge(api: OpenClawPluginApi): void {
 	api.registerGatewayMethod(
 		'canvas.bridge.register',
 		async ({ client, respond, context }: GatewayRequestHandlerOptions) => {
+			// Capture broadcast function for use by channel handleAction (e.g. sendWithEffect)
+			if (context.broadcast) {
+				setGatewayBroadcast(context.broadcast);
+			}
+
 			if (!client?.connId) {
 				respond(false, undefined, {
 					code: 'NO_CLIENT',

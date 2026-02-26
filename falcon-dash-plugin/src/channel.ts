@@ -1,5 +1,31 @@
 import type { OpenClawPluginApi } from 'openclaw/plugin-sdk';
 
+// Broadcast function captured from gateway context (set by canvas-bridge on first register)
+type BroadcastFn = (event: string, payload: unknown) => void;
+let gatewayBroadcast: BroadcastFn | null = null;
+
+export function setGatewayBroadcast(fn: BroadcastFn): void {
+	gatewayBroadcast = fn;
+}
+
+const BUBBLE_EFFECTS = new Set(['slam', 'loud', 'gentle', 'invisible-ink']);
+const SCREEN_EFFECTS = new Set([
+	'confetti',
+	'fireworks',
+	'hearts',
+	'balloons',
+	'celebration',
+	'lasers',
+	'spotlight',
+	'echo'
+]);
+
+function resolveEffectType(effectName: string): 'bubble' | 'screen' | null {
+	if (BUBBLE_EFFECTS.has(effectName)) return 'bubble';
+	if (SCREEN_EFFECTS.has(effectName)) return 'screen';
+	return null;
+}
+
 const SUPPORTED_ACTIONS = [
 	'send',
 	'react',
@@ -39,7 +65,8 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			edit: true,
 			media: true,
 			blockStreaming: true,
-			polls: true
+			polls: true,
+			effects: true
 		},
 
 		config: {
@@ -81,7 +108,74 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			listActions: () => [...SUPPORTED_ACTIONS],
 			supportsAction: ({ action }) => (SUPPORTED_ACTIONS as readonly string[]).includes(action),
 			handleAction: async (ctx) => {
-				// For gateway delivery mode, the gateway handles routing.
+				if (ctx.action === 'sendWithEffect') {
+					const text = (ctx.params.message ?? ctx.params.text ?? '') as string;
+					const effectName = (ctx.params.effect ?? ctx.params.effectId ?? '') as string;
+					const sessionKey = (ctx.params.to ?? '') as string;
+
+					if (!effectName) {
+						return {
+							content: [{ type: 'text' as const, text: 'Missing effect name' }],
+							details: { error: 'missing_effect' }
+						};
+					}
+
+					const effectType = resolveEffectType(effectName);
+					if (!effectType) {
+						return {
+							content: [
+								{
+									type: 'text' as const,
+									text: `Unknown effect: ${effectName}. Valid effects: ${[...BUBBLE_EFFECTS, ...SCREEN_EFFECTS].join(', ')}`
+								}
+							],
+							details: { error: 'unknown_effect' }
+						};
+					}
+
+					if (!gatewayBroadcast) {
+						api.logger.warn(
+							'sendWithEffect: no broadcast function available (no client connected?)'
+						);
+						return {
+							content: [
+								{
+									type: 'text' as const,
+									text: 'No dashboard client connected to receive effects'
+								}
+							],
+							details: { error: 'no_broadcast' }
+						};
+					}
+
+					const messageId = `fd-effect-${Date.now()}`;
+					gatewayBroadcast('chat.message', {
+						sessionKey,
+						messageId,
+						role: 'assistant',
+						content: text,
+						timestamp: Date.now(),
+						sendEffect: {
+							type: effectType,
+							name: effectName
+						}
+					});
+
+					api.logger.info(
+						`sendWithEffect: broadcast ${effectType}/${effectName} to session ${sessionKey}`
+					);
+					return {
+						content: [
+							{
+								type: 'text' as const,
+								text: `Sent message with ${effectName} effect`
+							}
+						],
+						details: { messageId, effect: effectName, effectType }
+					};
+				}
+
+				// For all other actions, gateway handles routing
 				api.logger.info(`Message action '${ctx.action}' routed via gateway`);
 				return {
 					content: [{ type: 'text' as const, text: 'Routed via gateway' }],
@@ -101,9 +195,10 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 		// Step 5: Agent prompt adapter
 		agentPrompt: {
 			messageToolHints: () => [
-				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and send effects.',
+				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and visual effects.',
 				'Use thread-create to start a threaded conversation. Use thread-reply to reply within an existing thread.',
-				'Use poll to create interactive polls with multiple options. Use sendWithEffect to send messages with visual effects (bubble: slam, loud, gentle, invisible-ink; screen: confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo).',
+				'Use poll to create interactive polls with multiple options.',
+				'Use sendWithEffect to send messages with visual effects. Pass "effect" param with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). The effect plays on the operator\'s dashboard when the message arrives.',
 				'The operator sees rich markdown including code blocks, math (KaTeX), and Mermaid diagrams.'
 			]
 		},

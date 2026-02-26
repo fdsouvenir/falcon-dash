@@ -332,7 +332,10 @@ export function createChatSession(sessionKey: string) {
 			content: rawContent,
 			timestamp: (payload.timestamp ?? Date.now()) as number,
 			status: 'complete',
-			replyToMessageId: payload.replyToMessageId as string | undefined
+			replyToMessageId: payload.replyToMessageId as string | undefined,
+			sendEffect: payload.sendEffect
+				? { ...(payload.sendEffect as SendEffect), played: false }
+				: undefined
 		};
 
 		// Deduplicate by ID
