@@ -46,6 +46,9 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-02-25 (Claude):** Screen effects use CSS `@keyframes` with `animation` inline styles on generated particle arrays. Fireworks use `cos()/sin()` CSS functions with `--angle` custom properties for radial burst directions.
 - **2026-02-25 (Claude):** `prefers-reduced-motion: reduce` is respected by both bubble effects (skipping animation) and screen effects (not generating particles at all via early `ondone()` call).
 - **2026-02-25 (Claude):** Poll and sendWithEffect actions added to channel plugin's `SUPPORTED_ACTIONS` array. `polls: true` capability flag enables poll tool availability for agents.
+- **2026-02-25 (Claude):** Gateway has a dedicated `poll` RPC method (params: `to`, `question`, `options`, `maxSelections`, `durationHours`, `channel`, `idempotencyKey`). Do NOT pass poll data via `chat.send` — the gateway rejects unknown properties with strict schema validation.
+- **2026-02-25 (Claude):** `sendWithEffect` data is client-side only — the gateway `chat.send` RPC also rejects `sendEffect` as an unknown property. Effects are stored on the optimistic message and rendered locally.
+- **2026-02-25 (Claude):** EffectPicker popover needs `z-50` to appear above the sidebar (`z-40`). Without it, the picker renders behind the sidebar's `<nav>` overlay on desktop.
 
 ## Decisions
 

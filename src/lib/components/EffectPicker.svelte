@@ -48,7 +48,7 @@
 
 <div
 	bind:this={pickerEl}
-	class="absolute bottom-full right-0 mb-1 w-56 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-xl"
+	class="absolute bottom-full right-0 z-50 mb-1 w-56 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-xl"
 >
 	<!-- Bubble effects -->
 	<div class="mb-1 px-1 text-[10px] font-medium uppercase tracking-wider text-gray-500">Bubble</div>
