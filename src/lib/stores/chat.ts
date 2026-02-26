@@ -784,6 +784,10 @@ export function createChatSession(sessionKey: string) {
 	/**
 	 * Send a poll message. Optimistic: poll appears immediately.
 	 */
+	/**
+	 * Send a poll message. Polls are client-side only — the gateway receives
+	 * a plain text message with the question; poll data lives in local state.
+	 */
 	async function sendPoll(pollInput: {
 		question: string;
 		options: string[];
@@ -799,10 +803,11 @@ export function createChatSession(sessionKey: string) {
 			totalVotes: 0
 		};
 
+		const messageText = `📊 ${pollInput.question}`;
 		const userMessage: ChatMessage = {
 			id: idempotencyKey,
 			role: 'user',
-			content: `📊 ${pollInput.question}`,
+			content: messageText,
 			timestamp: Date.now(),
 			status: 'sending',
 			poll
@@ -810,23 +815,55 @@ export function createChatSession(sessionKey: string) {
 
 		_messages.update((msgs) => [...msgs, userMessage]);
 
+		// Check connection state — queue if not ready
+		const connState = get(connection.state);
+		if (connState !== 'READY') {
+			_pendingQueue.update((q) => [...q, messageText]);
+			return;
+		}
+
 		try {
-			await call('chat.send', {
+			// Send as plain text — gateway doesn't support poll params
+			const result = await call<{ runId: string; status: string }>('chat.send', {
 				sessionKey,
-				message: `📊 ${pollInput.question}`,
+				message: messageText,
 				idempotencyKey,
-				deliver: false,
-				poll: {
-					question: pollInput.question,
-					options: pollInput.options,
-					maxSelections: pollInput.maxSelections ?? 1,
-					...(pollInput.duration ? { duration: pollInput.duration } : {})
-				}
+				deliver: false
 			});
+
+			const runId = result.runId;
 
 			_messages.update((msgs) =>
 				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
 			);
+
+			// Set up streaming for agent response
+			streamManager.onAck(runId, sessionKey);
+
+			_messages.update((msgs) => {
+				if (msgs.some((m) => m.runId === runId && m.role === 'assistant')) return msgs;
+				return [
+					...msgs,
+					{
+						id: `${runId}-response`,
+						role: 'assistant' as const,
+						content: '',
+						timestamp: Date.now(),
+						status: 'streaming' as const,
+						runId
+					}
+				];
+			});
+			_activeRunId.set(runId);
+			setCanvasActiveRunId(runId);
+			_isStreaming.set(true);
+
+			clearSafetyTimer();
+			_safetyTimer = setTimeout(() => {
+				if (streamManager.isActive(runId)) {
+					streamManager.onFinal(runId, 'error', undefined, 'Response timed out');
+				}
+			}, 60_000);
 		} catch (err) {
 			_messages.update((msgs) =>
 				msgs.map((m) =>
@@ -839,22 +876,17 @@ export function createChatSession(sessionKey: string) {
 	}
 
 	/**
-	 * Vote on a poll option. Optimistic: vote appears immediately.
+	 * Vote on a poll option. Purely client-side — no gateway RPC.
 	 */
-	async function votePoll(messageId: string, optionIndices: number[]): Promise<void> {
-		// Snapshot for rollback
-		const msgs = get(_messages);
-		const msgIdx = msgs.findIndex((m) => m.id === messageId);
-		if (msgIdx < 0) return;
-		const originalPoll = msgs[msgIdx].poll;
-		if (!originalPoll || originalPoll.closed) return;
-
-		// Optimistic update
+	function votePoll(messageId: string, optionIndices: number[]): void {
 		_messages.update((list) => {
 			const idx = list.findIndex((m) => m.id === messageId);
 			if (idx < 0) return list;
+			const msg = list[idx];
+			if (!msg.poll || msg.poll.closed) return list;
+
 			const updated = [...list];
-			const poll = { ...updated[idx].poll! };
+			const poll = { ...msg.poll };
 			const options = poll.options.map((opt, i) => {
 				const wasVoted = opt.votedBySelf;
 				const shouldVote = optionIndices.includes(i);
@@ -868,19 +900,6 @@ export function createChatSession(sessionKey: string) {
 			updated[idx] = { ...updated[idx], poll: { ...poll, options, totalVotes } };
 			return updated;
 		});
-
-		try {
-			await call('chat.poll.vote', { sessionKey, messageId, optionIndices });
-		} catch {
-			// Rollback
-			_messages.update((list) => {
-				const idx = list.findIndex((m) => m.id === messageId);
-				if (idx < 0) return list;
-				const updated = [...list];
-				updated[idx] = { ...updated[idx], poll: originalPoll };
-				return updated;
-			});
-		}
 	}
 
 	/**
@@ -931,13 +950,13 @@ export function createChatSession(sessionKey: string) {
 				);
 			}
 
+			// Send as plain text — effect data is client-side only
 			const result = await call<{ runId: string; status: string }>('chat.send', {
 				sessionKey,
 				message,
 				idempotencyKey,
 				deliver: false,
 				replyToMessageId: currentReplyTo?.id,
-				sendEffect: { type: effect.type, name: effect.name },
 				...(attachments ? { attachments } : {})
 			});
 
