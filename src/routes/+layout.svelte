@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { gatewayToken, gatewayUrl } from '$lib/stores/token.js';
+	import { get } from 'svelte/store';
 	import { connection, connectToGateway } from '$lib/stores/gateway.js';
 	import {
 		restoreActiveSession,
@@ -10,7 +11,7 @@
 	} from '$lib/stores/sessions.js';
 	import {
 		ensureDefaultChannel,
-		activeChannelId,
+		channels,
 		setActiveChannel,
 		restoreActiveChannel
 	} from '$lib/stores/channels.js';
@@ -132,22 +133,20 @@
 	// Auto-create #general channel per agent when connection is ready
 	const channelAutoCreated: Record<string, boolean> = {};
 
-	function tryEnsureChannel(agentId: string | null, connState: string) {
-		if (connState !== 'READY' || !agentId) return;
-		if (channelAutoCreated[agentId]) return;
-		channelAutoCreated[agentId] = true;
-
-		const currentAgent = agentId;
-		ensureDefaultChannel(currentAgent).then((channel) => {
-			let currentActiveId: string | null = null;
-			const unsubActive = activeChannelId.subscribe((v) => {
-				currentActiveId = v;
-			});
-			unsubActive();
-			if (!currentActiveId) {
+	function activateAgentChannel(agentId: string) {
+		if (!channelAutoCreated[agentId]) {
+			channelAutoCreated[agentId] = true;
+			ensureDefaultChannel(agentId).then((channel) => {
 				setActiveChannel(channel.id);
+			});
+		} else {
+			// Agent already initialized — switch to its default channel
+			const agentChannels = get(channels).filter((c) => c.agentId === agentId);
+			const defaultChan = agentChannels.find((c) => c.isDefault) ?? agentChannels[0];
+			if (defaultChan) {
+				setActiveChannel(defaultChan.id);
 			}
-		});
+		}
 	}
 
 	$effect(() => {
@@ -156,12 +155,16 @@
 
 		const unsubAgent = selectedAgentId.subscribe((id) => {
 			agentId = id;
-			tryEnsureChannel(agentId, connState);
+			if (connState === 'READY' && agentId) {
+				activateAgentChannel(agentId);
+			}
 		});
 
 		const unsubConn = connectionState.subscribe((state) => {
 			connState = state;
-			tryEnsureChannel(agentId, connState);
+			if (connState === 'READY' && agentId) {
+				activateAgentChannel(agentId);
+			}
 		});
 
 		return () => {
