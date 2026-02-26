@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SlashCommandMenu from './SlashCommandMenu.svelte';
+	import EffectPicker from './EffectPicker.svelte';
 	import {
 		filterCommands,
 		parseCommand,
@@ -9,15 +10,20 @@
 	import { activeSessionKey } from '$lib/stores/sessions.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import { get } from 'svelte/store';
+	import type { SendEffect } from '$lib/stores/chat.js';
 
 	let {
 		onSend,
 		onAbort,
+		onPoll,
+		onSendWithEffect,
 		disabled = false,
 		isStreaming = false
 	}: {
 		onSend: (message: string, attachments?: File[]) => void;
 		onAbort: () => void;
+		onPoll?: () => void;
+		onSendWithEffect?: (message: string, effect: SendEffect, attachments?: File[]) => void;
 		disabled: boolean;
 		isStreaming: boolean;
 	} = $props();
@@ -27,6 +33,8 @@
 	let textarea: HTMLTextAreaElement;
 	let fileInput: HTMLInputElement;
 	let isDragging = $state(false);
+	let selectedEffect = $state<SendEffect | null>(null);
+	let showEffectPicker = $state(false);
 
 	// Slash command state
 	let showCommandMenu = $state(false);
@@ -38,7 +46,6 @@
 			const afterSlash = text.slice(1);
 			const hasSpace = afterSlash.includes(' ');
 			if (hasSpace) {
-				// User is typing args — hide menu, let Enter trigger send()
 				showCommandMenu = false;
 				return;
 			}
@@ -56,7 +63,6 @@
 
 	function handleCommandSelect(cmd: SlashCommand) {
 		showCommandMenu = false;
-		// If the command has args, fill in the command name and let user type args
 		if (cmd.args) {
 			text = `/${cmd.name} `;
 			textarea?.focus();
@@ -136,7 +142,13 @@
 			const handled = await executeSlashCommand();
 			if (handled) return;
 		}
-		onSend(trimmed, attachments.length > 0 ? attachments : undefined);
+		// Send with effect if one is selected
+		if (selectedEffect && onSendWithEffect) {
+			onSendWithEffect(trimmed, selectedEffect, attachments.length > 0 ? attachments : undefined);
+			selectedEffect = null;
+		} else {
+			onSend(trimmed, attachments.length > 0 ? attachments : undefined);
+		}
 		text = '';
 		attachments = [];
 		resize();
@@ -212,6 +224,35 @@
 			input.value = '';
 		}
 	}
+
+	function handleEffectSelect(effect: SendEffect) {
+		// Toggle: if same effect is already selected, deselect it
+		if (
+			selectedEffect &&
+			selectedEffect.type === effect.type &&
+			selectedEffect.name === effect.name
+		) {
+			selectedEffect = null;
+		} else {
+			selectedEffect = effect;
+		}
+		showEffectPicker = false;
+	}
+
+	const EFFECT_LABELS: Record<string, string> = {
+		slam: 'Slam',
+		loud: 'Loud',
+		gentle: 'Gentle',
+		'invisible-ink': 'Invisible Ink',
+		confetti: 'Confetti',
+		fireworks: 'Fireworks',
+		hearts: 'Hearts',
+		balloons: 'Balloons',
+		celebration: 'Celebration',
+		lasers: 'Lasers',
+		spotlight: 'Spotlight',
+		echo: 'Echo'
+	};
 </script>
 
 <div
@@ -221,6 +262,31 @@
 	ondragleave={handleDragLeave}
 	role="form"
 >
+	<!-- Selected effect badge -->
+	{#if selectedEffect}
+		<div class="mb-2 flex items-center gap-2">
+			<span
+				class="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2.5 py-1 text-xs text-purple-300"
+			>
+				Sending with {EFFECT_LABELS[selectedEffect.name] ?? selectedEffect.name}
+				<button
+					onclick={() => (selectedEffect = null)}
+					class="ml-0.5 text-purple-400 hover:text-purple-200"
+					aria-label="Remove effect"
+				>
+					<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			</span>
+		</div>
+	{/if}
+
 	<!-- Attachments preview -->
 	{#if attachments.length > 0}
 		<div class="mb-2 flex flex-wrap gap-2">
@@ -310,7 +376,7 @@
 		<!-- File upload button -->
 		<button
 			onclick={openFileDialog}
-			class="hidden md:flex flex-shrink-0 rounded p-2 text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+			class="hidden flex-shrink-0 rounded p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white md:flex"
 			aria-label="Attach file"
 			{disabled}
 		>
@@ -325,6 +391,51 @@
 		</button>
 		<input bind:this={fileInput} type="file" multiple class="hidden" onchange={handleFileChange} />
 
+		<!-- Poll button -->
+		{#if onPoll}
+			<button
+				onclick={onPoll}
+				class="hidden flex-shrink-0 rounded p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white md:flex"
+				aria-label="Create poll"
+				{disabled}
+			>
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+					/>
+				</svg>
+			</button>
+		{/if}
+
+		<!-- Effect button -->
+		{#if onSendWithEffect}
+			<div class="relative hidden md:block">
+				<button
+					onclick={() => (showEffectPicker = !showEffectPicker)}
+					class="flex-shrink-0 rounded p-2 transition-colors {selectedEffect
+						? 'text-purple-400 hover:bg-purple-900/30 hover:text-purple-300'
+						: 'text-gray-400 hover:bg-gray-800 hover:text-white'}"
+					aria-label="Add effect"
+					{disabled}
+				>
+					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+						/>
+					</svg>
+				</button>
+				{#if showEffectPicker}
+					<EffectPicker onSelect={handleEffectSelect} onClose={() => (showEffectPicker = false)} />
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Textarea -->
 		<textarea
 			bind:this={textarea}
@@ -336,14 +447,14 @@
 			{disabled}
 			rows="1"
 			aria-label="Type a message"
-			class="flex-1 resize-none rounded-2xl md:rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+			class="flex-1 resize-none rounded-2xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50 md:rounded-lg"
 		></textarea>
 
 		<!-- Send/Abort button -->
 		{#if isStreaming}
 			<button
 				onclick={onAbort}
-				class="flex-shrink-0 h-10 w-10 md:h-auto md:w-auto rounded-full md:rounded-lg bg-red-600 md:px-4 md:py-2.5 flex items-center justify-center text-sm font-medium text-white hover:bg-red-500 transition-colors"
+				class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-sm font-medium text-white transition-colors hover:bg-red-500 md:h-auto md:w-auto md:rounded-lg md:px-4 md:py-2.5"
 				aria-label="Stop"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,7 +476,7 @@
 			<button
 				onclick={send}
 				disabled={disabled || (!text.trim() && attachments.length === 0)}
-				class="flex-shrink-0 h-10 w-10 md:h-auto md:w-auto rounded-full md:rounded-lg bg-blue-600 md:px-4 md:py-2.5 flex items-center justify-center text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+				class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:rounded-lg md:px-4 md:py-2.5"
 				aria-label="Send message"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

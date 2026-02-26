@@ -2,7 +2,12 @@
 	import { tick, untrack } from 'svelte';
 	import { page } from '$app/stores';
 	import { activeSessionKey, setActiveSession, selectedAgentId } from '$lib/stores/sessions.js';
-	import { createChatSession, type ChatSessionStore, type ChatMessage } from '$lib/stores/chat.js';
+	import {
+		createChatSession,
+		type ChatSessionStore,
+		type ChatMessage,
+		type SendEffect
+	} from '$lib/stores/chat.js';
 	import { activeThread, closeThread } from '$lib/stores/threads.js';
 	import { connection } from '$lib/stores/gateway.js';
 	import { formatMessageTime } from '$lib/chat/time-utils.js';
@@ -27,6 +32,10 @@
 	import ReplyPreview from './ReplyPreview.svelte';
 	import ReactionPicker from './ReactionPicker.svelte';
 	import ReactionDisplay from './ReactionDisplay.svelte';
+	import PollCard from './PollCard.svelte';
+	import PollCreator from './PollCreator.svelte';
+	import BubbleEffect from './effects/BubbleEffect.svelte';
+	import ScreenEffect from './effects/ScreenEffect.svelte';
 	import ThreadPanel from './ThreadPanel.svelte';
 	import {
 		Conversation,
@@ -310,6 +319,8 @@
 	}
 
 	let reactionPickerMessageId = $state<string | null>(null);
+	let showPollCreator = $state(false);
+	let activeScreenEffect = $state<{ name: string; messageId: string } | null>(null);
 	let isMobile = $state(false);
 
 	$effect(() => {
@@ -343,6 +354,45 @@
 			chatSession.addReaction(messageId, emoji);
 		}
 	}
+
+	function handlePollCreate(pollInput: {
+		question: string;
+		options: string[];
+		maxSelections?: number;
+		duration?: number;
+	}) {
+		if (!chatSession) return;
+		chatSession.sendPoll(pollInput);
+		showPollCreator = false;
+	}
+
+	function handlePollVote(messageId: string, optionIndices: number[]) {
+		if (!chatSession) return;
+		chatSession.votePoll(messageId, optionIndices);
+	}
+
+	function handleSendWithEffect(message: string, effect: SendEffect, attachments?: File[]) {
+		if (!chatSession) return;
+		chatSession.sendWithEffect(message, effect, attachments);
+	}
+
+	// Watch for new screen effect messages and trigger overlay
+	let lastScreenEffectCheck = $state(0);
+	$effect(() => {
+		const len = messages.length;
+		if (len === 0) return;
+		// Only check new messages since last check
+		for (let i = Math.max(0, lastScreenEffectCheck); i < len; i++) {
+			const msg = messages[i];
+			if (msg.sendEffect?.type === 'screen' && !msg.sendEffect.played) {
+				activeScreenEffect = { name: msg.sendEffect.name, messageId: msg.id };
+				// Mark as played
+				msg.sendEffect.played = true;
+				break;
+			}
+		}
+		lastScreenEffectCheck = len;
+	});
 </script>
 
 <div class="flex h-full">
@@ -463,13 +513,32 @@
 												</div>
 											{/if}
 										{/if}
-										<div class="text-sm text-foreground text-right md:text-left">
-											<MarkdownRenderer
-												content={typeof message.content === 'string'
-													? message.content
-													: String(message.content ?? '')}
+										{#if message.sendEffect?.type === 'bubble'}
+											<BubbleEffect name={message.sendEffect.name}>
+												<div class="text-sm text-foreground text-right md:text-left">
+													<MarkdownRenderer
+														content={typeof message.content === 'string'
+															? message.content
+															: String(message.content ?? '')}
+													/>
+												</div>
+											</BubbleEffect>
+										{:else}
+											<div class="text-sm text-foreground text-right md:text-left">
+												<MarkdownRenderer
+													content={typeof message.content === 'string'
+														? message.content
+														: String(message.content ?? '')}
+												/>
+											</div>
+										{/if}
+										{#if message.poll}
+											<PollCard
+												poll={message.poll}
+												messageId={message.id}
+												onvote={handlePollVote}
 											/>
-										</div>
+										{/if}
 										{#if message.status === 'sending'}
 											<span class="text-xs text-muted-foreground">Sending...</span>
 										{:else if message.status === 'error'}
@@ -573,14 +642,34 @@
 
 										<!-- Content -->
 										{#if message.content}
-											<MarkdownRenderer
-												content={typeof message.content === 'string'
-													? message.content
-													: String(message.content ?? '')}
-												isStreaming={message.status === 'streaming'}
-											/>
+											{#if message.sendEffect?.type === 'bubble'}
+												<BubbleEffect name={message.sendEffect.name}>
+													<MarkdownRenderer
+														content={typeof message.content === 'string'
+															? message.content
+															: String(message.content ?? '')}
+														isStreaming={message.status === 'streaming'}
+													/>
+												</BubbleEffect>
+											{:else}
+												<MarkdownRenderer
+													content={typeof message.content === 'string'
+														? message.content
+														: String(message.content ?? '')}
+													isStreaming={message.status === 'streaming'}
+												/>
+											{/if}
 										{:else if message.status === 'streaming' && !message.thinkingText}
 											<Loader class="text-muted-foreground" size={16} />
+										{/if}
+
+										<!-- Poll card -->
+										{#if message.poll}
+											<PollCard
+												poll={message.poll}
+												messageId={message.id}
+												onvote={handlePollVote}
+											/>
 										{/if}
 
 										<!-- Plan block -->
@@ -681,10 +770,22 @@
 		<MessageComposer
 			onSend={handleSend}
 			onAbort={handleAbort}
+			onPoll={() => (showPollCreator = true)}
+			onSendWithEffect={handleSendWithEffect}
 			disabled={isStreaming}
 			{isStreaming}
 		/>
 	</div>
+
+	<!-- Poll creator modal -->
+	{#if showPollCreator}
+		<PollCreator oncreate={handlePollCreate} oncancel={() => (showPollCreator = false)} />
+	{/if}
+
+	<!-- Screen effect overlay -->
+	{#if activeScreenEffect}
+		<ScreenEffect name={activeScreenEffect.name} ondone={() => (activeScreenEffect = null)} />
+	{/if}
 
 	<!-- Thread panel: full-screen overlay on mobile, side panel on desktop -->
 	{#if thread}
