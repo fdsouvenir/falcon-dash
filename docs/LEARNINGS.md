@@ -20,12 +20,6 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-02-25 (Claude, seeded):** Tool events can arrive before the `chat.send` RPC response — `handleMessageStart` creates an assistant placeholder early to prevent a race condition.
 - **2026-02-25 (Claude, seeded):** Thinking events use `stream: "thinking"` (not `stream: "assistant"`). Fields: `data.text` (accumulated), `data.delta` (incremental).
 
-## PM / context pipeline
-
-- **2026-02-25 (Claude, seeded):** `BOOTSTRAP.md` lives at `{workspace}/.falcon-dash/BOOTSTRAP.md`, loaded by `bootstrap-extra-files` hook, not by Falcon Dash itself.
-- **2026-02-25 (Claude, seeded):** `sync-peers.sh` self-heals: it recreates `BOOTSTRAP.md` if the file is missing or lacks `<!-- PEERS:START -->` / `<!-- PEERS:END -->` markers.
-- **2026-02-25 (Claude, seeded):** On new agent creation, only `mkdir` the workspace directory — no need to provision `BOOTSTRAP.md` manually.
-
 ## Dev environment
 
 - **2026-02-25 (Claude, seeded):** No `.env` file is needed in local dev — gateway config is read from `~/.openclaw/openclaw.json` via the `/api/gateway-config` endpoint.
