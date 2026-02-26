@@ -785,8 +785,8 @@ export function createChatSession(sessionKey: string) {
 	 * Send a poll message. Optimistic: poll appears immediately.
 	 */
 	/**
-	 * Send a poll message. Polls are client-side only — the gateway receives
-	 * a plain text message with the question; poll data lives in local state.
+	 * Send a poll via the gateway `poll` RPC.
+	 * Renders an optimistic poll card immediately; the gateway handles delivery.
 	 */
 	async function sendPoll(pollInput: {
 		question: string;
@@ -815,7 +815,6 @@ export function createChatSession(sessionKey: string) {
 
 		_messages.update((msgs) => [...msgs, userMessage]);
 
-		// Check connection state — queue if not ready
 		const connState = get(connection.state);
 		if (connState !== 'READY') {
 			_pendingQueue.update((q) => [...q, messageText]);
@@ -823,47 +822,22 @@ export function createChatSession(sessionKey: string) {
 		}
 
 		try {
-			// Send as plain text — gateway doesn't support poll params
-			const result = await call<{ runId: string; status: string }>('chat.send', {
-				sessionKey,
-				message: messageText,
+			// Use the gateway's dedicated `poll` RPC method
+			await call('poll', {
+				to: sessionKey,
+				question: pollInput.question,
+				options: pollInput.options,
 				idempotencyKey,
-				deliver: false
+				...(pollInput.maxSelections != null ? { maxSelections: pollInput.maxSelections } : {}),
+				...(pollInput.duration != null
+					? { durationHours: Math.ceil(pollInput.duration / 3600) }
+					: {}),
+				channel: 'falcon-dash'
 			});
-
-			const runId = result.runId;
 
 			_messages.update((msgs) =>
-				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'sent' as const } : m))
+				msgs.map((m) => (m.id === idempotencyKey ? { ...m, status: 'complete' as const } : m))
 			);
-
-			// Set up streaming for agent response
-			streamManager.onAck(runId, sessionKey);
-
-			_messages.update((msgs) => {
-				if (msgs.some((m) => m.runId === runId && m.role === 'assistant')) return msgs;
-				return [
-					...msgs,
-					{
-						id: `${runId}-response`,
-						role: 'assistant' as const,
-						content: '',
-						timestamp: Date.now(),
-						status: 'streaming' as const,
-						runId
-					}
-				];
-			});
-			_activeRunId.set(runId);
-			setCanvasActiveRunId(runId);
-			_isStreaming.set(true);
-
-			clearSafetyTimer();
-			_safetyTimer = setTimeout(() => {
-				if (streamManager.isActive(runId)) {
-					streamManager.onFinal(runId, 'error', undefined, 'Response timed out');
-				}
-			}, 60_000);
 		} catch (err) {
 			_messages.update((msgs) =>
 				msgs.map((m) =>
