@@ -236,6 +236,17 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 					reason: 'No Falcon Dash client connected'
 				};
 			}
+		},
+
+		// Step 8: Gateway lifecycle adapter
+		gateway: {
+			startAccount: async ({ abortSignal }) => {
+				// Falcon is gateway-native — no external connection needed.
+				// Keep the channel alive until the gateway stops it.
+				await new Promise<void>((resolve) => {
+					abortSignal.addEventListener('abort', () => resolve(), { once: true });
+				});
+			}
 		}
 	});
 
