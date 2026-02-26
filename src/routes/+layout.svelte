@@ -132,28 +132,36 @@
 	// Auto-create #general channel per agent when connection is ready
 	const channelAutoCreated: Record<string, boolean> = {};
 
+	function tryEnsureChannel(agentId: string | null, connState: string) {
+		if (connState !== 'READY' || !agentId) return;
+		if (channelAutoCreated[agentId]) return;
+		channelAutoCreated[agentId] = true;
+
+		const currentAgent = agentId;
+		ensureDefaultChannel(currentAgent).then((channel) => {
+			let currentActiveId: string | null = null;
+			const unsubActive = activeChannelId.subscribe((v) => {
+				currentActiveId = v;
+			});
+			unsubActive();
+			if (!currentActiveId) {
+				setActiveChannel(channel.id);
+			}
+		});
+	}
+
 	$effect(() => {
 		let agentId: string | null = null;
+		let connState: string = '';
+
 		const unsubAgent = selectedAgentId.subscribe((id) => {
 			agentId = id;
+			tryEnsureChannel(agentId, connState);
 		});
 
 		const unsubConn = connectionState.subscribe((state) => {
-			if (state !== 'READY' || !agentId) return;
-			if (channelAutoCreated[agentId]) return;
-			channelAutoCreated[agentId] = true;
-
-			const currentAgent = agentId;
-			ensureDefaultChannel(currentAgent).then((channel) => {
-				let currentActiveId: string | null = null;
-				const unsubActive = activeChannelId.subscribe((v) => {
-					currentActiveId = v;
-				});
-				unsubActive();
-				if (!currentActiveId) {
-					setActiveChannel(channel.id);
-				}
-			});
+			connState = state;
+			tryEnsureChannel(agentId, connState);
 		});
 
 		return () => {

@@ -52,7 +52,7 @@
 		<p class="text-sm text-gray-400 italic">No other connections</p>
 	{:else}
 		<ul class="space-y-2">
-			{#each presenceList as entry (entry.instanceId ?? entry.displayName ?? Math.random())}
+			{#each presenceList as entry, i (entry.instanceId ?? entry.displayName ?? `presence-${i}`)}
 				<li class="bg-gray-900 rounded p-3 border border-gray-700">
 					<div class="flex items-start justify-between">
 						<div class="flex-1 min-w-0">

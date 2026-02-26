@@ -94,6 +94,41 @@ export async function ensureDefaultChannel(agentId: string): Promise<Channel> {
 	const existing = get(_channels).find((c) => c.agentId === agentId && c.isDefault);
 	if (existing) return existing;
 
+	// Check if a #general session already exists on the gateway (e.g. localStorage was cleared)
+	try {
+		const result = await call<{
+			sessions: Array<{ key: string; label?: string; displayName?: string }>;
+		}>('sessions.list', {});
+		const generalSession = result.sessions?.find(
+			(s) =>
+				s.key.startsWith(`agent:${agentId}:falcon-dash:dm:fd-chan-`) &&
+				(s.label === '#general' || s.displayName === '#general')
+		);
+		if (generalSession) {
+			// Extract channel id from session key: agent:{agentId}:falcon-dash:dm:fd-chan-{channelId}
+			const chanIdMatch = generalSession.key.match(/:fd-chan-(.+)$/);
+			const channelId = chanIdMatch ? chanIdMatch[1] : shortId();
+			const channel: Channel = {
+				id: channelId,
+				agentId,
+				sessionKey: generalSession.key,
+				name: 'general',
+				position: 0,
+				createdAt: Date.now(),
+				isDefault: true
+			};
+			_channels.update((list) => {
+				const next = [...list, channel];
+				persistChannels(next);
+				return next;
+			});
+			await loadSessions();
+			return channel;
+		}
+	} catch {
+		// Fall through to create new channel
+	}
+
 	const id = shortId();
 	const sessionKey = buildSessionKey(agentId, id);
 	const channel: Channel = {
