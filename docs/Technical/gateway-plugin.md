@@ -50,36 +50,175 @@ The `activate` function is called once when the gateway loads the plugin. It:
 
 **File:** `falcon-dash-plugin/src/channel.ts`
 
+The channel registration declares Falcon Dash as a full channel provider with 10 adapter slots populated (out of 20+ available). The gateway uses these adapters to route messages, enable agent tools, manage streaming, and perform health checks.
+
+### Core adapters
+
+#### Capabilities
+
+Declares what the Falcon Dash client supports:
+
 ```typescript
-api.registerChannel({
-	id: 'falcon-dash',
-	meta: {
-		id: 'falcon-dash',
-		label: 'Falcon Dashboard',
-		selectionLabel: 'Falcon Dashboard',
-		docsPath: '/channels/falcon-dash',
-		blurb: 'Web dashboard channel for Falcon Dash'
-	},
-	capabilities: {
-		chatTypes: ['direct'],
-		threads: true
-	},
-	config: {
-		listAccountIds: () => ['default'],
-		resolveAccount: (_cfg, accountId) => ({
-			accountId: accountId ?? 'default',
-			enabled: true
-		})
-	},
-	outbound: {
-		deliveryMode: 'gateway',
-		sendText: async () => ({
-			channel: 'falcon-dash',
-			messageId: `fd-${Date.now()}`
-		})
-	}
-});
+capabilities: {
+	chatTypes: ['direct'],
+	threads: true,
+	reactions: true,
+	reply: true,
+	edit: true,
+	media: true,
+	blockStreaming: true
+}
 ```
+
+The gateway uses these flags to decide which events and features to enable for the channel.
+
+#### Config
+
+Single-account setup — always returns a `default` account:
+
+```typescript
+config: {
+	listAccountIds: () => ['default'],
+	resolveAccount: (_cfg, accountId) => ({
+		accountId: accountId ?? 'default',
+		enabled: true
+	})
+}
+```
+
+#### Outbound
+
+Gateway delivery mode — messages are delivered through the gateway event system, not through an external service:
+
+```typescript
+outbound: {
+	deliveryMode: 'gateway',
+	sendText: async () => ({
+		channel: 'falcon-dash',
+		messageId: `fd-${Date.now()}`
+	})
+}
+```
+
+### Threading adapter
+
+Routes reply-to IDs and provides thread context to agent tools:
+
+```typescript
+threading: {
+	resolveReplyToMode: () => 'all',
+	allowExplicitReplyTagsWhenOff: true,
+	buildToolContext: ({ context }) => ({
+		currentChannelId: context.Channel ?? undefined,
+		currentChannelProvider: 'falcon-dash',
+		currentThreadTs: context.MessageThreadId?.toString(),
+		currentMessageId: context.CurrentMessageId,
+		replyToMode: 'all',
+		skipCrossContextDecoration: true
+	})
+}
+```
+
+- `resolveReplyToMode: 'all'` — always attach reply-to ID (appropriate for direct chats)
+- `skipCrossContextDecoration: true` — no `[from X]` prefix needed (single operator)
+- Thread session keys follow the pattern `agent:{agentId}:falcon-dash:dm:{parentId}:thread:fd-chat-{shortId}` (from `stores/threads.ts`)
+
+### Message actions adapter
+
+Enables agents to use message tools (react, reply, thread-create, edit, search, etc.):
+
+```typescript
+actions: {
+	listActions: () => [...SUPPORTED_ACTIONS],
+	supportsAction: ({ action }) => SUPPORTED_ACTIONS.includes(action),
+	handleAction: async (ctx) => { /* returns success, lets gateway handle routing */ }
+}
+```
+
+**Supported actions:** `send`, `react`, `reactions`, `reply`, `edit`, `thread-create`, `thread-reply`, `thread-list`, `search`, `read`, `sendAttachment`, `pin`, `unpin`, `list-pins`
+
+**Excluded:** `unsend` (no delete-for-everyone UI), `broadcast`/`poll`/`sendWithEffect` (no UI), group management actions (`chatTypes: ['direct']` only), Discord-specific actions.
+
+### Streaming adapter
+
+Controls how the gateway coalesces streaming text before delivery:
+
+```typescript
+streaming: {
+	blockStreamingCoalesceDefaults: {
+		minChars: 20,
+		idleMs: 150
+	}
+}
+```
+
+The client-side `AgentStreamManager` uses accumulated text fields (`data.text`), so coalescing mainly affects network traffic. The `minChars` prevents single-char deltas; `idleMs` flushes after 150ms idle for smooth rendering.
+
+### Agent prompt adapter
+
+Provides the agent with tool hints about Falcon Dash messaging capabilities:
+
+```typescript
+agentPrompt: {
+	messageToolHints: () => [
+		'Falcon Dash supports: reactions (emoji), threaded replies, ...',
+		'Use thread-create to start a threaded conversation. ...',
+		'The operator sees rich markdown including code blocks, ...'
+	];
+}
+```
+
+This complements the `before_prompt_build` context injection (which covers rendering context). The adapter specifically teaches the agent about available message tools.
+
+### Status adapter
+
+Provides the gateway with channel health info for diagnostics:
+
+```typescript
+status: {
+	buildAccountSnapshot: ({ account }) => ({
+		accountId: account.accountId,
+		enabled: true,
+		configured: true,
+		name: 'Falcon Dashboard'
+	});
+}
+```
+
+### Heartbeat adapter
+
+Lets the gateway health check system know if a Falcon Dash client is connected:
+
+```typescript
+heartbeat: {
+	checkReady: async ({ deps }) => {
+		if (deps?.hasActiveWebListener?.()) {
+			return { ok: true, reason: 'Gateway client connected' };
+		}
+		return { ok: false, reason: 'No Falcon Dash client connected' };
+	};
+}
+```
+
+### Adapters intentionally skipped
+
+13 adapters are not implemented because Falcon Dash uses gateway-level auth/routing and operates as a single-operator dashboard:
+
+| Adapter      | Reason                                                     |
+| ------------ | ---------------------------------------------------------- |
+| `setup`      | No onboarding flow — uses gateway auth directly            |
+| `auth`       | Uses gateway token auth, no channel-specific auth          |
+| `gateway`    | No external service lifecycle (no login/logout/start/stop) |
+| `onboarding` | No setup wizard needed                                     |
+| `pairing`    | Uses gateway device pairing, not channel-specific          |
+| `security`   | DM policy enforced at gateway level                        |
+| `elevated`   | No allowlist fallback needed                               |
+| `directory`  | Single operator, no user/group directory                   |
+| `resolver`   | Gateway handles routing for `deliveryMode: 'gateway'`      |
+| `groups`     | Only `chatTypes: ['direct']` — no group chats              |
+| `mentions`   | No @-mention system                                        |
+| `messaging`  | Gateway routes by session key, not external user IDs       |
+| `commands`   | Slash commands handled client-side                         |
 
 ### What this enables
 
@@ -87,8 +226,10 @@ Without the channel plugin, Falcon Dash sessions would use generic `webchat` cha
 
 - Session keys contain `falcon-dash:dm:` (e.g., `agent:default:falcon-dash:dm:fd-chat-a1b2c3d4`)
 - Agents can identify Falcon Dash sessions by the `fd-` prefix and adapt responses accordingly (rich markdown, KaTeX, Mermaid diagrams)
-- Chat capabilities include direct messaging and threads
-- Delivery mode is `gateway` -- messages are delivered through the gateway event system, not through an external service
+- Agents have access to message tools (react, reply, thread, edit, search, pin)
+- Streaming coalescing reduces network chatter for smooth rendering
+- Gateway health checks know whether a dashboard client is connected
+- Delivery mode is `gateway` — messages are delivered through the gateway event system, not through an external service
 
 ## Canvas bridge
 
