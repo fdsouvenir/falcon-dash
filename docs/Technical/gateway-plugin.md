@@ -66,7 +66,8 @@ capabilities: {
 	reply: true,
 	edit: true,
 	media: true,
-	blockStreaming: true
+	blockStreaming: true,
+	polls: true
 }
 ```
 
@@ -135,9 +136,9 @@ actions: {
 }
 ```
 
-**Supported actions:** `send`, `react`, `reactions`, `reply`, `edit`, `thread-create`, `thread-reply`, `thread-list`, `search`, `read`, `sendAttachment`, `pin`, `unpin`, `list-pins`
+**Supported actions:** `send`, `react`, `reactions`, `reply`, `edit`, `thread-create`, `thread-reply`, `thread-list`, `search`, `read`, `sendAttachment`, `pin`, `unpin`, `list-pins`, `poll`, `sendWithEffect`
 
-**Excluded:** `unsend` (no delete-for-everyone UI), `broadcast`/`poll`/`sendWithEffect` (no UI), group management actions (`chatTypes: ['direct']` only), Discord-specific actions.
+**Excluded:** `unsend` (no delete-for-everyone UI), `broadcast` (no broadcast UI), group management actions (`chatTypes: ['direct']` only), Discord-specific actions.
 
 ### Streaming adapter
 
