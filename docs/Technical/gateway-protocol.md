@@ -89,7 +89,7 @@ Example:
 	"id": "7",
 	"method": "chat.send",
 	"params": {
-		"sessionKey": "agent:default:falcon-dash:dm:fd-chat-a1b2c3d4",
+		"sessionKey": "agent:default:falcon:dm:fd-chat-a1b2c3d4",
 		"message": "Hello",
 		"idempotencyKey": "550e8400-e29b-41d4-a716-446655440000"
 	}

@@ -46,7 +46,7 @@ export async function openThread(
 	const agentId = defaults.defaultAgentId ?? 'default';
 	// Extract parentId from parentSessionKey (last segment before any :thread:)
 	const parentId = parentSessionKey.split(':').pop() ?? parentSessionKey;
-	const threadKey = `agent:${agentId}:falcon-dash:dm:${parentId}:thread:fd-chat-${shortId()}`;
+	const threadKey = `agent:${agentId}:falcon:dm:${parentId}:thread:fd-chat-${shortId()}`;
 	const name = displayName ?? 'Thread';
 
 	// Create thread session on server

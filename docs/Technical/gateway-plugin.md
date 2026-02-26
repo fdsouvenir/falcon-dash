@@ -12,7 +12,7 @@ See also:
 
 The falcon-dash-plugin is an OpenClaw gateway plugin (ID: `falcon-dash-plugin`) with three responsibilities:
 
-1. **Channel registration** -- registers a `falcon-dash` channel so chat sessions use `falcon-dash:dm:` key prefixes instead of generic `webchat` keys
+1. **Channel registration** -- registers a `falcon` channel (aliases: `fd`, `falcon-dash`) so chat sessions use `falcon:dm:` key prefixes instead of generic `webchat` keys
 2. **Canvas bridge** -- bridges dashboard operators into the canvas pipeline, allowing agents to present canvas surfaces to the dashboard UI
 3. **Context injection** -- injects Falcon Dash awareness and peer agent information into every agent prompt
 
@@ -95,7 +95,7 @@ Gateway delivery mode — messages are delivered through the gateway event syste
 outbound: {
 	deliveryMode: 'gateway',
 	sendText: async () => ({
-		channel: 'falcon-dash',
+		channel: 'falcon',
 		messageId: `fd-${Date.now()}`
 	})
 }
@@ -111,7 +111,7 @@ threading: {
 	allowExplicitReplyTagsWhenOff: true,
 	buildToolContext: ({ context }) => ({
 		currentChannelId: context.Channel ?? undefined,
-		currentChannelProvider: 'falcon-dash',
+		currentChannelProvider: 'falcon',
 		currentThreadTs: context.MessageThreadId?.toString(),
 		currentMessageId: context.CurrentMessageId,
 		replyToMode: 'all',
@@ -122,7 +122,7 @@ threading: {
 
 - `resolveReplyToMode: 'all'` — always attach reply-to ID (appropriate for direct chats)
 - `skipCrossContextDecoration: true` — no `[from X]` prefix needed (single operator)
-- Thread session keys follow the pattern `agent:{agentId}:falcon-dash:dm:{parentId}:thread:fd-chat-{shortId}` (from `stores/threads.ts`)
+- Thread session keys follow the pattern `agent:{agentId}:falcon:dm:{parentId}:thread:fd-chat-{shortId}` (from `stores/threads.ts`)
 
 ### Message actions adapter
 
@@ -231,7 +231,7 @@ heartbeat: {
 
 Without the channel plugin, Falcon Dash sessions would use generic `webchat` channel keys. With the plugin:
 
-- Session keys contain `falcon-dash:dm:` (e.g., `agent:default:falcon-dash:dm:fd-chat-a1b2c3d4`)
+- Session keys contain `falcon:dm:` (e.g., `agent:default:falcon:dm:fd-chat-a1b2c3d4`)
 - Agents can identify Falcon Dash sessions by the `fd-` prefix and adapt responses accordingly (rich markdown, KaTeX, Mermaid diagrams)
 - Agents have access to message tools (react, reply, thread, edit, search, pin)
 - Streaming coalescing reduces network chatter for smooth rendering

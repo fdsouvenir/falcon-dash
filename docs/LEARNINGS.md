@@ -46,6 +46,7 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 ## Channels & Session Management
 
 - **2026-02-25 (Claude):** Channel data is stored in localStorage (`falcon-dash:channels`), NOT synced from the gateway. If localStorage is cleared, `ensureDefaultChannel()` must check `sessions.list` for existing `#general` sessions on the gateway before creating new ones — otherwise `sessions.patch` rejects the duplicate label.
+- **2026-02-26 (Claude):** Channel protocol ID is `falcon` (with aliases `fd`, `falcon-dash`). Session keys use `falcon:dm:` prefix (e.g., `agent:main:falcon:dm:fd-chan-abc123`). The gateway infers the channel from the session key — `chat.send` does NOT pass an explicit `channel` param. Old `falcon-dash:dm:` sessions are orphaned after migration; no auto-pruning — clean up manually or let them accumulate.
 - **2026-02-25 (Claude):** `selectedAgentId` store starts as `null` and is set by `AgentRail` after connection. The channel auto-creation `$effect` in `+layout.svelte` must trigger on BOTH `connectionState` and `selectedAgentId` changes — a subscribe-inside-subscribe pattern misses the case where one fires before the other.
 - **2026-02-25 (Claude):** Switching agents in the rail must also switch the active channel to the new agent's default channel. Without this, the chat view shows the previous agent's messages with the new agent's name in the header.
 

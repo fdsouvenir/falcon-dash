@@ -86,7 +86,7 @@ export function channelBySessionKey(sessionKey: string): Channel | null {
 }
 
 function buildSessionKey(agentId: string, channelId: string): string {
-	return `agent:${agentId}:falcon-dash:dm:fd-chan-${channelId}`;
+	return `agent:${agentId}:falcon:dm:fd-chan-${channelId}`;
 }
 
 /** Idempotent creation of #general for an agent */
@@ -101,11 +101,11 @@ export async function ensureDefaultChannel(agentId: string): Promise<Channel> {
 		}>('sessions.list', {});
 		const generalSession = result.sessions?.find(
 			(s) =>
-				s.key.startsWith(`agent:${agentId}:falcon-dash:dm:fd-chan-`) &&
+				s.key.startsWith(`agent:${agentId}:falcon:dm:fd-chan-`) &&
 				(s.label === '#general' || s.displayName === '#general')
 		);
 		if (generalSession) {
-			// Extract channel id from session key: agent:{agentId}:falcon-dash:dm:fd-chan-{channelId}
+			// Extract channel id from session key: agent:{agentId}:falcon:dm:fd-chan-{channelId}
 			const chanIdMatch = generalSession.key.match(/:fd-chan-(.+)$/);
 			const channelId = chanIdMatch ? chanIdMatch[1] : shortId();
 			const channel: Channel = {

@@ -886,7 +886,7 @@ export function createChatSession(sessionKey: string) {
 				...(pollInput.duration != null
 					? { durationHours: Math.ceil(pollInput.duration / 3600) }
 					: {}),
-				channel: 'falcon-dash'
+				channel: 'falcon'
 			});
 
 			_messages.update((msgs) =>

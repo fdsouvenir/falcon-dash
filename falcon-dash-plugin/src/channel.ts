@@ -47,12 +47,13 @@ const SUPPORTED_ACTIONS = [
 
 export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 	api.registerChannel({
-		id: 'falcon-dash',
+		id: 'falcon',
 		meta: {
-			id: 'falcon-dash',
+			id: 'falcon',
 			label: 'Falcon Dashboard',
 			selectionLabel: 'Falcon Dashboard',
-			docsPath: '/channels/falcon-dash',
+			aliases: ['fd', 'falcon-dash'],
+			docsPath: '/channels/falcon',
 			blurb: 'Web dashboard channel for Falcon Dash'
 		},
 
@@ -89,11 +90,11 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 				return { ok: true, to };
 			},
 			sendText: async () => ({
-				channel: 'falcon-dash' as 'falcon-dash' & Record<never, never>,
+				channel: 'falcon' as 'falcon' & Record<never, never>,
 				messageId: `fd-${Date.now()}`
 			}),
 			sendPoll: async () => ({
-				channel: 'falcon-dash' as 'falcon-dash' & Record<never, never>,
+				channel: 'falcon' as 'falcon' & Record<never, never>,
 				messageId: `fd-poll-${Date.now()}`
 			})
 		},
@@ -104,7 +105,7 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 			allowExplicitReplyTagsWhenOff: true,
 			buildToolContext: ({ context }) => ({
 				currentChannelId: context.Channel ?? undefined,
-				currentChannelProvider: 'falcon-dash',
+				currentChannelProvider: 'falcon',
 				currentThreadTs: context.MessageThreadId?.toString(),
 				currentMessageId: context.CurrentMessageId,
 				replyToMode: 'all',
@@ -208,7 +209,7 @@ export function registerFalconDashChannel(api: OpenClawPluginApi): void {
 				'Falcon Dash supports: reactions (emoji), threaded replies, message editing, file attachments, pin/unpin, polls, and visual effects.',
 				'Use thread-create to start a threaded conversation. Use thread-reply to reply within an existing thread.',
 				'Use poll to create interactive polls with multiple options.',
-				'To send a message with a visual effect, use action: "sendWithEffect" (NOT action: "send" with an effect param). Pass "effect" with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). Example: { "action": "sendWithEffect", "target": "operator", "message": "Hello!", "effect": "fireworks", "channel": "falcon-dash" }',
+				'To send a message with a visual effect, use action: "sendWithEffect" (NOT action: "send" with an effect param). Pass "effect" with one of: bubble effects (slam, loud, gentle, invisible-ink) or screen effects (confetti, fireworks, hearts, balloons, celebration, lasers, spotlight, echo). Example: { "action": "sendWithEffect", "target": "operator", "message": "Hello!", "effect": "fireworks", "channel": "falcon" }',
 				'The operator sees rich markdown including code blocks, math (KaTeX), and Mermaid diagrams.'
 			]
 		},

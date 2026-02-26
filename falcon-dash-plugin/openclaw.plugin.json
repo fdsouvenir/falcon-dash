@@ -2,7 +2,7 @@
 	"id": "falcon-dash-plugin",
 	"name": "Falcon Dashboard",
 	"description": "Channel plugin and canvas operator bridge for Falcon Dash",
-	"channels": ["falcon-dash"],
+	"channels": ["falcon"],
 	"configSchema": {
 		"type": "object",
 		"additionalProperties": false,

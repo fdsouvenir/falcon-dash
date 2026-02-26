@@ -187,7 +187,7 @@ Manages session lifecycle across all agents. Key exports:
 
 ### Session key format
 
-Session keys follow the pattern: `agent:<agentId>:falcon-dash:dm:fd-chat-<8hex>`
+Session keys follow the pattern: `agent:<agentId>:falcon:dm:fd-chat-<8hex>`
 
 The `fd-` prefix identifies Falcon Dash sessions. The type segment (`fd-chat`) indicates session capabilities. Agents use this pattern to adapt their responses (e.g., rich markdown for `fd-chat` sessions).
 
