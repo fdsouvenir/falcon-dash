@@ -75,8 +75,14 @@
 			if (hasDiscordRpc) {
 				await call('discord.configure', { clientId, botToken });
 			} else {
-				const configResult = await call<{ config: string; hash: string }>('config.get', {});
-				const config = JSON.parse(configResult.config);
+				const configResult = await call<{ config: string | object; hash: string }>(
+					'config.get',
+					{}
+				);
+				const config =
+					typeof configResult.config === 'string'
+						? JSON.parse(configResult.config)
+						: configResult.config;
 				if (!config.channels) config.channels = {};
 				config.channels.discord = { clientId, botToken };
 				await call('config.apply', {
