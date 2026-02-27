@@ -6,6 +6,22 @@ let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
 	if (!('serviceWorker' in navigator)) return null;
+
+	// In dev mode, unregister any existing service worker and clear caches
+	// to prevent stale-while-revalidate from ballooning Cache Storage with
+	// hashed Vite bundles that are never evicted.
+	if (import.meta.env.DEV) {
+		const registrations = await navigator.serviceWorker.getRegistrations();
+		for (const reg of registrations) {
+			await reg.unregister();
+		}
+		const keys = await caches.keys();
+		for (const key of keys) {
+			await caches.delete(key);
+		}
+		return null;
+	}
+
 	try {
 		const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 		return reg;
