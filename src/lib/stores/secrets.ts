@@ -76,7 +76,7 @@ export async function addProvider(provider: SecretProvider): Promise<void> {
 	config.secrets.providers[name] = provider;
 
 	await call('config.apply', {
-		config: JSON.stringify(config, null, 2),
+		raw: JSON.stringify(config, null, 2),
 		baseHash: result.hash
 	});
 	await loadSecrets();
@@ -88,7 +88,7 @@ export async function removeProvider(name: string): Promise<void> {
 	if (config.secrets?.providers?.[name]) {
 		delete config.secrets.providers[name];
 		await call('config.apply', {
-			config: JSON.stringify(config, null, 2),
+			raw: JSON.stringify(config, null, 2),
 			baseHash: result.hash
 		});
 		await loadSecrets();

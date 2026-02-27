@@ -81,7 +81,7 @@
 				if (!config.channels) config.channels = {};
 				config.channels.telegram = { botToken };
 				await call('config.apply', {
-					config: JSON.stringify(config, null, 2),
+					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
 				});
 			}

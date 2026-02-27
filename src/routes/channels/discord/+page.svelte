@@ -86,7 +86,7 @@
 				if (!config.channels) config.channels = {};
 				config.channels.discord = { clientId, botToken };
 				await call('config.apply', {
-					config: JSON.stringify(config, null, 2),
+					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
 				});
 			}

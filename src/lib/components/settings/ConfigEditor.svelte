@@ -98,7 +98,7 @@
 		}
 
 		try {
-			await call('config.apply', { config, baseHash });
+			await call('config.apply', { raw: config, baseHash });
 			success = 'Config applied. Gateway is restarting...';
 			setTimeout(() => {
 				success = null;
