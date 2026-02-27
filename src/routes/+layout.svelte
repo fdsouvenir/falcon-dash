@@ -46,6 +46,16 @@
 			listenForInstallPrompt();
 			measureWebVitals();
 			preloadHighlighter();
+
+			// Clean up stale localStorage keys from removed chat feature
+			for (const key of [
+				'falcon-dash:channels',
+				'falcon-dash:activeChannelId',
+				'falcon-dash:activeSessionKey',
+				'falcon-dash:pinnedSessions'
+			]) {
+				localStorage.removeItem(key);
+			}
 		}
 	});
 
