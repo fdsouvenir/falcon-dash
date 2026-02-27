@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { eventBus } from '$lib/stores/gateway.js';
 	import { connection } from '$lib/stores/gateway.js';
 	import type { ConnectionState } from '$lib/gateway/types.js';
@@ -81,7 +82,7 @@
 			timestamp: Date.now(),
 			icon
 		};
-		items = [item, ...items].slice(0, MAX_ITEMS);
+		items = [item, ...untrack(() => items)].slice(0, MAX_ITEMS);
 	}
 
 	function formatTime(ts: number): string {
