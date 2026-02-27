@@ -8,6 +8,8 @@
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 	import { addToast } from '$lib/stores/toast.js';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let {
 		selectedAgentId = $bindable('default'),
@@ -176,11 +178,34 @@
 	let isMobile = $derived(variant === 'mobile');
 </script>
 
-<!-- eslint-disable svelte/no-navigation-without-resolve -- static route -->
 <div
 	class="agent-rail flex shrink-0 flex-col items-center gap-1 pb-3 pt-3"
 	class:agent-rail--mobile={isMobile}
 >
+	<!-- Dashboard icon -->
+	<div class="agent-slot group relative">
+		<button
+			onclick={() => goto(resolve('/'))}
+			class="agent-icon agent-icon--home"
+			class:agent-icon--mobile={isMobile}
+			title="Dashboard"
+			aria-label="Go to dashboard"
+		>
+			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+				/>
+			</svg>
+		</button>
+		<div class="agent-tooltip">
+			<span class="agent-tooltip__name">Dashboard</span>
+		</div>
+	</div>
+
+	<div class="agent-separator"></div>
+
 	<!-- Agent icons -->
 	{#each agents as agent (agent.agentId)}
 		{@const isActive = selectedAgentId === agent.agentId}
@@ -197,6 +222,7 @@
 				onclick={() => {
 					selectedAgentId = agent.agentId;
 					setSelectedAgent(agent.agentId);
+					goto(resolve('/agents/[id]', { id: agent.agentId }));
 				}}
 				class="agent-icon"
 				class:agent-icon--active={isActive}
@@ -386,6 +412,18 @@
 	}
 	.agent-dot--active {
 		border-color: color-mix(in oklab, var(--color-blue-600) 100%, black 6%);
+	}
+
+	/* Home button */
+	.agent-icon--home {
+		background: var(--color-gray-800);
+		color: var(--color-gray-400);
+	}
+	.agent-icon--home:hover {
+		background: var(--color-gray-700);
+		color: var(--color-white);
+		border-radius: 16px;
+		box-shadow: none;
 	}
 
 	/* Add button */
