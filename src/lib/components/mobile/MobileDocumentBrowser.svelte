@@ -10,7 +10,7 @@
 	import { editor, openFile, closeFile } from '$lib/stores/editor.js';
 	import type { EditorState } from '$lib/stores/editor.js';
 	import type { FileEntry } from '$lib/stores/files.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 
 	let view = $state<'list' | 'viewer'>('list');

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
 	import NotificationCenter from '$lib/components/NotificationCenter.svelte';
-	import ChannelList from './ChannelList.svelte';
-	import ChatList from './ChatList.svelte';
 	import { pinnedApps, unpinApp, renameApp } from '$lib/stores/pinned-apps.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
-	import { filteredSessions } from '$lib/stores/sessions.js';
+	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let {
 		collapsed = false,
@@ -16,7 +15,6 @@
 	let agentName = $state('Falcon Dashboard');
 	let agentEmoji = $state<string | undefined>(undefined);
 
-	// Fetch identity when selected agent changes
 	$effect(() => {
 		const id = selectedAgentId;
 		const unsub = connectionState.subscribe((s) => {
@@ -25,16 +23,6 @@
 				agentName = identity.name || 'Falcon Dashboard';
 				agentEmoji = identity.emoji;
 			});
-		});
-		return unsub;
-	});
-
-	let oldChatsExpanded = $state(false);
-	let legacyCount = $state(0);
-
-	$effect(() => {
-		const unsub = filteredSessions.subscribe((list) => {
-			legacyCount = list.length;
 		});
 		return unsub;
 	});
@@ -82,6 +70,10 @@
 			cancelRename();
 		}
 	}
+
+	function isActive(path: string): boolean {
+		return page.url.pathname === path;
+	}
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- routes will be created in later stories -->
@@ -90,7 +82,7 @@
 		? '-translate-x-full'
 		: 'translate-x-0'} fixed inset-y-0 left-0 z-40 md:relative md:translate-x-0"
 >
-	<!-- Header — agent name (Discord-style server header) -->
+	<!-- Header -->
 	<div
 		class="flex items-center justify-between border-b border-gray-800 px-4 py-3 shadow-sm shadow-black/20"
 	>
@@ -99,14 +91,6 @@
 			<span class="text-sm font-semibold text-white"
 				>{agentEmoji ? `${agentEmoji} ` : ''}{agentName}</span
 			>
-			<svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2.5"
-					d="M19 9l-7 7-7-7"
-				/>
-			</svg>
 		</div>
 		<button
 			class="text-gray-400 hover:text-white md:hidden"
@@ -126,49 +110,42 @@
 
 	<!-- Scrollable content -->
 	<nav class="flex flex-1 flex-col overflow-y-auto">
-		<!-- Channels -->
+		<!-- Navigation -->
 		<div class="px-3 py-3">
-			<ChannelList />
+			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+				Navigation
+			</h2>
+			<a
+				href={resolve('/')}
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/')
+					? 'bg-gray-800 text-white'
+					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+			>
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+					/>
+				</svg>
+				Dashboard
+			</a>
+			<a
+				href="/channels"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/channels')
+					? 'bg-gray-800 text-white'
+					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+			>
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+					/>
+				</svg>
+				Channels
+			</a>
 		</div>
-
-		<!-- Old Chats (legacy fd-chat sessions) -->
-		{#if legacyCount > 0}
-			<div class="px-3 pb-1">
-				<button
-					onclick={() => (oldChatsExpanded = !oldChatsExpanded)}
-					class="flex w-full items-center gap-1.5 px-2 py-1 text-left"
-				>
-					<svg
-						class="h-3 w-3 text-gray-500 transition-transform {oldChatsExpanded
-							? ''
-							: '-rotate-90'}"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 9l-7 7-7-7"
-						/>
-					</svg>
-					<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
-						>Old Chats</span
-					>
-					<span
-						class="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-gray-700 px-1 text-[10px] text-gray-400"
-					>
-						{legacyCount}
-					</span>
-				</button>
-				{#if oldChatsExpanded}
-					<div class="pt-1">
-						<ChatList legacy={true} />
-					</div>
-				{/if}
-			</div>
-		{/if}
 
 		<!-- Apps section -->
 		<div class="px-3 py-3">
@@ -346,7 +323,7 @@
 			Settings
 		</a>
 		<a
-			href="/passwords"
+			href="/secrets"
 			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -354,10 +331,10 @@
 					stroke-linecap="round"
 					stroke-linejoin="round"
 					stroke-width="2"
-					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+					d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
 				/>
 			</svg>
-			Passwords
+			Secrets
 		</a>
 	</div>
 </aside>

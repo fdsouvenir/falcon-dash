@@ -1,61 +1,21 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import {
-		activeSessionKey,
-		sessions,
-		selectedAgentId,
-		type ChatSessionInfo
-	} from '$lib/stores/sessions.js';
-	import { totalUnreadCount } from '$lib/stores/mobile-chat-nav.js';
+	import { selectedAgentId } from '$lib/stores/sessions.js';
 	import { getAgentIdentity, connectionState } from '$lib/stores/agent-identity.js';
 	import { unreadNotificationCount } from '$lib/stores/notifications.js';
 
 	let {
-		chatOpen = false,
-		settingsOpen = false,
-		onBack,
-		onNotifications,
-		onThreads,
-		onSettingsToggle
+		onNotifications
 	}: {
-		chatOpen?: boolean;
-		settingsOpen?: boolean;
-		onBack?: () => void;
 		onNotifications?: () => void;
-		onThreads?: () => void;
-		onSettingsToggle?: () => void;
 	} = $props();
 
 	let pathname = $state('/');
-	let activeKey = $state<string | null>(null);
-	let sessionList = $state<ChatSessionInfo[]>([]);
-	let unreadCount = $state(0);
 	let agentName = $state('Agent');
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
 			pathname = p.url.pathname;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = activeSessionKey.subscribe((v) => {
-			activeKey = v;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = sessions.subscribe((v) => {
-			sessionList = v;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = totalUnreadCount.subscribe((v) => {
-			unreadCount = v;
 		});
 		return unsub;
 	});
@@ -70,34 +30,26 @@
 	});
 
 	$effect(() => {
-		const _id = currentAgentId;
 		const unsub = connectionState.subscribe((s) => {
 			if (s !== 'READY') return;
-			getAgentIdentity(_id ?? undefined).then((identity) => {
+			getAgentIdentity(currentAgentId ?? undefined).then((identity) => {
 				agentName = identity.name || 'Agent';
 			});
 		});
 		return unsub;
 	});
 
-	let isChatRoute = $derived(pathname === '/');
-
-	let sessionName = $derived(() => {
-		if (!activeKey) return 'Chat';
-		const session = sessionList.find((s) => s.sessionKey === activeKey);
-		return session?.displayName ?? 'Chat';
-	});
-
 	const routeTitles: Record<string, string> = {
+		'/': 'Dashboard',
 		'/settings': 'Settings',
 		'/documents': 'Documents',
 		'/projects': 'Projects',
-		'/passwords': 'Passwords'
+		'/channels': 'Channels',
+		'/secrets': 'Secrets',
+		'/skills': 'Skills'
 	};
 
 	let title = $derived(() => {
-		if (isChatRoute && chatOpen) return sessionName();
-		if (isChatRoute) return 'Falcon Dash v' + __APP_VERSION__;
 		if (pathname === '/jobs') return `${agentName}'s Jobs`;
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
@@ -111,7 +63,9 @@
 		return unsub;
 	});
 
-	let isSecondaryRoute = $derived(['/documents', '/projects', '/passwords'].includes(pathname));
+	let isSecondaryRoute = $derived(
+		['/documents', '/projects', '/channels', '/secrets'].includes(pathname)
+	);
 </script>
 
 {#snippet notifBell()}
@@ -139,94 +93,11 @@
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
 <header class="flex shrink-0 items-center border-b border-gray-800 bg-gray-900 px-3 py-2">
-	{#if isChatRoute && chatOpen}
-		<!-- Chat route, panel open: back arrow (with unread badge) left, session name center, settings right -->
-		<button
-			class="touch-target relative flex items-center justify-center text-gray-400 hover:text-white"
-			onclick={onBack}
-			aria-label="Back to chat list"
-		>
-			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-			</svg>
-			{#if unreadCount > 0}
-				<span
-					class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
-				>
-					{unreadCount > 99 ? '99+' : unreadCount}
-				</span>
-			{/if}
-		</button>
-		<button
-			class="flex flex-1 items-center justify-center gap-1 truncate"
-			onclick={onSettingsToggle}
-			aria-label="Toggle session settings"
-		>
-			<span class="truncate text-sm font-semibold text-white">{title()}</span>
-			<svg
-				class="h-3 w-3 shrink-0 text-gray-400 transition-transform duration-200"
-				class:rotate-180={settingsOpen}
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-				stroke-width="2"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-			</svg>
-		</button>
-		{@render notifBell()}
-		<button
-			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
-			aria-label="View threads"
-			onclick={onThreads}
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-				/>
-			</svg>
-		</button>
-		<a
-			href="/settings"
-			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
-			aria-label="Settings"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-				/>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-			</svg>
-		</a>
-	{:else if isChatRoute}
-		<!-- Chat route, panel closed: title "Chats", settings gear right -->
-		<div class="h-6 w-6"></div>
-		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
-		{@render notifBell()}
-		<a
-			href="/settings"
-			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
-			aria-label="Settings"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-				/>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-			</svg>
-		</a>
-	{:else if isSecondaryRoute}
-		<!-- Secondary route: back arrow left, title center -->
+	{#if isSecondaryRoute}
 		<a
 			href="/"
 			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
-			aria-label="Back to chat"
+			aria-label="Back to dashboard"
 		>
 			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -249,12 +120,9 @@
 			</svg>
 		</a>
 	{:else}
-		<!-- Primary route (jobs, settings): title center -->
 		<div class="h-6 w-6"></div>
 		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
-		{#if pathname === '/settings'}
-			<div class="h-6 w-6"></div>
-		{:else}
+		{#if pathname !== '/settings'}
 			{@render notifBell()}
 			<a
 				href="/settings"
@@ -274,6 +142,8 @@
 					/>
 				</svg>
 			</a>
+		{:else}
+			<div class="h-6 w-6"></div>
 		{/if}
 	{/if}
 </header>

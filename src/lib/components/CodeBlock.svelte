@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { highlightCode } from '$lib/chat/highlighter.js';
+	import { highlightCode } from '$lib/utils/highlighter.js';
 
 	let { code = '', lang = '' }: { code: string; lang: string } = $props();
 

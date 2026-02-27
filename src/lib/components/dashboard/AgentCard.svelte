@@ -122,7 +122,7 @@
 			{@const running = isRunning(agent.id)}
 			{@const channels = getChannels()}
 			<a
-				href={resolve(`/agents/${agent.id}`)}
+				href={resolve('/agents/[id]', { id: agent.id })}
 				class="group rounded-lg border border-gray-700/60 bg-gray-800/40 p-4 transition-colors hover:border-gray-600/80 hover:bg-gray-800/60"
 			>
 				<div class="mb-3 flex items-center gap-3">

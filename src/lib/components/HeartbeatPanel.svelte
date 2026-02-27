@@ -15,7 +15,7 @@
 	} from '$lib/stores/heartbeat.js';
 	import MarkdownRenderer from './MarkdownRenderer.svelte';
 	import HeartbeatHistory from './HeartbeatHistory.svelte';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 
 	let config = $state<HeartbeatConfig | null>(null);
 	let status = $state<HeartbeatStatus | null>(null);

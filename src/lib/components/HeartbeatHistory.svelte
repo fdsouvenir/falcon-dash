@@ -5,7 +5,7 @@
 		loadHeartbeatHistory,
 		type HeartbeatExecution
 	} from '$lib/stores/heartbeat.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 
 	let executions = $state<HeartbeatExecution[]>([]);
 	let loading = $state(false);

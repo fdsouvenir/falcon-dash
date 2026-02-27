@@ -8,7 +8,7 @@
 		clearNotifications,
 		type AppNotification
 	} from '$lib/stores/notifications.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 	import { setActiveSession } from '$lib/stores/sessions.js';
 
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();

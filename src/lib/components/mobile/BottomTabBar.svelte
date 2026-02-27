@@ -62,10 +62,10 @@
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+					d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
 				/>
 			</svg>
-			<span>Chat</span>
+			<span>Home</span>
 			{#if unreadCount > 0}
 				<span
 					class="absolute right-1/4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
@@ -130,9 +130,9 @@
 		</a>
 
 		<a
-			href="/passwords"
+			href="/channels"
 			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/passwords'
+				'/channels'
 			)
 				? 'text-blue-400'
 				: 'text-gray-500'}"
@@ -141,10 +141,10 @@
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+					d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
 				/>
 			</svg>
-			<span>Passwords</span>
+			<span>Channels</span>
 		</a>
 
 		{#if hasApps}

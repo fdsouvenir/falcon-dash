@@ -1,45 +1,19 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { page } from '$app/stores';
-	import { activeSessionKey } from '$lib/stores/sessions.js';
-	import { mobileChatOpen, openMobileChat, closeMobileChat } from '$lib/stores/mobile-chat-nav.js';
 	import MobileHeader from './MobileHeader.svelte';
 	import BottomTabBar from './BottomTabBar.svelte';
 	import BottomSheet from './BottomSheet.svelte';
 	import MoreSheet from './MoreSheet.svelte';
-	import ChannelList from '$lib/components/ChannelList.svelte';
-	import ChatList from '$lib/components/ChatList.svelte';
-	import ChatView from '$lib/components/ChatView.svelte';
 	import ConnectionErrorBanner from '$lib/components/ConnectionErrorBanner.svelte';
-	import AgentRail from './AgentRail.svelte';
 	import MobileNotificationSheet from './MobileNotificationSheet.svelte';
-	import ThreadList from '$lib/components/ThreadList.svelte';
-	import MobileChatSettings from './MobileChatSettings.svelte';
-	import { loadThreads } from '$lib/stores/threads.js';
-	import { filteredSessions } from '$lib/stores/sessions.js';
 	import ExecApprovalPrompt from '$lib/components/ExecApprovalPrompt.svelte';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 
 	let { children }: { children: Snippet } = $props();
 
-	let legacyCount = $state(0);
-	let oldChatsExpanded = $state(false);
-
-	$effect(() => {
-		const unsub = filteredSessions.subscribe((list) => {
-			legacyCount = list.length;
-		});
-		return unsub;
-	});
-
 	let moreOpen = $state(false);
 	let notificationsOpen = $state(false);
-	let threadsOpen = $state(false);
-	let showMobileSettings = $state(false);
-	let chatOpen = $state(false);
-	let pathname = $state('/');
-	let activeKey = $state<string | null>(null);
 	let approvals = $state<PendingApproval[]>([]);
 	let approvalsSheetOpen = $derived(approvals.length > 0);
 
@@ -58,155 +32,15 @@
 		addToDenylist(command);
 		resolveApproval(requestId, 'deny').catch(() => {});
 	}
-
-	$effect(() => {
-		const unsub = page.subscribe((p) => {
-			pathname = p.url.pathname;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = mobileChatOpen.subscribe((v) => {
-			chatOpen = v;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = activeSessionKey.subscribe((v) => {
-			activeKey = v;
-		});
-		return unsub;
-	});
-
-	// Auto-close panel if active session is deleted
-	$effect(() => {
-		if (chatOpen && activeKey === null) {
-			closeMobileChat();
-		}
-	});
-
-	// Close settings when chat panel closes
-	$effect(() => {
-		if (!chatOpen) {
-			showMobileSettings = false;
-		}
-	});
-
-	// Browser back gesture support
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-		function handlePopState() {
-			if (chatOpen) {
-				// Don't push another history entry — just close
-				closeMobileChat();
-			}
-		}
-
-		window.addEventListener('popstate', handlePopState);
-		return () => window.removeEventListener('popstate', handlePopState);
-	});
-
-	let isChatRoute = $derived(pathname === '/');
-
-	function handleBack() {
-		// Pop the history entry we pushed in openMobileChat
-		if (typeof window !== 'undefined') {
-			history.back();
-		}
-	}
-
-	function handleThreads() {
-		if (activeKey) {
-			loadThreads(activeKey).catch(() => {});
-		}
-		threadsOpen = true;
-	}
 </script>
 
 <div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
-	<MobileHeader
-		chatOpen={isChatRoute && chatOpen}
-		settingsOpen={showMobileSettings}
-		onBack={handleBack}
-		onNotifications={() => (notificationsOpen = true)}
-		onThreads={handleThreads}
-		onSettingsToggle={() => (showMobileSettings = !showMobileSettings)}
-	/>
+	<MobileHeader onNotifications={() => (notificationsOpen = true)} />
 
-	{#if isChatRoute}
-		<!-- Chat route: two-panel slide architecture -->
+	<main class="flex-1 overflow-y-auto">
 		<ConnectionErrorBanner />
-		<MobileChatSettings open={showMobileSettings} />
-		<div class="relative flex-1 overflow-hidden">
-			<!-- Base layer: AgentRail + ChannelList + Old Chats -->
-			<div class="absolute inset-0 flex">
-				<AgentRail />
-				<div class="flex-1 overflow-y-auto pl-1.5">
-					<div class="px-3 py-3">
-						<ChannelList onselect={() => openMobileChat()} />
-					</div>
-
-					<!-- Old Chats (legacy fd-chat sessions) -->
-					{#if legacyCount > 0}
-						<div class="px-3 pb-1">
-							<button
-								onclick={() => (oldChatsExpanded = !oldChatsExpanded)}
-								class="flex w-full items-center gap-1.5 px-2 py-1 text-left"
-							>
-								<svg
-									class="h-3 w-3 text-gray-500 transition-transform {oldChatsExpanded
-										? ''
-										: '-rotate-90'}"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M19 9l-7 7-7-7"
-									/>
-								</svg>
-								<span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
-									>Old Chats</span
-								>
-								<span
-									class="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-gray-700 px-1 text-[10px] text-gray-400"
-								>
-									{legacyCount}
-								</span>
-							</button>
-							{#if oldChatsExpanded}
-								<div class="pt-1">
-									<ChatList variant="mobile" legacy={true} onselect={() => openMobileChat()} />
-								</div>
-							{/if}
-						</div>
-					{/if}
-				</div>
-			</div>
-
-			<!-- Overlay layer: ChatView (slides in from right) -->
-			<div
-				class="mobile-chat-panel absolute inset-0 bg-gray-950 transition-transform duration-300 ease-in-out"
-				class:translate-x-0={chatOpen}
-				class:translate-x-full={!chatOpen}
-			>
-				{#if activeKey}
-					<ChatView />
-				{/if}
-			</div>
-		</div>
-	{:else}
-		<!-- Non-chat routes: render children normally -->
-		<main class="flex-1 overflow-y-auto">
-			<ConnectionErrorBanner />
-			{@render children()}
-		</main>
-	{/if}
+		{@render children()}
+	</main>
 
 	<BottomTabBar onmore={() => (moreOpen = true)} />
 
@@ -226,29 +60,4 @@
 			/>
 		{/if}
 	</BottomSheet>
-
-	{#if threadsOpen}
-		<div class="fixed inset-0 z-50 flex flex-col bg-gray-950">
-			<div class="flex items-center justify-between border-b border-gray-800 px-3 py-2">
-				<span class="text-sm font-medium text-white">Threads</span>
-				<button
-					onclick={() => (threadsOpen = false)}
-					class="rounded p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
-					aria-label="Close threads"
-				>
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/>
-					</svg>
-				</button>
-			</div>
-			<div class="flex-1 overflow-y-auto">
-				<ThreadList />
-			</div>
-		</div>
-	{/if}
 </div>

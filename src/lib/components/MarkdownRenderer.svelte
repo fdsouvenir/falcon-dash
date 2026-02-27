@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { renderMarkdownSync } from '$lib/chat/markdown.js';
+	import { renderMarkdownSync } from '$lib/utils/markdown.js';
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 

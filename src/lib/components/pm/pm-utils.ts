@@ -1,4 +1,4 @@
-import { formatRelativeTime as formatRelativeTimeMs } from '$lib/chat/time-utils.js';
+import { formatRelativeTime as formatRelativeTimeMs } from '$lib/utils/time.js';
 
 /**
  * Format a unix-seconds timestamp as relative time.

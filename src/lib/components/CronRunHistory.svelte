@@ -7,7 +7,7 @@
 		type CronRun,
 		type CronJob
 	} from '$lib/stores/cron.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 	import { describeCron } from '$lib/cron-utils.js';
 
 	interface Props {

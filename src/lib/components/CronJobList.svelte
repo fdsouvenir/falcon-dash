@@ -12,7 +12,7 @@
 		runCronJob,
 		type CronJob
 	} from '$lib/stores/cron.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 	import { describeCron, describeScheduleObject } from '$lib/cron-utils.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

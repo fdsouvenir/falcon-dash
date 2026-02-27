@@ -7,7 +7,7 @@
 		type CronJob,
 		type CronRun
 	} from '$lib/stores/cron.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 
 	let { job, onback }: { job: CronJob; onback: () => void } = $props();
 

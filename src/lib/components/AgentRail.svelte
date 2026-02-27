@@ -6,7 +6,6 @@
 		type AgentIdentity
 	} from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
-	import { channelCounts } from '$lib/stores/channels.js';
 	import { snapshot } from '$lib/stores/gateway.js';
 	import { addToast } from '$lib/stores/toast.js';
 
@@ -42,16 +41,6 @@
 
 	// Session counts (written by sessions effect)
 	let sessionCounts = $state<Record<string, number>>({});
-
-	// Channel counts
-	let chanCounts = $state<Record<string, number>>({});
-
-	$effect(() => {
-		const unsub = channelCounts.subscribe((v) => {
-			chanCounts = v;
-		});
-		return unsub;
-	});
 
 	async function fetchConfigAgents() {
 		try {
@@ -147,7 +136,7 @@
 				emoji,
 				initial: name.charAt(0).toUpperCase(),
 				sessionCount: sessionCounts[ca.id] ?? 0,
-				channelCount: chanCounts[ca.id] ?? 0,
+				channelCount: 0,
 				hasIdentity: !!(ca.identity?.name || gw?.name)
 			};
 		});
@@ -162,7 +151,7 @@
 					emoji: undefined,
 					initial: id.charAt(0).toUpperCase(),
 					sessionCount: sessionCounts[id],
-					channelCount: chanCounts[id] ?? 0,
+					channelCount: 0,
 					hasIdentity: false
 				});
 			}

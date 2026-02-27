@@ -28,7 +28,7 @@
 		type FileEntry,
 		type SortField
 	} from '$lib/stores/files.js';
-	import { formatRelativeTime } from '$lib/chat/time-utils.js';
+	import { formatRelativeTime } from '$lib/utils/time.js';
 	import { openFile } from '$lib/stores/editor.js';
 
 	let entries = $state<FileEntry[]>([]);

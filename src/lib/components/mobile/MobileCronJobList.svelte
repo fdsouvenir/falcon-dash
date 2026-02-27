@@ -13,9 +13,7 @@
 		type CronJob
 	} from '$lib/stores/cron.js';
 	import { describeCron, describeScheduleObject } from '$lib/cron-utils.js';
-	import ChatView from '$lib/components/ChatView.svelte';
-	import { formatRelativeTime, formatCountdown } from '$lib/chat/time-utils.js';
-	import { setActiveSession } from '$lib/stores/sessions.js';
+	import { formatRelativeTime, formatCountdown } from '$lib/utils/time.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import BottomSheet from './BottomSheet.svelte';
 	import MobileCronJobForm from './MobileCronJobForm.svelte';
@@ -28,7 +26,6 @@
 	let view = $state<'list' | 'form'>('list');
 	let editingJob = $state<CronJob | null>(null);
 
-	let chatSlideOpen = $state(false);
 	let deleteTarget = $state<CronJob | null>(null);
 	let deleteSheetOpen = $state(false);
 	let overflowTarget = $state<CronJob | null>(null);
@@ -83,27 +80,11 @@
 
 	function handleHistory(job: CronJob) {
 		if (job.sessionTarget) {
-			setActiveSession(job.sessionTarget);
-			chatSlideOpen = true;
-			history.pushState({ jobChatOpen: true }, '');
+			addToast('Job session: ' + job.sessionTarget, 'info');
 		} else {
-			addToast('No chat session linked to this job', 'info');
+			addToast('No session linked to this job', 'info');
 		}
 	}
-
-	function closeChatSlide() {
-		chatSlideOpen = false;
-	}
-
-	$effect(() => {
-		function onPopState(e: PopStateEvent) {
-			if (chatSlideOpen && !e.state?.jobChatOpen) {
-				chatSlideOpen = false;
-			}
-		}
-		window.addEventListener('popstate', onPopState);
-		return () => window.removeEventListener('popstate', onPopState);
-	});
 
 	function handleFormBack() {
 		view = 'list';
@@ -392,35 +373,6 @@
 	</BottomSheet>
 
 	<!-- Chat slide-in overlay -->
-	<div
-		class="fixed inset-0 z-50 bg-gray-950 transition-transform duration-300 ease-in-out"
-		class:translate-x-0={chatSlideOpen}
-		class:translate-x-full={!chatSlideOpen}
-	>
-		{#if chatSlideOpen}
-			<div class="flex items-center border-b border-gray-800 px-2 py-2">
-				<button
-					onclick={closeChatSlide}
-					class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-gray-400"
-				>
-					<svg
-						class="h-5 w-5"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-					</svg>
-				</button>
-				<span class="text-sm font-medium text-gray-300">Job Chat</span>
-			</div>
-			<div class="h-[calc(100%-52px)]">
-				<ChatView />
-			</div>
-		{/if}
-	</div>
-
 	<!-- Delete confirmation -->
 	<BottomSheet open={deleteSheetOpen} onclose={() => (deleteSheetOpen = false)}>
 		<div class="pb-4">

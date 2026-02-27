@@ -1,21 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { gatewayToken, gatewayUrl } from '$lib/stores/token.js';
-	import { get } from 'svelte/store';
 	import { connection, connectToGateway } from '$lib/stores/gateway.js';
-	import {
-		restoreActiveSession,
-		subscribeToEvents,
-		unsubscribeFromEvents,
-		selectedAgentId
-	} from '$lib/stores/sessions.js';
-	import {
-		ensureDefaultChannel,
-		channels,
-		setActiveChannel,
-		restoreActiveChannel
-	} from '$lib/stores/channels.js';
-	import { connectionState } from '$lib/stores/agent-identity.js';
 	import {
 		subscribeToNotificationEvents,
 		unsubscribeFromNotificationEvents
@@ -37,7 +23,7 @@
 	import InstallPrompt from '$lib/components/InstallPrompt.svelte';
 	import { browser } from '$app/environment';
 	import { measureWebVitals } from '$lib/performance/web-vitals.js';
-	import { preloadHighlighter } from '$lib/chat/highlighter.js';
+	import { preloadHighlighter } from '$lib/utils/highlighter.js';
 
 	let { children } = $props();
 
@@ -54,7 +40,6 @@
 		return unsub;
 	});
 
-	// Register service worker, install prompt listener, and performance tooling
 	$effect(() => {
 		if (browser) {
 			registerServiceWorker();
@@ -64,7 +49,6 @@
 		}
 	});
 
-	// Subscribe to token store — picks up changes from config fetch or manual entry
 	$effect(() => {
 		const unsub = gatewayToken.subscribe((v) => {
 			token = v;
@@ -72,9 +56,6 @@
 		return unsub;
 	});
 
-	// Fetch server config first, then mark loading complete.
-	// This prevents the auto-connect effect from firing with a stale localStorage token
-	// before the server config has been read.
 	$effect(() => {
 		fetch('/api/gateway-config')
 			.then((res) => {
@@ -90,16 +71,13 @@
 				}
 			})
 			.catch(() => {
-				// Config file unavailable — fall through to manual entry
+				// Config file unavailable
 			})
 			.finally(() => {
 				loading = false;
 			});
 	});
 
-	// Connect ONLY after config fetch completes (loading === false) and we have a token.
-	// The `connected` guard ensures we call connectToGateway() exactly once per startup.
-	// If the token changes later (e.g. manual re-entry), we reconnect.
 	$effect(() => {
 		if (!loading && token && !connected) {
 			connected = true;
@@ -112,75 +90,18 @@
 		}
 	});
 
-	// Load sessions and event subscriptions when connection is ready
 	$effect(() => {
 		const unsub = connection.state.subscribe((state) => {
 			if (state === 'READY') {
-				restoreActiveSession();
-				subscribeToEvents();
 				subscribeToNotificationEvents();
 				subscribeToApprovalEvents();
 			}
 		});
 		return () => {
 			unsub();
-			unsubscribeFromEvents();
 			unsubscribeFromNotificationEvents();
 			unsubscribeFromApprovalEvents();
 		};
-	});
-
-	// Auto-create #general channel per agent when connection is ready
-	const channelAutoCreated: Record<string, boolean> = {};
-
-	function activateAgentChannel(agentId: string) {
-		if (!channelAutoCreated[agentId]) {
-			channelAutoCreated[agentId] = true;
-			ensureDefaultChannel(agentId).then((channel) => {
-				setActiveChannel(channel.id);
-			});
-		} else {
-			// Agent already initialized — switch to its default channel
-			const agentChannels = get(channels).filter((c) => c.agentId === agentId);
-			const defaultChan = agentChannels.find((c) => c.isDefault) ?? agentChannels[0];
-			if (defaultChan) {
-				setActiveChannel(defaultChan.id);
-			}
-		}
-	}
-
-	$effect(() => {
-		let agentId: string | null = null;
-		let connState: string = '';
-
-		const unsubAgent = selectedAgentId.subscribe((id) => {
-			agentId = id;
-			if (connState === 'READY' && agentId) {
-				activateAgentChannel(agentId);
-			}
-		});
-
-		const unsubConn = connectionState.subscribe((state) => {
-			connState = state;
-			if (connState === 'READY' && agentId) {
-				activateAgentChannel(agentId);
-			}
-		});
-
-		return () => {
-			unsubAgent();
-			unsubConn();
-		};
-	});
-
-	// Restore persisted channel on reconnect
-	$effect(() => {
-		const unsub = connection.state.subscribe((state) => {
-			if (state === 'READY') {
-				restoreActiveChannel();
-			}
-		});
-		return unsub;
 	});
 </script>
 
