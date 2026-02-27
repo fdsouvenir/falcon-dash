@@ -1,7 +1,6 @@
 <script lang="ts">
 	import MobileSettingsHome from './MobileSettingsHome.svelte';
 	import UserPage from './settings/UserPage.svelte';
-	import ChannelsPage from './settings/ChannelsPage.svelte';
 	import AgentsPage from './settings/AgentsPage.svelte';
 	import SkillsPage from './settings/SkillsPage.svelte';
 	import ToolsPage from './settings/ToolsPage.svelte';
@@ -23,8 +22,6 @@
 	<MobileSettingsHome onnavigate={(id) => (activeSettingsPage = id)} />
 {:else if activeSettingsPage === 'user'}
 	<UserPage onback={goBack} />
-{:else if activeSettingsPage === 'channels'}
-	<ChannelsPage onback={goBack} />
 {:else if activeSettingsPage === 'agents'}
 	<AgentsPage onback={goBack} />
 {:else if activeSettingsPage === 'agent-files'}

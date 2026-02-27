@@ -3,7 +3,6 @@
 	import InformationTab from './InformationTab.svelte';
 	import AboutTab from './AboutTab.svelte';
 	import ConfigEditor from './ConfigEditor.svelte';
-	import DiscordSetup from './DiscordSetup.svelte';
 	import DeviceManagement from './DeviceManagement.svelte';
 	import LiveLogs from './LiveLogs.svelte';
 	import ExecApprovals from './ExecApprovals.svelte';
@@ -19,7 +18,6 @@
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
 		{ id: 'information', label: 'Information', component: InformationTab },
 		{ id: 'config', label: 'Config', component: ConfigEditor },
-		{ id: 'discord', label: 'Discord', component: DiscordSetup },
 		{ id: 'devices', label: 'Devices', component: DeviceManagement },
 		{ id: 'logs', label: 'Logs', component: LiveLogs },
 		{ id: 'approvals', label: 'Approvals', component: ExecApprovals },

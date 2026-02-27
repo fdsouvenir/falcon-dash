@@ -8,6 +8,9 @@
 		if (item.id === 'cron') {
 			// eslint-disable-next-line svelte/no-navigation-without-resolve -- static route
 			goto('/jobs');
+		} else if (item.id === 'channels') {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- static route
+			goto('/channels');
 		} else if (item.id === 'logout') {
 			window.location.href = '/cdn-cgi/access/logout';
 		} else {
