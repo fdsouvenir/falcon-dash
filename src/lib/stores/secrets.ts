@@ -67,8 +67,8 @@ export async function loadSecrets(): Promise<void> {
 }
 
 export async function addProvider(provider: SecretProvider): Promise<void> {
-	const result = await call<{ config: string; hash: string }>('config.get', {});
-	const config = JSON.parse(result.config);
+	const result = await call<{ raw: string; hash: string }>('config.get', {});
+	const config = JSON.parse(result.raw);
 	if (!config.secrets) config.secrets = {};
 	if (!config.secrets.providers) config.secrets.providers = {};
 
@@ -83,8 +83,8 @@ export async function addProvider(provider: SecretProvider): Promise<void> {
 }
 
 export async function removeProvider(name: string): Promise<void> {
-	const result = await call<{ config: string; hash: string }>('config.get', {});
-	const config = JSON.parse(result.config);
+	const result = await call<{ raw: string; hash: string }>('config.get', {});
+	const config = JSON.parse(result.raw);
 	if (config.secrets?.providers?.[name]) {
 		delete config.secrets.providers[name];
 		await call('config.apply', {

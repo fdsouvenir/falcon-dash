@@ -76,8 +76,8 @@
 				await call('telegram.configure', { botToken });
 			} else {
 				// Fallback: write config directly via config.apply
-				const configResult = await call<{ config: string; hash: string }>('config.get', {});
-				const config = JSON.parse(configResult.config);
+				const configResult = await call<{ raw: string; hash: string }>('config.get', {});
+				const config = JSON.parse(configResult.raw);
 				if (!config.channels) config.channels = {};
 				config.channels.telegram = { botToken };
 				await call('config.apply', {

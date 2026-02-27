@@ -28,11 +28,8 @@
 		loading = true;
 		error = null;
 		try {
-			const result = await call<{ config: string; hash: string; schema?: object }>(
-				'config.get',
-				{}
-			);
-			config = result.config;
+			const result = await call<{ raw: string; hash: string; schema?: object }>('config.get', {});
+			config = result.raw;
 			baseHash = result.hash;
 			schema = result.schema || null;
 			isDirty = false;
