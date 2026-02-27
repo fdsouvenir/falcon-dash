@@ -78,7 +78,7 @@
 				const configResult = await call<{ raw: string; hash: string }>('config.get', {});
 				const config = JSON.parse(configResult.raw);
 				if (!config.channels) config.channels = {};
-				config.channels.discord = { clientId, botToken };
+				config.channels.discord = { token: botToken };
 				await call('config.apply', {
 					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
