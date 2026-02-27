@@ -162,10 +162,8 @@
 				</button>
 			</div>
 		{:else if currentStep === 5}
-			<h2 class="text-2xl font-bold mb-4">Password Vault</h2>
-			<p class="text-gray-400 mb-6">
-				Create a secure vault for storing passwords and sensitive data.
-			</p>
+			<h2 class="text-2xl font-bold mb-4">Secrets</h2>
+			<p class="text-gray-400 mb-6">Configure secret providers for API keys and sensitive data.</p>
 			<p class="text-sm text-gray-500 mb-6">You can set this up later in Settings.</p>
 			<div class="flex gap-4">
 				<button onclick={prevStep} class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg">
@@ -175,13 +173,10 @@
 					Skip for Now
 				</button>
 				<button
-					onclick={() => {
-						/* TODO: open vault creation */
-						nextStep();
-					}}
+					onclick={nextStep}
 					class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium"
 				>
-					Create Vault
+					Configure Secrets
 				</button>
 			</div>
 		{:else if currentStep === 6}
