@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { call, connection, snapshot } from '$lib/stores/gateway.js';
 
 	interface DiscordStatus {
 		state: 'not_configured' | 'configured' | 'connected' | 'error';
@@ -14,12 +14,24 @@
 	let loading = $state(false);
 	let setupStep = $state(1);
 	let showDisconnectConfirm = $state(false);
+	let hasDiscordRpc = $state(false);
 
 	async function loadStatus() {
 		loading = true;
 		try {
-			const result = await call<DiscordStatus>('discord.status', {});
-			status = result;
+			if (hasDiscordRpc) {
+				const result = await call<DiscordStatus>('discord.status', {});
+				status = result;
+			} else {
+				const cfg = await call<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
+					path: 'channels.discord'
+				});
+				if (cfg?.channels?.discord) {
+					status = { state: 'configured' };
+				} else {
+					status = { state: 'not_configured' };
+				}
+			}
 		} catch (err) {
 			status = { state: 'error', error: String(err) };
 		} finally {
@@ -35,7 +47,18 @@
 
 		loading = true;
 		try {
-			await call('discord.configure', { clientId, botToken });
+			if (hasDiscordRpc) {
+				await call('discord.configure', { clientId, botToken });
+			} else {
+				const configResult = await call<{ config: string; hash: string }>('config.get', {});
+				const config = JSON.parse(configResult.config);
+				if (!config.channels) config.channels = {};
+				config.channels.discord = { clientId, botToken };
+				await call('config.apply', {
+					config: JSON.stringify(config, null, 2),
+					baseHash: configResult.hash
+				});
+			}
 			await loadStatus();
 			clientId = '';
 			botToken = '';
@@ -50,7 +73,17 @@
 	async function disconnect() {
 		loading = true;
 		try {
-			await call('discord.disconnect', {});
+			if (hasDiscordRpc) {
+				await call('discord.disconnect', {});
+			} else {
+				const configResult = await call<{ config: string; hash: string }>('config.get', {});
+				const config = JSON.parse(configResult.config);
+				if (config.channels) delete config.channels.discord;
+				await call('config.apply', {
+					config: JSON.stringify(config, null, 2),
+					baseHash: configResult.hash
+				});
+			}
 			await loadStatus();
 			showDisconnectConfirm = false;
 		} catch (err) {
@@ -69,6 +102,13 @@
 	$effect(() => {
 		const unsub = connection.state.subscribe((s) => {
 			connectionState = s;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = snapshot.hasMethod('discord.status').subscribe((v) => {
+			hasDiscordRpc = v;
 		});
 		return unsub;
 	});

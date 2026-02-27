@@ -1,6 +1,6 @@
 <script lang="ts">
 	import WizardShell from '$lib/components/wizard/WizardShell.svelte';
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { call, connection, snapshot } from '$lib/stores/gateway.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -29,6 +29,7 @@
 	let botToken = $state('');
 	let saving = $state(false);
 	let checking = $state(false);
+	let hasDiscordRpc = $state(false);
 
 	$effect(() => {
 		const unsub = connection.state.subscribe((s) => {
@@ -38,10 +39,28 @@
 		return unsub;
 	});
 
+	$effect(() => {
+		const unsub = snapshot.hasMethod('discord.status').subscribe((v) => {
+			hasDiscordRpc = v;
+		});
+		return unsub;
+	});
+
 	async function checkStatus() {
 		checking = true;
 		try {
-			status = await call<DiscordStatus>('discord.status', {});
+			if (hasDiscordRpc) {
+				status = await call<DiscordStatus>('discord.status', {});
+			} else {
+				const cfg = await call<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
+					path: 'channels.discord'
+				});
+				if (cfg?.channels?.discord) {
+					status = { state: 'configured' };
+				} else {
+					status = { state: 'not_configured' };
+				}
+			}
 		} catch {
 			status = { state: 'not_configured' };
 		} finally {
@@ -53,7 +72,18 @@
 		if (!clientId.trim() || !botToken.trim()) return;
 		saving = true;
 		try {
-			await call('discord.configure', { clientId, botToken });
+			if (hasDiscordRpc) {
+				await call('discord.configure', { clientId, botToken });
+			} else {
+				const configResult = await call<{ config: string; hash: string }>('config.get', {});
+				const config = JSON.parse(configResult.config);
+				if (!config.channels) config.channels = {};
+				config.channels.discord = { clientId, botToken };
+				await call('config.apply', {
+					config: JSON.stringify(config, null, 2),
+					baseHash: configResult.hash
+				});
+			}
 			addToast('Discord configured successfully', 'success');
 			await checkStatus();
 			currentStep = 5;
@@ -108,6 +138,14 @@
 					</span>
 				</div>
 			</div>
+			{#if !hasDiscordRpc}
+				<div class="flex items-center gap-2">
+					<span class="h-2 w-2 rounded-full bg-amber-400"></span>
+					<span class="text-sm text-gray-300">
+						No <span class="font-mono text-gray-400">discord.*</span> RPCs — will use config fallback
+					</span>
+				</div>
+			{/if}
 			{#if status.state === 'connected'}
 				<div class="rounded border border-emerald-600/30 bg-emerald-900/20 p-3">
 					<p class="text-sm text-emerald-400">
@@ -179,7 +217,7 @@
 				<p class="text-sm text-gray-300">
 					Click below to invite your bot with the required permissions.
 				</p>
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external Discord OAuth URL -->
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- external Discord OAuth URL -->
 				<a
 					href={generateOAuthUrl()}
 					target="_blank"
@@ -212,6 +250,11 @@
 					<div class="flex justify-between">
 						<span class="text-gray-400">Bot Token</span><span class="font-mono text-gray-200"
 							>{botToken ? '••••••••' : '--'}</span
+						>
+					</div>
+					<div class="flex justify-between">
+						<span class="text-gray-400">Method</span><span class="font-mono text-gray-200"
+							>{hasDiscordRpc ? 'discord.configure RPC' : 'config.apply fallback'}</span
 						>
 					</div>
 				</div>
