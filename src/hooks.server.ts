@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/sveltekit';
 import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { startContextScheduler } from '$lib/server/pm/context-scheduler.js';
+import { startTerminalServer } from '$lib/server/terminal-server.js';
 
 Sentry.init({
 	dsn: __SENTRY_DSN__,
@@ -12,6 +13,7 @@ Sentry.init({
 });
 
 startContextScheduler();
+startTerminalServer();
 
 const securityHeaders: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);

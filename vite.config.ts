@@ -50,6 +50,10 @@ export default defineConfig(({ mode }) => {
 				'/ws': {
 					target: gatewayTarget,
 					ws: true
+				},
+				'/terminal-ws': {
+					target: 'ws://localhost:3001',
+					ws: true
 				}
 			}
 		},
