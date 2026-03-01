@@ -1,19 +1,26 @@
 <script lang="ts">
-	import { get } from 'svelte/store';
-	import { gatewayUrl } from '$lib/stores/token.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 
 	let controlUrl = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
 	$effect(() => {
-		const wsUrl = get(gatewayUrl);
-		try {
-			const httpUrl = wsUrl.replace(/^ws(s?)/, 'http$1');
-			const url = new URL(httpUrl);
-			controlUrl = url.origin;
-		} catch {
-			error = 'No gateway URL configured. Connect to a gateway first.';
-		}
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			if (snap?.server?.host) {
+				try {
+					// Derive control UI URL from server host info
+					const url = new URL(`http://${snap.server.host}`);
+					controlUrl = url.origin;
+					error = null;
+				} catch {
+					error = 'Could not parse gateway host.';
+				}
+			} else {
+				controlUrl = null;
+				error = 'Not connected to gateway.';
+			}
+		});
+		return unsub;
 	});
 </script>
 

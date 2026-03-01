@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { canvasStore, diagnosticLog } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
+	import { diagnosticLog } from '$lib/stores/diagnostics.js';
 	import { getLoadedTier } from '$lib/canvas/a2ui-bridge.js';
 	import { pinnedApps } from '$lib/stores/pinned-apps.js';
 	import type { CanvasSurface, BridgeStatus } from '$lib/stores/canvas.js';
-	import type { DiagnosticEvent } from '$lib/gateway/diagnostic-log.js';
+	import type { DiagnosticEvent } from '$lib/stores/diagnostic-log.js';
 	import type { PinnedApp } from '$lib/stores/pinned-apps.js';
 
 	let bridgeStatus = $state<BridgeStatus>({ registered: false });

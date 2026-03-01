@@ -1,10 +1,10 @@
 <script lang="ts">
 	import WizardShell from '$lib/components/wizard/WizardShell.svelte';
-	import { call, connection, snapshot } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { ConnectionState } from '$lib/gateway/types.js';
+	import { derived } from 'svelte/store';
 
 	interface DiscordStatus {
 		state: 'not_configured' | 'configured' | 'connected' | 'error';
@@ -23,7 +23,7 @@
 	];
 
 	let currentStep = $state(0);
-	let connState = $state<ConnectionState>('DISCONNECTED');
+	let connState = $state('disconnected');
 	let status = $state<DiscordStatus>({ state: 'not_configured' });
 	let clientId = $state('');
 	let botToken = $state('');
@@ -32,15 +32,19 @@
 	let hasDiscordRpc = $state(false);
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connState = s;
-			if (s === 'READY') checkStatus();
+			if (s === 'ready') checkStatus();
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		const unsub = snapshot.hasMethod('discord.status').subscribe((v) => {
+		const hasMethodStore = derived(
+			gatewayEvents.snapshot,
+			($snap) => $snap?.features?.methods?.includes('discord.status') ?? false
+		);
+		const unsub = hasMethodStore.subscribe((v) => {
 			hasDiscordRpc = v;
 		});
 		return unsub;
@@ -50,9 +54,9 @@
 		checking = true;
 		try {
 			if (hasDiscordRpc) {
-				status = await call<DiscordStatus>('discord.status', {});
+				status = await rpc<DiscordStatus>('discord.status', {});
 			} else {
-				const cfg = await call<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
+				const cfg = await rpc<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
 					path: 'channels.discord'
 				});
 				if (cfg?.channels?.discord) {
@@ -73,13 +77,13 @@
 		saving = true;
 		try {
 			if (hasDiscordRpc) {
-				await call('discord.configure', { clientId, botToken });
+				await rpc('discord.configure', { clientId, botToken });
 			} else {
-				const configResult = await call<{ raw: string; hash: string }>('config.get', {});
+				const configResult = await rpc<{ raw: string; hash: string }>('config.get', {});
 				const config = JSON.parse(configResult.raw);
 				if (!config.channels) config.channels = {};
 				config.channels.discord = { token: botToken };
-				await call('config.apply', {
+				await rpc('config.apply', {
 					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
 				});
@@ -99,7 +103,7 @@
 		return `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2048&scope=bot`;
 	}
 
-	let isConnected = $derived(connState === 'READY');
+	let isConnected = $derived(connState === 'ready');
 	let canProceed = $derived.by(() => {
 		if (currentStep === 0) return isConnected;
 		if (currentStep === 2) return clientId.trim().length > 0 && botToken.trim().length > 0;

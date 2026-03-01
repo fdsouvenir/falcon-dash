@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { connection, snapshot } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import {
 		discordStatus,
 		initDiscordStatus,
 		subscribeToDiscordEvents
 	} from '$lib/stores/discord.js';
 	import { resolve } from '$app/paths';
-	import type { ConnectionState } from '$lib/gateway/types.js';
+	import { derived } from 'svelte/store';
 
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	let discord = $state<{ connected: boolean; guildName?: string }>({ connected: false });
 	let hasDiscordRpc = $state(false);
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'READY') {
+			if (s === 'ready') {
 				initDiscordStatus();
 				subscribeToDiscordEvents();
 			}
@@ -31,13 +31,17 @@
 	});
 
 	$effect(() => {
-		const unsub = snapshot.hasMethod('discord.status').subscribe((v) => {
+		const hasMethodStore = derived(
+			gatewayEvents.snapshot,
+			($snap) => $snap?.features?.methods?.includes('discord.status') ?? false
+		);
+		const unsub = hasMethodStore.subscribe((v) => {
 			hasDiscordRpc = v;
 		});
 		return unsub;
 	});
 
-	let isConnected = $derived(connectionState === 'READY');
+	let isConnected = $derived(connectionState === 'ready');
 
 	const channelTypes = [
 		{

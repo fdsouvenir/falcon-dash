@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	type Skill = {
 		name: string;
@@ -47,7 +47,7 @@
 		skillErrors = {};
 		try {
 			const response = await Promise.race([
-				call<SkillsStatusResponse>('skills.status'),
+				rpc<SkillsStatusResponse>('skills.status'),
 				new Promise<never>((_, reject) =>
 					setTimeout(() => reject(new Error('Skills service not available')), 10_000)
 				)
@@ -66,7 +66,7 @@
 		skillErrors = {};
 		try {
 			const response = await Promise.race([
-				call<SkillsStatusResponse>('skills.status'),
+				rpc<SkillsStatusResponse>('skills.status'),
 				new Promise<never>((_, reject) =>
 					setTimeout(() => reject(new Error('Skills service not available')), 10_000)
 				)
@@ -85,7 +85,7 @@
 		delete skillErrors[skill.name];
 
 		try {
-			await call('skills.update', { skillKey: skill.name, enabled: skill.enabled });
+			await rpc('skills.update', { skillKey: skill.name, enabled: skill.enabled });
 		} catch (e) {
 			skill.enabled = originalEnabled;
 			skillErrors[skill.name] = e instanceof Error ? e.message : 'Failed to update skill';
@@ -110,7 +110,7 @@
 		delete skillErrors[apiKeyModalSkill];
 
 		try {
-			await call('skills.update', { skillKey: apiKeyModalSkill, apiKey: apiKeyInput });
+			await rpc('skills.update', { skillKey: apiKeyModalSkill, apiKey: apiKeyInput });
 			const skill = skills.find((s) => s.name === apiKeyModalSkill);
 			if (skill) {
 				skill.hasApiKey = true;
@@ -158,7 +158,7 @@
 				params.registry = installRegistry;
 			}
 
-			await call('skills.install', params);
+			await rpc('skills.install', params);
 			closeInstallModal();
 			await loadSkills();
 		} catch (e) {
@@ -173,7 +173,7 @@
 		delete skillErrors[skillKey];
 
 		try {
-			await call('skills.uninstall', { skillKey });
+			await rpc('skills.uninstall', { skillKey });
 			skills = skills.filter((s) => s.name !== skillKey);
 			uninstallConfirmSkill = null;
 		} catch (e) {
@@ -188,16 +188,16 @@
 		expandedSkill = expandedSkill === skillKey ? null : skillKey;
 	}
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		if (connectionState === 'READY') loadSkills();
+		if (connectionState === 'ready') loadSkills();
 	});
 </script>
 

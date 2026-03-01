@@ -463,3 +463,5 @@ export class CanvasStore {
 		this.unsubscribers = [];
 	}
 }
+
+export const canvasStore = new CanvasStore();

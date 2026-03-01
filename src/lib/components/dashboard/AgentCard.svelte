@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { connection, call } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 	import { getAgentIdentity, type AgentIdentity } from '$lib/stores/agent-identity.js';
 	import { discordStatus } from '$lib/stores/discord.js';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -19,8 +19,8 @@
 	let loading = $state(true);
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
-			if (s === 'READY') {
+		const unsub = gatewayEvents.state.subscribe((s) => {
+			if (s === 'ready') {
 				loadAgentData();
 			}
 		});
@@ -53,7 +53,7 @@
 			}
 
 			try {
-				const result = await call<{
+				const result = await rpc<{
 					active?: Array<{ runId: string; task: string; model: string }>;
 				}>('agents.list');
 				activeRuns = result.active ?? [];

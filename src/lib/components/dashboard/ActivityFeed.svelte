@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { eventBus } from '$lib/stores/gateway.js';
-	import { connection } from '$lib/stores/gateway.js';
-	import type { ConnectionState } from '$lib/gateway/types.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 
 	interface ActivityItem {
 		id: string;
@@ -15,16 +13,16 @@
 	const MAX_ITEMS = 20;
 
 	let items = $state<ActivityItem[]>([]);
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
+	let connectionState = $state<string>('disconnected');
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'READY') {
+			if (s === 'ready') {
 				addItem('system', 'Connected to gateway', 'link');
-			} else if (s === 'DISCONNECTED') {
+			} else if (s === 'disconnected') {
 				addItem('system', 'Disconnected from gateway', 'unlink');
-			} else if (s === 'RECONNECTING') {
+			} else if (s === 'reconnecting') {
 				addItem('system', 'Reconnecting...', 'refresh');
 			}
 		});
@@ -32,10 +30,10 @@
 	});
 
 	$effect(() => {
-		if (connectionState !== 'READY') return;
+		if (connectionState !== 'ready') return;
 
 		const unsubs = [
-			eventBus.on('agent', (payload) => {
+			gatewayEvents.on('agent', (payload) => {
 				const stream = payload.stream as string;
 				const phase = (payload.data as Record<string, unknown>)?.phase as string;
 				if (stream === 'lifecycle') {
@@ -48,7 +46,7 @@
 					}
 				}
 			}),
-			eventBus.on('discord', (payload) => {
+			gatewayEvents.on('discord', (payload) => {
 				const action = payload.action as string;
 				if (action === 'connected') {
 					addItem('discord', 'Discord bot connected', 'discord');
@@ -56,14 +54,14 @@
 					addItem('discord', 'Discord bot disconnected', 'discord');
 				}
 			}),
-			eventBus.on('health', () => {
+			gatewayEvents.on('health', () => {
 				addItem('health', 'Health status updated', 'heart');
 			}),
-			eventBus.on('exec.approval.requested', (payload) => {
+			gatewayEvents.on('exec.approval.requested', (payload) => {
 				const cmd = (payload.command as string) ?? 'command';
 				addItem('approval', `Approval requested: ${cmd}`, 'shield');
 			}),
-			eventBus.on('session', (payload) => {
+			gatewayEvents.on('session', (payload) => {
 				const action = payload.action as string;
 				if (action === 'created') {
 					addItem('session', 'New session created', 'chat');

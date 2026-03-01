@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { connection } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { getAgentIdentity, type AgentIdentity } from '$lib/stores/agent-identity.js';
 	import {
 		agentLifecycle,
@@ -18,17 +18,15 @@
 	import { addToast } from '$lib/stores/toast.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { ConnectionState } from '$lib/gateway/types.js';
-
 	let agentId = $derived(page.params.id);
 
 	// Connection state
-	let connState = $state<ConnectionState>('DISCONNECTED');
+	let connState = $state('disconnected');
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connState = s;
-			if (s === 'READY') loadData();
+			if (s === 'ready') loadData();
 		});
 		return unsub;
 	});
@@ -162,7 +160,7 @@
 		agentConfig?.identity?.name ?? identity?.name ?? agentId ?? 'Agent'
 	);
 	let emoji = $derived(agentConfig?.identity?.emoji || identity?.emoji);
-	let isConnected = $derived(connState === 'READY');
+	let isConnected = $derived(connState === 'ready');
 
 	const tabs: { id: Tab; label: string }[] = [
 		{ id: 'config', label: 'Config' },

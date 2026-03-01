@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { diagnosticLog } from '$lib/gateway/diagnostic-log.js';
+import { diagnosticLog } from '$lib/stores/diagnostic-log.js';
 
 /** Tick health — updated via EventBus subscription in gateway.ts */
 export const tickHealth = writable<{

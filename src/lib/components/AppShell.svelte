@@ -3,7 +3,7 @@
 	import Sidebar from './Sidebar.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ExecApprovalPrompt from './ExecApprovalPrompt.svelte';
-	import { canvasStore } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';

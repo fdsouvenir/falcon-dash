@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { ensureA2UILoaded, type A2UIHostElement } from '$lib/canvas/a2ui-bridge.js';
-	import { canvasStore } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
 
 	interface Props {
 		messages: unknown[];

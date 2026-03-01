@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { canvasStore, connection } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { pinnedApps, unpinApp } from '$lib/stores/pinned-apps.js';
 	import { get } from 'svelte/store';
 	import InlineA2UI from './InlineA2UI.svelte';
@@ -34,8 +35,8 @@
 
 	// Reset restoredOnce on reconnect so pinned apps can re-restore
 	$effect(() => {
-		const unsub = connection.state.subscribe((state) => {
-			if (state === 'READY') {
+		const unsub = gatewayEvents.state.subscribe((state) => {
+			if (state === 'ready') {
 				restoredOnce = false;
 			}
 		});

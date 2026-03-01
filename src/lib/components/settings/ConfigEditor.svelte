@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	let config = $state('');
 	let baseHash = $state('');
@@ -12,23 +12,23 @@
 	let showApplyConfirm = $state(false);
 	let unavailable = $state(false);
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		if (connectionState === 'READY') loadConfig();
+		if (connectionState === 'ready') loadConfig();
 	});
 
 	async function loadConfig() {
 		loading = true;
 		error = null;
 		try {
-			const result = await call<{ raw: string; hash: string; schema?: object }>('config.get', {});
+			const result = await rpc<{ raw: string; hash: string; schema?: object }>('config.get', {});
 			config = result.raw;
 			baseHash = result.hash;
 			schema = result.schema || null;
@@ -64,7 +64,7 @@
 		}
 
 		try {
-			const result = await call<{ hash: string }>('config.set', { config, baseHash });
+			const result = await rpc<{ hash: string }>('config.set', { config, baseHash });
 			baseHash = result.hash;
 			isDirty = false;
 			success = 'Config saved successfully';
@@ -95,7 +95,7 @@
 		}
 
 		try {
-			await call('config.apply', { raw: config, baseHash });
+			await rpc('config.apply', { raw: config, baseHash });
 			success = 'Config applied. Gateway is restarting...';
 			setTimeout(() => {
 				success = null;

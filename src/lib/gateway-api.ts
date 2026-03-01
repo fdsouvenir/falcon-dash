@@ -49,7 +49,7 @@ interface EventData {
 
 type EventHandler = (payload: Record<string, unknown>, event: EventData) => void;
 
-interface HelloOkPayload {
+export interface HelloOkPayload {
 	type: 'hello-ok';
 	protocol: number;
 	server: { version: string; host: string; connId: string };
