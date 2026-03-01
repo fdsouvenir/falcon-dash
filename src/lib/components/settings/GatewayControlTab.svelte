@@ -1,26 +1,22 @@
 <script lang="ts">
-	import { gatewayEvents } from '$lib/gateway-api.js';
-
+	// Gateway control UI runs on localhost — always available regardless of SSE connection state.
+	// Port is read from the server via a lightweight endpoint.
 	let controlUrl = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
 	$effect(() => {
-		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
-			if (snap?.server?.host) {
-				try {
-					// Derive control UI URL from server host info
-					const url = new URL(`http://${snap.server.host}`);
-					controlUrl = url.origin;
-					error = null;
-				} catch {
-					error = 'Could not parse gateway host.';
+		fetch('/api/gateway/control-url')
+			.then((r) => r.json())
+			.then((data: { url?: string; error?: string }) => {
+				if (data.url) {
+					controlUrl = data.url;
+				} else {
+					error = data.error ?? 'Could not determine gateway URL.';
 				}
-			} else {
-				controlUrl = null;
-				error = 'Not connected to gateway.';
-			}
-		});
-		return unsub;
+			})
+			.catch(() => {
+				error = 'Failed to fetch gateway URL.';
+			});
 	});
 </script>
 
@@ -36,5 +32,9 @@
 			class="h-full w-full flex-1 border-0"
 			sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
 		></iframe>
+	{:else}
+		<div class="flex flex-1 items-center justify-center">
+			<p class="text-sm text-gray-400">Loading...</p>
+		</div>
 	{/if}
 </div>
