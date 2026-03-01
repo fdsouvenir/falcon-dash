@@ -2,13 +2,13 @@
 
 ## What Falcon Dash is
 
-Falcon Dash is an all-in-one control panel for AI agents deployed by Fredbot Hosting. It gives you a single place to chat with your agents, manage projects, browse documents, schedule tasks, store passwords, and configure every aspect of your AI agent setup.
+Falcon Dash is an all-in-one control panel for AI agents deployed by Fredbot Hosting. It gives you a single place to manage projects, browse documents, schedule tasks, store passwords, and configure every aspect of your AI agent setup.
 
 ## The problem it solves
 
-When you hire Fredbot Hosting to deploy AI agents for your business, those agents run on dedicated infrastructure managed for you. But you still need a way to actually use them — to have conversations, review their work, approve their actions, and manage their configuration. Without Falcon Dash, you would need technical knowledge of servers, terminals, and configuration files to interact with your agents.
+When you hire Fredbot Hosting to deploy AI agents for your business, those agents run on dedicated infrastructure managed for you. But you still need a way to actually manage their configuration. Without Falcon Dash, you would need technical knowledge of servers, terminals, and configuration files and cli to interact with your agents.
 
-Falcon Dash eliminates that complexity. It provides a clean, intuitive web interface where you can do everything you need — from having a conversation with your agent to adjusting advanced settings — without ever touching a command line.
+Falcon Dash eliminates that complexity. It provides a clean, intuitive web interface where you can do everything you need to adjust advanced settings — without ever touching a command line.
 
 ## Where it sits in the stack
 
