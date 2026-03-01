@@ -22,7 +22,7 @@ switch (command) {
 			process.env.FALCON_DASH_HOST ||
 			'0.0.0.0';
 
-		const child = spawn(process.execPath, [resolve(packageRoot, 'build', 'index.js')], {
+		const child = spawn(process.execPath, [resolve(packageRoot, 'build', 'start.js')], {
 			cwd: packageRoot,
 			stdio: 'inherit',
 			env: { ...process.env, PORT: port, HOST: host }

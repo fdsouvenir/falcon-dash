@@ -14,7 +14,13 @@ Sentry.init({
 });
 
 startContextScheduler();
-startTerminalServer();
+
+// Only start standalone terminal server in dev — production uses entry.js wrapper
+// which attaches the terminal WebSocket to the same HTTP server
+if (process.env.NODE_ENV !== 'production') {
+	startTerminalServer();
+}
+
 startGatewayClient();
 
 const securityHeaders: Handle = async ({ event, resolve }) => {
