@@ -1,7 +1,6 @@
 import { writable, readonly, get, type Readable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { eventBus, connection } from '$lib/stores/gateway.js';
-import { call } from '$lib/stores/gateway.js';
+import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 import { notifyApproval } from '$lib/stores/notifications.js';
 import { activeSessionKey } from '$lib/stores/sessions.js';
 
@@ -56,7 +55,7 @@ function persistDenylist(list: string[]): void {
 function notifyAgent(command: string, label: string): void {
 	const sessionKey = get(activeSessionKey);
 	if (!sessionKey) return;
-	call('chat.send', {
+	rpc('chat.send', {
 		sessionKey,
 		message: `[${label}] ${command}`,
 		idempotencyKey: crypto.randomUUID(),
@@ -86,7 +85,7 @@ export function addPendingApproval(data: Record<string, unknown>): boolean {
 	unsub();
 
 	if (denied) {
-		call('exec.approval.resolve', { id: requestId, decision: 'deny' })
+		rpc('exec.approval.resolve', { id: requestId, decision: 'deny' })
 			.then(() => notifyAgent(command, 'Exec denied (denylist)'))
 			.catch(() => {});
 		return true;
@@ -109,7 +108,7 @@ export async function resolveApproval(
 	const approval = pending.find((a) => a.requestId === requestId);
 	const command = approval?.command ?? 'unknown';
 
-	await call('exec.approval.resolve', { id: requestId, decision });
+	await rpc('exec.approval.resolve', { id: requestId, decision });
 	_pendingApprovals.update((list) => list.filter((a) => a.requestId !== requestId));
 
 	const label = decision === 'deny' ? 'Exec denied' : 'Exec approved';
@@ -144,8 +143,8 @@ let _eventUnsub: (() => void) | null = null;
 export function subscribeToApprovalEvents(): void {
 	unsubscribeFromApprovalEvents();
 
-	const helloOk = get(connection.helloOk);
-	const scopes = helloOk?.auth?.scopes ?? [];
+	const snap = get(gatewayEvents.snapshot);
+	const scopes = snap?.auth?.scopes ?? [];
 	if (!scopes.includes('operator.approvals') && !scopes.includes('operator.admin')) {
 		console.warn(
 			'[exec-approvals] Cannot subscribe: operator.approvals scope not granted by gateway'
@@ -153,7 +152,7 @@ export function subscribeToApprovalEvents(): void {
 		return;
 	}
 
-	_eventUnsub = eventBus.on('exec.approval.requested', (data: Record<string, unknown>) => {
+	_eventUnsub = gatewayEvents.on('exec.approval.requested', (data: Record<string, unknown>) => {
 		const autoDenied = addPendingApproval(data);
 		if (!autoDenied) {
 			const request = data.request as Record<string, unknown> | undefined;

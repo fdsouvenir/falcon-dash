@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import { call } from '$lib/stores/gateway.js';
+import { rpc } from '$lib/gateway-api.js';
 
 export interface SecretProvider {
 	type: 'env' | 'file' | 'exec';
@@ -44,7 +44,7 @@ export const secrets = {
 export async function loadSecrets(): Promise<void> {
 	_state.update((s) => ({ ...s, loading: true, error: null }));
 	try {
-		const result = await call<{ config: string; hash: string }>('config.get', {});
+		const result = await rpc<{ config: string; hash: string }>('config.get', {});
 		const config = JSON.parse(result.config);
 		const secretsConfig = config.secrets ?? {};
 
@@ -67,7 +67,7 @@ export async function loadSecrets(): Promise<void> {
 }
 
 export async function addProvider(provider: SecretProvider): Promise<void> {
-	const result = await call<{ raw: string; hash: string }>('config.get', {});
+	const result = await rpc<{ raw: string; hash: string }>('config.get', {});
 	const config = JSON.parse(result.raw);
 	if (!config.secrets) config.secrets = {};
 	if (!config.secrets.providers) config.secrets.providers = {};
@@ -75,7 +75,7 @@ export async function addProvider(provider: SecretProvider): Promise<void> {
 	const name = provider.name || `${provider.type}-${Date.now()}`;
 	config.secrets.providers[name] = provider;
 
-	await call('config.apply', {
+	await rpc('config.apply', {
 		raw: JSON.stringify(config, null, 2),
 		baseHash: result.hash
 	});
@@ -83,11 +83,11 @@ export async function addProvider(provider: SecretProvider): Promise<void> {
 }
 
 export async function removeProvider(name: string): Promise<void> {
-	const result = await call<{ raw: string; hash: string }>('config.get', {});
+	const result = await rpc<{ raw: string; hash: string }>('config.get', {});
 	const config = JSON.parse(result.raw);
 	if (config.secrets?.providers?.[name]) {
 		delete config.secrets.providers[name];
-		await call('config.apply', {
+		await rpc('config.apply', {
 			raw: JSON.stringify(config, null, 2),
 			baseHash: result.hash
 		});

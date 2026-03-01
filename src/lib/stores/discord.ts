@@ -1,5 +1,5 @@
 import { writable, readonly, derived, type Readable } from 'svelte/store';
-import { snapshot, eventBus } from '$lib/stores/gateway.js';
+import { gatewayEvents } from '$lib/gateway-api.js';
 
 export interface DiscordStatus {
 	connected: boolean;
@@ -20,8 +20,8 @@ const _cleanupFns: Array<() => void> = [];
 
 /** Initialize Discord status from snapshot health data */
 export function initDiscordStatus(): void {
-	const unsub = snapshot.health.subscribe((health) => {
-		const discord = health.discord as Record<string, unknown> | undefined;
+	const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+		const discord = snap?.snapshot?.health?.discord as Record<string, unknown> | undefined;
 		if (discord) {
 			_discordStatus.set({
 				connected: (discord.connected as boolean) ?? false,
@@ -30,14 +30,13 @@ export function initDiscordStatus(): void {
 			});
 		}
 	});
-	// Store unsub for cleanup if needed
 	_cleanupFns.push(unsub);
 }
 
 /** Subscribe to Discord-related events */
 export function subscribeToDiscordEvents(): void {
 	_cleanupFns.push(
-		eventBus.on('discord', (payload) => {
+		gatewayEvents.on('discord', (payload) => {
 			const action = payload.action as string;
 			if (action === 'connected') {
 				_discordStatus.update((s) => ({
