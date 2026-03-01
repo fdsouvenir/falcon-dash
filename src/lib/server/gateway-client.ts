@@ -6,7 +6,7 @@ import { env } from '$env/dynamic/private';
 import { ensureServerIdentity, buildSignMessage, signChallenge } from './server-device-identity.js';
 
 const PROTOCOL_VERSION = 3;
-const CLIENT_ID = 'openclaw-control-ui';
+const CLIENT_ID = 'gateway-client';
 const CLIENT_MODE = 'ui';
 const CLIENT_VERSION = '0.1.0';
 
@@ -225,6 +225,7 @@ export class GatewayClient {
 
 		// Challenge-response auth
 		if (frame.type === 'event' && (frame as unknown as EventFrame).event === 'connect.challenge') {
+			console.log('[gateway-client] Challenge received, sending connect frame');
 			const challenge = (frame as unknown as EventFrame).payload as unknown as ChallengePayload;
 			this.sendConnectFrame(challenge, token);
 			return;
@@ -344,7 +345,14 @@ export class GatewayClient {
 			userAgent: `falcon-dash-server/${CLIENT_VERSION}`
 		};
 
-		this.ws?.send(JSON.stringify({ type: 'req', id: '__connect', method: 'connect', params }));
+		const frame = JSON.stringify({ type: 'req', id: '__connect', method: 'connect', params });
+		console.log(
+			'[gateway-client] Sending connect frame with client.id:',
+			CLIENT_ID,
+			'mode:',
+			CLIENT_MODE
+		);
+		this.ws?.send(frame);
 	}
 
 	private scheduleReconnect(): void {
