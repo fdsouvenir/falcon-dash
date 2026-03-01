@@ -1,6 +1,6 @@
 import { writable, readonly, derived, type Readable } from 'svelte/store';
-import type { HelloOkPayload, EventFrame } from './types.js';
-import type { EventBus } from './event-bus.js';
+import type { HelloOkPayload } from './types.js';
+import { gatewayEvents } from '$lib/gateway-api.js';
 
 export interface PresenceEntry {
 	instanceId: string;
@@ -18,6 +18,10 @@ export interface SessionDefaults {
 	[key: string]: unknown;
 }
 
+/**
+ * SnapshotStore — hydrates from gatewayEvents.snapshot (SSE)
+ * and subscribes to gatewayEvents for incremental presence/health updates.
+ */
 export class SnapshotStore {
 	private _presence = writable<PresenceEntry[]>([]);
 	private _health = writable<Record<string, unknown>>({});
@@ -33,44 +37,26 @@ export class SnapshotStore {
 
 	private unsubscribers: Array<() => void> = [];
 
-	/** Presence list as a readable store */
 	readonly presence: Readable<PresenceEntry[]> = readonly(this._presence);
-
-	/** Health snapshot as a readable store */
 	readonly health: Readable<Record<string, unknown>> = readonly(this._health);
-
-	/** State versions per domain as a readable store */
 	readonly stateVersion: Readable<Record<string, number>> = readonly(this._stateVersion);
-
-	/** Session defaults (model, contextTokens, thinking level) as a readable store */
 	readonly sessionDefaults: Readable<SessionDefaults> = readonly(this._sessionDefaults);
-
-	/** Available gateway methods for feature detection */
 	readonly features: Readable<string[]> = readonly(this._features);
-
-	/** Server info from hello-ok */
 	readonly server: Readable<{ version: string; host: string; connId: string } | null> = readonly(
 		this._server
 	);
-
-	/** Policy from hello-ok */
 	readonly policy: Readable<{
 		maxPayload: number;
 		maxBufferedBytes: number;
 		tickIntervalMs: number;
 	} | null> = readonly(this._policy);
 
-	/** Derived: check if a specific method is available */
 	hasMethod(method: string): Readable<boolean> {
 		return derived(this._features, ($features) => $features.includes(method));
 	}
 
-	/**
-	 * Hydrate from hello-ok payload. Called on connect and reconnect.
-	 */
 	hydrate(helloOk: HelloOkPayload): void {
 		const snapshot = helloOk.snapshot;
-
 		this._presence.set((snapshot.presence ?? []) as PresenceEntry[]);
 		this._health.set(snapshot.health ?? {});
 		this._stateVersion.set(snapshot.stateVersion ?? {});
@@ -81,15 +67,21 @@ export class SnapshotStore {
 	}
 
 	/**
-	 * Subscribe to EventBus for incremental updates.
-	 * Call this after hydrate() to keep stores in sync.
+	 * Subscribe to gatewayEvents for snapshot hydration and incremental updates.
 	 */
-	subscribe(eventBus: EventBus): void {
+	subscribeToGateway(): void {
 		this.unsubscribeAll();
+
+		// Hydrate from initial snapshot
+		this.unsubscribers.push(
+			gatewayEvents.snapshot.subscribe((snap) => {
+				if (snap) this.hydrate(snap);
+			})
+		);
 
 		// Presence events update presence list incrementally
 		this.unsubscribers.push(
-			eventBus.on('presence', (payload, frame: EventFrame) => {
+			gatewayEvents.on('presence', (payload, event) => {
 				this._presence.update((current) => {
 					const updated = [...current];
 					const entries = (payload.entries ?? [payload]) as PresenceEntry[];
@@ -111,11 +103,10 @@ export class SnapshotStore {
 					return updated;
 				});
 
-				// Update stateVersion if present
-				if (frame.stateVersion != null) {
+				if (event.stateVersion != null) {
 					this._stateVersion.update((sv) => ({
 						...sv,
-						presence: frame.stateVersion!
+						presence: event.stateVersion!
 					}));
 				}
 			})
@@ -123,25 +114,22 @@ export class SnapshotStore {
 
 		// Health events update health store
 		this.unsubscribers.push(
-			eventBus.on('health', (payload, frame: EventFrame) => {
+			gatewayEvents.on('health', (payload, event) => {
 				this._health.update((current) => ({
 					...current,
 					...payload
 				}));
 
-				if (frame.stateVersion != null) {
+				if (event.stateVersion != null) {
 					this._stateVersion.update((sv) => ({
 						...sv,
-						health: frame.stateVersion!
+						health: event.stateVersion!
 					}));
 				}
 			})
 		);
 	}
 
-	/**
-	 * Clear all stores and unsubscribe from events.
-	 */
 	clear(): void {
 		this.unsubscribeAll();
 		this._presence.set([]);
