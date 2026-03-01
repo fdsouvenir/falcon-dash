@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { connection } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import {
 		secrets,
 		loadSecrets,
@@ -8,9 +8,8 @@
 		type SecretProvider
 	} from '$lib/stores/secrets.js';
 	import { addToast } from '$lib/stores/toast.js';
-	import type { ConnectionState } from '$lib/gateway/types.js';
 
-	let connState = $state<ConnectionState>('DISCONNECTED');
+	let connState = $state('disconnected');
 	let providers = $state<SecretProvider[]>([]);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -24,9 +23,9 @@
 	let saving = $state(false);
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connState = s;
-			if (s === 'READY') loadSecrets();
+			if (s === 'ready') loadSecrets();
 		});
 		return unsub;
 	});
@@ -90,7 +89,7 @@
 		newCommand = '';
 	}
 
-	let isConnected = $derived(connState === 'READY');
+	let isConnected = $derived(connState === 'ready');
 </script>
 
 <div class="flex flex-col gap-5 p-4 sm:p-6">

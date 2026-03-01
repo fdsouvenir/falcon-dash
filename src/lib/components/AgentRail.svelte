@@ -6,7 +6,7 @@
 		type AgentIdentity
 	} from '$lib/stores/agent-identity.js';
 	import { sessions, setSelectedAgent } from '$lib/stores/sessions.js';
-	import { snapshot } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -107,7 +107,7 @@
 	// Re-fetch when connection becomes READY (reconnect)
 	$effect(() => {
 		const unsub = connectionState.subscribe((s) => {
-			if (s === 'READY') fetchConfigAgents();
+			if (s === 'ready') fetchConfigAgents();
 		});
 		return unsub;
 	});
@@ -165,8 +165,13 @@
 	// Auto-select default agent on connection
 	$effect(() => {
 		const unsub = connectionState.subscribe((s) => {
-			if (s !== 'READY') return;
-			const defaultId = get(snapshot.sessionDefaults).defaultAgentId ?? 'default';
+			if (s !== 'ready') return;
+			const defaultId =
+				((
+					get(gatewayEvents.snapshot)?.snapshot?.sessionDefaults as
+						| Record<string, unknown>
+						| undefined
+				)?.defaultAgentId as string) ?? 'default';
 			if (!selectedAgentId || selectedAgentId === 'default') {
 				selectedAgentId = defaultId;
 				setSelectedAgent(defaultId);

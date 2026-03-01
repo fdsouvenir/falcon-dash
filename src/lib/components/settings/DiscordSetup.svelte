@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection, snapshot } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	interface DiscordStatus {
 		state: 'not_configured' | 'configured' | 'connected' | 'error';
@@ -20,10 +20,10 @@
 		loading = true;
 		try {
 			if (hasDiscordRpc) {
-				const result = await call<DiscordStatus>('discord.status', {});
+				const result = await rpc<DiscordStatus>('discord.status', {});
 				status = result;
 			} else {
-				const cfg = await call<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
+				const cfg = await rpc<{ channels?: { discord?: Record<string, unknown> } }>('config.get', {
 					path: 'channels.discord'
 				});
 				if (cfg?.channels?.discord) {
@@ -48,13 +48,13 @@
 		loading = true;
 		try {
 			if (hasDiscordRpc) {
-				await call('discord.configure', { clientId, botToken });
+				await rpc('discord.configure', { clientId, botToken });
 			} else {
-				const configResult = await call<{ raw: string; hash: string }>('config.get', {});
+				const configResult = await rpc<{ raw: string; hash: string }>('config.get', {});
 				const config = JSON.parse(configResult.raw);
 				if (!config.channels) config.channels = {};
 				config.channels.discord = { token: botToken };
-				await call('config.apply', {
+				await rpc('config.apply', {
 					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
 				});
@@ -74,12 +74,12 @@
 		loading = true;
 		try {
 			if (hasDiscordRpc) {
-				await call('discord.disconnect', {});
+				await rpc('discord.disconnect', {});
 			} else {
-				const configResult = await call<{ raw: string; hash: string }>('config.get', {});
+				const configResult = await rpc<{ raw: string; hash: string }>('config.get', {});
 				const config = JSON.parse(configResult.raw);
 				if (config.channels) delete config.channels.discord;
-				await call('config.apply', {
+				await rpc('config.apply', {
 					raw: JSON.stringify(config, null, 2),
 					baseHash: configResult.hash
 				});
@@ -98,23 +98,23 @@
 		return `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=2048&scope=bot`;
 	}
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		const unsub = snapshot.hasMethod('discord.status').subscribe((v) => {
-			hasDiscordRpc = v;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			hasDiscordRpc = snap?.features?.methods?.includes('discord.status') ?? false;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		if (connectionState === 'READY') loadStatus();
+		if (connectionState === 'ready') loadStatus();
 	});
 </script>
 

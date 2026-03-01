@@ -1,5 +1,5 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 export interface HeartbeatConfig {
 	enabled: boolean;
@@ -40,9 +40,9 @@ export async function loadHeartbeatConfig(): Promise<void> {
 	_error.set(null);
 	try {
 		const [configResult, statusResult, templateResult] = await Promise.all([
-			call<{ heartbeat: HeartbeatConfig }>('config.get', { path: 'heartbeat' }),
-			call<HeartbeatStatus>('heartbeat.status', {}),
-			call<{ content: string }>('agents-files.get', { path: 'HEARTBEAT.md' })
+			rpc<{ heartbeat: HeartbeatConfig }>('config.get', { path: 'heartbeat' }),
+			rpc<HeartbeatStatus>('heartbeat.status', {}),
+			rpc<{ content: string }>('agents-files.get', { path: 'HEARTBEAT.md' })
 		]);
 		_config.set(configResult.heartbeat ?? null);
 		_status.set(statusResult ?? null);
@@ -56,7 +56,7 @@ export async function loadHeartbeatConfig(): Promise<void> {
 
 export async function updateHeartbeatConfig(patch: Partial<HeartbeatConfig>): Promise<boolean> {
 	try {
-		await call('config.patch', { path: 'heartbeat', value: patch });
+		await rpc('config.patch', { path: 'heartbeat', value: patch });
 		await loadHeartbeatConfig();
 		return true;
 	} catch (err) {
@@ -67,7 +67,7 @@ export async function updateHeartbeatConfig(patch: Partial<HeartbeatConfig>): Pr
 
 export async function saveHeartbeatTemplate(content: string): Promise<boolean> {
 	try {
-		await call('agents-files.set', { path: 'HEARTBEAT.md', content });
+		await rpc('agents-files.set', { path: 'HEARTBEAT.md', content });
 		_template.set(content);
 		return true;
 	} catch (err) {
@@ -78,7 +78,7 @@ export async function saveHeartbeatTemplate(content: string): Promise<boolean> {
 
 export function subscribeToHeartbeatEvents(): void {
 	if (eventUnsub) return;
-	eventUnsub = eventBus.on('heartbeat', () => {
+	eventUnsub = gatewayEvents.on('heartbeat', () => {
 		loadHeartbeatConfig();
 	});
 }
@@ -108,7 +108,7 @@ export const heartbeatExecutionsLoading: Readable<boolean> = readonly(_execution
 export async function loadHeartbeatHistory(): Promise<void> {
 	_executionsLoading.set(true);
 	try {
-		const result = await call<{ executions: HeartbeatExecution[] }>('last-heartbeat', {});
+		const result = await rpc<{ executions: HeartbeatExecution[] }>('last-heartbeat', {});
 		_executions.set(result.executions ?? []);
 	} catch (err) {
 		_error.set((err as Error).message);

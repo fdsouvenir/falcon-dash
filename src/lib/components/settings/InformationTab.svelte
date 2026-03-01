@@ -1,20 +1,18 @@
 <script lang="ts">
-	import { connection, snapshot, call } from '$lib/stores/gateway.js';
-	import type { ConnectionState, HelloOkPayload } from '$lib/gateway/types.js';
-	import type { PresenceEntry, SessionDefaults } from '$lib/gateway/snapshot-store.js';
+	import { rpc, gatewayEvents, type HelloOkPayload } from '$lib/gateway-api.js';
 	import { addToast } from '$lib/stores/toast.js';
 
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
-	let helloOk = $state<HelloOkPayload | null>(null);
+	let connectionState = $state<string>('disconnected');
+	let snapshotData = $state<HelloOkPayload | null>(null);
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
-	let sessionDefaults = $state<SessionDefaults>({});
+	let sessionDefaults = $state<Record<string, unknown>>({});
 	let policy = $state<{
 		maxPayload: number;
 		maxBufferedBytes: number;
 		tickIntervalMs: number;
 	} | null>(null);
 	let features = $state<string[]>([]);
-	let presence = $state<PresenceEntry[]>([]);
+	let presence = $state<unknown[]>([]);
 	let connectedAt = $state<number | null>(null);
 	let currentTime = $state(Date.now());
 
@@ -60,57 +58,50 @@
 	let showRestartConfirm = $state(false);
 	let rpcErrors = $state<string[]>([]);
 
-	// Subscribe to stores
+	// Subscribe to gateway state
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'READY' && connectedAt === null) {
+			if (s === 'ready' && connectedAt === null) {
 				connectedAt = Date.now();
-			} else if (s === 'DISCONNECTED') {
+			} else if (s === 'disconnected') {
 				connectedAt = null;
 			}
 		});
 		return unsub;
 	});
 
+	// Subscribe to snapshot (replaces connection.helloOk + snapshot.* stores)
 	$effect(() => {
-		const unsub = connection.helloOk.subscribe((h) => {
-			helloOk = h;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.server.subscribe((s) => {
-			serverInfo = s;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.sessionDefaults.subscribe((s) => {
-			sessionDefaults = s;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.policy.subscribe((p) => {
-			policy = p;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.features.subscribe((f) => {
-			features = f;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.presence.subscribe((p) => {
-			presence = p;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			snapshotData = snap as Record<string, unknown> | null;
+			if (snap) {
+				const s = snap as {
+					server?: { version: string; host: string; connId: string };
+					snapshot?: {
+						sessionDefaults?: Record<string, unknown>;
+						presence?: unknown[];
+						uptimeMs?: number;
+						configPath?: string;
+						stateDir?: string;
+					};
+					features?: { methods?: string[] };
+					policy?: { maxPayload: number; maxBufferedBytes: number; tickIntervalMs: number };
+					protocol?: number;
+					auth?: { role: string; scopes: string[] };
+				};
+				serverInfo = s.server ?? null;
+				sessionDefaults = s.snapshot?.sessionDefaults ?? {};
+				policy = s.policy ?? null;
+				features = s.features?.methods ?? [];
+				presence = s.snapshot?.presence ?? [];
+			} else {
+				serverInfo = null;
+				sessionDefaults = {};
+				policy = null;
+				features = [];
+				presence = [];
+			}
 		});
 		return unsub;
 	});
@@ -124,7 +115,7 @@
 
 	// Load RPC data when ready
 	$effect(() => {
-		if (connectionState === 'READY') {
+		if (connectionState === 'ready') {
 			loadRpcData();
 		}
 	});
@@ -135,12 +126,12 @@
 		const errors: string[] = [];
 
 		await Promise.allSettled([
-			call<{ uptime?: number; model?: string; sessions?: number }>('info.status')
+			rpc<{ uptime?: number; model?: string; sessions?: number }>('info.status')
 				.then((r) => {
 					gatewayStatus = { uptime: r.uptime, currentModel: r.model, sessionCount: r.sessions };
 				})
 				.catch(() => errors.push('info.status')),
-			call<{
+			rpc<{
 				providers?: Array<{ name: string; tokens: number; cost?: number }>;
 				total?: { tokens: number; cost?: number };
 			}>('info.usage')
@@ -148,7 +139,7 @@
 					usageData = r;
 				})
 				.catch(() => errors.push('info.usage')),
-			call<{
+			rpc<{
 				nodes: Array<{
 					id: string;
 					name: string;
@@ -161,7 +152,7 @@
 					nodesData = r.nodes || [];
 				})
 				.catch(() => errors.push('nodes.list')),
-			call<{
+			rpc<{
 				active?: Array<{
 					runId: string;
 					task: string;
@@ -191,7 +182,7 @@
 
 	async function stopAgent(runId: string) {
 		try {
-			await call('agents.stop', { runId });
+			await rpc('agents.stop', { runId });
 			addToast('Agent stopped', 'success');
 			loadRpcData();
 		} catch {
@@ -201,7 +192,7 @@
 
 	async function restartGateway() {
 		try {
-			await call('update.run');
+			await rpc('update.run');
 			addToast('Gateway restart initiated', 'success');
 			showRestartConfirm = false;
 		} catch {
@@ -236,14 +227,14 @@
 		return `$${cost.toFixed(4)}`;
 	}
 
-	// Derived values from hello-ok (no RPC needed)
-	let isConnected = $derived(connectionState === 'READY');
-	let authRole = $derived(helloOk?.auth?.role ?? null);
-	let authScopes = $derived(helloOk?.auth?.scopes ?? []);
-	let uptimeMs = $derived(helloOk?.snapshot?.uptimeMs ?? null);
-	let configPath = $derived(helloOk?.snapshot?.configPath ?? null);
-	let stateDir = $derived(helloOk?.snapshot?.stateDir ?? null);
-	let protocolVersion = $derived(helloOk?.protocol ?? null);
+	// Derived values from snapshot (no RPC needed)
+	let isConnected = $derived(connectionState === 'ready');
+	let authRole = $derived(snapshotData?.auth?.role ?? null);
+	let authScopes = $derived(snapshotData?.auth?.scopes ?? []);
+	let uptimeMs = $derived(snapshotData?.snapshot?.uptimeMs ?? null);
+	let configPath = $derived(snapshotData?.snapshot?.configPath ?? null);
+	let stateDir = $derived(snapshotData?.snapshot?.stateDir ?? null);
+	let protocolVersion = $derived(snapshotData?.protocol ?? null);
 
 	let sessionUptime = $derived(
 		isConnected && connectedAt !== null ? formatUptime(currentTime - connectedAt) : null
@@ -258,7 +249,7 @@
 	let statusColor = $derived(
 		isConnected
 			? 'bg-emerald-400'
-			: connectionState === 'RECONNECTING' || connectionState === 'CONNECTING'
+			: connectionState === 'reconnecting' || connectionState === 'connecting'
 				? 'bg-amber-400'
 				: 'bg-red-400'
 	);
@@ -266,15 +257,15 @@
 	let statusLabel = $derived(
 		isConnected
 			? 'Connected'
-			: connectionState === 'RECONNECTING'
+			: connectionState === 'reconnecting'
 				? 'Reconnecting'
-				: connectionState === 'CONNECTING'
+				: connectionState === 'connecting'
 					? 'Connecting'
-					: connectionState === 'AUTHENTICATING'
+					: connectionState === 'authenticating'
 						? 'Authenticating'
-						: connectionState === 'PAIRING_REQUIRED'
+						: connectionState === 'pairing_required'
 							? 'Pairing Required'
-							: connectionState === 'AUTH_FAILED'
+							: connectionState === 'auth_failed'
 								? 'Auth Failed'
 								: 'Disconnected'
 	);
@@ -292,7 +283,7 @@
 		<div class="relative flex items-center gap-4 px-4 py-3.5 sm:px-5">
 			<div class="flex items-center gap-2.5">
 				<span class="relative flex h-2.5 w-2.5">
-					{#if isConnected || connectionState === 'RECONNECTING' || connectionState === 'CONNECTING'}
+					{#if isConnected || connectionState === 'reconnecting' || connectionState === 'connecting'}
 						<span
 							class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 {statusColor}"
 						></span>
@@ -749,7 +740,7 @@
 	{/if}
 
 	<!-- Disconnected State -->
-	{#if !isConnected && connectionState !== 'CONNECTING' && connectionState !== 'AUTHENTICATING' && connectionState !== 'RECONNECTING'}
+	{#if !isConnected && connectionState !== 'connecting' && connectionState !== 'authenticating' && connectionState !== 'reconnecting'}
 		<div
 			class="flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-700/40 bg-gray-800/20 py-12"
 		>

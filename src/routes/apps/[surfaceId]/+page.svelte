@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { canvasStore } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import { pinnedApps, unpinApp, isPinned } from '$lib/stores/pinned-apps.js';
 	import { isMobile } from '$lib/stores/viewport.js';

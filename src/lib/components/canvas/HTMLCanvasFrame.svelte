@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { canvasStore } from '$lib/stores/gateway.js';
+	import { canvasStore } from '$lib/stores/canvas.js';
 
 	interface Props {
 		url: string;

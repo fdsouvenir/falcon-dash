@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, eventBus, connection } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	interface PairingRequest {
 		requestId: string;
@@ -28,7 +28,7 @@
 
 	async function loadPendingRequests() {
 		try {
-			const result = await call<{ requests: PairingRequest[] }>('device-pair.list', {
+			const result = await rpc<{ requests: PairingRequest[] }>('device-pair.list', {
 				status: 'pending'
 			});
 			pendingRequests = result.requests || [];
@@ -39,7 +39,7 @@
 
 	async function loadPairedDevices() {
 		try {
-			const result = await call<{ devices: PairedDevice[] }>('device-pair.list', {
+			const result = await rpc<{ devices: PairedDevice[] }>('device-pair.list', {
 				status: 'approved'
 			});
 			pairedDevices = result.devices || [];
@@ -64,7 +64,7 @@
 	async function approveRequest(requestId: string) {
 		loading = true;
 		try {
-			await call('device-pair.approve', { requestId });
+			await rpc('device-pair.approve', { requestId });
 			await loadAll();
 		} catch (err) {
 			alert(`Failed to approve device: ${err}`);
@@ -76,7 +76,7 @@
 	async function rejectRequest(requestId: string) {
 		loading = true;
 		try {
-			await call('device-pair.reject', { requestId });
+			await rpc('device-pair.reject', { requestId });
 			await loadAll();
 		} catch (err) {
 			alert(`Failed to reject device: ${err}`);
@@ -88,7 +88,7 @@
 	async function rotateToken(deviceId: string) {
 		loading = true;
 		try {
-			await call('device-token.rotate', { deviceId });
+			await rpc('device-token.rotate', { deviceId });
 			confirmAction = null;
 			await loadPairedDevices();
 		} catch (err) {
@@ -101,7 +101,7 @@
 	async function revokeToken(deviceId: string) {
 		loading = true;
 		try {
-			await call('device-token.revoke', { deviceId });
+			await rpc('device-token.revoke', { deviceId });
 			confirmAction = null;
 			await loadAll();
 		} catch (err) {
@@ -126,23 +126,23 @@
 		return date.toLocaleDateString();
 	}
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		if (connectionState === 'READY') loadAll();
+		if (connectionState === 'ready') loadAll();
 	});
 
 	$effect(() => {
-		const unsubRequested = eventBus.on('device-pair.requested', () => {
+		const unsubRequested = gatewayEvents.on('device-pair.requested', () => {
 			loadPendingRequests();
 		});
-		const unsubResolved = eventBus.on('device-pair.resolved', () => {
+		const unsubResolved = gatewayEvents.on('device-pair.resolved', () => {
 			loadAll();
 		});
 		return () => {

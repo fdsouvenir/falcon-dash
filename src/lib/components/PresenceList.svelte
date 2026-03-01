@@ -1,14 +1,20 @@
 <script lang="ts">
-	import { snapshot } from '$lib/stores/gateway.js';
-	import type { PresenceEntry } from '$lib/gateway/snapshot-store.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
+
+	interface PresenceEntry {
+		instanceId?: string;
+		displayName?: string;
+		deviceType?: string;
+		connectedAt?: number;
+	}
 
 	let presenceList = $state<PresenceEntry[]>([]);
 	let now = $state(Date.now());
 
-	// Subscribe to presence store
+	// Subscribe to snapshot and extract presence
 	$effect(() => {
-		const unsub = snapshot.presence.subscribe((list) => {
-			presenceList = list;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			presenceList = (snap?.snapshot?.presence as PresenceEntry[] | undefined) ?? [];
 		});
 		return unsub;
 	});

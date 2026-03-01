@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 	import {
 		pendingApprovals as pendingApprovalsStore,
 		resolveApproval as resolveApprovalStore,
@@ -22,16 +22,16 @@
 	let error = $state<string | null>(null);
 	let unavailable = $state(false);
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		if (connectionState === 'READY') loadAllowlist();
+		if (connectionState === 'ready') loadAllowlist();
 	});
 
 	$effect(() => {
@@ -52,7 +52,7 @@
 		loading = true;
 		error = null;
 		try {
-			const result = await call<{ allowlist: string[]; policy: string; nodes: string[] }>(
+			const result = await rpc<{ allowlist: string[]; policy: string; nodes: string[] }>(
 				'exec.approvals.get',
 				{}
 			);
@@ -72,7 +72,7 @@
 		if (!newPattern.trim()) return;
 		try {
 			const updated = [...allowlist, newPattern.trim()];
-			await call('exec.approvals.set', { allowlist: updated, policy });
+			await rpc('exec.approvals.set', { allowlist: updated, policy });
 			allowlist = updated;
 			newPattern = '';
 		} catch (e) {
@@ -83,7 +83,7 @@
 	async function removePattern(pattern: string) {
 		try {
 			const updated = allowlist.filter((p) => p !== pattern);
-			await call('exec.approvals.set', { allowlist: updated, policy });
+			await rpc('exec.approvals.set', { allowlist: updated, policy });
 			allowlist = updated;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -92,7 +92,7 @@
 
 	async function updatePolicy(newPolicy: 'off' | 'on-miss' | 'always') {
 		try {
-			await call('exec.approvals.set', { allowlist, policy: newPolicy });
+			await rpc('exec.approvals.set', { allowlist, policy: newPolicy });
 			policy = newPolicy;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -101,7 +101,7 @@
 
 	async function loadNodeAllowlist(nodeId: string) {
 		try {
-			const result = await call<{ allowlist: string[] }>('exec.approvals.node.get', { nodeId });
+			const result = await rpc<{ allowlist: string[] }>('exec.approvals.node.get', { nodeId });
 			nodeAllowlist = result.allowlist || [];
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -111,7 +111,7 @@
 	async function updateNodeAllowlist() {
 		if (!selectedNode) return;
 		try {
-			await call('exec.approvals.node.set', { nodeId: selectedNode, allowlist: nodeAllowlist });
+			await rpc('exec.approvals.node.set', { nodeId: selectedNode, allowlist: nodeAllowlist });
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}

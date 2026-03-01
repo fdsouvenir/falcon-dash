@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { sessions } from '$lib/stores/sessions.js';
-	import { snapshot } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { getAgentIdentity, type AgentIdentity } from '$lib/stores/agent-identity.js';
 	import { addToast } from '$lib/stores/toast.js';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -55,7 +55,8 @@
 
 	$effect(() => {
 		const unsub = sessions.subscribe(($sessions) => {
-			defaultAgentId = get(snapshot.sessionDefaults).defaultAgentId ?? 'main';
+			const snap = get(gatewayEvents.snapshot);
+			defaultAgentId = (snap?.snapshot?.sessionDefaults?.defaultAgentId as string) ?? 'main';
 			const counts: Record<string, number> = {};
 			for (const s of $sessions) {
 				const match = s.sessionKey.match(/^agent:([^:]+):/);

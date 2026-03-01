@@ -3,6 +3,7 @@ import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { startContextScheduler } from '$lib/server/pm/context-scheduler.js';
 import { startTerminalServer } from '$lib/server/terminal-server.js';
+import { startGatewayClient } from '$lib/server/gateway-client.js';
 
 Sentry.init({
 	dsn: __SENTRY_DSN__,
@@ -14,6 +15,7 @@ Sentry.init({
 
 startContextScheduler();
 startTerminalServer();
+startGatewayClient();
 
 const securityHeaders: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
@@ -27,7 +29,7 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	const sentryConnectSrc = __SENTRY_DSN__ ? ' *.sentry.io' : '';
 	response.headers.set(
 		'Content-Security-Policy',
-		`default-src 'self' *.cloudflareaccess.com; script-src 'self' 'unsafe-inline' static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:${sentryConnectSrc}; img-src 'self' data:; font-src 'self' data:; worker-src 'self'; manifest-src 'self'`
+		`default-src 'self' *.cloudflareaccess.com; script-src 'self' 'unsafe-inline' static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; connect-src 'self'${sentryConnectSrc}; img-src 'self' data:; font-src 'self' data:; worker-src 'self'; manifest-src 'self'`
 	);
 
 	return response;

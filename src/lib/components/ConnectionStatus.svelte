@@ -1,53 +1,23 @@
 <script lang="ts">
-	import {
-		connection,
-		snapshot,
-		reconnector,
-		correlator,
-		pairingState
-	} from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { tickHealth } from '$lib/stores/diagnostics.js';
-	import { gatewayToken } from '$lib/stores/token.js';
-	import { connectToGateway } from '$lib/stores/gateway.js';
-	import { gatewayUrl } from '$lib/stores/token.js';
-	import type { ConnectionState } from '$lib/gateway/types.js';
-	import type { PairingState } from '$lib/stores/gateway.js';
-	import type { ReconnectorMetrics } from '$lib/gateway/reconnector.js';
-	import type { CorrelatorMetrics } from '$lib/gateway/correlator.js';
 	import DiagnosticPanel from './DiagnosticPanel.svelte';
 
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
+	let connectionState = $state<string>('disconnected');
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
 	let showDetails = $state(false);
 	let showDiagnostics = $state(false);
 	let connectedAt = $state<number | null>(null);
 	let currentTime = $state(Date.now());
-	let reconnectMetrics = $state<ReconnectorMetrics>({
-		attempt: 0,
-		maxAttempts: 20,
-		exhausted: false,
-		nextRetryAt: null,
-		nextRetryDelayMs: null,
-		lastReconnectAt: null,
-		tickIntervalMs: null
-	});
-	let correlatorMetrics = $state<CorrelatorMetrics>({
-		pendingCount: 0,
-		totalRequests: 0,
-		totalTimeouts: 0,
-		totalErrors: 0,
-		lastErrorAt: null
-	});
 	let lastTickAt = $state<number | null>(null);
-	let pairing = $state<PairingState>({ status: 'idle', retryCount: 0, maxRetries: 10 });
 
 	// Subscribe to connection state
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'READY' && connectedAt === null) {
+			if (s === 'ready' && connectedAt === null) {
 				connectedAt = Date.now();
-			} else if (s === 'DISCONNECTED') {
+			} else if (s === 'disconnected') {
 				connectedAt = null;
 			}
 		});
@@ -56,24 +26,8 @@
 
 	// Subscribe to server snapshot
 	$effect(() => {
-		const unsub = snapshot.server.subscribe((s) => {
-			serverInfo = s;
-		});
-		return unsub;
-	});
-
-	// Subscribe to reconnector metrics
-	$effect(() => {
-		const unsub = reconnector.metrics.subscribe((m) => {
-			reconnectMetrics = m;
-		});
-		return unsub;
-	});
-
-	// Subscribe to correlator metrics
-	$effect(() => {
-		const unsub = correlator.metrics.subscribe((m) => {
-			correlatorMetrics = m;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			serverInfo = snap?.server ?? null;
 		});
 		return unsub;
 	});
@@ -86,17 +40,9 @@
 		return unsub;
 	});
 
-	// Subscribe to pairing state
-	$effect(() => {
-		const unsub = pairingState.subscribe((s) => {
-			pairing = s;
-		});
-		return unsub;
-	});
-
 	// Update current time every second for uptime calculation
 	$effect(() => {
-		if (connectionState === 'READY' || connectionState === 'RECONNECTING') {
+		if (connectionState === 'ready' || connectionState === 'reconnecting') {
 			const interval = setInterval(() => {
 				currentTime = Date.now();
 			}, 1000);
@@ -104,20 +50,20 @@
 		}
 	});
 
-	function statusColor(state: ConnectionState): string {
-		if (state === 'READY') return 'bg-green-500';
-		if (state === 'PAIRING_REQUIRED') return 'bg-yellow-500 animate-pulse';
-		if (state === 'RECONNECTING' || state === 'CONNECTING' || state === 'AUTHENTICATING')
+	function statusColor(state: string): string {
+		if (state === 'ready') return 'bg-green-500';
+		if (state === 'pairing_required') return 'bg-yellow-500 animate-pulse';
+		if (state === 'reconnecting' || state === 'connecting' || state === 'authenticating')
 			return 'bg-yellow-500';
 		return 'bg-red-500';
 	}
 
-	function statusText(state: ConnectionState): string {
-		if (state === 'READY') return 'Connected';
-		if (state === 'RECONNECTING') return 'Reconnecting...';
-		if (state === 'CONNECTING' || state === 'AUTHENTICATING') return 'Connecting...';
-		if (state === 'AUTH_FAILED') return 'Auth Failed';
-		if (state === 'PAIRING_REQUIRED') return 'Pairing Required';
+	function statusText(state: string): string {
+		if (state === 'ready') return 'Connected';
+		if (state === 'reconnecting') return 'Reconnecting...';
+		if (state === 'connecting' || state === 'authenticating') return 'Connecting...';
+		if (state === 'auth_failed') return 'Auth Failed';
+		if (state === 'pairing_required') return 'Pairing Required';
 		return 'Disconnected';
 	}
 
@@ -154,25 +100,16 @@
 	});
 
 	function handleReenterToken() {
-		gatewayToken.clear();
+		// Auth is server-side; just retry connection
+		gatewayEvents.disconnect();
+		gatewayEvents.connect();
 		showDetails = false;
 	}
 
 	function handleRetryConnection() {
-		reconnector.resetAttempts();
-		let url = 'ws://127.0.0.1:18789';
-		let token: string | null = null;
-		const unsubUrl = gatewayUrl.subscribe((v) => {
-			url = v;
-		});
-		const unsubToken = gatewayToken.subscribe((v) => {
-			token = v;
-		});
-		unsubUrl();
-		unsubToken();
-		if (token) {
-			connectToGateway(url, token);
-		}
+		// Server-side SSE reconnects automatically; force by reconnecting the EventSource
+		gatewayEvents.disconnect();
+		gatewayEvents.connect();
 		showDetails = false;
 	}
 
@@ -182,15 +119,9 @@
 	}
 
 	let uptime = $derived(
-		connectionState === 'READY' && connectedAt !== null
+		connectionState === 'ready' && connectedAt !== null
 			? formatUptime(currentTime - connectedAt)
 			: 'N/A'
-	);
-
-	let retryCountdown = $derived(
-		reconnectMetrics.nextRetryAt !== null
-			? Math.max(0, Math.ceil((reconnectMetrics.nextRetryAt - currentTime) / 1000))
-			: null
 	);
 
 	let lastTickAgo = $derived(
@@ -245,29 +176,21 @@
 				</div>
 
 				<!-- Reconnecting info -->
-				{#if connectionState === 'RECONNECTING'}
+				{#if connectionState === 'reconnecting'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
-						<div>
-							<dt class="text-gray-400">Attempt</dt>
-							<dd class="text-yellow-400">
-								{reconnectMetrics.attempt}/{reconnectMetrics.maxAttempts}
-							</dd>
-						</div>
-						<div class="mt-1">
-							<dt class="text-gray-400">Next retry in</dt>
-							<dd class="text-yellow-400">
-								{retryCountdown !== null ? `${retryCountdown}s` : 'waiting for network...'}
-							</dd>
-						</div>
+						<p class="text-yellow-400">SSE reconnecting automatically...</p>
+						<button
+							class="mt-2 w-full rounded bg-blue-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+							onclick={handleRetryConnection}
+						>
+							Force Reconnect
+						</button>
 					</div>
 				{/if}
 
-				<!-- Retries exhausted -->
-				{#if reconnectMetrics.exhausted && connectionState === 'DISCONNECTED'}
+				<!-- Disconnected recovery -->
+				{#if connectionState === 'disconnected'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
-						<p class="text-red-400 mb-2">
-							Connection failed after {reconnectMetrics.maxAttempts} attempts
-						</p>
 						<button
 							class="w-full rounded bg-blue-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
 							onclick={handleRetryConnection}
@@ -278,7 +201,7 @@
 				{/if}
 
 				<!-- Ready state info -->
-				{#if connectionState === 'READY'}
+				{#if connectionState === 'ready'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
 						<div>
 							<dt class="text-gray-400">Last tick</dt>
@@ -286,15 +209,11 @@
 								{lastTickAgo !== null ? `${lastTickAgo}s ago` : 'N/A'}
 							</dd>
 						</div>
-						<div class="mt-1">
-							<dt class="text-gray-400">Pending requests</dt>
-							<dd class="text-white">{correlatorMetrics.pendingCount}</dd>
-						</div>
 					</div>
 				{/if}
 
 				<!-- Auth failed recovery -->
-				{#if connectionState === 'AUTH_FAILED'}
+				{#if connectionState === 'auth_failed'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
 						<button
 							class="w-full rounded bg-red-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
@@ -306,17 +225,9 @@
 				{/if}
 
 				<!-- Pairing required recovery -->
-				{#if connectionState === 'PAIRING_REQUIRED'}
+				{#if connectionState === 'pairing_required'}
 					<div class="border-t border-gray-700 pt-2 mt-2">
-						<p class="text-yellow-400 mb-1">
-							{#if pairing.status === 'waiting'}
-								Waiting for approval ({pairing.retryCount}/{pairing.maxRetries})...
-							{:else if pairing.status === 'timeout'}
-								Pairing retries exhausted
-							{:else}
-								Approve device in gateway admin
-							{/if}
-						</p>
+						<p class="text-yellow-400 mb-1">Approve device in gateway admin</p>
 						<p class="text-xs text-gray-400 mb-2">
 							Run <code class="font-mono">openclaw devices approve</code>
 						</p>

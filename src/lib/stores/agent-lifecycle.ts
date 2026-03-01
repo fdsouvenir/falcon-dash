@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import { call } from '$lib/stores/gateway.js';
+import { rpc } from '$lib/gateway-api.js';
 
 export interface ActiveAgent {
 	runId: string;
@@ -45,7 +45,7 @@ export const agentLifecycle = {
 export async function loadAgentLifecycle(): Promise<void> {
 	_state.update((s) => ({ ...s, loading: true, error: null }));
 	try {
-		const result = await call<{ active?: ActiveAgent[]; history?: AgentHistory[] }>(
+		const result = await rpc<{ active?: ActiveAgent[]; history?: AgentHistory[] }>(
 			'agents.list',
 			{}
 		);
@@ -61,10 +61,10 @@ export async function loadAgentLifecycle(): Promise<void> {
 }
 
 export async function stopAgent(runId: string): Promise<void> {
-	await call('agents.stop', { runId });
+	await rpc('agents.stop', { runId });
 	await loadAgentLifecycle();
 }
 
 export async function restartGateway(): Promise<void> {
-	await call('update.run', {});
+	await rpc('update.run', {});
 }

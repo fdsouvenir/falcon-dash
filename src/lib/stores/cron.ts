@@ -1,5 +1,5 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
-import { call, eventBus } from '$lib/stores/gateway.js';
+import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 import { addToast } from '$lib/stores/toast.js';
 import { notifyCron } from '$lib/stores/notifications.js';
 
@@ -32,7 +32,7 @@ export async function loadCronJobs(): Promise<void> {
 	_isLoading.set(true);
 	_error.set(null);
 	try {
-		const result = await call<{ jobs: CronJob[] }>('cron.list', { includeDisabled: true });
+		const result = await rpc<{ jobs: CronJob[] }>('cron.list', { includeDisabled: true });
 		const jobs = (result.jobs ?? []).map((j) => ({
 			...j,
 			rawSchedule:
@@ -52,7 +52,7 @@ export async function loadCronJobs(): Promise<void> {
 
 export function subscribeToCronEvents(): void {
 	if (eventUnsub) return;
-	eventUnsub = eventBus.on('cron', (payload: Record<string, unknown>) => {
+	eventUnsub = gatewayEvents.on('cron', (payload: Record<string, unknown>) => {
 		const action = payload.action as string;
 		const jobName = (payload.name as string) ?? 'Job';
 
@@ -118,7 +118,7 @@ export interface CronJobInput {
 
 export async function createCronJob(input: CronJobInput): Promise<boolean> {
 	try {
-		await call('cron.create', input as unknown as Record<string, unknown>);
+		await rpc('cron.create', input as unknown as Record<string, unknown>);
 		await loadCronJobs();
 		return true;
 	} catch (err) {
@@ -132,7 +132,7 @@ export async function updateCronJob(
 	patch: Partial<CronJobInput & { enabled: boolean }>
 ): Promise<boolean> {
 	try {
-		await call('cron.update', { id, patch });
+		await rpc('cron.update', { id, patch });
 		await loadCronJobs();
 		return true;
 	} catch (err) {
@@ -143,7 +143,7 @@ export async function updateCronJob(
 
 export async function deleteCronJob(id: string): Promise<boolean> {
 	try {
-		await call('cron.delete', { id });
+		await rpc('cron.delete', { id });
 		await loadCronJobs();
 		return true;
 	} catch (err) {
@@ -154,7 +154,7 @@ export async function deleteCronJob(id: string): Promise<boolean> {
 
 export async function runCronJob(id: string): Promise<boolean> {
 	try {
-		await call('cron.run', { id, mode: 'force' });
+		await rpc('cron.run', { id, mode: 'force' });
 		return true;
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -187,7 +187,7 @@ export async function loadCronRuns(jobId: string): Promise<void> {
 	_selectedJobId.set(jobId);
 	_runsLoading.set(true);
 	try {
-		const result = await call<{ runs: CronRun[] }>('cron.runs', { id: jobId, limit: 50 });
+		const result = await rpc<{ runs: CronRun[] }>('cron.runs', { id: jobId, limit: 50 });
 		_runs.set(result.runs ?? []);
 	} catch (err) {
 		_error.set((err as Error).message);

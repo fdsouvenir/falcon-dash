@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { call, connection } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	type LogEntry = {
 		ts: number;
@@ -42,7 +42,7 @@
 
 	async function fetchLogs() {
 		try {
-			const response = await call<LogsTailResponse>('logs.tail', {
+			const response = await rpc<LogsTailResponse>('logs.tail', {
 				cursor,
 				limit: 500,
 				maxBytes: 250000
@@ -118,7 +118,7 @@
 	}
 
 	$effect(() => {
-		const unsub = connection.state.subscribe(() => {});
+		const unsub = gatewayEvents.state.subscribe(() => {});
 		return () => {
 			unsub();
 			stopPolling();

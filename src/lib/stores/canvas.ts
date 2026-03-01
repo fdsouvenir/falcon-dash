@@ -1,7 +1,5 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
-import type { EventBus } from '$lib/gateway/event-bus.js';
 import { sendCanvasAction, pushSurfaceMessage, clearSurface } from '$lib/canvas/delivery.js';
-import { diagnosticLog } from '$lib/gateway/diagnostic-log.js';
 
 export interface BridgeStatus {
 	registered: boolean;
@@ -75,17 +73,20 @@ export class CanvasStore {
 	}
 
 	/**
-	 * Subscribe to EventBus for canvas events.
-	 * @param eventBus - The gateway event bus
-	 * @param callFn - RPC call function (injected to avoid circular imports with gateway.ts)
+	 * Subscribe to gateway events for canvas events.
+	 * @param onEvent - Function to register event handlers (returns unsubscribe fn)
+	 * @param callFn - RPC call function
 	 */
-	subscribe(eventBus: EventBus, callFn: CallFn): void {
+	subscribe(
+		onEvent: (event: string, handler: (payload: Record<string, unknown>) => void) => () => void,
+		callFn: CallFn
+	): void {
 		this.callFn = callFn;
 		this.unsubscribeAll();
 
 		// Primary path: node.invoke.request — gateway routes canvas commands to us
 		this.unsubscribers.push(
-			eventBus.on('node.invoke.request', (payload) => {
+			onEvent('node.invoke.request', (payload) => {
 				const requestId = (payload.id ?? payload.requestId) as string;
 				const command = payload.command as string;
 
@@ -110,24 +111,24 @@ export class CanvasStore {
 				}
 
 				console.log('[canvas] invoke.request received:', { requestId, command, params });
-				diagnosticLog.log('canvas', 'info', `Invoke request: ${command}`, { requestId });
+				console.log('[canvas]', `Invoke request: ${command}`, { requestId });
 				this.handleCommand(command, params, requestId);
 			})
 		);
 
 		// Alternative path: canvas.deliver — event-based delivery (Approach A2)
 		this.unsubscribers.push(
-			eventBus.on('canvas.deliver', (payload) => {
+			onEvent('canvas.deliver', (payload) => {
 				const command = payload.command as string;
 				const params = (payload.params ?? payload) as Record<string, unknown>;
-				diagnosticLog.log('canvas', 'info', `Canvas deliver: ${command}`);
+				console.log('[canvas]', `Canvas deliver: ${command}`);
 				this.handleCommand(command, params);
 			})
 		);
 
 		// Legacy path: canvas.message — existing event from delivery.ts
 		this.unsubscribers.push(
-			eventBus.on('canvas.message', (payload) => {
+			onEvent('canvas.message', (payload) => {
 				const surfaceId = payload.surfaceId as string;
 				const messages = payload.messages as unknown[] | undefined;
 				const message = payload.payload;
@@ -143,7 +144,7 @@ export class CanvasStore {
 			})
 		);
 
-		diagnosticLog.log('canvas', 'info', 'Canvas store subscribed to EventBus');
+		console.log('[canvas]', 'Canvas store subscribed to EventBus');
 	}
 
 	/**
@@ -172,7 +173,7 @@ export class CanvasStore {
 					this.handleReset(params);
 					break;
 				default:
-					diagnosticLog.log('canvas', 'warn', `Unknown canvas command: ${command}`);
+					console.warn('[canvas]', `Unknown canvas command: ${command}`);
 					if (requestId) {
 						this.respondError(requestId, `Unknown command: ${command}`);
 					}
@@ -182,7 +183,7 @@ export class CanvasStore {
 				this.respondOk(requestId);
 			}
 		} catch (err) {
-			diagnosticLog.log('canvas', 'error', `Canvas command error: ${command}`, {
+			console.error('[canvas]', `Canvas command error: ${command}`, {
 				error: String(err)
 			});
 			if (requestId) {
@@ -238,7 +239,7 @@ export class CanvasStore {
 
 		this._currentSurfaceId.set(surfaceId);
 		console.log('[canvas] handlePresent:', { surfaceId, title, url });
-		diagnosticLog.log('canvas', 'info', `Surface presented: ${surfaceId}`, { url });
+		console.log('[canvas]', `Surface presented: ${surfaceId}`, { url });
 		return surfaceId;
 	}
 
@@ -273,7 +274,7 @@ export class CanvasStore {
 
 		// If hiding the current surface, clear current
 		this._currentSurfaceId.update((id) => (id === surfaceId ? null : id));
-		diagnosticLog.log('canvas', 'info', `Surface hidden: ${surfaceId}`);
+		console.log('[canvas]', `Surface hidden: ${surfaceId}`);
 	}
 
 	/** canvas.navigate — navigate a surface's webview to a new URL */
@@ -283,7 +284,7 @@ export class CanvasStore {
 
 		const url = typeof params.url === 'string' ? params.url : null;
 		if (!url) {
-			diagnosticLog.log('canvas', 'warn', `handleNavigate: missing url for ${surfaceId}`);
+			console.warn('[canvas]', `handleNavigate: missing url for ${surfaceId}`);
 			return;
 		}
 
@@ -296,7 +297,7 @@ export class CanvasStore {
 			return new Map(map);
 		});
 
-		diagnosticLog.log('canvas', 'info', `Surface navigated: ${surfaceId} → ${url}`);
+		console.log('[canvas]', `Surface navigated: ${surfaceId} → ${url}`);
 	}
 
 	/** canvas.a2ui.pushJSONL — push A2UI messages to a surface */
@@ -328,7 +329,7 @@ export class CanvasStore {
 			this.pushMessage(surfaceId, msg);
 		}
 
-		diagnosticLog.log('canvas', 'debug', `Pushed ${messages.length} messages to ${surfaceId}`);
+		console.debug('[canvas]', `Pushed ${messages.length} messages to ${surfaceId}`);
 	}
 
 	/** canvas.a2ui.reset — clear a surface's A2UI state */
@@ -347,7 +348,7 @@ export class CanvasStore {
 
 		// Also clear in delivery registry
 		clearSurface(surfaceId);
-		diagnosticLog.log('canvas', 'info', `Surface reset: ${surfaceId}`);
+		console.log('[canvas]', `Surface reset: ${surfaceId}`);
 	}
 
 	/** Push a single message to a surface, creating the surface if needed */
@@ -387,7 +388,7 @@ export class CanvasStore {
 			ok: true,
 			payload
 		}).catch((err) => {
-			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
+			console.error('[canvas]', `Failed to respond to invoke: ${err}`);
 		});
 	}
 
@@ -400,7 +401,7 @@ export class CanvasStore {
 			ok: false,
 			error: message
 		}).catch((err) => {
-			diagnosticLog.log('canvas', 'error', `Failed to respond to invoke: ${err}`);
+			console.error('[canvas]', `Failed to respond to invoke: ${err}`);
 		});
 	}
 
@@ -428,7 +429,7 @@ export class CanvasStore {
 			}
 			return changed ? new Map(map) : map;
 		});
-		diagnosticLog.log('canvas', 'info', `Restored ${pins.length} pinned surfaces`);
+		console.log('[canvas]', `Restored ${pins.length} pinned surfaces`);
 	}
 
 	/**
@@ -462,3 +463,5 @@ export class CanvasStore {
 		this.unsubscribers = [];
 	}
 }
+
+export const canvasStore = new CanvasStore();

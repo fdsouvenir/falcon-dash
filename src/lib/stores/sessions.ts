@@ -1,5 +1,5 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
-import { call, eventBus, snapshot } from '$lib/stores/gateway.js';
+import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 import { notifyNewMessage } from '$lib/stores/notifications.js';
 import { shortId } from '$lib/utils.js';
 
@@ -213,7 +213,7 @@ function originLabel(s: Record<string, unknown>): string | undefined {
 
 export async function loadSessions(): Promise<void> {
 	try {
-		const result = await call<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
+		const result = await rpc<{ sessions: Array<Record<string, unknown>> }>('sessions.list', {});
 		const labelless = new Set<string>();
 		const parsed: ChatSessionInfo[] = (result.sessions ?? []).map((s, i) => {
 			const hasLabel = typeof s.label === 'string' && s.label.length > 0;
@@ -272,14 +272,14 @@ export function setActiveSession(sessionKey: string): void {
 }
 
 export async function renameSession(sessionKey: string, name: string): Promise<void> {
-	await call('sessions.patch', { key: sessionKey, label: name });
+	await rpc('sessions.patch', { key: sessionKey, label: name });
 	_sessions.update((list) =>
 		list.map((s) => (s.sessionKey === sessionKey ? { ...s, displayName: name } : s))
 	);
 }
 
 export async function deleteSession(sessionKey: string): Promise<void> {
-	await call('sessions.delete', { key: sessionKey, deleteTranscript: true });
+	await rpc('sessions.delete', { key: sessionKey, deleteTranscript: true });
 	_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
 	if (get(_activeSessionKey) === sessionKey) {
 		_activeSessionKey.set(null);
@@ -300,7 +300,8 @@ function uniqueLabel(base: string, existing: ChatSessionInfo[], agentId?: string
 
 export async function createSession(label?: string): Promise<string> {
 	const selected = get(_selectedAgentId);
-	const defaults = get(snapshot.sessionDefaults);
+	const snap = get(gatewayEvents.snapshot);
+	const defaults = (snap?.snapshot?.sessionDefaults ?? {}) as Record<string, unknown>;
 	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:falcon:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
@@ -309,7 +310,7 @@ export async function createSession(label?: string): Promise<string> {
 	persistSessionKey(sessionKey);
 
 	try {
-		await call('sessions.patch', { key: sessionKey, label: displayName });
+		await rpc('sessions.patch', { key: sessionKey, label: displayName });
 		await loadSessions();
 	} catch (err) {
 		_activeSessionKey.set(null);
@@ -323,7 +324,8 @@ export async function createSession(label?: string): Promise<string> {
 
 export function createSessionOptimistic(label?: string): string {
 	const selected = get(_selectedAgentId);
-	const defaults = get(snapshot.sessionDefaults);
+	const snap = get(gatewayEvents.snapshot);
+	const defaults = (snap?.snapshot?.sessionDefaults ?? {}) as Record<string, unknown>;
 	const agentId = selected || defaults.defaultAgentId || 'default';
 	const sessionKey = `agent:${agentId}:falcon:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
@@ -331,7 +333,7 @@ export function createSessionOptimistic(label?: string): string {
 	_activeSessionKey.set(sessionKey);
 	persistSessionKey(sessionKey);
 
-	call('sessions.patch', { key: sessionKey, label: displayName })
+	rpc('sessions.patch', { key: sessionKey, label: displayName })
 		.then(() => loadSessions())
 		.catch((err) => {
 			_activeSessionKey.set(null);
@@ -357,7 +359,7 @@ function debouncedLoadSessions(): void {
 export function subscribeToEvents(): void {
 	unsubscribeFromEvents();
 	unsubscribers.push(
-		eventBus.on('session', (payload) => {
+		gatewayEvents.on('session', (payload) => {
 			const action = payload.action as string;
 			const sessionKey = payload.sessionKey as string;
 			if (action === 'created' || action === 'updated') {
@@ -369,7 +371,7 @@ export function subscribeToEvents(): void {
 	);
 
 	unsubscribers.push(
-		eventBus.on('chat.message', (payload) => {
+		gatewayEvents.on('chat.message', (payload) => {
 			const msgSessionKey = payload.sessionKey as string;
 			if (!msgSessionKey || msgSessionKey === get(_activeSessionKey)) return;
 			_sessions.update((list) =>

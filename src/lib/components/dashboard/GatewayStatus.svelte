@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { connection, snapshot } from '$lib/stores/gateway.js';
-	import type { ConnectionState } from '$lib/gateway/types.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 
-	let connectionState = $state<ConnectionState>('DISCONNECTED');
+	let connectionState = $state<string>('disconnected');
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
 	let uptimeMs = $state<number | null>(null);
 	let connectedAt = $state<number | null>(null);
@@ -10,11 +9,11 @@
 	let deviceCount = $state(0);
 
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'READY' && connectedAt === null) {
+			if (s === 'ready' && connectedAt === null) {
 				connectedAt = Date.now();
-			} else if (s === 'DISCONNECTED') {
+			} else if (s === 'disconnected') {
 				connectedAt = null;
 			}
 		});
@@ -22,22 +21,10 @@
 	});
 
 	$effect(() => {
-		const unsub = connection.helloOk.subscribe((h) => {
-			uptimeMs = h?.snapshot?.uptimeMs ?? null;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.server.subscribe((s) => {
-			serverInfo = s;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = snapshot.presence.subscribe((p) => {
-			deviceCount = p.length;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			uptimeMs = snap?.snapshot?.uptimeMs ?? null;
+			serverInfo = snap?.server ?? null;
+			deviceCount = (snap?.snapshot?.presence as unknown[] | undefined)?.length ?? 0;
 		});
 		return unsub;
 	});
@@ -60,12 +47,12 @@
 		return `${seconds}s`;
 	}
 
-	let isConnected = $derived(connectionState === 'READY');
+	let isConnected = $derived(connectionState === 'ready');
 
 	let statusColor = $derived(
 		isConnected
 			? 'bg-emerald-400'
-			: connectionState === 'RECONNECTING' || connectionState === 'CONNECTING'
+			: connectionState === 'reconnecting' || connectionState === 'connecting'
 				? 'bg-amber-400'
 				: 'bg-red-400'
 	);
@@ -73,15 +60,15 @@
 	let statusLabel = $derived(
 		isConnected
 			? 'Connected'
-			: connectionState === 'RECONNECTING'
+			: connectionState === 'reconnecting'
 				? 'Reconnecting'
-				: connectionState === 'CONNECTING'
+				: connectionState === 'connecting'
 					? 'Connecting'
-					: connectionState === 'AUTHENTICATING'
+					: connectionState === 'authenticating'
 						? 'Authenticating'
-						: connectionState === 'PAIRING_REQUIRED'
+						: connectionState === 'pairing_required'
 							? 'Pairing Required'
-							: connectionState === 'AUTH_FAILED'
+							: connectionState === 'auth_failed'
 								? 'Auth Failed'
 								: 'Disconnected'
 	);
@@ -101,7 +88,7 @@
 	<div class="relative flex items-center gap-4 px-4 py-3 sm:px-5">
 		<div class="flex items-center gap-2.5">
 			<span class="relative flex h-2.5 w-2.5">
-				{#if isConnected || connectionState === 'RECONNECTING' || connectionState === 'CONNECTING'}
+				{#if isConnected || connectionState === 'reconnecting' || connectionState === 'connecting'}
 					<span
 						class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 {statusColor}"
 					></span>

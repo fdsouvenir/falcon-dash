@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { diagnosticLog } from '$lib/stores/diagnostics.js';
-	import { getConnectionSummary } from '$lib/stores/gateway.js';
-	import type { DiagnosticEvent, DiagnosticLevel } from '$lib/gateway/diagnostic-log.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
+	import { get } from 'svelte/store';
+	import type { DiagnosticEvent, DiagnosticLevel } from '$lib/stores/diagnostic-log.js';
 
 	let { open = $bindable(false) } = $props();
 
@@ -57,7 +58,12 @@
 	}
 
 	function handleCopySummary() {
-		navigator.clipboard.writeText(JSON.stringify(getConnectionSummary(), null, 2));
+		const summary = {
+			state: get(gatewayEvents.state),
+			connected: get(gatewayEvents.connected),
+			snapshot: get(gatewayEvents.snapshot)
+		};
+		navigator.clipboard.writeText(JSON.stringify(summary, null, 2));
 	}
 
 	function handleClose() {

@@ -1,4 +1,4 @@
-import { eventBus, call } from '$lib/stores/gateway.js';
+import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 export interface CanvasMessage {
 	surfaceId: string;
@@ -8,7 +8,7 @@ export interface CanvasMessage {
 
 // Subscribe to canvas delivery events
 export function subscribeToCanvasDelivery(onMessage: (msg: CanvasMessage) => void): () => void {
-	return eventBus.on('canvas.message', (data: Record<string, unknown>) => {
+	return gatewayEvents.on('canvas.message', (data: Record<string, unknown>) => {
 		onMessage({
 			surfaceId: data.surfaceId as string,
 			type: (data.type as 'a2ui' | 'html') ?? 'a2ui',
@@ -23,7 +23,7 @@ export async function sendCanvasAction(
 	actionId: string,
 	payload: Record<string, unknown>
 ): Promise<void> {
-	await call('canvas.action', { surfaceId, actionId, payload });
+	await rpc('canvas.action', { surfaceId, actionId, payload });
 }
 
 // Track active surfaces

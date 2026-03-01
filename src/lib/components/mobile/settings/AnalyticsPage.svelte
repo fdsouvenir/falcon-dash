@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { SvelteMap } from 'svelte/reactivity';
-	import { connection } from '$lib/stores/gateway.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import { sessions, loadSessions } from '$lib/stores/sessions.js';
 
 	let { onback }: { onback: () => void } = $props();
@@ -8,9 +8,9 @@
 	let loading = $state(true);
 	let refreshing = $state(false);
 
-	let connectionState = $state('DISCONNECTED');
+	let connectionState = $state('disconnected');
 	$effect(() => {
-		const unsub = connection.state.subscribe((s) => {
+		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
 		});
 		return unsub;
@@ -50,7 +50,7 @@
 	}
 
 	$effect(() => {
-		if (connectionState === 'READY') {
+		if (connectionState === 'ready') {
 			load();
 		}
 	});

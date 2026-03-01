@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { snapshot, call } from '$lib/stores/gateway.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 
 	const dashboardVersion = __APP_VERSION__;
 
@@ -8,10 +8,10 @@
 	let gatewayStatus = $state<{ uptime?: number; sessionCount?: number } | null>(null);
 	let loading = $state(true);
 
-	// Subscribe to server snapshot
+	// Subscribe to server info from snapshot
 	$effect(() => {
-		const unsub = snapshot.server.subscribe((s) => {
-			serverInfo = s;
+		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
+			serverInfo = snap?.server ?? null;
 		});
 		return unsub;
 	});
@@ -25,10 +25,10 @@
 		loading = true;
 		try {
 			const [identity, status] = await Promise.all([
-				call<{ name: string; description?: string }>('agent-identity').catch(() => ({
+				rpc<{ name: string; description?: string }>('agent-identity').catch(() => ({
 					name: 'OpenClaw Agent'
 				})),
-				call<{ uptime?: number; sessions?: number }>('info.status').catch(() => ({
+				rpc<{ uptime?: number; sessions?: number }>('info.status').catch(() => ({
 					uptime: undefined,
 					sessions: undefined
 				}))
