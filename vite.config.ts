@@ -8,7 +8,6 @@ import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig(({ mode }) => {
 	const envVars = loadEnv(mode, process.cwd(), '');
-	const gatewayTarget = envVars.GATEWAY_URL || 'ws://127.0.0.1:18789';
 
 	return {
 		define: {
@@ -47,10 +46,6 @@ export default defineConfig(({ mode }) => {
 		server: {
 			host: '0.0.0.0',
 			proxy: {
-				'/ws': {
-					target: gatewayTarget,
-					ws: true
-				},
 				'/terminal-ws': {
 					target: 'ws://localhost:3001',
 					ws: true

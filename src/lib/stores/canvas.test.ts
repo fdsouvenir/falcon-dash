@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { EventBus } from '$lib/gateway/event-bus.js';
 import { CanvasStore } from './canvas.js';
 
 vi.mock('$lib/canvas/delivery.js', () => ({
@@ -9,39 +8,54 @@ vi.mock('$lib/canvas/delivery.js', () => ({
 	clearSurface: vi.fn()
 }));
 
-vi.mock('$lib/gateway/diagnostic-log.js', () => ({
-	diagnosticLog: { log: vi.fn() }
-}));
+type EventHandler = (payload: Record<string, unknown>, event: Record<string, unknown>) => void;
 
-function makeEventFrame(event: string, payload: Record<string, unknown> = {}) {
-	return { type: 'event' as const, event, payload };
+/**
+ * Minimal event dispatcher for tests — replaces the old EventBus.
+ * Provides an `onEvent` function compatible with CanvasStore.subscribe().
+ */
+function createTestEventDispatcher() {
+	const handlers = new Map<string, Set<EventHandler>>();
+
+	function onEvent(event: string, handler: EventHandler): () => void {
+		if (!handlers.has(event)) handlers.set(event, new Set());
+		handlers.get(event)!.add(handler);
+		return () => handlers.get(event)?.delete(handler);
+	}
+
+	function dispatch(event: string, payload: Record<string, unknown> = {}) {
+		const eventObj = { type: 'event', event, payload };
+		for (const h of handlers.get(event) ?? []) {
+			h(payload, eventObj);
+		}
+	}
+
+	return { onEvent, dispatch };
 }
 
 describe('CanvasStore', () => {
 	let store: CanvasStore;
-	let eventBus: EventBus;
+	let dispatcher: ReturnType<typeof createTestEventDispatcher>;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let callFn: any;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		store = new CanvasStore();
-		eventBus = new EventBus();
+		dispatcher = createTestEventDispatcher();
 		callFn = vi.fn().mockResolvedValue(undefined);
 	});
 
 	// --- subscribe ---
-	it('subscribe wires EventBus handlers', () => {
-		store.subscribe(eventBus, callFn);
+	it('subscribe wires event handlers', () => {
+		store.subscribe(dispatcher.onEvent, callFn);
 
 		// Dispatching a node.invoke.request event should reach handleCommand
-		eventBus.handleFrame(
-			makeEventFrame('node.invoke.request', {
-				id: 'req-1',
-				command: 'canvas.present',
-				params: { surfaceId: 's1' }
-			})
-		);
+		dispatcher.dispatch('node.invoke.request', {
+			id: 'req-1',
+			command: 'canvas.present',
+			params: { surfaceId: 's1' }
+		});
 
 		expect(get(store.surfaces).has('s1')).toBe(true);
 	});
@@ -70,7 +84,7 @@ describe('CanvasStore', () => {
 
 	// --- canvas.present (with requestId) ---
 	it('canvas.present with requestId calls canvas.bridge.invokeResult with ok:true', () => {
-		store.subscribe(eventBus, callFn);
+		store.subscribe(dispatcher.onEvent, callFn);
 		store.handleCommand('canvas.present', { surfaceId: 'surf-1' }, 'req-42');
 
 		expect(callFn).toHaveBeenCalledWith('canvas.bridge.invokeResult', {
@@ -135,9 +149,7 @@ describe('CanvasStore', () => {
 
 	// --- canvas.a2ui.pushJSONL (auto-create) ---
 	it('canvas.a2ui.pushJSONL auto-creates surface if missing', () => {
-		// Set currentSurfaceId by presenting then using that ID
 		store.handleCommand('canvas.present', { surfaceId: 'surf-1' });
-		// pushJSONL to a different surface that doesn't exist yet — pushMessage auto-creates
 		store.handleCommand('canvas.a2ui.pushJSONL', {
 			surfaceId: 'surf-new',
 			messages: [{ type: 'test' }]
@@ -166,7 +178,7 @@ describe('CanvasStore', () => {
 
 	// --- unknown command ---
 	it('unknown command calls respondError when requestId is given', () => {
-		store.subscribe(eventBus, callFn);
+		store.subscribe(dispatcher.onEvent, callFn);
 		store.handleCommand('canvas.bogus', {}, 'req-99');
 
 		expect(callFn).toHaveBeenCalledWith('canvas.bridge.invokeResult', {
@@ -181,7 +193,6 @@ describe('CanvasStore', () => {
 		store.handleCommand('canvas.present', { surfaceId: 'surf-1', url: 'http://initial' });
 		expect(get(store.currentSurfaceId)).toBe('surf-1');
 
-		// navigate without explicit surfaceId — should resolve to current
 		store.handleCommand('canvas.navigate', { url: 'http://navigated' });
 
 		expect(get(store.surfaces).get('surf-1')!.url).toBe('http://navigated');
@@ -189,7 +200,7 @@ describe('CanvasStore', () => {
 
 	// --- respondOk ---
 	it('respondOk sends correct invokeResult params', () => {
-		store.subscribe(eventBus, callFn);
+		store.subscribe(dispatcher.onEvent, callFn);
 		store.handleCommand('canvas.hide', { surfaceId: 'nonexistent' }, 'req-ok');
 
 		expect(callFn).toHaveBeenCalledWith('canvas.bridge.invokeResult', {
@@ -201,7 +212,7 @@ describe('CanvasStore', () => {
 
 	// --- respondError ---
 	it('respondError sends correct invokeResult params', () => {
-		store.subscribe(eventBus, callFn);
+		store.subscribe(dispatcher.onEvent, callFn);
 		store.handleCommand('canvas.unknown', {}, 'req-err');
 
 		expect(callFn).toHaveBeenCalledWith('canvas.bridge.invokeResult', {
@@ -222,9 +233,7 @@ describe('CanvasStore', () => {
 
 		const surfaces = get(store.surfaces);
 		expect(surfaces.size).toBe(2);
-		// existing should NOT be overwritten
 		expect(surfaces.get('existing')!.visible).toBe(true);
-		// new-pin should be created with visible: false
 		expect(surfaces.get('new-pin')!.visible).toBe(false);
 		expect(surfaces.get('new-pin')!.url).toBe('http://new');
 		expect(surfaces.get('new-pin')!.title).toBe('New');
@@ -240,7 +249,7 @@ describe('CanvasStore', () => {
 
 	// --- clear ---
 	it('clear resets all state', () => {
-		store.subscribe(eventBus, callFn);
+		store.subscribe(dispatcher.onEvent, callFn);
 		store.handleCommand('canvas.present', { surfaceId: 'surf-1' });
 		expect(get(store.surfaces).size).toBe(1);
 
@@ -250,17 +259,15 @@ describe('CanvasStore', () => {
 		expect(get(store.currentSurfaceId)).toBeNull();
 	});
 
-	// --- EventBus dispatch: node.invoke.request ---
-	it('EventBus dispatch: node.invoke.request reaches handleCommand', () => {
-		store.subscribe(eventBus, callFn);
+	// --- event dispatch: node.invoke.request ---
+	it('event dispatch: node.invoke.request reaches handleCommand', () => {
+		store.subscribe(dispatcher.onEvent, callFn);
 
-		eventBus.handleFrame(
-			makeEventFrame('node.invoke.request', {
-				id: 'inv-1',
-				command: 'canvas.present',
-				params: { surfaceId: 'evt-surf' }
-			})
-		);
+		dispatcher.dispatch('node.invoke.request', {
+			id: 'inv-1',
+			command: 'canvas.present',
+			params: { surfaceId: 'evt-surf' }
+		});
 
 		expect(get(store.surfaces).has('evt-surf')).toBe(true);
 		expect(callFn).toHaveBeenCalledWith(
@@ -272,32 +279,28 @@ describe('CanvasStore', () => {
 		);
 	});
 
-	// --- EventBus dispatch: canvas.deliver ---
-	it('EventBus dispatch: canvas.deliver reaches handleCommand', () => {
-		store.subscribe(eventBus, callFn);
+	// --- event dispatch: canvas.deliver ---
+	it('event dispatch: canvas.deliver reaches handleCommand', () => {
+		store.subscribe(dispatcher.onEvent, callFn);
 
-		eventBus.handleFrame(
-			makeEventFrame('canvas.deliver', {
-				command: 'canvas.present',
-				params: { surfaceId: 'deliver-surf', title: 'Delivered' }
-			})
-		);
+		dispatcher.dispatch('canvas.deliver', {
+			command: 'canvas.present',
+			params: { surfaceId: 'deliver-surf', title: 'Delivered' }
+		});
 
 		const surface = get(store.surfaces).get('deliver-surf');
 		expect(surface).toBeDefined();
 		expect(surface!.title).toBe('Delivered');
 	});
 
-	// --- EventBus dispatch: canvas.message ---
-	it('EventBus dispatch: canvas.message pushes messages to surface', () => {
-		store.subscribe(eventBus, callFn);
+	// --- event dispatch: canvas.message ---
+	it('event dispatch: canvas.message pushes messages to surface', () => {
+		store.subscribe(dispatcher.onEvent, callFn);
 
-		eventBus.handleFrame(
-			makeEventFrame('canvas.message', {
-				surfaceId: 'msg-surf',
-				messages: [{ type: 'hello' }]
-			})
-		);
+		dispatcher.dispatch('canvas.message', {
+			surfaceId: 'msg-surf',
+			messages: [{ type: 'hello' }]
+		});
 
 		const surface = get(store.surfaces).get('msg-surf');
 		expect(surface).toBeDefined();
