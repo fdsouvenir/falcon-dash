@@ -52,37 +52,42 @@
 
 		const unsubs = [
 			gatewayEvents.on('agent', (payload) => {
+				const ts = payload._timestamp as number | undefined;
 				const stream = payload.stream as string;
 				const phase = (payload.data as Record<string, unknown>)?.phase as string;
 				if (stream === 'lifecycle') {
 					if (phase === 'start') {
-						addItem('lifecycle', 'Agent run started', 'play');
+						addItem('lifecycle', 'Agent run started', 'play', ts);
 					} else if (phase === 'end') {
-						addItem('lifecycle', 'Agent run completed', 'check');
+						addItem('lifecycle', 'Agent run completed', 'check', ts);
 					} else if (phase === 'error') {
-						addItem('lifecycle', 'Agent run errored', 'alert');
+						addItem('lifecycle', 'Agent run errored', 'alert', ts);
 					}
 				}
 			}),
 			gatewayEvents.on('discord', (payload) => {
+				const ts = payload._timestamp as number | undefined;
 				const action = payload.action as string;
 				if (action === 'connected') {
-					addItem('discord', 'Discord bot connected', 'discord');
+					addItem('discord', 'Discord bot connected', 'discord', ts);
 				} else if (action === 'disconnected') {
-					addItem('discord', 'Discord bot disconnected', 'discord');
+					addItem('discord', 'Discord bot disconnected', 'discord', ts);
 				}
 			}),
-			gatewayEvents.on('health', () => {
-				addItem('health', 'Health status updated', 'heart');
+			gatewayEvents.on('health', (payload) => {
+				const ts = payload._timestamp as number | undefined;
+				addItem('health', 'Health status updated', 'heart', ts);
 			}),
 			gatewayEvents.on('exec.approval.requested', (payload) => {
+				const ts = payload._timestamp as number | undefined;
 				const cmd = (payload.command as string) ?? 'command';
-				addItem('approval', `Approval requested: ${cmd}`, 'shield');
+				addItem('approval', `Approval requested: ${cmd}`, 'shield', ts);
 			}),
 			gatewayEvents.on('session', (payload) => {
+				const ts = payload._timestamp as number | undefined;
 				const action = payload.action as string;
 				if (action === 'created') {
-					addItem('session', 'New session created', 'chat');
+					addItem('session', 'New session created', 'chat', ts);
 				}
 			})
 		];
@@ -90,12 +95,12 @@
 		return () => unsubs.forEach((fn) => fn());
 	});
 
-	function addItem(type: ActivityItem['type'], message: string, icon: string) {
+	function addItem(type: ActivityItem['type'], message: string, icon: string, timestamp?: number) {
 		const item: ActivityItem = {
 			id: crypto.randomUUID(),
 			type,
 			message,
-			timestamp: Date.now(),
+			timestamp: timestamp ?? Date.now(),
 			icon
 		};
 		items = [item, ...untrack(() => items)].slice(0, MAX_ITEMS);

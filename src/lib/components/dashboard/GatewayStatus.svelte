@@ -4,18 +4,13 @@
 	let connectionState = $state<string>('disconnected');
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
 	let uptimeMs = $state<number | null>(null);
-	let connectedAt = $state<number | null>(null);
+	let snapshotReceivedAt = $state<number | null>(null);
 	let currentTime = $state(Date.now());
 	let deviceCount = $state(0);
 
 	$effect(() => {
 		const unsub = gatewayEvents.state.subscribe((s) => {
 			connectionState = s;
-			if (s === 'ready' && connectedAt === null) {
-				connectedAt = Date.now();
-			} else if (s === 'disconnected') {
-				connectedAt = null;
-			}
 		});
 		return unsub;
 	});
@@ -23,6 +18,8 @@
 	$effect(() => {
 		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
 			uptimeMs = snap?.snapshot?.uptimeMs ?? null;
+			snapshotReceivedAt =
+				((snap as Record<string, unknown>)?._snapshotReceivedAt as number) ?? null;
 			serverInfo = snap?.server ?? null;
 			deviceCount = (snap?.snapshot?.presence as unknown[] | undefined)?.length ?? 0;
 		});
@@ -73,7 +70,9 @@
 	);
 
 	let gatewayUptime = $derived(
-		uptimeMs != null ? formatUptime(uptimeMs + (currentTime - (connectedAt ?? currentTime))) : null
+		uptimeMs != null && snapshotReceivedAt != null
+			? formatUptime(uptimeMs + (currentTime - snapshotReceivedAt))
+			: null
 	);
 </script>
 

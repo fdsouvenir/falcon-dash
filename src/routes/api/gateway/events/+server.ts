@@ -19,11 +19,19 @@ export const GET: RequestHandler = async ({ request }) => {
 
 			// Send initial snapshot if available
 			if (client.snapshot) {
-				send('snapshot', client.snapshot);
+				send('snapshot', { ...client.snapshot, _snapshotReceivedAt: client.snapshotReceivedAt });
 			}
 
 			// Send current connection state
 			send('gateway-status', { state: client.state });
+
+			// Replay buffered activity events with original timestamps
+			for (const entry of client.activityLog) {
+				send('gateway', {
+					event: entry.event,
+					payload: { ...entry.payload, _timestamp: entry.timestamp }
+				});
+			}
 
 			// Forward gateway events to SSE
 			const unsubEvent = client.onEvent((event) => {
@@ -40,7 +48,7 @@ export const GET: RequestHandler = async ({ request }) => {
 				send('gateway-status', { state });
 				// If we just reconnected, send the new snapshot
 				if (state === 'ready' && client.snapshot) {
-					send('snapshot', client.snapshot);
+					send('snapshot', { ...client.snapshot, _snapshotReceivedAt: client.snapshotReceivedAt });
 				}
 			});
 

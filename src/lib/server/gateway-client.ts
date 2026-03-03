@@ -67,10 +67,27 @@ interface PendingRequest {
 	timer: ReturnType<typeof setTimeout>;
 }
 
+export interface ActivityEntry {
+	event: string;
+	payload: Record<string, unknown>;
+	timestamp: number;
+}
+
+const ACTIVITY_LOG_MAX = 50;
+const ACTIVITY_EVENTS = new Set([
+	'agent',
+	'discord',
+	'health',
+	'exec.approval.requested',
+	'session'
+]);
+
 export class GatewayClient {
 	private ws: WebSocket | null = null;
 	private _state: GatewayState = 'disconnected';
 	private _snapshot: HelloOkPayload | null = null;
+	private _snapshotReceivedAt: number = 0;
+	private _activityLog: ActivityEntry[] = [];
 	private eventHandlers = new Set<EventHandler>();
 	private stateHandlers = new Set<StateHandler>();
 	private pending = new Map<string, PendingRequest>();
@@ -87,6 +104,14 @@ export class GatewayClient {
 
 	get snapshot(): HelloOkPayload | null {
 		return this._snapshot;
+	}
+
+	get snapshotReceivedAt(): number {
+		return this._snapshotReceivedAt;
+	}
+
+	get activityLog(): ActivityEntry[] {
+		return this._activityLog;
 	}
 
 	async connect(): Promise<void> {
@@ -217,6 +242,8 @@ export class GatewayClient {
 				const helloOk = res.payload as unknown as HelloOkPayload;
 				if (helloOk.type === 'hello-ok') {
 					this._snapshot = helloOk;
+					this._snapshotReceivedAt = Date.now();
+					this._activityLog = [];
 					this.reconnectAttempt = 0;
 					this.setState('ready');
 					console.log(
@@ -257,6 +284,17 @@ export class GatewayClient {
 			// Reset tick timer on any event (tick events are the heartbeat)
 			if (evt.event === 'tick') {
 				this.resetTickTimer();
+			}
+			// Buffer activity-relevant events for replay on SSE connect
+			if (ACTIVITY_EVENTS.has(evt.event)) {
+				this._activityLog.push({
+					event: evt.event,
+					payload: evt.payload,
+					timestamp: Date.now()
+				});
+				if (this._activityLog.length > ACTIVITY_LOG_MAX) {
+					this._activityLog.shift();
+				}
 			}
 			for (const handler of this.eventHandlers) {
 				try {

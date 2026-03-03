@@ -62,6 +62,11 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 
 - **2026-02-25 (Claude):** `Math.random()` as an `{#each}` key causes `each_key_volatile` runtime errors in Svelte 5. Use index-based fallback keys like `` `prefix-${i}` `` instead.
 
+## Dashboard State Persistence
+
+- **2026-03-03 (Claude):** Gateway snapshot's `uptimeMs` is a point-in-time value from when the _server_ connected. The browser must use `snapshotReceivedAt` (server timestamp injected as `_snapshotReceivedAt`) to compute correct uptime: `uptimeMs + (now - snapshotReceivedAt)`. Using `Date.now()` at browser connect time causes uptime to reset on page refresh.
+- **2026-03-03 (Claude):** Activity events are buffered server-side in a ring buffer (max 50) on `GatewayClient` and replayed to new SSE connections. Replayed events carry `_timestamp` in the payload so the ActivityFeed shows original event times, not replay time. Buffer is cleared on gateway reconnect (stale events from a different connection aren't useful).
+
 ## Mobile UX
 
 - **2026-03-13 (Claude):** The `MobileShell` BottomTabBar had 5 tabs (Home, Projects, Jobs, Docs, Channels) but 7 pages were completely inaccessible — Ops, Skills, Passwords, Secrets had no mobile nav entry. The "More" tab was conditionally rendered only when pinned apps existed. Fix: always show "More" tab, add Navigate section to MoreSheet.
