@@ -22,6 +22,9 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 
 ## Dev environment
 
+- **2026-03-03 (Claude):** `openclaw config get gateway.auth.token` always returns `__OPENCLAW_REDACTED__` — the CLI redacts sensitive values. Use CLI for port/bind (URL construction) but tokens must come from env vars or direct file read.
+- **2026-03-03 (Claude):** Managed deployments write `OPENCLAW_GATEWAY_TOKEN` (not `GATEWAY_TOKEN`) to the env file. Both are now accepted. `GATEWAY_TOKEN` takes precedence if both are set.
+- **2026-03-03 (Claude):** Never hardcode a default gateway port. The port comes from `openclaw config get gateway --json` or `~/.openclaw/openclaw.json`. The old default of 18789 caused connection failures on deployments using port 28789.
 - **2026-02-25 (Claude, seeded):** No `.env` file is needed in local dev — gateway config is read from `~/.openclaw/openclaw.json` via the `/api/gateway-config` endpoint.
 - **2026-02-25 (Claude, seeded):** Use `journalctl --user -u openclaw-gateway` for gateway logs. The `openclaw logs` command requires its own device pairing and is less practical.
 - **2026-02-25 (Claude, seeded):** `window.__oc` exposes `call`, `connection`, `snapshot`, `eventBus`, and `canvasStore` for runtime debugging in the browser console.

@@ -10,16 +10,18 @@ OpenClaw is a new and rapidly evolving project. Rely on documentation from docs.
 
 ## Your instructions
 
-Document as much as possible. When planning work, always look for relevant github issues to update, and create one if required. You are in charge of ensuring github issues are up to date with reality as you work. Commit early, and commit often. Always err on the side of more commits.
+Document as much as possible. When planning work, always look for relevant github issues to update, and create one if required. You are in charge of ensuring github issues are up to date with reality as you work. Commit early, and commit often. Always err on the side of more commits and add discoveries and gotchas to docs/LEARNINGS.md.
 
 ## Development Environment
 
 This machine hosts the dev repo of falcon-dash and has an openclaw gateway running.
 
-- **`.env` file** — set these to connect to a gateway:
-  - `GATEWAY_URL=ws://<host>:18789` — WebSocket URL of the gateway (default: `ws://127.0.0.1:18789`)
-  - `GATEWAY_TOKEN=<token>` — gateway auth token (auto-read from `~/.openclaw/openclaw.json` if not set)
-- **Gateway config fallback** — if env vars are not set, `/api/gateway-config` reads from `~/.openclaw/openclaw.json` (`gateway.auth.token`, `gateway.port`, `gateway.bind`)
+- **Gateway config resolution** (priority chain, no hardcoded port defaults):
+  - **URL**: `GATEWAY_URL` env → `openclaw config get gateway --json` CLI → `~/.openclaw/openclaw.json` file
+  - **Token**: `GATEWAY_TOKEN` env → `OPENCLAW_GATEWAY_TOKEN` env → `~/.openclaw/openclaw.json` file
+- **`.env` file** — optional overrides for remote gateway development:
+  - `GATEWAY_URL=ws://<host>:<port>` — WebSocket URL of the gateway
+  - `GATEWAY_TOKEN=<token>` — gateway auth token (or `OPENCLAW_GATEWAY_TOKEN` for managed deployments)
 - **Dev auth** — set `gateway.controlUi.allowInsecureAuth: true` in the gateway's `openclaw.json` for token-only auth (no device pairing)
 - **Vite proxy** — dev server proxies `/ws` to `GATEWAY_URL` for WebSocket connections
 - **Production** — set `ORIGIN=https://your-domain.com` to derive `wss://` URLs for reverse proxy

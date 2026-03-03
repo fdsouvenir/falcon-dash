@@ -1,9 +1,6 @@
 import WebSocket from 'ws';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-import { env } from '$env/dynamic/private';
 import { ensureServerIdentity, buildSignMessage, signChallenge } from './server-device-identity.js';
+import { readGatewayConfig } from './gateway-config.js';
 
 const PROTOCOL_VERSION = 3;
 const CLIENT_ID = 'gateway-client';
@@ -70,25 +67,6 @@ interface PendingRequest {
 	timer: ReturnType<typeof setTimeout>;
 }
 
-function readGatewayConfig(): { url: string; token: string } {
-	const envUrl = env.GATEWAY_URL;
-	const envToken = env.GATEWAY_TOKEN;
-	if (envUrl && envToken) {
-		return { url: envUrl.replace(/^ws/, 'ws'), token: envToken };
-	}
-
-	const configPath = join(homedir(), '.openclaw', 'openclaw.json');
-	const raw = readFileSync(configPath, 'utf-8');
-	const config = JSON.parse(raw);
-	const token = config?.gateway?.auth?.token;
-	if (!token) throw new Error('No gateway token in ~/.openclaw/openclaw.json');
-
-	const port = config?.gateway?.port ?? 18789;
-	const bind = config?.gateway?.bind ?? 'loopback';
-	const host = bind === 'loopback' ? '127.0.0.1' : bind;
-	return { url: `ws://${host}:${port}`, token };
-}
-
 export class GatewayClient {
 	private ws: WebSocket | null = null;
 	private _state: GatewayState = 'disconnected';
@@ -111,13 +89,14 @@ export class GatewayClient {
 		return this._snapshot;
 	}
 
-	connect(): void {
+	async connect(): Promise<void> {
 		if (this.ws) return;
 		this.shouldReconnect = true;
 
-		let config: { url: string; token: string };
+		let config: { url: string; token: string; source: string };
 		try {
-			config = readGatewayConfig();
+			config = await readGatewayConfig();
+			console.log(`[gateway-client] Config resolved (${config.source})`);
 		} catch (err) {
 			console.error('[gateway-client] Failed to read gateway config:', err);
 			this.scheduleReconnect();
@@ -408,7 +387,9 @@ let instance: GatewayClient | null = null;
 export function startGatewayClient(): void {
 	if (instance) return;
 	instance = new GatewayClient();
-	instance.connect();
+	instance.connect().catch((err) => {
+		console.error('[gateway-client] Initial connect failed:', err);
+	});
 }
 
 export function getGatewayClient(): GatewayClient {
