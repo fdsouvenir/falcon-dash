@@ -1,10 +1,9 @@
 ---
 name: falcon-dash
 description: >-
-  Falcon Dash operator dashboard — project management, password vault,
-  file browser, cron jobs, and system settings. Use the PM API to track
-  all work discussed in conversation. Use context files (PROJECTS.md,
-  Projects/, PM-API.md) for quick reads.
+  Falcon Dash operator dashboard — project management, password vault, file browser, cron jobs, and
+  system settings. Use the PM API to track all work discussed in conversation. Use context files
+  (PROJECTS.md, Projects/, PM-API.md) for quick reads.
 metadata:
   openclaw:
     emoji: "🦅"
@@ -13,9 +12,11 @@ metadata:
 
 # Falcon Dash
 
-Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000` and provides a web UI for chat, project management, file browsing, cron jobs, passwords, and settings.
+Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000` and provides
+a web UI for chat, project management, file browsing, cron jobs, passwords, and settings.
 
-**You are the agent behind this dashboard.** When work is discussed, track it in the PM system. When credentials are needed, use the KeePassXC vault. The operator sees everything you do in Falcon Dash.
+**You are the agent behind this dashboard.** When work is discussed, track it in the PM system. When
+credentials are needed, use the KeePassXC vault. The operator sees everything you do in Falcon Dash.
 
 ## Project Management
 
@@ -49,10 +50,9 @@ Base URL: `http://localhost:3000/api/pm`
 
 All list endpoints return: `{ items: [...], total, page, limit, hasMore }`
 
-**IDs:** Projects use numeric IDs. Domains and focuses use string slug IDs.
-**Statuses:** `todo`, `in_progress`, `review`, `done`, `cancelled`, `archived`
-**Priorities:** `low`, `normal`, `high`, `urgent`
-**Dates:** ISO 8601 `YYYY-MM-DD`
+**IDs:** Projects use numeric IDs. Domains and focuses use string slug IDs. **Statuses:** `todo`,
+`in_progress`, `review`, `done`, `cancelled`, `archived` **Priorities:** `low`, `normal`, `high`,
+`urgent` **Dates:** ISO 8601 `YYYY-MM-DD`
 
 #### Domains
 
@@ -126,7 +126,9 @@ curl -X POST http://localhost:3000/api/pm/projects \
 
 ## Password Vault (KeePassXC)
 
-Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx`. A separate `keepassxc` skill provides CLI access for reading/writing credentials. Falcon Dash provides the web UI for browsing and managing vault entries.
+Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx`. A separate `keepassxc`
+skill provides CLI access for reading/writing credentials. Falcon Dash provides the web UI for
+browsing and managing vault entries.
 
 ## Other Features
 
