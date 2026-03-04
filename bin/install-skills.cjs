@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * install-skills.cjs — Copy Falcon Dash skills to ~/.openclaw/skills/
  *
@@ -39,7 +40,7 @@ function main() {
 
 	try {
 		fs.mkdirSync(SKILLS_DEST, { recursive: true });
-	} catch (err) {
+	} catch (_err) {
 		// Can't create target — skip silently (CI, containers, etc.)
 		console.log('[falcon-dash] Skipping skill install: cannot create ' + SKILLS_DEST);
 		return;
