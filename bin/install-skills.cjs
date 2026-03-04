@@ -40,7 +40,7 @@ function main() {
 
 	try {
 		fs.mkdirSync(SKILLS_DEST, { recursive: true });
-	} catch (_err) {
+	} catch {
 		// Can't create target — skip silently (CI, containers, etc.)
 		console.log('[falcon-dash] Skipping skill install: cannot create ' + SKILLS_DEST);
 		return;
