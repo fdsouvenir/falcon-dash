@@ -58,7 +58,7 @@
 		"postbuild": "cp src/entry.js build/start.js",
 		"prepublishOnly": "npm run build",
 		"release": "npm version",
-		"postinstall": "node bin/install-skills.js"
+		"postinstall": "node bin/install-skills.cjs"
 	},
 	"lint-staged": {
 		"*.{js,ts,svelte}": [
