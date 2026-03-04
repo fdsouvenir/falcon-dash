@@ -6,7 +6,7 @@ description: >-
   (PROJECTS.md, Projects/, PM-API.md) for quick reads.
 metadata:
   openclaw:
-    emoji: "🦅"
+    emoji: '🦅'
     always: true
 ---
 
