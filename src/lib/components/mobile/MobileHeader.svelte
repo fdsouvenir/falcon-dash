@@ -46,7 +46,8 @@
 		'/projects': 'Projects',
 		'/channels': 'Channels',
 		'/secrets': 'Secrets',
-		'/skills': 'Skills'
+		'/skills': 'Skills',
+		'/passwords': 'Passwords'
 	};
 
 	let title = $derived(() => {
@@ -64,7 +65,7 @@
 	});
 
 	let isSecondaryRoute = $derived(
-		['/documents', '/projects', '/channels', '/secrets'].includes(pathname)
+		['/documents', '/projects', '/channels', '/secrets', '/passwords'].includes(pathname)
 	);
 </script>
 

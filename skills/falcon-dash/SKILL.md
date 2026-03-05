@@ -126,9 +126,93 @@ curl -X POST http://localhost:3000/api/pm/projects \
 
 ## Password Vault (KeePassXC)
 
-Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx`. A separate `keepassxc`
-skill provides CLI access for reading/writing credentials. Falcon Dash provides the web UI for
-browsing and managing vault entries.
+Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx` with key-file auth
+(`~/.openclaw/vault.key`, no master password). The **Passwords** page at `/passwords` provides a
+two-panel UI for browsing groups and entries.
+
+### Vault REST API
+
+Base URL: `http://localhost:3000/api/vault`
+
+#### Status
+
+```
+GET  /api/vault/status          # { available: bool, error?: string }
+```
+
+#### Entries
+
+```
+GET    /api/vault/entries               # List entries in root (or ?group=Group/Sub)
+POST   /api/vault/entries               # Create: { path, username?, password?, url?, notes? }
+GET    /api/vault/entries/{path}        # Get entry (includes password in clear)
+PATCH  /api/vault/entries/{path}        # Edit: { title?, username?, password?, url?, notes? }
+DELETE /api/vault/entries/{path}        # Delete entry
+```
+
+Entry paths use the full KeePassXC path, e.g. `Work/APIs/GitHub`.
+
+#### Groups
+
+```
+GET    /api/vault/groups                # List all groups recursively → { groups: string[] }
+POST   /api/vault/groups                # Create: { path }
+DELETE /api/vault/groups/{path}         # Delete (must be empty)
+```
+
+### Entry fields
+
+Each entry has: `title`, `username`, `password`, `url`, `notes`, `path`.
+
+### Secret Resolver (exec provider)
+
+`bin/keepassxc-secret-resolver.cjs` implements the OpenClaw exec provider protocol for use as a
+gateway secrets source.
+
+**Register it in the gateway:**
+
+```json
+{
+  "secrets": {
+    "providers": [
+      {
+        "type": "exec",
+        "name": "keepassxc",
+        "command": "/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs"
+      }
+    ]
+  }
+}
+```
+
+**Key format:**
+
+| Key | Returns |
+|-----|---------|
+| `Group/Entry` | Password field |
+| `Group/Entry:Password` | Password field (explicit) |
+| `Group/Entry:UserName` | Username field |
+| `Group/Entry:URL` | URL field |
+| `Group/Entry:Notes` | Notes field |
+
+**Protocol:**
+- stdin: `{ "keys": ["Group/Entry", "Group/Entry:UserName"] }`
+- stdout: `{ "Group/Entry": "secret123", "Group/Entry:UserName": "admin" }`
+- exit 0 always (partial results returned with empty string on lookup failure)
+
+### Example: Read an entry
+
+```bash
+curl http://localhost:3000/api/vault/entries/Work/APIs/GitHub
+```
+
+### Example: Create an entry
+
+```bash
+curl -X POST http://localhost:3000/api/vault/entries \
+  -H "Content-Type: application/json" \
+  -d '{"path": "Work/APIs/GitHub", "username": "octocat", "password": "ghp_secret", "url": "https://github.com"}'
+```
 
 ## Other Features
 

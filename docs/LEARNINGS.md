@@ -65,3 +65,12 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 ## Decisions
 
 _(Add architectural and design decisions here as they are made.)_
+
+## KeePassXC Vault
+
+- **2026-03-05 (Claude):** `keepassxc-cli ls` with an empty vault returns empty output with exit 0 — parse defensively, filter blank lines.
+- **2026-03-05 (Claude):** `keepassxc-cli show --show-protected` is required to retrieve password values; without `-s` the Password field is omitted from output.
+- **2026-03-05 (Claude):** `keepassxc-cli add` / `edit` use `-p` / `--password-prompt` to read the entry password from stdin. Pipe the password string + newline to the child process's stdin.
+- **2026-03-05 (Claude):** `keepassxc-cli ls` without `-R` lists only immediate children in the given group. Groups are suffixed with `/`, bare names are entries. Use this to build the group tree incrementally.
+- **2026-03-05 (Claude):** The exec provider secret resolver (`bin/keepassxc-secret-resolver.cjs`) caches `keepassxc-cli show` output per entry within a single invocation to avoid redundant CLI calls when multiple fields of the same entry are requested.
+- **2026-03-05 (Claude):** Entry paths use `/` as the group separator matching KeePassXC's internal path format. URL-encode the path when using it in REST routes — the `[...path]` catch-all receives the decoded string automatically via SvelteKit.
