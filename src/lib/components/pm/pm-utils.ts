@@ -84,6 +84,22 @@ export function getPriorityTag(priority: string | null): { classes: string; labe
 	return null;
 }
 
+/** Named accent colors for domains (keyed by lowercase domain name). */
+export const DOMAIN_ACCENT_COLORS: Record<string, string> = {
+	personal: '#60a5fa',
+	work: '#a78bfa',
+	condo: '#34d399',
+	verl: '#fb923c'
+};
+
+/**
+ * Returns a hex accent color for a domain name.
+ * Falls back to gray for unknown domains.
+ */
+export function getDomainAccentColor(domainName: string): string {
+	return DOMAIN_ACCENT_COLORS[domainName.toLowerCase()] ?? '#6b7280';
+}
+
 /**
  * Smart due date formatting with urgency coloring.
  * Returns null when no due date is set.

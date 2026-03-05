@@ -20,7 +20,7 @@
 		type DashboardContext
 	} from '$lib/stores/pm-operations.js';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { getStatusPill, getPriorityTag, formatDueDate } from './pm-utils.js';
+	import { getStatusPill, formatDueDate, getDomainAccentColor } from './pm-utils.js';
 
 	interface Props {
 		onselect?: (projectId: number) => void;
@@ -34,7 +34,6 @@
 	let loading = $state(false);
 	let filterMode = $state<'active' | 'all' | 'done' | 'archived'>('active');
 	let collapsedDomains = new SvelteSet<string>();
-	let collapsedFocuses = new SvelteSet<string>();
 	let dashStats = $state<PMStats | null>(null);
 	let dashContext = $state<DashboardContext | null>(null);
 
@@ -73,22 +72,18 @@
 			});
 	});
 
-	interface FocusGroup {
-		focus: Focus;
-		projects: Project[];
-	}
-
+	/** Flat project list per domain — focus name shown inline on each row. */
 	interface DomainGroup {
 		domain: Domain;
-		focusGroups: FocusGroup[];
+		projects: Project[];
+		/** Maps focus_id -> focus.name for inline display */
+		focusNames: Record<string, string>;
 		projectCount: number;
 	}
 
 	function sortProjects(projs: Project[]): Project[] {
 		return [...projs].sort((a, b) => {
-			if (a.due_date && b.due_date) {
-				return a.due_date.localeCompare(b.due_date);
-			}
+			if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
 			if (a.due_date && !b.due_date) return -1;
 			if (!a.due_date && b.due_date) return 1;
 			return b.last_activity_at - a.last_activity_at;
@@ -114,41 +109,37 @@
 		const focusMap: Record<string, Focus> = {};
 		for (const f of focusList) focusMap[f.id] = f;
 
-		const domainFocuses: Record<string, Focus[]> = {};
-		for (const f of [...focusList].sort((a, b) => a.sort_order - b.sort_order)) {
-			const list = domainFocuses[f.domain_id] || [];
-			list.push(f);
-			domainFocuses[f.domain_id] = list;
+		const projectsByDomain: Record<string, Project[]> = {};
+		const focusNamesByDomain: Record<string, Record<string, string>> = {};
+
+		for (const p of filtered) {
+			const focus = focusMap[p.focus_id];
+			const domainId = focus?.domain_id;
+			if (!domainId) continue;
+			if (!projectsByDomain[domainId]) {
+				projectsByDomain[domainId] = [];
+				focusNamesByDomain[domainId] = {};
+			}
+			projectsByDomain[domainId].push(p);
+			if (focus) focusNamesByDomain[domainId][p.focus_id] = focus.name;
 		}
 
-		const projectsByFocus: Record<string, Project[]> = {};
-		for (const p of filtered) {
-			const list = projectsByFocus[p.focus_id] || [];
-			list.push(p);
-			projectsByFocus[p.focus_id] = list;
-		}
-		for (const key of Object.keys(projectsByFocus)) {
-			projectsByFocus[key] = sortProjects(projectsByFocus[key]);
+		for (const key of Object.keys(projectsByDomain)) {
+			projectsByDomain[key] = sortProjects(projectsByDomain[key]);
 		}
 
 		const result: DomainGroup[] = [];
 		const sortedDomains = [...domainList].sort((a, b) => a.sort_order - b.sort_order);
 
 		for (const domain of sortedDomains) {
-			const dFocuses = domainFocuses[domain.id] || [];
-			const focusGroups: FocusGroup[] = [];
-			let domainProjectCount = 0;
-
-			for (const focus of dFocuses) {
-				const projs = projectsByFocus[focus.id];
-				if (projs && projs.length > 0) {
-					focusGroups.push({ focus, projects: projs });
-					domainProjectCount += projs.length;
-				}
-			}
-
-			if (focusGroups.length > 0) {
-				result.push({ domain, focusGroups, projectCount: domainProjectCount });
+			const projs = projectsByDomain[domain.id];
+			if (projs && projs.length > 0) {
+				result.push({
+					domain,
+					projects: projs,
+					focusNames: focusNamesByDomain[domain.id] || {},
+					projectCount: projs.length
+				});
 			}
 		}
 
@@ -170,30 +161,11 @@
 		);
 	});
 
-	// Attention items: dueSoon + blocked, max 3
-	const attentionItems = $derived.by(() => {
-		if (!dashContext) return [];
-		const items: Array<{ id: number; title: string; tag: string; tagColor: string }> = [];
-		for (const d of dashContext.dueSoon) {
-			if (items.length >= 3) break;
-			items.push({ id: d.id, title: d.title, tag: 'due soon', tagColor: 'text-amber-400' });
-		}
-		return items;
-	});
-
 	function toggleDomain(domainId: string) {
 		if (collapsedDomains.has(domainId)) {
 			collapsedDomains.delete(domainId);
 		} else {
 			collapsedDomains.add(domainId);
-		}
-	}
-
-	function toggleFocus(focusId: string) {
-		if (collapsedFocuses.has(focusId)) {
-			collapsedFocuses.delete(focusId);
-		} else {
-			collapsedFocuses.add(focusId);
 		}
 	}
 
@@ -203,31 +175,48 @@
 		{ key: 'done', label: 'Done' },
 		{ key: 'archived', label: 'Archived' }
 	];
+
+	function priorityEmoji(priority: string | null): string {
+		if (priority === 'urgent') return '🔴';
+		if (priority === 'high') return '🟡';
+		if (priority === 'normal') return '🟢';
+		return '';
+	}
 </script>
 
-{#snippet projectRow(project: Project)}
+{#snippet projectRow(project: Project, accentColor: string, focusName: string | null)}
 	{@const status = getStatusPill(project.status)}
-	{@const priority = getPriorityTag(project.priority)}
 	{@const due = formatDueDate(project.due_date)}
 	<button
-		class="flex min-h-[40px] w-full items-center gap-3 py-2 pl-12 pr-4 text-left transition-colors hover:bg-gray-800/60"
+		class="relative flex h-[38px] w-full items-center gap-2 overflow-hidden pl-4 pr-3 text-left transition-colors hover:bg-gray-800/60"
 		onclick={() => onselect?.(project.id)}
 	>
-		<span class="min-w-0 flex-1 truncate text-sm text-gray-200">
+		<!-- 4px colored left accent bar -->
+		<span class="absolute left-0 top-0 h-full w-1" style="background: {accentColor}"></span>
+
+		<!-- Title -->
+		<span class="min-w-0 flex-1 truncate text-[13px] font-medium leading-none text-white">
 			{project.title}
 		</span>
-		<span class="w-[72px] shrink-0 text-center rounded-full px-2 py-0.5 text-xs {status.classes}">
+
+		<!-- Focus name tag -->
+		{#if focusName}
+			<span class="max-w-[72px] shrink-0 truncate text-[11px] text-gray-500">{focusName}</span>
+		{/if}
+
+		<!-- Status pill -->
+		<span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-tight {status.classes}">
 			{status.label}
 		</span>
-		<span class="hidden w-[52px] shrink-0 text-center sm:inline-flex sm:justify-center">
-			{#if priority}
-				<span class="rounded-full px-1.5 py-0.5 text-xs {priority.classes}">
-					{priority.label}
-				</span>
-			{/if}
+
+		<!-- Priority emoji -->
+		<span class="w-3.5 shrink-0 text-center text-[11px] leading-none">
+			{priorityEmoji(project.priority)}
 		</span>
-		<span class="w-[72px] shrink-0 text-right text-xs {due?.color || 'text-gray-600'}">
-			{due?.text || '\u2014'}
+
+		<!-- Due date -->
+		<span class="w-[64px] shrink-0 text-right text-[11px] {due?.color || 'text-gray-600'}">
+			{due?.text || ''}
 		</span>
 	</button>
 {/snippet}
@@ -236,47 +225,26 @@
 	{#if loading}
 		<div class="flex flex-1 items-center justify-center text-base text-gray-400">Loading...</div>
 	{:else}
-		<!-- Dashboard header -->
-		<div class="border-b border-gray-800 px-4 pt-4 pb-3">
-			<!-- Stat cards -->
+		<!-- Header: compact inline stats + filter pills -->
+		<div class="border-b border-gray-800 px-4 py-2.5">
 			{#if dashStats}
-				<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
-						<div class="text-xs text-gray-500">Total</div>
-						<div class="text-lg font-semibold text-white">{dashStats.projects.total}</div>
-					</div>
-					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
-						<div class="text-xs text-gray-500">Active</div>
-						<div class="text-lg font-semibold text-green-400">
-							{dashStats.projects.byStatus.in_progress || 0}
-						</div>
-					</div>
-					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
-						<div class="text-xs text-gray-500">Due Soon</div>
-						<div class="text-lg font-semibold text-amber-400">
-							{dashContext?.dueSoon?.length ?? 0}
-						</div>
-					</div>
-					<div class="stat-card rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
-						<div class="text-xs text-gray-500">Overdue</div>
-						<div class="text-lg font-semibold text-red-400">{dashStats.overdue}</div>
-					</div>
-				</div>
-			{/if}
-
-			<!-- Attention items -->
-			{#if attentionItems.length > 0}
-				<div class="mb-3 flex flex-wrap gap-1.5">
-					{#each attentionItems as item, i (item.id)}
-						<button
-							class="attention-chip flex items-center gap-1.5 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs transition-colors hover:border-gray-600"
-							style="animation-delay: {200 + i * 50}ms"
-							onclick={() => onselect?.(item.id)}
-						>
-							<span class="truncate text-white">{item.title}</span>
-							<span class={item.tagColor}>{item.tag}</span>
-						</button>
-					{/each}
+				<div class="mb-2 flex items-center gap-4 text-xs">
+					<span class="text-gray-500"
+						>Total <span class="font-medium text-white">{dashStats.projects.total}</span></span
+					>
+					<span class="text-gray-500"
+						>Active <span class="font-medium text-green-400"
+							>{dashStats.projects.byStatus.in_progress || 0}</span
+						></span
+					>
+					<span class="text-gray-500"
+						>Due Soon <span class="font-medium text-amber-400"
+							>{dashContext?.dueSoon?.length ?? 0}</span
+						></span
+					>
+					<span class="text-gray-500"
+						>Overdue <span class="font-medium text-red-400">{dashStats.overdue}</span></span
+					>
 				</div>
 			{/if}
 
@@ -298,7 +266,7 @@
 			</div>
 		</div>
 
-		<!-- Grouped project list -->
+		<!-- Grouped project list (flat rows per domain, no focus sub-headers) -->
 		<div class="flex-1 overflow-y-auto">
 			{#if grouped.length === 0 && orphanProjects.length === 0}
 				<div class="flex items-center justify-center p-8 text-base text-gray-500">
@@ -306,9 +274,11 @@
 				</div>
 			{:else}
 				{#each grouped as group (group.domain.id)}
-					<!-- Domain header -->
+					{@const accentColor = getDomainAccentColor(group.domain.name)}
+
+					<!-- Domain section header -->
 					<button
-						class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-gray-800/50"
+						class="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-gray-800/50"
 						onclick={() => toggleDomain(group.domain.id)}
 					>
 						<svg
@@ -322,56 +292,31 @@
 						>
 							<path d="M2 4l4 4 4-4z" />
 						</svg>
-						<span class="text-xs font-semibold uppercase tracking-wider text-gray-400">
+						<span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
 							{group.domain.name}
 						</span>
-						<span class="text-xs text-gray-600">({group.projectCount})</span>
+						<span class="text-[10px] text-gray-600">({group.projectCount})</span>
 					</button>
 
+					<!-- Flat project rows (focus name shown inline) -->
 					<div class="collapse-section {collapsedDomains.has(group.domain.id) ? 'collapsed' : ''}">
 						<div>
-							{#each group.focusGroups as fg (fg.focus.id)}
-								<!-- Focus sub-header -->
-								<button
-									class="flex w-full items-center gap-1.5 py-1 pl-9 pr-4 text-left text-xs text-gray-500 hover:bg-gray-800/30"
-									onclick={() => toggleFocus(fg.focus.id)}
-								>
-									<svg
-										class="h-2.5 w-2.5 text-gray-600 transition-transform duration-200 {collapsedFocuses.has(
-											fg.focus.id
-										)
-											? '-rotate-90'
-											: ''}"
-										fill="currentColor"
-										viewBox="0 0 12 12"
-									>
-										<path d="M2 4l4 4 4-4z" />
-									</svg>
-									<span>{fg.focus.name}</span>
-									<span class="text-gray-600">({fg.projects.length})</span>
-								</button>
-
-								<!-- Project rows -->
-								<div
-									class="collapse-section {collapsedFocuses.has(fg.focus.id) ? 'collapsed' : ''}"
-								>
-									<div>
-										{#each fg.projects as project (project.id)}
-											{@render projectRow(project)}
-										{/each}
-									</div>
-								</div>
+							{#each group.projects as project (project.id)}
+								{@render projectRow(
+									project,
+									accentColor,
+									group.focusNames[project.focus_id] ?? null
+								)}
 							{/each}
 						</div>
 					</div>
 				{/each}
 
-				<!-- Orphan projects (not in any known domain) -->
 				{#if orphanProjects.length > 0}
 					<div class="mt-1 border-t border-gray-700 pt-1">
-						<div class="px-4 py-1.5 text-xs text-gray-500">Other</div>
+						<div class="px-4 py-1 text-[11px] text-gray-500">Other</div>
 						{#each orphanProjects as project (project.id)}
-							{@render projectRow(project)}
+							{@render projectRow(project, '#6b7280', null)}
 						{/each}
 					</div>
 				{/if}
@@ -391,33 +336,5 @@
 	}
 	.collapse-section > div {
 		overflow: hidden;
-	}
-
-	.stat-card {
-		animation: fadeSlideUp 300ms ease-out both;
-	}
-	.stat-card:nth-child(2) {
-		animation-delay: 50ms;
-	}
-	.stat-card:nth-child(3) {
-		animation-delay: 100ms;
-	}
-	.stat-card:nth-child(4) {
-		animation-delay: 150ms;
-	}
-
-	.attention-chip {
-		animation: fadeSlideUp 300ms ease-out both;
-	}
-
-	@keyframes fadeSlideUp {
-		from {
-			opacity: 0;
-			transform: translateY(8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
 	}
 </style>
