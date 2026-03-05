@@ -2,6 +2,7 @@
 	import EntryList from '$lib/components/vault/EntryList.svelte';
 	import EntryDetail from '$lib/components/vault/EntryDetail.svelte';
 	import AddEntryForm from '$lib/components/vault/AddEntryForm.svelte';
+	import AddGroupForm from '$lib/components/vault/AddGroupForm.svelte';
 
 	import {
 		vaultAvailable,
@@ -13,6 +14,7 @@
 
 	let selectedEntryPath = $state<string | null>(null);
 	let showAddForm = $state(false);
+	let showAddGroupForm = $state(false);
 	let available = $derived($vaultAvailable);
 	let checked = $derived($vaultChecked);
 
@@ -94,7 +96,7 @@
 {:else}
 	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
 		<div class="flex-1 overflow-hidden">
-			<EntryList onselect={openEntry} onadd={() => (showAddForm = true)} />
+			<EntryList onselect={openEntry} onadd={() => (showAddForm = true)} onaddgroup={() => (showAddGroupForm = true)} />
 		</div>
 
 		{#if selectedEntryPath !== null}
@@ -111,6 +113,17 @@
 		<AddEntryForm
 			onCancel={() => (showAddForm = false)}
 			onCreated={handleCreated}
+		/>
+	{/if}
+
+	{#if showAddGroupForm}
+		<AddGroupForm
+			onCancel={() => (showAddGroupForm = false)}
+			onCreated={() => {
+				showAddGroupForm = false;
+				loadEntries();
+				loadGroups();
+			}}
 		/>
 	{/if}
 {/if}

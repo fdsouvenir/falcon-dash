@@ -13,9 +13,10 @@
 	interface Props {
 		onselect?: (path: string) => void;
 		onadd?: () => void;
+		onaddgroup?: () => void;
 	}
 
-	let { onselect, onadd }: Props = $props();
+	let { onselect, onadd, onaddgroup }: Props = $props();
 
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -104,12 +105,20 @@
 					{#if subGroups.length > 0}, {subGroups.length} {subGroups.length === 1 ? 'group' : 'groups'}{/if}
 				</span>
 			</div>
-			<button
-				onclick={onadd}
-				class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-			>
-				+ New Entry
-			</button>
+			<div class="flex items-center gap-2">
+				<button
+					onclick={onaddgroup}
+					class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-gray-600"
+				>
+					+ New Group
+				</button>
+				<button
+					onclick={onadd}
+					class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+				>
+					+ New Entry
+				</button>
+			</div>
 		</div>
 	</div>
 
