@@ -49,7 +49,6 @@
 		showAddForm = false;
 		loadEntries();
 		loadGroups();
-		// Auto-open the newly created entry
 		openEntry(path);
 	}
 
@@ -65,14 +64,14 @@
 </svelte:head>
 
 {#if !checked}
-	<div class="flex h-full items-center justify-center bg-gray-900 text-base text-gray-400">
+	<div class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted">
 		Loading...
 	</div>
 {:else if !available}
-	<div class="flex h-full items-center justify-center bg-gray-900 text-white">
-		<div class="rounded-lg border border-gray-700 bg-gray-800 p-8 text-center">
+	<div class="flex h-full items-center justify-center bg-surface-0 text-white">
+		<div class="rounded-lg border border-surface-border bg-surface-2 p-8 text-center">
 			<svg
-				class="mx-auto mb-4 h-12 w-12 text-gray-600"
+				class="mx-auto mb-4 h-12 w-12 text-status-muted"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -84,17 +83,17 @@
 					d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
 				/>
 			</svg>
-			<h2 class="mb-2 text-xl font-semibold">Vault Not Available</h2>
-			<p class="text-base text-gray-400">
+			<h2 class="mb-2 text-[length:var(--text-page-title)] font-bold">Vault Not Available</h2>
+			<p class="text-[length:var(--text-body)] text-status-muted">
 				KeePassXC vault not found or cannot be unlocked.
 			</p>
-			<p class="mt-1 text-xs text-gray-600">
+			<p class="mt-1 text-[length:var(--text-label)] text-status-muted/60">
 				Expected: ~/.openclaw/passwords.kdbx with ~/.openclaw/vault.key
 			</p>
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
+	<div class="flex h-full overflow-hidden bg-surface-0 text-white">
 		<div class="flex-1 overflow-hidden">
 			<EntryList onselect={openEntry} onadd={() => (showAddForm = true)} onaddgroup={() => (showAddGroupForm = true)} />
 		</div>

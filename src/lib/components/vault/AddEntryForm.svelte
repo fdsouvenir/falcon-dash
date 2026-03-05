@@ -57,11 +57,11 @@
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 	onkeydown={handleKeydown}
 >
-	<div class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+	<div class="w-full max-w-md rounded-lg border border-surface-border bg-surface-1 shadow-xl">
 		<!-- Header -->
-		<div class="flex items-center justify-between border-b border-gray-700 px-4 py-3">
-			<h2 class="text-sm font-semibold text-white">New Entry</h2>
-			<button onclick={onCancel} class="text-gray-500 hover:text-gray-300">
+		<div class="flex items-center justify-between border-b border-surface-border px-4 py-3">
+			<h2 class="text-[length:var(--text-card-title)] font-medium text-white">New Entry</h2>
+			<button onclick={onCancel} class="text-status-muted hover:text-white">
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 				</svg>
@@ -72,45 +72,45 @@
 		<form onsubmit={handleSubmit} class="space-y-4 p-4">
 			<!-- Group context -->
 			{#if group}
-				<div class="rounded-lg bg-gray-800/60 px-3 py-2 text-xs text-gray-400">
-					Group: <span class="font-mono text-gray-300">{group}</span>
+				<div class="rounded-lg bg-surface-3 px-3 py-2 text-[length:var(--text-badge)] text-status-muted">
+					Group: <span class="font-mono text-white">{group}</span>
 				</div>
 			{/if}
 
 			<!-- Title -->
 			<div>
-				<label for="entry-title" class="mb-1 block text-xs font-medium text-gray-400">Title *</label>
+				<label for="entry-title" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Title *</label>
 				<input
 					id="entry-title"
 					type="text"
 					bind:value={title}
 					placeholder="e.g. GitHub API Key"
 					required
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 				/>
 			</div>
 
 			<!-- Username -->
 			<div>
-				<label for="entry-username" class="mb-1 block text-xs font-medium text-gray-400">Username</label>
+				<label for="entry-username" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Username</label>
 				<input
 					id="entry-username"
 					type="text"
 					bind:value={username}
 					placeholder="user@example.com"
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 				/>
 			</div>
 
 			<!-- Password -->
 			<div>
 				<div class="mb-1 flex items-center justify-between">
-					<label for="entry-password" class="text-xs font-medium text-gray-400">Password</label>
-					<label class="flex cursor-pointer items-center gap-1.5 text-xs text-gray-500">
+					<label for="entry-password" class="text-[length:var(--text-badge)] font-medium text-status-muted">Password</label>
+					<label class="flex cursor-pointer items-center gap-1.5 text-[length:var(--text-badge)] text-status-muted">
 						<input
 							type="checkbox"
 							bind:checked={generatePassword}
-							class="rounded border-gray-600"
+							class="rounded border-surface-border"
 						/>
 						Auto-generate
 					</label>
@@ -122,12 +122,12 @@
 							type={showPassword ? 'text' : 'password'}
 							bind:value={password}
 							placeholder="Enter password"
-							class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 pr-9 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 pr-9 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 						/>
 						<button
 							type="button"
 							onclick={() => (showPassword = !showPassword)}
-							class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+							class="absolute right-2 top-1/2 -translate-y-1/2 text-status-muted hover:text-white"
 						>
 							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								{#if showPassword}
@@ -140,7 +140,7 @@
 						</button>
 					</div>
 				{:else}
-					<div class="rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs text-gray-400">
+					<div class="rounded-lg border border-surface-border bg-surface-3 px-3 py-2 text-[length:var(--text-badge)] text-status-muted">
 						A strong password will be generated automatically.
 					</div>
 				{/if}
@@ -148,25 +148,25 @@
 
 			<!-- URL -->
 			<div>
-				<label for="entry-url" class="mb-1 block text-xs font-medium text-gray-400">URL</label>
+				<label for="entry-url" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">URL</label>
 				<input
 					id="entry-url"
 					type="url"
 					bind:value={url}
 					placeholder="https://example.com"
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 				/>
 			</div>
 
 			<!-- Notes -->
 			<div>
-				<label for="entry-notes" class="mb-1 block text-xs font-medium text-gray-400">Notes</label>
+				<label for="entry-notes" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Notes</label>
 				<textarea
 					id="entry-notes"
 					bind:value={notes}
 					rows="3"
 					placeholder="Optional notes"
-					class="w-full resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full resize-none rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 				></textarea>
 			</div>
 
@@ -175,14 +175,14 @@
 				<button
 					type="button"
 					onclick={onCancel}
-					class="rounded-lg px-4 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-white"
+					class="rounded-lg px-4 py-2 text-[length:var(--text-body)] text-status-muted hover:bg-surface-3 hover:text-white"
 				>
 					Cancel
 				</button>
 				<button
 					type="submit"
 					disabled={saving || !title.trim()}
-					class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+					class="rounded-lg bg-status-active px-4 py-2 text-[length:var(--text-body)] font-medium text-white hover:opacity-80 disabled:opacity-50"
 				>
 					{saving ? 'Creating…' : 'Create Entry'}
 				</button>
