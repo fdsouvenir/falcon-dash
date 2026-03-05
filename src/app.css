@@ -35,10 +35,39 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+
+	/* ── Surface layer classes ── */
+	--color-surface-0: var(--surface-0);
+	--color-surface-1: var(--surface-1);
+	--color-surface-2: var(--surface-2);
+	--color-surface-3: var(--surface-3);
+	--color-surface-border: var(--surface-border);
+
+	/* ── Semantic status classes ── */
+	--color-status-active: var(--status-active);
+	--color-status-active-bg: var(--status-active-bg);
+	--color-status-warning: var(--status-warning);
+	--color-status-warning-bg: var(--status-warning-bg);
+	--color-status-danger: var(--status-danger);
+	--color-status-danger-bg: var(--status-danger-bg);
+	--color-status-info: var(--status-info);
+	--color-status-info-bg: var(--status-info-bg);
+	--color-status-muted: var(--status-muted);
+	--color-status-muted-bg: var(--status-muted-bg);
+	--color-status-purple: var(--status-purple);
+	--color-status-purple-bg: var(--status-purple-bg);
+
+	/* ── Domain accent classes ── */
+	--color-domain-personal: var(--domain-personal);
+	--color-domain-work: var(--domain-work);
+	--color-domain-condo: var(--domain-condo);
+	--color-domain-verl: var(--domain-verl);
 }
 
 :root {
 	--radius: 0.625rem;
+
+	/* ── Shadcn base tokens (existing) ── */
 	--background: oklch(0.129 0.042 264.695);
 	--foreground: oklch(0.984 0.003 247.858);
 	--card: oklch(0.129 0.042 264.695);
@@ -65,6 +94,51 @@
 	--sidebar-accent-foreground: oklch(0.929 0.013 255.508);
 	--sidebar-border: oklch(0.278 0.033 256.848);
 	--sidebar-ring: oklch(0.551 0.027 264.364);
+
+	/* ── Surface layers (4-level depth system) ── */
+	--surface-0: #0a0a0f;
+	--surface-1: #12121a;
+	--surface-2: #1a1a2e;
+	--surface-3: #2a2a3e;
+	--surface-border: rgba(42, 42, 62, 0.6);
+
+	/* ── Semantic status colors ── */
+	--status-active: #4ade80;
+	--status-active-bg: rgba(74, 222, 128, 0.12);
+	--status-warning: #fbbf24;
+	--status-warning-bg: rgba(251, 191, 36, 0.12);
+	--status-danger: #f87171;
+	--status-danger-bg: rgba(248, 113, 113, 0.12);
+	--status-info: #60a5fa;
+	--status-info-bg: rgba(96, 165, 250, 0.12);
+	--status-muted: #6b7280;
+	--status-muted-bg: rgba(107, 114, 128, 0.12);
+	--status-purple: #a78bfa;
+	--status-purple-bg: rgba(167, 139, 250, 0.12);
+
+	/* ── Domain accent colors ── */
+	--domain-personal: #60a5fa;
+	--domain-work: #a78bfa;
+	--domain-condo: #34d399;
+	--domain-verl: #fb923c;
+
+	/* ── Typography scale ── */
+	--text-page-title: 1.25rem;
+	--text-section-header: 0.6875rem;
+	--text-card-title: 0.875rem;
+	--text-body: 0.8125rem;
+	--text-label: 0.6875rem;
+	--text-badge: 0.625rem;
+	--text-mono: 0.75rem;
+
+	/* ── Spacing scale ── */
+	--space-card-padding: 1rem;
+	--space-card-gap: 0.5rem;
+	--space-section-gap: 1.5rem;
+	--space-row-x: 0.875rem;
+	--space-row-y: 0.625rem;
+	--space-badge-x: 0.625rem;
+	--space-badge-y: 0.125rem;
 }
 
 /* Prevent document-level scrolling in PWA standalone mode */
