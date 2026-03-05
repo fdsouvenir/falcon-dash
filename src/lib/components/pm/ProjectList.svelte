@@ -20,7 +20,8 @@
 		type DashboardContext
 	} from '$lib/stores/pm-operations.js';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { getStatusPill, formatDueDate, getDomainAccentColor } from './pm-utils.js';
+	import { formatDueDate, formatStatusLabel, getDomainAccentColor } from './pm-utils.js';
+	import { getStatusColor, BADGE, getPriority } from '$lib/components/ui/design-tokens.js';
 
 	interface Props {
 		onselect?: (projectId: number) => void;
@@ -176,77 +177,57 @@
 		{ key: 'done', label: 'Done' },
 		{ key: 'archived', label: 'Archived' }
 	];
-
-	function priorityEmoji(priority: string | null): string {
-		if (priority === 'urgent') return '🔴';
-		if (priority === 'high') return '🔴';
-		if (priority === 'medium') return '🟡';
-		if (priority === 'normal' || priority === 'low') return '🟢';
-		return '';
-	}
 </script>
 
 {#snippet projectRow(project: Project, accentColor: string, focusName: string | null)}
-	{@const status = getStatusPill(project.status)}
+	{@const statusKey = getStatusColor(project.status)}
 	{@const due = formatDueDate(project.due_date)}
-	{@const pri = priorityEmoji(project.priority)}
+	{@const pri = getPriority(project.priority)}
 	{@const isSelected = selectedId === project.id}
 	<button
-		class="relative mx-2 my-[2px] flex items-center gap-2.5 overflow-hidden rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors {isSelected ? 'bg-gray-700/80' : 'hover:bg-gray-800/60'}"
+		class="relative mx-2 my-[2px] flex items-center gap-2.5 overflow-hidden rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors {isSelected ? 'bg-surface-3' : 'hover:bg-surface-3/60'}"
 		onclick={() => onselect?.(project.id)}
 	>
 		<!-- 5px colored left accent bar -->
-		<span class="absolute left-0 top-1 bottom-1 w-[5px] rounded-r" style="background: {accentColor}"></span>
+		<span class="absolute bottom-1 left-0 top-1 w-[5px] rounded-r" style="background: {accentColor}"></span>
 
 		<!-- Title + focus on same line -->
-		<span class="min-w-0 flex-1 truncate text-[13px] font-medium text-white">
+		<span class="min-w-0 flex-1 truncate text-[length:var(--text-card-title)] font-medium text-white">
 			{project.title}
 			{#if focusName}
-				<span class="ml-1.5 text-[11px] font-normal text-gray-500">· {focusName}</span>
+				<span class="ml-1.5 text-[length:var(--text-label)] font-normal text-status-muted">· {focusName}</span>
 			{/if}
 		</span>
 
 		<!-- Status pill -->
-		<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium leading-tight {status.classes}">
-			{status.label}
+		<span class="shrink-0 {BADGE.status(statusKey)}">
+			{formatStatusLabel(project.status)}
 		</span>
 
 		<!-- Priority emoji -->
 		{#if pri}
-			<span class="shrink-0 text-[12px]">{pri}</span>
+			<span class="shrink-0 text-[12px]">{pri.emoji}</span>
 		{/if}
 
 		<!-- Due date -->
 		{#if due}
-			<span class="shrink-0 text-[11px] {due.color}">{due.text}</span>
+			<span class="shrink-0 text-[length:var(--text-label)] {due.color}">{due.text}</span>
 		{/if}
 	</button>
 {/snippet}
 
 <div class="flex h-full flex-col overflow-auto">
 	{#if loading}
-		<div class="flex flex-1 items-center justify-center text-base text-gray-400">Loading...</div>
+		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted">Loading...</div>
 	{:else}
 		<!-- Header: compact inline stats + filter pills -->
-		<div class="border-b border-gray-800 px-4 py-2.5">
+		<div class="border-b border-surface-border bg-surface-1 px-4 py-2.5">
 			{#if dashStats}
-				<div class="mb-2 flex items-center gap-4 text-xs">
-					<span class="text-gray-500"
-						>Total <span class="font-medium text-white">{dashStats.projects.total}</span></span
-					>
-					<span class="text-gray-500"
-						>Active <span class="font-medium text-green-400"
-							>{dashStats.projects.byStatus.in_progress || 0}</span
-						></span
-					>
-					<span class="text-gray-500"
-						>Due Soon <span class="font-medium text-amber-400"
-							>{dashContext?.dueSoon?.length ?? 0}</span
-						></span
-					>
-					<span class="text-gray-500"
-						>Overdue <span class="font-medium text-red-400">{dashStats.overdue}</span></span
-					>
+				<div class="mb-2 flex items-center gap-4 text-[length:var(--text-label)]">
+					<span class="text-status-muted">Total <span class="font-medium text-white">{dashStats.projects.total}</span></span>
+					<span class="text-status-muted">Active <span class="font-medium text-status-active">{dashStats.projects.byStatus.in_progress || 0}</span></span>
+					<span class="text-status-muted">Due Soon <span class="font-medium text-status-warning">{dashContext?.dueSoon?.length ?? 0}</span></span>
+					<span class="text-status-muted">Overdue <span class="font-medium text-status-danger">{dashStats.overdue}</span></span>
 				</div>
 			{/if}
 
@@ -254,10 +235,9 @@
 			<div class="flex gap-1.5">
 				{#each filters as f (f.key)}
 					<button
-						class="rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 {filterMode ===
-						f.key
-							? 'bg-gray-700 text-white'
-							: 'text-gray-400 hover:text-gray-200'}"
+						class="rounded-full px-3 py-1 text-[length:var(--text-badge)] font-medium transition-all duration-150 {filterMode === f.key
+							? 'bg-surface-3 text-white'
+							: 'text-status-muted hover:text-white'}"
 						onclick={() => {
 							filterMode = f.key;
 						}}
@@ -271,7 +251,7 @@
 		<!-- Grouped project list (flat rows per domain, no focus sub-headers) -->
 		<div class="flex-1 overflow-y-auto">
 			{#if grouped.length === 0 && orphanProjects.length === 0}
-				<div class="flex items-center justify-center p-8 text-base text-gray-500">
+				<div class="flex items-center justify-center p-8 text-[length:var(--text-body)] text-status-muted">
 					No projects found
 				</div>
 			{:else}
@@ -280,24 +260,23 @@
 
 					<!-- Domain section header -->
 					<button
-						class="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-gray-800/50"
+						class="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-surface-3/40"
 						onclick={() => toggleDomain(group.domain.id)}
 					>
 						<svg
-							class="h-3 w-3 text-gray-500 transition-transform duration-200 {collapsedDomains.has(
-								group.domain.id
-							)
-								? '-rotate-90'
-								: ''}"
+							class="h-3 w-3 text-status-muted transition-transform duration-200 {collapsedDomains.has(group.domain.id) ? '-rotate-90' : ''}"
 							fill="currentColor"
 							viewBox="0 0 12 12"
 						>
 							<path d="M2 4l4 4 4-4z" />
 						</svg>
-						<span class="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+						<span
+							class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider"
+							style="color: {accentColor}"
+						>
 							{group.domain.name}
 						</span>
-						<span class="text-[10px] text-gray-600">({group.projectCount})</span>
+						<span class="text-[length:var(--text-label)] text-status-muted/50">({group.projectCount})</span>
 					</button>
 
 					<!-- Flat project rows (focus name shown inline) -->
@@ -315,8 +294,8 @@
 				{/each}
 
 				{#if orphanProjects.length > 0}
-					<div class="mt-1 border-t border-gray-700 pt-1">
-						<div class="px-4 py-1 text-[11px] text-gray-500">Other</div>
+					<div class="mt-1 border-t border-surface-border pt-1">
+						<div class="px-4 py-1 text-[length:var(--text-label)] text-status-muted">Other</div>
 						{#each orphanProjects as project (project.id)}
 							{@render projectRow(project, '#6b7280', null)}
 						{/each}

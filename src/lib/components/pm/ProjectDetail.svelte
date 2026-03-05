@@ -3,12 +3,8 @@
 	import { getProject, type Project } from '$lib/stores/pm-projects.js';
 	import { listActivities, type Activity } from '$lib/stores/pm-operations.js';
 	import { getDomain, getFocus, type Domain, type Focus } from '$lib/stores/pm-domains.js';
-	import {
-		STATUS_BADGE,
-		formatStatusLabel,
-		formatRelativeTime,
-		getPriorityTag
-	} from './pm-utils.js';
+	import { formatStatusLabel, formatRelativeTime } from './pm-utils.js';
+	import { getStatusColor, BADGE, getPriority } from '$lib/components/ui/design-tokens.js';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 
 	interface Props {
@@ -58,29 +54,29 @@
 
 <!-- Inline side panel — slides in from the right -->
 <div
-	class="flex h-full min-w-[320px] flex-[2] flex-col overflow-hidden border-l border-gray-700 bg-gray-900"
+	class="flex h-full min-w-[320px] flex-[2] flex-col overflow-hidden border-l border-surface-border bg-surface-1"
 	transition:fly={{ x: 420, duration: 200 }}
 >
 	{#if loading}
-		<div class="p-8 text-center text-base text-gray-400">Loading...</div>
+		<div class="p-8 text-center text-[length:var(--text-body)] text-status-muted">Loading...</div>
 	{:else if error}
 		<div class="p-8">
-			<div class="mb-4 text-base text-red-500">Error: {error}</div>
+			<div class="mb-4 text-[length:var(--text-body)] text-status-danger">Error: {error}</div>
 			<button
 				onclick={onClose}
-				class="min-h-[44px] rounded bg-gray-700 px-4 py-3 text-base text-white hover:bg-gray-600"
+				class="min-h-[44px] rounded-lg border border-surface-border bg-surface-2 px-4 py-3 text-[length:var(--text-body)] text-white hover:bg-surface-3"
 			>
 				Close
 			</button>
 		</div>
 	{:else if project}
 		<!-- Header -->
-		<div class="border-b border-gray-700 bg-gray-800 px-3 py-2">
+		<div class="border-b border-surface-border bg-surface-1 px-3 py-2">
 			<!-- Row 1: breadcrumb bar -->
 			<div class="flex min-h-[36px] items-center gap-2">
 				<button
 					onclick={onClose}
-					class="min-h-[36px] min-w-[36px] shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-700 hover:text-white"
+					class="min-h-[36px] min-w-[36px] shrink-0 rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
 					title="Back"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,55 +90,52 @@
 				</button>
 
 				{#if domain && focus}
-					<span class="shrink-0 text-xs text-gray-500">
+					<span class="shrink-0 text-[length:var(--text-label)] text-status-muted">
 						{domain.name} / {focus.name}
 					</span>
 				{/if}
 
 				<span class="flex-1"></span>
 
-				<span
-					class="shrink-0 rounded px-1.5 py-0.5 text-xs {STATUS_BADGE[project.status] ||
-						'bg-gray-600 text-gray-200'}"
-				>
+				<span class="shrink-0 {BADGE.status(getStatusColor(project.status))}">
 					{formatStatusLabel(project.status)}
 				</span>
 
-				{#if getPriorityTag(project.priority)}
-					{@const pt = getPriorityTag(project.priority)!}
-					<span class="shrink-0 rounded px-1.5 py-0.5 text-xs {pt.classes}">
+				{#if project.priority === 'urgent' || project.priority === 'high'}
+					{@const pt = getPriority(project.priority)!}
+					<span class="shrink-0 {BADGE.status(pt.color)}">
 						{pt.label}
 					</span>
 				{/if}
 
 				{#if project.due_date}
-					<span class="shrink-0 text-xs text-gray-400">{project.due_date}</span>
+					<span class="shrink-0 text-[length:var(--text-label)] text-status-muted">{project.due_date}</span>
 				{/if}
 			</div>
 
 			<!-- Row 2: title -->
-			<h1 class="px-1 pt-1 pb-0.5 text-base font-semibold text-white">
+			<h1 class="px-1 pt-1 pb-0.5 text-[length:var(--text-card-title)] font-semibold text-white">
 				{project.title}
 			</h1>
 
 			<!-- Row 3: description subtitle -->
 			{#if project.description}
-				<p class="line-clamp-1 px-1 pb-1 text-xs text-gray-400">
+				<p class="line-clamp-1 px-1 pb-1 text-[length:var(--text-label)] text-status-muted">
 					{project.description}
 				</p>
 			{/if}
 		</div>
 
 		<!-- Tabs -->
-		<div class="border-b border-gray-700 bg-gray-800">
+		<div class="border-b border-surface-border bg-surface-1">
 			<div class="flex gap-1 px-4">
 				<button
 					onclick={() => {
 						activeTab = 'status';
 					}}
-					class="min-h-[40px] px-3 py-2 text-xs font-medium {activeTab === 'status'
-						? 'border-b-2 border-blue-500 text-white'
-						: 'text-gray-400 hover:text-white'}"
+					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab === 'status'
+						? 'border-b-2 border-status-info text-white'
+						: 'text-status-muted hover:text-white'}"
 				>
 					Status
 				</button>
@@ -150,9 +143,9 @@
 					onclick={() => {
 						activeTab = 'activity';
 					}}
-					class="min-h-[40px] px-3 py-2 text-xs font-medium {activeTab === 'activity'
-						? 'border-b-2 border-blue-500 text-white'
-						: 'text-gray-400 hover:text-white'}"
+					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab === 'activity'
+						? 'border-b-2 border-status-info text-white'
+						: 'text-status-muted hover:text-white'}"
 				>
 					Activity
 				</button>
@@ -162,20 +155,20 @@
 		<!-- Tab content -->
 		<div class="flex-1 overflow-y-auto">
 			{#if activeTab === 'status'}
-				<div class="p-4">
+				<div class="p-[var(--space-card-padding)]">
 					{#if project.body}
 						<MarkdownRenderer content={project.body} />
 					{:else}
-						<p class="text-sm text-gray-500">No status content yet.</p>
+						<p class="text-[length:var(--text-body)] text-status-muted">No status content yet.</p>
 					{/if}
 				</div>
 			{:else if activeTab === 'activity'}
-				<div class="divide-y divide-gray-800">
+				<div class="divide-y divide-surface-border">
 					{#each activities as activity (activity.id)}
-						<div class="px-4 py-2.5">
-							<div class="text-xs">
+						<div class="px-[var(--space-row-x)] py-[var(--space-row-y)]">
+							<div class="text-[length:var(--text-body)]">
 								<span class="font-medium text-white">{activity.actor}</span>
-								<span class="text-gray-400">
+								<span class="text-status-muted">
 									{activity.action}
 								</span>
 								<span class="text-white">
@@ -183,17 +176,17 @@
 								</span>
 							</div>
 							{#if activity.details}
-								<div class="mt-0.5 text-xs text-gray-500">
+								<div class="mt-0.5 text-[length:var(--text-label)] text-status-muted">
 									{activity.details}
 								</div>
 							{/if}
-							<div class="mt-0.5 text-xs text-gray-600">
+							<div class="mt-0.5 text-[length:var(--text-label)] text-status-muted/60">
 								{formatRelativeTime(activity.created_at)}
 							</div>
 						</div>
 					{/each}
 					{#if activities.length === 0}
-						<p class="p-4 text-sm text-gray-500">No recent activity</p>
+						<p class="p-[var(--space-card-padding)] text-[length:var(--text-body)] text-status-muted">No recent activity</p>
 					{/if}
 				</div>
 			{/if}

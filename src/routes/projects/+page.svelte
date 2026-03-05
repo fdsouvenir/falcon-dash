@@ -50,20 +50,20 @@
 </svelte:head>
 
 {#if !checked}
-	<div class="flex h-full items-center justify-center bg-gray-900 text-base text-gray-400">
+	<div class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted">
 		Loading...
 	</div>
 {:else if !available}
-	<div class="flex h-full items-center justify-center bg-gray-900 text-white">
-		<div class="rounded-lg border border-gray-700 bg-gray-800 p-8 text-center">
-			<h2 class="mb-2 text-xl font-semibold">PM Not Available</h2>
-			<p class="text-base text-gray-400">
+	<div class="flex h-full items-center justify-center bg-surface-0 text-white">
+		<div class="rounded-lg border border-surface-border bg-surface-1 p-8 text-center">
+			<h2 class="mb-2 text-[length:var(--text-page-title)] font-semibold">PM Not Available</h2>
+			<p class="text-[length:var(--text-body)] text-status-muted">
 				The project management database is not configured or not available.
 			</p>
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
+	<div class="flex h-full overflow-hidden bg-surface-0 text-white">
 		<div class="min-w-0 {selectedProjectId !== null ? 'flex-[3]' : 'flex-1'} overflow-hidden transition-all duration-200">
 			<ProjectList onselect={navigateToProject} selectedId={selectedProjectId} />
 		</div>
