@@ -102,6 +102,7 @@
 				entryPath={selectedEntryPath}
 				onClose={closeEntry}
 				onDeleted={handleDeleted}
+				onUpdated={(newPath) => (selectedEntryPath = newPath)}
 			/>
 		{/if}
 	</div>

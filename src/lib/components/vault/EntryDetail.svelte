@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { fetchEntry, deleteEntry, type VaultEntry } from '$lib/stores/vault.js';
+	import { fetchEntry, editEntry, deleteEntry, type VaultEntry } from '$lib/stores/vault.js';
 	import { addToast } from '$lib/stores/toast.js';
 
 	interface Props {
 		entryPath: string;
 		onClose?: () => void;
 		onDeleted?: () => void;
+		onUpdated?: (newPath: string) => void;
 	}
 
-	let { entryPath, onClose, onDeleted }: Props = $props();
+	let { entryPath, onClose, onDeleted, onUpdated }: Props = $props();
 
 	let entry = $state<VaultEntry | null>(null);
 	let loading = $state(false);
@@ -16,6 +17,16 @@
 	let showPassword = $state(false);
 	let confirmDelete = $state(false);
 	let deleting = $state(false);
+
+	// Edit mode state
+	let editing = $state(false);
+	let saving = $state(false);
+	let editTitle = $state('');
+	let editUsername = $state('');
+	let editPassword = $state('');
+	let editUrl = $state('');
+	let editNotes = $state('');
+	let showEditPassword = $state(false);
 
 	async function loadEntry() {
 		loading = true;
@@ -41,7 +52,10 @@
 	}
 
 	function handleBackdropKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onClose?.();
+		if (e.key === 'Escape') {
+			if (editing) cancelEdit();
+			else onClose?.();
+		}
 	}
 
 	async function copyToClipboard(value: string, label: string) {
@@ -63,6 +77,50 @@
 			addToast(`Delete failed: ${(err as Error).message}`, 'error');
 		} finally {
 			deleting = false;
+		}
+	}
+
+	function startEdit() {
+		if (!entry) return;
+		editTitle = entry.title;
+		editUsername = entry.username ?? '';
+		editPassword = entry.password ?? '';
+		editUrl = entry.url ?? '';
+		editNotes = entry.notes ?? '';
+		showEditPassword = false;
+		editing = true;
+	}
+
+	function cancelEdit() {
+		editing = false;
+	}
+
+	async function handleSave() {
+		if (!editTitle.trim()) return;
+		saving = true;
+		try {
+			await editEntry(entryPath, {
+				title: editTitle.trim(),
+				username: editUsername.trim() || undefined,
+				password: editPassword || undefined,
+				url: editUrl.trim() || undefined,
+				notes: editNotes.trim() || undefined
+			});
+			addToast('Entry saved', 'success');
+			editing = false;
+
+			// Compute new path in case title changed
+			const parts = entryPath.split('/');
+			parts[parts.length - 1] = editTitle.trim();
+			const newPath = parts.join('/');
+			onUpdated?.(newPath);
+
+			// Reload entry data (uses updated entryPath prop if parent updated it)
+			entry = await fetchEntry(newPath);
+		} catch (err) {
+			addToast(`Save failed: ${(err as Error).message}`, 'error');
+		} finally {
+			saving = false;
 		}
 	}
 </script>
@@ -89,9 +147,18 @@
 					</svg>
 				</button>
 				<span class="flex-1 text-sm font-semibold text-white">
-					{#if loading}Loading...{:else if entry}{entry.title}{:else}Entry{/if}
+					{#if loading}Loading...{:else if editing}Edit Entry{:else if entry}{entry.title}{:else}Entry{/if}
 				</span>
-				{#if !confirmDelete}
+				{#if !confirmDelete && !editing}
+					<button
+						onclick={startEdit}
+						class="rounded p-1.5 text-gray-500 hover:bg-gray-700 hover:text-blue-400"
+						title="Edit entry"
+					>
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+						</svg>
+					</button>
 					<button
 						onclick={() => (confirmDelete = true)}
 						class="rounded p-1.5 text-gray-500 hover:bg-gray-700 hover:text-red-400"
@@ -136,6 +203,106 @@
 				<div class="m-4 rounded-lg border border-red-600/30 bg-red-900/10 p-3">
 					<p class="text-sm text-red-400">{error}</p>
 				</div>
+			{:else if editing}
+				<!-- Edit form -->
+				<form
+					onsubmit={(e) => { e.preventDefault(); handleSave(); }}
+					class="space-y-4 p-4"
+				>
+					<!-- Title -->
+					<div>
+						<label for="edit-title" class="mb-1 block text-xs font-medium text-gray-400">Title *</label>
+						<input
+							id="edit-title"
+							type="text"
+							bind:value={editTitle}
+							required
+							class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+						/>
+					</div>
+
+					<!-- Username -->
+					<div>
+						<label for="edit-username" class="mb-1 block text-xs font-medium text-gray-400">Username</label>
+						<input
+							id="edit-username"
+							type="text"
+							bind:value={editUsername}
+							placeholder="user@example.com"
+							class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+						/>
+					</div>
+
+					<!-- Password -->
+					<div>
+						<label for="edit-password" class="mb-1 block text-xs font-medium text-gray-400">Password</label>
+						<div class="relative">
+							<input
+								id="edit-password"
+								type={showEditPassword ? 'text' : 'password'}
+								bind:value={editPassword}
+								placeholder="Leave blank to keep existing"
+								class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 pr-9 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+							/>
+							<button
+								type="button"
+								onclick={() => (showEditPassword = !showEditPassword)}
+								class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+							>
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									{#if showEditPassword}
+										<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+									{:else}
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+										<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+									{/if}
+								</svg>
+							</button>
+						</div>
+					</div>
+
+					<!-- URL -->
+					<div>
+						<label for="edit-url" class="mb-1 block text-xs font-medium text-gray-400">URL</label>
+						<input
+							id="edit-url"
+							type="url"
+							bind:value={editUrl}
+							placeholder="https://example.com"
+							class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+						/>
+					</div>
+
+					<!-- Notes -->
+					<div>
+						<label for="edit-notes" class="mb-1 block text-xs font-medium text-gray-400">Notes</label>
+						<textarea
+							id="edit-notes"
+							bind:value={editNotes}
+							rows="3"
+							placeholder="Optional notes"
+							class="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+						></textarea>
+					</div>
+
+					<!-- Actions -->
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							onclick={cancelEdit}
+							class="rounded-lg px-4 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-white"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={saving || !editTitle.trim()}
+							class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+						>
+							{saving ? 'Saving…' : 'Save'}
+						</button>
+					</div>
+				</form>
 			{:else if entry}
 				<div class="divide-y divide-gray-800">
 					<!-- Path -->
@@ -195,7 +362,7 @@
 									title="Copy password"
 								>
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+										<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
 									</svg>
 								</button>
 							</div>
