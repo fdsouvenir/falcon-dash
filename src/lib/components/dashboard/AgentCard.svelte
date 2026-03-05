@@ -81,24 +81,26 @@
 </script>
 
 {#if loading && agents.length === 0}
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+	<!-- Skeleton -->
+	<div class="grid gap-[var(--space-card-gap)] sm:grid-cols-2 lg:grid-cols-3">
 		{#each [1, 2] as i (i)}
-			<div class="animate-pulse rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
+			<div class="animate-pulse rounded-lg border border-surface-border bg-surface-2 p-[var(--space-card-padding)]">
 				<div class="mb-3 flex items-center gap-3">
-					<div class="h-10 w-10 rounded-full bg-gray-700"></div>
+					<div class="h-10 w-10 rounded-full bg-surface-3"></div>
 					<div class="flex-1">
-						<div class="mb-1 h-4 w-24 rounded bg-gray-700"></div>
-						<div class="h-3 w-16 rounded bg-gray-700/60"></div>
+						<div class="mb-1 h-4 w-24 rounded bg-surface-3"></div>
+						<div class="h-3 w-16 rounded bg-surface-3/60"></div>
 					</div>
 				</div>
 			</div>
 		{/each}
 	</div>
 {:else if agents.length === 0}
+	<!-- Empty state -->
 	<div
-		class="flex flex-col items-center gap-3 rounded-lg border border-gray-700/40 border-dashed bg-gray-800/20 py-10"
+		class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-surface-border bg-surface-1 py-10"
 	>
-		<div class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-800 text-gray-500">
+		<div class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-status-muted">
 			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path
 					stroke-linecap="round"
@@ -107,69 +109,72 @@
 				/>
 			</svg>
 		</div>
-		<p class="text-sm text-gray-400">No agents configured</p>
+		<p class="text-[length:var(--text-body)] text-status-muted">No agents configured</p>
 		<a
 			href={resolve('/settings')}
-			class="rounded-md bg-blue-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-600"
+			class="rounded-md bg-status-info px-3 py-1.5 text-[length:var(--text-badge)] font-semibold text-white transition-colors hover:opacity-90"
 		>
 			Configure Agent
 		</a>
 	</div>
 {:else}
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+	<!-- Agent grid -->
+	<div class="grid gap-[var(--space-card-gap)] sm:grid-cols-2 lg:grid-cols-3">
 		{#each agents as agent (agent.id)}
 			{@const identity = getIdentity(agent.id)}
 			{@const running = isRunning(agent.id)}
 			{@const channels = getChannels()}
 			<a
 				href={resolve('/agents/[id]', { id: agent.id })}
-				class="group rounded-lg border border-gray-700/60 bg-gray-800/40 p-4 transition-colors hover:border-gray-600/80 hover:bg-gray-800/60"
+				class="group rounded-lg border border-surface-border bg-surface-2 p-[var(--space-card-padding)] transition-colors hover:bg-surface-3"
 			>
+				<!-- Avatar + name -->
 				<div class="mb-3 flex items-center gap-3">
 					<div
 						class="relative flex h-10 w-10 items-center justify-center rounded-full {running
-							? 'bg-blue-600/20 ring-1 ring-blue-500/40'
-							: 'bg-gray-700/60'}"
+							? 'bg-status-info-bg ring-1 ring-status-info/40'
+							: 'bg-surface-3'}"
 					>
 						{#if identity?.emoji}
 							<span class="text-lg">{identity.emoji}</span>
 						{:else}
-							<span class="text-sm font-semibold text-gray-300">
+							<span class="text-[length:var(--text-card-title)] font-semibold text-white/80">
 								{(identity?.name ?? agent.name ?? agent.id).charAt(0).toUpperCase()}
 							</span>
 						{/if}
 						<span
-							class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-gray-800 {running
-								? 'bg-emerald-400'
-								: 'bg-gray-500'}"
+							class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface-2 {running
+								? 'bg-status-active'
+								: 'bg-status-muted'}"
 						></span>
 					</div>
 					<div class="min-w-0 flex-1">
-						<h3 class="truncate text-sm font-semibold text-gray-100">
+						<h3 class="truncate text-[length:var(--text-card-title)] font-semibold text-white">
 							{identity?.name ?? agent.name ?? agent.id}
 						</h3>
-						<p class="text-xs text-gray-500">
+						<p class="text-[length:var(--text-label)] text-status-muted">
 							{running ? 'Running' : 'Idle'}
 							{#if agent.model}
-								<span class="text-gray-600"> · </span>
+								<span class="text-surface-border"> · </span>
 								<span class="font-mono">{agent.model}</span>
 							{/if}
 						</p>
 					</div>
 				</div>
 
+				<!-- Channel badges -->
 				{#if channels.length > 0}
 					<div class="flex flex-wrap gap-1">
 						{#each channels as channel (channel)}
 							<span
-								class="rounded border border-gray-600/40 bg-gray-700/30 px-1.5 py-0.5 text-[11px] text-gray-400"
+								class="rounded border border-surface-border bg-surface-3 px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] text-status-muted"
 							>
 								{channel}
 							</span>
 						{/each}
 					</div>
 				{:else}
-					<p class="text-[11px] text-gray-600">No channels connected</p>
+					<p class="text-[length:var(--text-badge)] text-status-muted/50">No channels connected</p>
 				{/if}
 			</a>
 		{/each}

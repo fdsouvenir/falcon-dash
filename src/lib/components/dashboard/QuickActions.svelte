@@ -7,39 +7,53 @@
 			description: 'Connect Discord, Telegram & more',
 			href: '/channels',
 			icon: 'channels',
-			color: 'text-indigo-400'
+			color: 'text-status-purple',
 		},
 		{
-			label: 'Settings',
-			description: 'Gateway & agent configuration',
-			href: '/settings',
-			icon: 'settings',
-			color: 'text-gray-400'
+			label: 'Projects',
+			description: 'Track work across domains',
+			href: '/projects',
+			icon: 'projects',
+			color: 'text-status-info',
 		},
 		{
-			label: 'Skills',
-			description: 'Manage agent skills',
-			href: '/skills',
-			icon: 'skills',
-			color: 'text-purple-400'
+			label: 'Jobs',
+			description: 'Cron jobs & scheduled tasks',
+			href: '/jobs',
+			icon: 'jobs',
+			color: 'text-status-warning',
+		},
+		{
+			label: 'Passwords',
+			description: 'KeePassXC vault manager',
+			href: '/passwords',
+			icon: 'passwords',
+			color: 'text-status-active',
 		},
 		{
 			label: 'Documents',
-			description: 'Agent knowledge base',
+			description: 'Workspace knowledge base',
 			href: '/documents',
 			icon: 'documents',
-			color: 'text-emerald-400'
-		}
+			color: 'text-status-info',
+		},
+		{
+			label: 'Settings',
+			description: 'Gateway & agent config',
+			href: '/settings',
+			icon: 'settings',
+			color: 'text-status-muted',
+		},
 	] as const;
 </script>
 
-<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+<div class="grid grid-cols-2 gap-[var(--space-card-gap)] sm:grid-cols-3 lg:grid-cols-6">
 	{#each actions as action (action.href)}
 		<a
 			href={resolve(action.href)}
-			class="group rounded-lg border border-gray-700/50 bg-gray-800/30 px-3 py-3 transition-colors hover:border-gray-600/70 hover:bg-gray-800/50"
+			class="group rounded-lg border border-surface-border bg-surface-2 px-3 py-3 transition-colors hover:bg-surface-3 hover:border-surface-border"
 		>
-			<div class="mb-1 {action.color}">
+			<div class="mb-1.5 {action.color}">
 				<svg
 					class="h-5 w-5"
 					fill="none"
@@ -53,6 +67,30 @@
 							stroke-linejoin="round"
 							d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
 						/>
+					{:else if action.icon === 'projects'}
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+						/>
+					{:else if action.icon === 'jobs'}
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					{:else if action.icon === 'passwords'}
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+						/>
+					{:else if action.icon === 'documents'}
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+						/>
 					{:else if action.icon === 'settings'}
 						<path
 							stroke-linecap="round"
@@ -64,23 +102,11 @@
 							stroke-linejoin="round"
 							d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
 						/>
-					{:else if action.icon === 'skills'}
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
-						/>
-					{:else if action.icon === 'documents'}
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-						/>
 					{/if}
 				</svg>
 			</div>
-			<p class="text-xs font-medium text-gray-200">{action.label}</p>
-			<p class="mt-0.5 text-[11px] text-gray-500">{action.description}</p>
+			<p class="text-[length:var(--text-body)] font-medium text-white">{action.label}</p>
+			<p class="mt-0.5 text-[length:var(--text-badge)] text-status-muted">{action.description}</p>
 		</a>
 	{/each}
 </div>

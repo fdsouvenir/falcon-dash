@@ -48,13 +48,16 @@
 	}
 
 	let isConnected = $derived(connectionState === 'ready');
+	let isConnecting = $derived(
+		connectionState === 'reconnecting' || connectionState === 'connecting'
+	);
 
-	let statusColor = $derived(
+	let statusDotColor = $derived(
 		isConnected
-			? 'bg-emerald-400'
-			: connectionState === 'reconnecting' || connectionState === 'connecting'
-				? 'bg-amber-400'
-				: 'bg-red-400'
+			? 'bg-status-active'
+			: isConnecting
+				? 'bg-status-warning'
+				: 'bg-status-danger'
 	);
 
 	let statusLabel = $derived(
@@ -78,44 +81,83 @@
 	);
 </script>
 
-<div
-	class="relative overflow-hidden rounded-lg border border-gray-700/80 bg-gradient-to-r from-gray-800/90 to-gray-800/50"
->
+<div class="relative overflow-hidden rounded-lg border border-surface-border bg-surface-1">
+	<!-- Subtle grid overlay -->
 	<div
-		class="absolute inset-0 opacity-[0.03]"
+		class="pointer-events-none absolute inset-0 opacity-[0.03]"
 		style="background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, currentColor 40px, currentColor 41px), repeating-linear-gradient(0deg, transparent, transparent 40px, currentColor 40px, currentColor 41px)"
 	></div>
-	<div class="relative flex items-center gap-4 px-4 py-3 sm:px-5">
+
+	<div class="relative flex items-center gap-4 px-5 py-3">
+		<!-- Status dot + label -->
 		<div class="flex items-center gap-2.5">
 			<span class="relative flex h-2.5 w-2.5">
-				{#if isConnected || connectionState === 'reconnecting' || connectionState === 'connecting'}
+				{#if isConnected || isConnecting}
 					<span
-						class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 {statusColor}"
+						class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 {statusDotColor}"
 					></span>
 				{/if}
-				<span class="relative inline-flex h-2.5 w-2.5 rounded-full {statusColor}"></span>
+				<span class="relative inline-flex h-2.5 w-2.5 rounded-full {statusDotColor}"></span>
 			</span>
-			<span class="text-sm font-semibold tracking-wide text-gray-100">{statusLabel}</span>
+			<span class="text-[length:var(--text-card-title)] font-semibold tracking-wide text-white">
+				{statusLabel}
+			</span>
 		</div>
+
+		<!-- Server info -->
 		{#if serverInfo}
-			<div class="hidden items-center gap-3 text-xs text-gray-400 sm:flex">
-				<span class="font-mono">{serverInfo.host}</span>
-				<span class="text-gray-600">|</span>
-				<span>v{serverInfo.version}</span>
+			<div class="hidden items-center gap-3 sm:flex">
+				<span class="font-mono text-[length:var(--text-label)] text-status-muted">
+					{serverInfo.host}
+				</span>
+				<span class="text-surface-border">|</span>
+				<span class="text-[length:var(--text-label)] text-status-muted">
+					v{serverInfo.version}
+				</span>
 			</div>
 		{/if}
-		<div class="ml-auto flex items-center gap-4 text-xs text-gray-400">
+
+		<!-- Right stats -->
+		<div class="ml-auto flex items-center gap-5">
 			{#if deviceCount > 0}
-				<span>
-					<span class="text-gray-500">{deviceCount}</span>
-					<span class="ml-0.5 text-gray-500">device{deviceCount !== 1 ? 's' : ''}</span>
-				</span>
+				<div class="flex items-center gap-1.5">
+					<svg
+						class="h-3.5 w-3.5 text-status-muted"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"
+						/>
+					</svg>
+					<span class="text-[length:var(--text-label)] font-medium text-white">
+						{deviceCount}
+					</span>
+				</div>
 			{/if}
 			{#if gatewayUptime}
-				<span>
-					<span class="text-gray-500">up</span>
-					<span class="ml-1 font-mono text-gray-300">{gatewayUptime}</span>
-				</span>
+				<div class="flex items-center gap-1.5">
+					<svg
+						class="h-3.5 w-3.5 text-status-muted"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<span class="font-mono text-[length:var(--text-label)] font-medium text-white">
+						{gatewayUptime}
+					</span>
+				</div>
 			{/if}
 		</div>
 	</div>
