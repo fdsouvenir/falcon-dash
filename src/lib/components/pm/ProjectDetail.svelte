@@ -58,7 +58,7 @@
 
 <!-- Inline side panel — slides in from the right -->
 <div
-	class="flex h-full w-[420px] shrink-0 flex-col overflow-hidden border-l border-gray-700 bg-gray-900"
+	class="flex h-full min-w-[320px] flex-[2] flex-col overflow-hidden border-l border-gray-700 bg-gray-900"
 	transition:fly={{ x: 420, duration: 200 }}
 >
 	{#if loading}

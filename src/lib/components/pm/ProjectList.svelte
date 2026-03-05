@@ -24,9 +24,10 @@
 
 	interface Props {
 		onselect?: (projectId: number) => void;
+		selectedId?: number | null;
 	}
 
-	let { onselect }: Props = $props();
+	let { onselect, selectedId = null }: Props = $props();
 
 	let projectList = $state<Project[]>([]);
 	let domainList = $state<Domain[]>([]);
@@ -178,8 +179,9 @@
 
 	function priorityEmoji(priority: string | null): string {
 		if (priority === 'urgent') return '🔴';
-		if (priority === 'high') return '🟡';
-		if (priority === 'normal') return '🟢';
+		if (priority === 'high') return '🔴';
+		if (priority === 'medium') return '🟡';
+		if (priority === 'normal' || priority === 'low') return '🟢';
 		return '';
 	}
 </script>
@@ -187,37 +189,37 @@
 {#snippet projectRow(project: Project, accentColor: string, focusName: string | null)}
 	{@const status = getStatusPill(project.status)}
 	{@const due = formatDueDate(project.due_date)}
+	{@const pri = priorityEmoji(project.priority)}
+	{@const isSelected = selectedId === project.id}
 	<button
-		class="relative flex h-[38px] w-full items-center gap-2 overflow-hidden pl-4 pr-3 text-left transition-colors hover:bg-gray-800/60"
+		class="relative mx-2 my-[2px] flex items-center gap-2.5 overflow-hidden rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors {isSelected ? 'bg-gray-700/80' : 'hover:bg-gray-800/60'}"
 		onclick={() => onselect?.(project.id)}
 	>
-		<!-- 4px colored left accent bar -->
-		<span class="absolute left-0 top-0 h-full w-1" style="background: {accentColor}"></span>
+		<!-- 5px colored left accent bar -->
+		<span class="absolute left-0 top-1 bottom-1 w-[5px] rounded-r" style="background: {accentColor}"></span>
 
-		<!-- Title -->
-		<span class="min-w-0 flex-1 truncate text-[13px] font-medium leading-none text-white">
+		<!-- Title + focus on same line -->
+		<span class="min-w-0 flex-1 truncate text-[13px] font-medium text-white">
 			{project.title}
+			{#if focusName}
+				<span class="ml-1.5 text-[11px] font-normal text-gray-500">· {focusName}</span>
+			{/if}
 		</span>
 
-		<!-- Focus name tag -->
-		{#if focusName}
-			<span class="max-w-[72px] shrink-0 truncate text-[11px] text-gray-500">{focusName}</span>
-		{/if}
-
 		<!-- Status pill -->
-		<span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-tight {status.classes}">
+		<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium leading-tight {status.classes}">
 			{status.label}
 		</span>
 
 		<!-- Priority emoji -->
-		<span class="w-3.5 shrink-0 text-center text-[11px] leading-none">
-			{priorityEmoji(project.priority)}
-		</span>
+		{#if pri}
+			<span class="shrink-0 text-[12px]">{pri}</span>
+		{/if}
 
 		<!-- Due date -->
-		<span class="w-[64px] shrink-0 text-right text-[11px] {due?.color || 'text-gray-600'}">
-			{due?.text || ''}
-		</span>
+		{#if due}
+			<span class="shrink-0 text-[11px] {due.color}">{due.text}</span>
+		{/if}
 	</button>
 {/snippet}
 

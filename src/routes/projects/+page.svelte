@@ -64,8 +64,8 @@
 	</div>
 {:else}
 	<div class="flex h-full overflow-hidden bg-gray-900 text-white">
-		<div class="flex-1 overflow-hidden">
-			<ProjectList onselect={navigateToProject} />
+		<div class="min-w-0 {selectedProjectId !== null ? 'flex-[3]' : 'flex-1'} overflow-hidden transition-all duration-200">
+			<ProjectList onselect={navigateToProject} selectedId={selectedProjectId} />
 		</div>
 
 		{#if selectedProjectId !== null}
