@@ -71,40 +71,42 @@
 		if (e.key === 'Escape') onclose();
 	}}
 >
-	<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5">
-		<h3 class="mb-4 text-sm font-medium text-white">{isEdit ? 'Edit Job' : 'Create Job'}</h3>
+	<div class="w-96 rounded-lg border border-surface-border bg-surface-2 p-5">
+		<h3 class="mb-4 text-[length:var(--text-card-title)] font-medium text-white">
+			{isEdit ? 'Edit Job' : 'Create Job'}
+		</h3>
 
 		<div class="space-y-3">
 			<!-- Name -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">Name</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Name</label>
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					type="text"
 					bind:value={name}
 					placeholder="Job name"
 					autofocus
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
 			</div>
 
 			<!-- Description -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">Description</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Description</label>
 				<input
 					type="text"
 					bind:value={description}
 					placeholder="Optional description"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
 			</div>
 
 			<!-- Schedule Type -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">Schedule Type</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Schedule Type</label>
 				<select
 					bind:value={scheduleType}
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
 				>
 					<option value="cron">Cron Expression</option>
 					<option value="interval">Interval</option>
@@ -114,7 +116,7 @@
 
 			<!-- Schedule -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">
 					{scheduleType === 'cron'
 						? 'Cron Expression'
 						: scheduleType === 'interval'
@@ -129,7 +131,7 @@
 							<button
 								type="button"
 								onclick={() => applyPreset(preset.value)}
-								class="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-300 hover:border-blue-500 hover:text-white"
+								class="rounded border border-surface-border bg-surface-3 px-2 py-1 text-[length:var(--text-badge)] text-white/70 hover:border-status-info hover:text-white"
 							>
 								{preset.label}
 							</button>
@@ -145,20 +147,22 @@
 						: scheduleType === 'interval'
 							? '5m'
 							: '2026-01-01T00:00:00Z'}
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
 
 				{#if schedulePreview && schedulePreview !== schedule.trim()}
-					<div class="mt-1 text-[10px] text-gray-500">→ {schedulePreview}</div>
+					<div class="mt-1 text-[length:var(--text-badge)] text-status-muted">
+						→ {schedulePreview}
+					</div>
 				{/if}
 			</div>
 
 			<!-- Payload Type -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">Payload Type</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Payload Type</label>
 				<select
 					bind:value={payloadType}
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
 				>
 					<option value="system-event">System Event</option>
 					<option value="agent-turn">Agent Turn</option>
@@ -167,25 +171,30 @@
 
 			<!-- Session Target -->
 			<div>
-				<label class="mb-1 block text-xs text-gray-400">Session Target (optional)</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">
+					Session Target (optional)
+				</label>
 				<input
 					type="text"
 					bind:value={sessionTarget}
 					placeholder="Session key"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
 			</div>
 		</div>
 
 		<!-- Actions -->
 		<div class="mt-4 flex justify-end gap-2">
-			<button onclick={onclose} class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white">
+			<button
+				onclick={onclose}
+				class="rounded px-3 py-1.5 text-[length:var(--text-badge)] font-medium text-status-muted hover:text-white"
+			>
 				Cancel
 			</button>
 			<button
 				onclick={handleSubmit}
 				disabled={!name.trim() || !schedule.trim() || isSaving}
-				class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 disabled:opacity-50"
+				class="rounded bg-status-info px-3 py-1.5 text-[length:var(--text-badge)] font-semibold text-white hover:opacity-80 disabled:opacity-50"
 			>
 				{isSaving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
 			</button>

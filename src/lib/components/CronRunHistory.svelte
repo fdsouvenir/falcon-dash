@@ -61,9 +61,13 @@
 
 <div class="flex h-full flex-col">
 	<!-- Header -->
-	<div class="border-b border-gray-800 px-4 py-3">
+	<div class="border-b border-surface-border px-4 py-3">
 		<div class="flex items-center gap-2">
-			<button onclick={onclose} class="text-gray-400 hover:text-white" aria-label="Back to jobs">
+			<button
+				onclick={onclose}
+				class="text-status-muted hover:text-white"
+				aria-label="Back to jobs"
+			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -74,14 +78,16 @@
 				</svg>
 			</button>
 			<div>
-				<h2 class="text-sm font-medium text-white">Run History: {job.name}</h2>
+				<h2 class="text-[length:var(--text-card-title)] font-medium text-white">
+					Run History: {job.name}
+				</h2>
 				{#if humanSchedule && humanSchedule !== job.schedule}
-					<div class="mt-0.5 text-[10px] text-gray-500">
+					<div class="mt-0.5 text-[length:var(--text-badge)] text-status-muted">
 						{humanSchedule}
-						<span class="text-gray-600">({job.schedule})</span>
+						<span class="text-status-muted/50">({job.schedule})</span>
 					</div>
 				{:else}
-					<div class="mt-0.5 text-[10px] text-gray-500">{job.schedule}</div>
+					<div class="mt-0.5 text-[length:var(--text-badge)] text-status-muted">{job.schedule}</div>
 				{/if}
 			</div>
 		</div>
@@ -89,17 +95,17 @@
 
 	<!-- Content -->
 	{#if loading}
-		<div class="flex flex-1 items-center justify-center text-sm text-gray-500">
+		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted">
 			Loading history...
 		</div>
 	{:else if runs.length === 0}
-		<div class="flex flex-1 items-center justify-center text-sm text-gray-500">
+		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted">
 			No run history yet
 		</div>
 	{:else}
 		<!-- Column headers -->
 		<div
-			class="grid grid-cols-[160px_80px_80px_1fr] gap-2 border-b border-gray-800 px-4 py-2 text-xs text-gray-500"
+			class="grid grid-cols-[160px_80px_80px_1fr] gap-2 border-b border-surface-border px-4 py-2 text-[length:var(--text-label)] font-medium text-status-muted"
 		>
 			<span>Timestamp</span>
 			<span>Status</span>
@@ -110,34 +116,34 @@
 		<!-- Run rows -->
 		<div class="flex-1 overflow-y-auto">
 			{#each runs as run (run.id)}
-				<div class="border-b border-gray-800/50">
+				<div class="border-b border-surface-border/40">
 					<button
 						onclick={() => toggleExpand(run.id)}
-						class="grid w-full grid-cols-[160px_80px_80px_1fr] gap-2 px-4 py-2 text-left text-xs transition-colors hover:bg-gray-800"
+						class="grid w-full grid-cols-[160px_80px_80px_1fr] gap-2 px-4 py-2 text-left text-[length:var(--text-body)] transition-colors hover:bg-surface-3"
 					>
-						<span class="text-gray-400" title={formatTimestamp(run.timestamp)}>
+						<span class="text-status-muted" title={formatTimestamp(run.timestamp)}>
 							{formatRelativeTime(run.timestamp)}
 						</span>
 						<span>
 							{#if run.status === 'success'}
 								<span
-									class="rounded-full bg-green-600/50 px-2 py-0.5 text-[10px] font-medium text-green-300"
+									class="rounded-full bg-status-active-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-active"
 								>
 									Success
 								</span>
 							{:else}
 								<span
-									class="rounded-full bg-red-600/50 px-2 py-0.5 text-[10px] font-medium text-red-300"
+									class="rounded-full bg-status-danger-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-danger"
 								>
 									Error
 								</span>
 							{/if}
 						</span>
-						<span class="text-gray-400">{formatDuration(run.durationMs)}</span>
-						<span class="truncate text-gray-400">
+						<span class="text-status-muted">{formatDuration(run.durationMs)}</span>
+						<span class="truncate text-status-muted">
 							{run.output ? run.output.split('\n')[0] : '—'}
 							{#if run.output && run.output.includes('\n')}
-								<span class="ml-1 text-gray-600">
+								<span class="ml-1 text-status-muted/50">
 									{expandedRunId === run.id ? '▼' : '▶'}
 								</span>
 							{/if}
@@ -146,15 +152,19 @@
 
 					<!-- Expanded output -->
 					{#if expandedRunId === run.id && run.output}
-						<div class="border-t border-gray-800/50 bg-gray-950 px-4 py-3">
+						<div class="border-t border-surface-border/40 bg-surface-0 px-4 py-3">
 							<div class="flex items-center justify-between pb-2">
-								<span class="text-[10px] font-medium uppercase tracking-wide text-gray-500"
-									>Full Output</span
+								<span
+									class="text-[length:var(--text-badge)] font-medium uppercase tracking-wider text-status-muted"
 								>
-								<span class="text-[10px] text-gray-600">{formatTimestamp(run.timestamp)}</span>
+									Full Output
+								</span>
+								<span class="text-[length:var(--text-badge)] text-status-muted/60">
+									{formatTimestamp(run.timestamp)}
+								</span>
 							</div>
 							<pre
-								class="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-gray-900 p-3 font-mono text-xs text-gray-300">{run.output}</pre>
+								class="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-surface-1 p-3 font-mono text-[length:var(--text-mono)] text-white/80">{run.output}</pre>
 						</div>
 					{/if}
 				</div>

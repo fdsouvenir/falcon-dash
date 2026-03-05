@@ -126,9 +126,9 @@
 	}
 
 	function statusDotClass(job: CronJob): string {
-		if (!job.enabled) return 'bg-gray-500';
-		if (job.lastStatus === 'error') return 'bg-red-400';
-		return 'bg-green-400';
+		if (!job.enabled) return 'bg-status-muted';
+		if (job.lastStatus === 'error') return 'bg-status-danger';
+		return 'bg-status-active';
 	}
 
 	function showIsolatedChip(job: CronJob): boolean {
@@ -139,18 +139,18 @@
 {#if view === 'form'}
 	<MobileCronJobForm job={editingJob} onback={handleFormBack} />
 {:else}
-	<div class="flex h-full flex-col bg-gray-950">
+	<div class="flex h-full flex-col bg-surface-0">
 		<!-- Search + New -->
 		<div class="flex items-center gap-2 px-4 py-2">
 			<input
 				type="text"
 				placeholder="Search jobs..."
 				bind:value={search}
-				class="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+				class="flex-1 rounded-lg border border-surface-border bg-surface-1 px-3 py-2.5 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 			/>
 			<button
 				onclick={handleCreate}
-				class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white active:bg-blue-700"
+				class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-status-info px-4 text-[length:var(--text-body)] font-medium text-white active:opacity-80"
 			>
 				<svg
 					class="mr-1.5 h-4 w-4"
@@ -168,15 +168,17 @@
 		<!-- Content -->
 		<div class="flex-1 overflow-y-auto px-4 pb-[calc(1rem+var(--safe-bottom))]">
 			{#if loading && jobs.length === 0}
-				<div class="flex items-center justify-center py-12 text-gray-500">
+				<div class="flex items-center justify-center py-12 text-status-muted">
 					<span>Loading jobs...</span>
 				</div>
 			{:else if error}
-				<div class="rounded-lg border border-red-900/50 bg-red-950/50 p-4 text-sm text-red-300">
+				<div
+					class="rounded-lg border border-status-danger/30 bg-status-danger-bg p-4 text-[length:var(--text-body)] text-status-danger"
+				>
 					{error}
 				</div>
 			{:else if filtered.length === 0}
-				<div class="flex flex-col items-center justify-center py-12 text-gray-500">
+				<div class="flex flex-col items-center justify-center py-12 text-status-muted">
 					<svg
 						class="mb-2 h-8 w-8"
 						fill="none"
@@ -190,26 +192,30 @@
 							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<span>{search ? 'No matching jobs' : 'No cron jobs yet'}</span>
+					<span class="text-[length:var(--text-body)]">
+						{search ? 'No matching jobs' : 'No cron jobs yet'}
+					</span>
 				</div>
 			{:else}
 				<div class="space-y-3 py-2">
 					{#each filtered as job (job.id)}
 						<div
-							class="rounded-xl border border-gray-700 bg-gray-900 p-4 {job.enabled
+							class="rounded-xl border border-surface-border bg-surface-2 p-4 {job.enabled
 								? ''
 								: 'opacity-60'}"
 						>
 							<!-- Row 1: name + toggle -->
 							<div class="flex items-center justify-between">
-								<span class="min-w-0 flex-1 truncate text-sm font-medium text-white">
+								<span
+									class="min-w-0 flex-1 truncate text-[length:var(--text-card-title)] font-medium text-white"
+								>
 									{job.name}
 								</span>
 								<button
 									onclick={() => handleToggle(job)}
 									class="relative ml-3 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors {job.enabled
-										? 'bg-blue-600'
-										: 'bg-gray-600'}"
+										? 'bg-status-info'
+										: 'bg-surface-3'}"
 									role="switch"
 									aria-checked={job.enabled}
 								>
@@ -223,13 +229,17 @@
 
 							<!-- Description -->
 							{#if job.description}
-								<p class="mt-1 text-xs text-gray-400">{job.description}</p>
+								<p class="mt-1 text-[length:var(--text-body)] text-status-muted">
+									{job.description}
+								</p>
 							{/if}
 
 							<!-- Schedule -->
-							<div class="mt-2 flex items-center gap-1.5 text-xs text-gray-300">
+							<div
+								class="mt-2 flex items-center gap-1.5 text-[length:var(--text-body)] text-white/80"
+							>
 								<svg
-									class="h-3.5 w-3.5 shrink-0 text-gray-500"
+									class="h-3.5 w-3.5 shrink-0 text-status-muted"
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke="currentColor"
@@ -245,13 +255,15 @@
 							</div>
 
 							<!-- Timing row: Next / Last + status dot -->
-							<div class="mt-2 flex items-center gap-x-4 text-xs text-gray-500">
+							<div
+								class="mt-2 flex items-center gap-x-4 text-[length:var(--text-label)] text-status-muted"
+							>
 								{#if job.enabled && job.nextRun}
 									<span title={new Date(job.nextRun).toLocaleString()}>
 										Next: {formatCountdown(job.nextRun)}
 									</span>
 								{:else if !job.enabled}
-									<span class="text-gray-600">Paused</span>
+									<span class="text-status-muted/50">Paused</span>
 								{/if}
 								{#if job.lastRun}
 									<span title={new Date(job.lastRun).toLocaleString()}>
@@ -266,7 +278,7 @@
 								<div>
 									{#if showIsolatedChip(job)}
 										<span
-											class="rounded border border-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400"
+											class="rounded border border-surface-border px-1.5 py-0.5 text-[length:var(--text-badge)] text-status-muted"
 										>
 											{job.payloadType === 'system-event' ? 'system' : 'isolated'}
 										</span>
@@ -276,7 +288,7 @@
 									{#if job.enabled}
 										<button
 											onclick={() => handleRun(job)}
-											class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-gray-400 active:bg-gray-800"
+											class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-status-muted active:bg-surface-3"
 											title="Run now"
 										>
 											<svg class="h-4.5 w-4.5" fill="currentColor" viewBox="0 0 24 24">
@@ -286,7 +298,7 @@
 									{/if}
 									<button
 										onclick={() => handleHistory(job)}
-										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-gray-400 active:bg-gray-800"
+										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-status-muted active:bg-surface-3"
 										title="Chat history"
 									>
 										<svg
@@ -305,7 +317,7 @@
 									</button>
 									<button
 										onclick={() => handleEdit(job)}
-										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-gray-400 active:bg-gray-800"
+										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-status-muted active:bg-surface-3"
 										title="Edit"
 									>
 										<svg
@@ -324,7 +336,7 @@
 									</button>
 									<button
 										onclick={() => openOverflow(job)}
-										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-gray-400 active:bg-gray-800"
+										class="flex h-[44px] w-[44px] items-center justify-center rounded-lg text-status-muted active:bg-surface-3"
 										title="More"
 									>
 										<svg class="h-4.5 w-4.5" fill="currentColor" viewBox="0 0 24 24">
@@ -346,12 +358,14 @@
 	<BottomSheet open={overflowSheetOpen} onclose={() => (overflowSheetOpen = false)}>
 		<div class="pb-4">
 			{#if overflowTarget}
-				<h3 class="mb-3 text-sm font-medium text-white">{overflowTarget.name}</h3>
+				<h3 class="mb-3 text-[length:var(--text-card-title)] font-medium text-white">
+					{overflowTarget.name}
+				</h3>
 				<button
 					onclick={() => {
 						if (overflowTarget) confirmDelete(overflowTarget);
 					}}
-					class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 text-sm text-red-400 active:bg-gray-800"
+					class="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 text-[length:var(--text-body)] text-status-danger active:bg-surface-3"
 				>
 					<svg
 						class="h-5 w-5"
@@ -372,24 +386,23 @@
 		</div>
 	</BottomSheet>
 
-	<!-- Chat slide-in overlay -->
 	<!-- Delete confirmation -->
 	<BottomSheet open={deleteSheetOpen} onclose={() => (deleteSheetOpen = false)}>
 		<div class="pb-4">
-			<h3 class="text-lg font-semibold text-white">Delete Job</h3>
-			<p class="mt-2 text-sm text-gray-400">
+			<h3 class="text-[length:var(--text-card-title)] font-semibold text-white">Delete Job</h3>
+			<p class="mt-2 text-[length:var(--text-body)] text-status-muted">
 				Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone.
 			</p>
 			<div class="mt-4 flex gap-3">
 				<button
 					onclick={() => (deleteSheetOpen = false)}
-					class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-gray-800 text-sm font-medium text-gray-300 active:bg-gray-700"
+					class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-surface-3 text-[length:var(--text-body)] font-medium text-white/80 active:bg-surface-2"
 				>
 					Cancel
 				</button>
 				<button
 					onclick={handleDelete}
-					class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-red-600 text-sm font-medium text-white active:bg-red-700"
+					class="flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-status-danger text-[length:var(--text-body)] font-medium text-white active:opacity-80"
 				>
 					Delete
 				</button>
