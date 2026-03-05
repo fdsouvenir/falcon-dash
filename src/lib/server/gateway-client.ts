@@ -241,9 +241,10 @@ export class GatewayClient {
 				if (res.ok) {
 					pending.resolve(res.payload);
 				} else {
-					const err = new Error(res.error?.message ?? 'RPC error');
-					(err as Record<string, unknown>).code = res.error?.code;
-					(err as Record<string, unknown>).details = res.error?.details;
+					const err = Object.assign(new Error(res.error?.message ?? 'RPC error'), {
+						code: res.error?.code,
+						details: res.error?.details
+					});
 					pending.reject(err);
 				}
 			}

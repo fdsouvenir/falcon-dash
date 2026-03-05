@@ -302,7 +302,8 @@ export async function createSession(label?: string): Promise<string> {
 	const selected = get(_selectedAgentId);
 	const snap = get(gatewayEvents.snapshot);
 	const defaults = (snap?.snapshot?.sessionDefaults ?? {}) as Record<string, unknown>;
-	const agentId = selected || defaults.defaultAgentId || 'default';
+	const rawDefault = typeof defaults.defaultAgentId === 'string' ? defaults.defaultAgentId : undefined;
+	const agentId = selected || rawDefault || 'default';
 	const sessionKey = `agent:${agentId}:falcon:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 
@@ -326,7 +327,8 @@ export function createSessionOptimistic(label?: string): string {
 	const selected = get(_selectedAgentId);
 	const snap = get(gatewayEvents.snapshot);
 	const defaults = (snap?.snapshot?.sessionDefaults ?? {}) as Record<string, unknown>;
-	const agentId = selected || defaults.defaultAgentId || 'default';
+	const rawDefault = typeof defaults.defaultAgentId === 'string' ? defaults.defaultAgentId : undefined;
+	const agentId = selected || rawDefault || 'default';
 	const sessionKey = `agent:${agentId}:falcon:dm:fd-chat-${shortId()}`;
 	const displayName = uniqueLabel(label || 'New Chat', get(_sessions), agentId);
 

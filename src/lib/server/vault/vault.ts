@@ -67,7 +67,7 @@ async function run(command: string, args: string[], stdin?: string): Promise<str
 	// keepassxc-cli writes some informational messages to stderr (e.g. "Inserting entry...")
 	// Those are not errors — only throw if exit code was non-zero (handled by execFile rejecting).
 	void stderr;
-	return stdout;
+	return stdout.toString();
 }
 
 /** Spawn keepassxc-cli, write stdin, collect stdout/stderr, resolve on exit 0. */
