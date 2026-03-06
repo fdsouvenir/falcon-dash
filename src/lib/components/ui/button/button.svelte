@@ -3,6 +3,9 @@
 </script>
 
 <script lang="ts">
+	import { cn } from '$lib/utils.js';
+	import { buttonVariants, type ButtonProps } from './button-variants.js';
+
 	let {
 		class: className,
 		variant = 'default',

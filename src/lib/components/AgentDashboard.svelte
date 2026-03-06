@@ -11,7 +11,7 @@
 
 	$effect(() => {
 		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
-			const s = snap?.snapshot;
+			const s = snap?.snapshot as Record<string, unknown> | undefined;
 			if (s) {
 				sessionCount =
 					(s.activeSessions as number | undefined) ??

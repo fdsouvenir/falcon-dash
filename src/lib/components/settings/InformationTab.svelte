@@ -3,7 +3,7 @@
 	import { addToast } from '$lib/stores/toast.js';
 
 	let connectionState = $state<string>('disconnected');
-	let snapshotData = $state<HelloOkPayload | null>(null);
+	let snapshotData = $state<Record<string, unknown> | null>(null);
 	let serverInfo = $state<{ version: string; host: string; connId: string } | null>(null);
 	let sessionDefaults = $state<Record<string, unknown>>({});
 	let policy = $state<{
@@ -229,11 +229,11 @@
 
 	// Derived values from snapshot (no RPC needed)
 	let isConnected = $derived(connectionState === 'ready');
-	let authRole = $derived(snapshotData?.auth?.role ?? null);
-	let authScopes = $derived(snapshotData?.auth?.scopes ?? []);
-	let uptimeMs = $derived(snapshotData?.snapshot?.uptimeMs ?? null);
-	let configPath = $derived(snapshotData?.snapshot?.configPath ?? null);
-	let stateDir = $derived(snapshotData?.snapshot?.stateDir ?? null);
+	let authRole = $derived((snapshotData?.auth as Record<string, unknown> | undefined)?.role ?? null);
+	let authScopes = $derived(((snapshotData?.auth as Record<string, unknown> | undefined)?.scopes as string[] | undefined) ?? []);
+	let uptimeMs = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.uptimeMs as number | null ?? null);
+	let configPath = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.configPath as string | null ?? null);
+	let stateDir = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.stateDir as string | null ?? null);
 	let protocolVersion = $derived(snapshotData?.protocol ?? null);
 
 	let sessionUptime = $derived(
@@ -241,7 +241,7 @@
 	);
 
 	let gatewayUptime = $derived(
-		uptimeMs != null ? formatUptime(uptimeMs + (currentTime - (connectedAt ?? currentTime))) : null
+		uptimeMs != null ? formatUptime((uptimeMs as number) + (currentTime - (connectedAt ?? currentTime))) : null
 	);
 
 	let deviceCount = $derived(presence.length);
@@ -481,7 +481,8 @@
 				<span class="ml-1.5 font-mono text-gray-400">{presence.length}</span>
 			</h3>
 			<div class="space-y-1">
-				{#each presence as device (device.instanceId)}
+				{#each presence as _device}
+					{@const device = _device as Record<string, unknown>}
 					<div
 						class="flex items-center gap-2.5 rounded border border-gray-700/30 bg-gray-900/40 px-2.5 py-1.5"
 					>
