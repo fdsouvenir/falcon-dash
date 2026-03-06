@@ -116,7 +116,7 @@
 </script>
 
 <div class="p-6 space-y-6">
-	<h2 class="text-2xl font-bold text-gray-100">Gateway Configuration Editor</h2>
+	<h2 class="text-2xl font-bold text-white">Gateway Configuration Editor</h2>
 
 	<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
 		<p class="text-sm text-yellow-400">
@@ -138,7 +138,7 @@
 	{/if}
 
 	{#if loading}
-		<div class="text-gray-400">Loading configuration...</div>
+		<div class="text-status-muted">Loading configuration...</div>
 	{:else if unavailable}
 		<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
 			<p class="text-sm text-yellow-400">
@@ -152,14 +152,14 @@
 			<div class="flex gap-2 items-center">
 				<button
 					onclick={formatConfig}
-					class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
+					class="bg-surface-3 hover:bg-surface-3 text-white px-4 py-2 rounded"
 				>
 					Format JSON
 				</button>
 				<button
 					onclick={saveConfig}
 					disabled={!isDirty}
-					class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded"
+					class="bg-blue-600 hover:bg-blue-700 disabled:bg-surface-3 disabled:cursor-not-allowed text-white px-4 py-2 rounded"
 				>
 					Save
 				</button>
@@ -171,14 +171,14 @@
 				</button>
 				<button
 					onclick={loadConfig}
-					class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
+					class="bg-surface-3 hover:bg-surface-3 text-white px-4 py-2 rounded"
 				>
 					Reload
 				</button>
 				{#if schema}
 					<button
 						onclick={() => (showSchema = !showSchema)}
-						class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded ml-auto"
+						class="bg-surface-3 hover:bg-surface-3 text-white px-4 py-2 rounded ml-auto"
 					>
 						{showSchema ? 'Hide Schema' : 'Show Schema'}
 					</button>
@@ -190,21 +190,21 @@
 			{/if}
 
 			<!-- Config Editor -->
-			<div class="bg-gray-800 rounded-lg p-4">
+			<div class="bg-surface-2 rounded-lg p-4">
 				<textarea
 					bind:value={config}
 					oninput={handleInput}
-					class="w-full h-96 bg-gray-900 text-gray-100 border border-gray-600 rounded px-3 py-2 font-mono text-sm resize-y"
+					class="w-full h-96 bg-surface-1 text-white border border-surface-border rounded px-3 py-2 font-mono text-sm resize-y"
 					spellcheck="false"
 				></textarea>
 			</div>
 
 			<!-- Schema Display -->
 			{#if showSchema && schema}
-				<div class="bg-gray-800 rounded-lg p-4">
-					<h3 class="text-lg font-semibold text-gray-100 mb-3">Configuration Schema</h3>
+				<div class="bg-surface-2 rounded-lg p-4">
+					<h3 class="text-lg font-semibold text-white mb-3">Configuration Schema</h3>
 					<pre
-						class="bg-gray-900 text-gray-300 p-3 rounded overflow-x-auto text-sm font-mono">{JSON.stringify(
+						class="bg-surface-1 text-white/70 p-3 rounded overflow-x-auto text-sm font-mono">{JSON.stringify(
 							schema,
 							null,
 							2
@@ -217,16 +217,16 @@
 	<!-- Apply Confirmation Dialog -->
 	{#if showApplyConfirm}
 		<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-			<div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 class="text-xl font-bold text-gray-100 mb-4">Confirm Apply + Restart</h3>
-				<p class="text-gray-300 mb-6">
+			<div class="bg-surface-2 rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 class="text-xl font-bold text-white mb-4">Confirm Apply + Restart</h3>
+				<p class="text-white/70 mb-6">
 					This will apply the configuration changes and restart the gateway. All active connections
 					will be disconnected.
 				</p>
 				<div class="flex gap-3 justify-end">
 					<button
 						onclick={() => (showApplyConfirm = false)}
-						class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
+						class="bg-surface-3 hover:bg-surface-3 text-white px-4 py-2 rounded"
 					>
 						Cancel
 					</button>

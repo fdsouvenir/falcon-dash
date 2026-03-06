@@ -124,23 +124,23 @@
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">
 					<span class="h-2 w-2 rounded-full {isConnected ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-					<span class="text-sm text-gray-300">Gateway connected</span>
+					<span class="text-sm text-white/70">Gateway connected</span>
 				</div>
 				<div class="flex items-center gap-2">
 					<span
 						class="h-2 w-2 rounded-full {status.state !== 'not_configured'
 							? 'bg-emerald-400'
-							: 'bg-gray-500'}"
+							: 'bg-status-muted'}"
 					></span>
-					<span class="text-sm text-gray-300">
-						Telegram: <span class="font-mono text-gray-400">{status.state}</span>
+					<span class="text-sm text-white/70">
+						Telegram: <span class="font-mono text-status-muted">{status.state}</span>
 					</span>
 				</div>
 				{#if !hasTelegramRpc}
 					<div class="flex items-center gap-2">
 						<span class="h-2 w-2 rounded-full bg-amber-400"></span>
-						<span class="text-sm text-gray-300">
-							No <span class="font-mono text-gray-400">telegram.*</span> RPCs — will use config fallback
+						<span class="text-sm text-white/70">
+							No <span class="font-mono text-status-muted">telegram.*</span> RPCs — will use config fallback
 						</span>
 					</div>
 				{/if}
@@ -153,13 +153,13 @@
 				</div>
 			{/if}
 			{#if !isConnected}
-				<p class="text-xs text-gray-500">Connect to the gateway first to proceed.</p>
+				<p class="text-xs text-status-muted">Connect to the gateway first to proceed.</p>
 			{/if}
 		</div>
 	{:else if currentStep === 1}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Create a Telegram Bot</h3>
-			<ol class="list-decimal space-y-3 pl-5 text-sm text-gray-300">
+			<ol class="list-decimal space-y-3 pl-5 text-sm text-white/70">
 				<li>
 					Open Telegram and search for <a
 						href="https://t.me/BotFather"
@@ -169,24 +169,24 @@
 					>
 				</li>
 				<li>
-					Send <span class="rounded bg-gray-700 px-1.5 py-0.5 font-mono text-xs text-white"
+					Send <span class="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-white"
 						>/newbot</span
 					>
 				</li>
 				<li>Choose a <span class="font-semibold text-white">display name</span> for your bot</li>
 				<li>
 					Choose a <span class="font-semibold text-white">username</span> (must end in
-					<span class="font-mono text-gray-400">bot</span>)
+					<span class="font-mono text-status-muted">bot</span>)
 				</li>
 				<li>
 					BotFather will reply with your <span class="font-semibold text-white">bot token</span> — copy
 					it
 				</li>
 			</ol>
-			<div class="rounded border border-gray-700/60 bg-gray-900/40 p-3">
-				<p class="text-xs text-gray-500">
+			<div class="rounded border border-surface-border bg-surface-1/40 p-3">
+				<p class="text-xs text-status-muted">
 					If you already have a bot, send <span
-						class="rounded bg-gray-700 px-1 py-0.5 font-mono text-xs text-gray-300">/mybots</span
+						class="rounded bg-surface-3 px-1 py-0.5 font-mono text-xs text-white/70">/mybots</span
 					> to @BotFather to find your token.
 				</p>
 			</div>
@@ -195,7 +195,7 @@
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Enter Bot Token</h3>
 			<div>
-				<label for="telegram-bot-token" class="mb-1 block text-sm font-medium text-gray-300"
+				<label for="telegram-bot-token" class="mb-1 block text-sm font-medium text-white/70"
 					>Bot Token</label
 				>
 				<input
@@ -203,9 +203,9 @@
 					type="password"
 					bind:value={botToken}
 					placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
-				<p class="mt-1 text-xs text-gray-500">
+				<p class="mt-1 text-xs text-status-muted">
 					The token from @BotFather (format: <span class="font-mono">number:alphanumeric</span>)
 				</p>
 			</div>
@@ -213,43 +213,43 @@
 	{:else if currentStep === 3}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Configure Bot Settings</h3>
-			<p class="text-sm text-gray-300">
+			<p class="text-sm text-white/70">
 				Optionally configure your bot in @BotFather before connecting:
 			</p>
-			<div class="space-y-2 text-sm text-gray-400">
-				<div class="rounded border border-gray-700/60 bg-gray-900/40 p-3 space-y-2">
+			<div class="space-y-2 text-sm text-status-muted">
+				<div class="rounded border border-surface-border bg-surface-1/40 p-3 space-y-2">
 					<div class="flex items-start gap-2">
 						<span class="mt-0.5 font-mono text-xs text-blue-400">/setdescription</span>
-						<span class="text-gray-500">— What users see before starting a chat</span>
+						<span class="text-status-muted">— What users see before starting a chat</span>
 					</div>
 					<div class="flex items-start gap-2">
 						<span class="mt-0.5 font-mono text-xs text-blue-400">/setabouttext</span>
-						<span class="text-gray-500">— Shown in the bot's profile</span>
+						<span class="text-status-muted">— Shown in the bot's profile</span>
 					</div>
 					<div class="flex items-start gap-2">
 						<span class="mt-0.5 font-mono text-xs text-blue-400">/setuserpic</span>
-						<span class="text-gray-500">— Set the bot's avatar</span>
+						<span class="text-status-muted">— Set the bot's avatar</span>
 					</div>
 					<div class="flex items-start gap-2">
 						<span class="mt-0.5 font-mono text-xs text-blue-400">/setcommands</span>
-						<span class="text-gray-500">— Define slash commands for users</span>
+						<span class="text-status-muted">— Define slash commands for users</span>
 					</div>
 				</div>
 			</div>
-			<p class="text-xs text-gray-500">These are optional — you can always change them later.</p>
+			<p class="text-xs text-status-muted">These are optional — you can always change them later.</p>
 		</div>
 	{:else if currentStep === 4}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Save & Connect</h3>
-			<div class="rounded border border-gray-700/60 bg-gray-900/40 p-3">
+			<div class="rounded border border-surface-border bg-surface-1/40 p-3">
 				<div class="space-y-1 text-xs">
 					<div class="flex justify-between">
-						<span class="text-gray-400">Bot Token</span><span class="font-mono text-gray-200"
+						<span class="text-status-muted">Bot Token</span><span class="font-mono text-white/80"
 							>{botToken ? '••••••••' : '--'}</span
 						>
 					</div>
 					<div class="flex justify-between">
-						<span class="text-gray-400">Method</span><span class="font-mono text-gray-200"
+						<span class="text-status-muted">Method</span><span class="font-mono text-white/80"
 							>{hasTelegramRpc ? 'telegram.configure RPC' : 'config.apply fallback'}</span
 						>
 					</div>
@@ -269,9 +269,9 @@
 			{#if checking}
 				<div class="flex items-center gap-2">
 					<div
-						class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"
+						class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-status-info"
 					></div>
-					<span class="text-sm text-gray-400">Checking...</span>
+					<span class="text-sm text-status-muted">Checking...</span>
 				</div>
 			{:else if status.state === 'connected'}
 				<div class="rounded border border-emerald-600/30 bg-emerald-900/20 p-4">
@@ -290,7 +290,7 @@
 						>
 						<span class="font-medium">Telegram connected!</span>
 					</div>
-					{#if status.botUsername}<p class="mt-2 text-sm text-gray-300">
+					{#if status.botUsername}<p class="mt-2 text-sm text-white/70">
 							Bot: @{status.botUsername}
 						</p>{/if}
 				</div>
@@ -306,7 +306,7 @@
 				</div>
 				<button
 					onclick={checkStatus}
-					class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+					class="rounded-lg bg-surface-3 px-3 py-1.5 text-xs text-white/70 hover:bg-surface-3"
 					>Refresh</button
 				>
 			{/if}

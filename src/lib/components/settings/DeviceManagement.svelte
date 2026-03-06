@@ -156,11 +156,11 @@
 	<div class="flex items-center justify-between">
 		<h3 class="text-lg font-semibold text-white">Device Management</h3>
 		{#if loading}
-			<span class="text-sm text-gray-400">Loading...</span>
+			<span class="text-sm text-status-muted">Loading...</span>
 		{/if}
 	</div>
 
-	<p class="text-sm text-gray-400">
+	<p class="text-sm text-status-muted">
 		Manage paired devices that can connect to this gateway. Devices use cryptographic pairing for
 		secure authentication.
 	</p>
@@ -175,14 +175,14 @@
 	{:else}
 		{#if pendingRequests.length > 0}
 			<div class="space-y-3">
-				<h4 class="text-sm font-medium text-gray-300">Pending Pairing Requests</h4>
+				<h4 class="text-sm font-medium text-white/70">Pending Pairing Requests</h4>
 				{#each pendingRequests as request (request.requestId)}
 					<div class="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
 						<div class="flex items-start justify-between">
 							<div class="flex-1">
 								<p class="font-medium text-yellow-400">{request.deviceName}</p>
-								<p class="text-sm text-gray-400">Type: {request.deviceType}</p>
-								<p class="text-xs text-gray-500">
+								<p class="text-sm text-status-muted">Type: {request.deviceType}</p>
+								<p class="text-xs text-status-muted">
 									Requested {formatTimestamp(request.requestedAt)}
 								</p>
 							</div>
@@ -209,17 +209,17 @@
 		{/if}
 
 		<div class="space-y-3">
-			<h4 class="text-sm font-medium text-gray-300">Paired Devices</h4>
+			<h4 class="text-sm font-medium text-white/70">Paired Devices</h4>
 			{#if pairedDevices.length === 0}
-				<p class="text-sm text-gray-500">No paired devices</p>
+				<p class="text-sm text-status-muted">No paired devices</p>
 			{:else}
 				{#each pairedDevices as device (device.deviceId)}
-					<div class="rounded-lg border border-gray-700 bg-gray-800/50 p-4">
+					<div class="rounded-lg border border-surface-border bg-surface-2/50 p-4">
 						<div class="flex items-start justify-between">
 							<div class="flex-1">
 								<p class="font-medium text-white">{device.deviceName}</p>
-								<p class="text-sm text-gray-400">Type: {device.deviceType}</p>
-								<div class="mt-1 flex gap-4 text-xs text-gray-500">
+								<p class="text-sm text-status-muted">Type: {device.deviceType}</p>
+								<div class="mt-1 flex gap-4 text-xs text-status-muted">
 									<span>Paired {formatTimestamp(device.pairedAt)}</span>
 									{#if device.lastSeen}
 										<span>Last seen {formatTimestamp(device.lastSeen)}</span>
@@ -261,11 +261,11 @@
 
 	{#if confirmAction}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-			<div class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-6">
+			<div class="w-full max-w-md rounded-lg border border-surface-border bg-surface-2 p-6">
 				<h4 class="mb-3 text-lg font-semibold text-white">
 					{confirmAction.type === 'rotate' ? 'Rotate Token' : 'Revoke Device'}
 				</h4>
-				<p class="mb-4 text-sm text-gray-300">
+				<p class="mb-4 text-sm text-white/70">
 					{#if confirmAction.type === 'rotate'}
 						Are you sure you want to rotate the token for <strong>{confirmAction.deviceName}</strong
 						>? The device will need to authenticate with the new token.
@@ -291,7 +291,7 @@
 					<button
 						onclick={() => (confirmAction = null)}
 						disabled={loading}
-						class="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50"
+						class="flex-1 rounded-lg bg-surface-3 px-4 py-2 text-sm font-medium text-white hover:bg-surface-3 disabled:opacity-50"
 					>
 						Cancel
 					</button>

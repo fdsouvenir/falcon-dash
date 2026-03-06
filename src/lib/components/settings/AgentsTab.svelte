@@ -291,12 +291,12 @@
 	<div class="flex items-center justify-between">
 		<div>
 			<h2 class="text-lg font-semibold text-white">Agents</h2>
-			<p class="mt-1 text-sm text-gray-400">Manage your configured agents</p>
+			<p class="mt-1 text-sm text-status-muted">Manage your configured agents</p>
 		</div>
 		<button
 			onclick={requestSpawn}
 			disabled={spawning || !configHash}
-			class="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-gray-600 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+			class="flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface-2 px-3 py-1.5 text-sm text-status-muted transition-colors hover:border-surface-border hover:bg-surface-3 hover:text-white disabled:opacity-50"
 			aria-label="Spawn agent"
 			title="Spawn agent"
 		>
@@ -324,20 +324,20 @@
 	{#if error}
 		<div class="rounded-xl border border-red-800/50 bg-red-900/20 py-8 text-center">
 			<p class="text-sm text-red-400">{error}</p>
-			<button onclick={fetchAgents} class="mt-2 text-xs text-gray-400 underline hover:text-white">
+			<button onclick={fetchAgents} class="mt-2 text-xs text-status-muted underline hover:text-white">
 				Retry
 			</button>
 		</div>
 	{:else if loading}
-		<div class="rounded-xl border border-gray-800 bg-gray-900/30 py-12 text-center">
-			<p class="text-sm text-gray-500">Loading agents...</p>
+		<div class="rounded-xl border border-surface-border bg-surface-1/30 py-12 text-center">
+			<p class="text-sm text-status-muted">Loading agents...</p>
 		</div>
 	{:else}
 		<!-- Agent cards -->
 		<div class="space-y-3">
 			{#each enrichedAgents as agent (agent.id)}
 				<Card.Root
-					class="border-gray-800 bg-gray-900/50 px-4 py-4 transition-colors hover:border-gray-700 hover:bg-gray-900"
+					class="border-surface-border bg-surface-1/50 px-4 py-4 transition-colors hover:border-surface-border hover:bg-surface-1"
 				>
 					<div class="flex items-center gap-4">
 						<Avatar.Root class="h-11 w-11 rounded-xl">
@@ -355,14 +355,14 @@
 									</Badge>
 								{/if}
 								{#if agent.identity?.theme}
-									<Badge variant="outline" class="border-gray-700 text-gray-400">
+									<Badge variant="outline" class="border-surface-border text-status-muted">
 										{agent.identity.theme}
 									</Badge>
 								{/if}
 							</div>
-							<p class="mt-0.5 text-sm text-gray-400">
-								<span class="font-mono text-xs text-gray-500">{agent.id}</span>
-								<span class="mx-1.5 text-gray-600">&middot;</span>
+							<p class="mt-0.5 text-sm text-status-muted">
+								<span class="font-mono text-xs text-status-muted">{agent.id}</span>
+								<span class="mx-1.5 text-status-muted/60">&middot;</span>
 								{agent.sessionCount}
 								{agent.sessionCount === 1 ? 'session' : 'sessions'}
 							</p>
@@ -372,7 +372,7 @@
 							<!-- Edit button -->
 							<button
 								onclick={() => openEdit(agent)}
-								class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-300"
+								class="flex h-8 w-8 items-center justify-center rounded-md text-status-muted transition-colors hover:bg-surface-2 hover:text-white/70"
 								aria-label="Edit {agent.displayName}"
 								title="Edit"
 							>
@@ -395,7 +395,7 @@
 							{#if !agent.isFirst}
 								<button
 									onclick={() => openDelete(agent)}
-									class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-900/30 hover:text-red-400"
+									class="flex h-8 w-8 items-center justify-center rounded-md text-status-muted transition-colors hover:bg-red-900/30 hover:text-red-400"
 									aria-label="Delete {agent.displayName}"
 									title="Delete"
 								>
@@ -419,7 +419,7 @@
 							<span
 								class="h-2.5 w-2.5 rounded-full {agent.sessionCount > 0
 									? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
-									: 'bg-gray-600'}"
+									: 'bg-surface-3'}"
 							></span>
 						</div>
 					</div>
@@ -427,8 +427,8 @@
 			{/each}
 
 			{#if enrichedAgents.length === 0}
-				<div class="rounded-xl border border-gray-800 bg-gray-900/30 py-12 text-center">
-					<p class="text-sm text-gray-500">No agents configured</p>
+				<div class="rounded-xl border border-surface-border bg-surface-1/30 py-12 text-center">
+					<p class="text-sm text-status-muted">No agents configured</p>
 				</div>
 			{/if}
 		</div>
@@ -445,15 +445,15 @@
 		aria-modal="true"
 		aria-label="Confirm spawn agent"
 	>
-		<div class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
+		<div class="w-80 rounded-lg border border-surface-border bg-surface-2 p-5 shadow-xl">
 			<h3 class="mb-2 text-sm font-semibold text-white">Spawn Agent</h3>
-			<p class="mb-5 text-sm text-gray-300">
+			<p class="mb-5 text-sm text-white/70">
 				Create a new agent with an auto-generated ID? You can set its name and identity afterwards.
 			</p>
 			<div class="flex justify-end gap-2">
 				<button
 					onclick={() => (showSpawnConfirm = false)}
-					class="rounded px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-white"
+					class="rounded px-3 py-1.5 text-xs text-status-muted transition-colors hover:text-white"
 				>
 					Cancel
 				</button>
@@ -478,7 +478,7 @@
 		aria-modal="true"
 		aria-label="Edit agent"
 	>
-		<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
+		<div class="w-96 rounded-lg border border-surface-border bg-surface-2 p-5 shadow-xl">
 			<h3 class="mb-4 text-sm font-semibold text-white">Edit Agent</h3>
 
 			{#if formError}
@@ -487,29 +487,29 @@
 
 			<div class="space-y-3">
 				<div>
-					<label for="edit-agent-id" class="mb-1 block text-xs text-gray-400">Agent ID</label>
+					<label for="edit-agent-id" class="mb-1 block text-xs text-status-muted">Agent ID</label>
 					<input
 						id="edit-agent-id"
 						value={formId}
 						type="text"
 						disabled
-						class="w-full rounded border border-gray-700 bg-gray-900/50 px-3 py-1.5 font-mono text-sm text-gray-500"
+						class="w-full rounded border border-surface-border bg-surface-1/50 px-3 py-1.5 font-mono text-sm text-status-muted"
 					/>
 				</div>
 
 				<div class="flex gap-3">
 					<div class="w-20">
-						<label for="edit-agent-emoji" class="mb-1 block text-xs text-gray-400">Emoji</label>
+						<label for="edit-agent-emoji" class="mb-1 block text-xs text-status-muted">Emoji</label>
 						<input
 							id="edit-agent-emoji"
 							value={editDisplayEmoji || '\u2014'}
 							type="text"
 							disabled
-							class="w-full rounded border border-gray-700 bg-gray-900/50 px-3 py-1.5 text-center text-sm text-gray-500"
+							class="w-full rounded border border-surface-border bg-surface-1/50 px-3 py-1.5 text-center text-sm text-status-muted"
 						/>
 					</div>
 					<div class="flex-1">
-						<label for="edit-agent-name" class="mb-1 block text-xs text-gray-400">
+						<label for="edit-agent-name" class="mb-1 block text-xs text-status-muted">
 							Display Name
 						</label>
 						<input
@@ -517,22 +517,22 @@
 							value={editDisplayName}
 							type="text"
 							disabled
-							class="w-full rounded border border-gray-700 bg-gray-900/50 px-3 py-1.5 text-sm text-gray-500"
+							class="w-full rounded border border-surface-border bg-surface-1/50 px-3 py-1.5 text-sm text-status-muted"
 						/>
 					</div>
 				</div>
-				<p class="text-xs text-gray-600">Want to change my name or emoji? Just ask me in chat!</p>
+				<p class="text-xs text-status-muted/60">Want to change my name or emoji? Just ask me in chat!</p>
 
 				<div>
-					<label for="edit-agent-role" class="mb-1 block text-xs text-gray-400">Role</label>
+					<label for="edit-agent-role" class="mb-1 block text-xs text-status-muted">Role</label>
 					<input
 						id="edit-agent-role"
 						bind:value={formTheme}
 						type="text"
 						placeholder="research assistant"
-						class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+						class="w-full rounded border border-surface-border bg-surface-1 px-3 py-1.5 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 					/>
-					<p class="mt-1 text-xs text-gray-600">Tells the other agents why I'm here</p>
+					<p class="mt-1 text-xs text-status-muted/60">Tells the other agents why I'm here</p>
 				</div>
 			</div>
 
@@ -540,7 +540,7 @@
 				<button
 					onclick={closeModals}
 					disabled={formSaving}
-					class="rounded px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-white"
+					class="rounded px-3 py-1.5 text-xs text-status-muted transition-colors hover:text-white"
 				>
 					Cancel
 				</button>
@@ -566,18 +566,18 @@
 		aria-modal="true"
 		aria-label="Delete agent confirmation"
 	>
-		<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5 shadow-xl">
+		<div class="w-96 rounded-lg border border-surface-border bg-surface-2 p-5 shadow-xl">
 			<h3 class="mb-2 text-sm font-semibold text-white">Delete Agent</h3>
-			<p class="mb-1 text-sm text-gray-300">
+			<p class="mb-1 text-sm text-white/70">
 				Remove <strong>{deleteDisplayName}</strong> from the configuration?
 			</p>
-			<p class="mb-5 text-xs text-gray-500">The workspace directory will not be deleted.</p>
+			<p class="mb-5 text-xs text-status-muted">The workspace directory will not be deleted.</p>
 
 			<div class="flex justify-end gap-2">
 				<button
 					onclick={closeModals}
 					disabled={formSaving}
-					class="rounded px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-white"
+					class="rounded px-3 py-1.5 text-xs text-status-muted transition-colors hover:text-white"
 				>
 					Cancel
 				</button>

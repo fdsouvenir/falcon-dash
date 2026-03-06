@@ -28,7 +28,7 @@
 	function getLevelColor(level: string): string {
 		switch (level.toLowerCase()) {
 			case 'debug':
-				return 'text-gray-500';
+				return 'text-status-muted';
 			case 'info':
 				return 'text-blue-400';
 			case 'warn':
@@ -36,7 +36,7 @@
 			case 'error':
 				return 'text-red-400';
 			default:
-				return 'text-gray-400';
+				return 'text-status-muted';
 		}
 	}
 
@@ -126,14 +126,14 @@
 	});
 </script>
 
-<div class="flex h-full flex-col overflow-hidden bg-gray-900">
-	<div class="border-b border-gray-800 px-4 py-3">
+<div class="flex h-full flex-col overflow-hidden bg-surface-1">
+	<div class="border-b border-surface-border px-4 py-3">
 		<h2 class="text-lg font-semibold text-white">Live Logs</h2>
-		<p class="text-sm text-gray-400">View real-time gateway logs</p>
+		<p class="text-sm text-status-muted">View real-time gateway logs</p>
 	</div>
 
 	<!-- Controls -->
-	<div class="border-b border-gray-800 px-4 py-3">
+	<div class="border-b border-surface-border px-4 py-3">
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				onclick={togglePolling}
@@ -146,19 +146,19 @@
 
 			<button
 				onclick={clearLogs}
-				class="rounded bg-gray-700 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
+				class="rounded bg-surface-3 px-3 py-1 text-sm text-white transition-colors hover:bg-surface-3"
 			>
 				Clear
 			</button>
 
-			<label class="flex items-center gap-2 text-sm text-gray-300">
+			<label class="flex items-center gap-2 text-sm text-white/70">
 				<input type="checkbox" bind:checked={autoFollow} class="rounded" />
 				Auto-follow
 			</label>
 
 			<select
 				bind:value={levelFilter}
-				class="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-white"
+				class="rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
 			>
 				<option value="all">All Levels</option>
 				<option value="debug">Debug</option>
@@ -171,17 +171,17 @@
 				type="text"
 				bind:value={textFilter}
 				placeholder="Filter by text..."
-				class="rounded border border-gray-700 bg-gray-800 px-3 py-1 text-sm text-white placeholder-gray-500"
+				class="rounded border border-surface-border bg-surface-2 px-3 py-1 text-sm text-white placeholder-status-muted"
 			/>
 
-			<span class="ml-auto text-xs text-gray-500">
+			<span class="ml-auto text-xs text-status-muted">
 				{filteredEntries.length} / {entries.length} entries
 			</span>
 		</div>
 	</div>
 
 	<!-- Log entries -->
-	<div bind:this={logContainer} class="flex-1 overflow-y-auto bg-gray-950 p-4 font-mono text-sm">
+	<div bind:this={logContainer} class="flex-1 overflow-y-auto bg-surface-1 p-4 font-mono text-sm">
 		{#if unavailable}
 			<div class="rounded-lg border border-yellow-700/50 bg-yellow-900/20 p-4">
 				<p class="text-sm text-yellow-400">
@@ -190,18 +190,18 @@
 				</p>
 			</div>
 		{:else if filteredEntries.length === 0}
-			<div class="text-center text-gray-500">
+			<div class="text-center text-status-muted">
 				{isRunning ? 'Waiting for logs...' : 'Press Play to start tailing logs'}
 			</div>
 		{:else}
 			<div class="space-y-1">
 				{#each filteredEntries as entry (entry.ts + entry.message)}
 					<div class="flex gap-3">
-						<span class="flex-shrink-0 text-gray-600">{formatTimestamp(entry.ts)}</span>
+						<span class="flex-shrink-0 text-status-muted/60">{formatTimestamp(entry.ts)}</span>
 						<span class="w-12 flex-shrink-0 font-semibold uppercase {getLevelColor(entry.level)}">
 							{entry.level}
 						</span>
-						<span class="flex-1 text-gray-300">{entry.message}</span>
+						<span class="flex-1 text-white/70">{entry.message}</span>
 					</div>
 				{/each}
 			</div>

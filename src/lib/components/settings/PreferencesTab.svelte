@@ -90,18 +90,18 @@
 
 <div class="flex flex-col gap-6 p-6">
 	<!-- Appearance Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Appearance</h3>
 		<div class="space-y-4">
 			<!-- Theme -->
 			<div>
-				<label class="mb-2 block text-sm font-medium text-gray-300">Theme</label>
+				<label class="mb-2 block text-sm font-medium text-white/70">Theme</label>
 				<div class="flex gap-2">
 					<button
 						onclick={() => updateTheme('dark')}
 						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'dark'
 							? 'bg-blue-600 text-white'
-							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
 						Dark
 					</button>
@@ -109,7 +109,7 @@
 						onclick={() => updateTheme('light')}
 						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'light'
 							? 'bg-blue-600 text-white'
-							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
 						Light
 					</button>
@@ -117,7 +117,7 @@
 						onclick={() => updateTheme('system')}
 						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'system'
 							? 'bg-blue-600 text-white'
-							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
 						System
 					</button>
@@ -127,14 +127,14 @@
 			<!-- Compact Mode -->
 			<div class="flex items-center justify-between">
 				<div>
-					<div class="text-sm font-medium text-gray-300">Compact Mode</div>
-					<div class="text-xs text-gray-400">Use denser spacing for UI elements</div>
+					<div class="text-sm font-medium text-white/70">Compact Mode</div>
+					<div class="text-xs text-status-muted">Use denser spacing for UI elements</div>
 				</div>
 				<button
 					onclick={toggleCompactMode}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.compactMode
 						? 'bg-blue-600'
-						: 'bg-gray-600'}"
+						: 'bg-surface-3'}"
 					role="switch"
 					aria-checked={preferences.compactMode}
 				>
@@ -149,20 +149,20 @@
 	</div>
 
 	<!-- Notifications Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Notifications</h3>
 		<div class="space-y-4">
 			<!-- Enable Notifications -->
 			<div class="flex items-center justify-between">
 				<div>
-					<div class="text-sm font-medium text-gray-300">Browser Notifications</div>
-					<div class="text-xs text-gray-400">Show desktop notifications for important events</div>
+					<div class="text-sm font-medium text-white/70">Browser Notifications</div>
+					<div class="text-xs text-status-muted">Show desktop notifications for important events</div>
 				</div>
 				<button
 					onclick={toggleNotifications}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.notificationsEnabled
 						? 'bg-blue-600'
-						: 'bg-gray-600'}"
+						: 'bg-surface-3'}"
 					role="switch"
 					aria-checked={preferences.notificationsEnabled}
 				>
@@ -177,14 +177,14 @@
 			<!-- Sound -->
 			<div class="flex items-center justify-between">
 				<div>
-					<div class="text-sm font-medium text-gray-300">Notification Sound</div>
-					<div class="text-xs text-gray-400">Play sound when notifications appear</div>
+					<div class="text-sm font-medium text-white/70">Notification Sound</div>
+					<div class="text-xs text-status-muted">Play sound when notifications appear</div>
 				</div>
 				<button
 					onclick={toggleSound}
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.soundEnabled
 						? 'bg-blue-600'
-						: 'bg-gray-600'}"
+						: 'bg-surface-3'}"
 					role="switch"
 					aria-checked={preferences.soundEnabled}
 					disabled={!preferences.notificationsEnabled}
@@ -200,22 +200,22 @@
 	</div>
 
 	<!-- Project Management Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Project Management</h3>
 		<div>
-			<label class="mb-2 block text-sm font-medium text-gray-300">Default View</label>
+			<label class="mb-2 block text-sm font-medium text-white/70">Default View</label>
 			<select
 				value={preferences.defaultPmView}
 				onchange={(e) =>
 					updateDefaultPmView(e.currentTarget.value as 'dashboard' | 'kanban' | 'list' | 'tree')}
-				class="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				class="w-full rounded border border-surface-border bg-surface-3 px-3 py-2 text-sm text-white focus:border-status-info focus:outline-none focus:ring-1 focus:ring-status-info"
 			>
 				<option value="dashboard">Dashboard</option>
 				<option value="kanban">Kanban Board</option>
 				<option value="list">List View</option>
 				<option value="tree">Tree View</option>
 			</select>
-			<div class="mt-1 text-xs text-gray-400">
+			<div class="mt-1 text-xs text-status-muted">
 				Choose which view to show by default when opening Project Management
 			</div>
 		</div>
@@ -223,19 +223,19 @@
 
 	<!-- eslint-disable svelte/no-navigation-without-resolve -- external Cloudflare path, not a SvelteKit route -->
 	<!-- Session Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Session</h3>
 		<div class="space-y-3">
 			<div class="flex items-center justify-between">
 				<div>
-					<div class="text-sm font-medium text-gray-300">Log Out (Cloudflare)</div>
-					<div class="text-xs text-gray-400">
+					<div class="text-sm font-medium text-white/70">Log Out (Cloudflare)</div>
+					<div class="text-xs text-status-muted">
 						End your Cloudflare Access session and sign out completely
 					</div>
 				</div>
 				<a
 					href="/cdn-cgi/access/logout"
-					class="rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+					class="rounded bg-surface-3 px-3 py-1.5 text-sm text-white/70 hover:bg-surface-3 hover:text-white"
 				>
 					Log out
 				</a>

@@ -60,28 +60,28 @@
 
 <div class="flex flex-col gap-6 p-6">
 	<!-- Logo/Branding Section -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-6 text-center">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-6 text-center">
 		<div class="mb-4 flex items-center justify-center">
 			<div class="text-4xl">🦅</div>
 		</div>
 		<h2 class="mb-1 text-2xl font-bold text-white">Falcon Dash</h2>
-		<p class="text-sm text-gray-400">OpenClaw Control Dashboard</p>
+		<p class="text-sm text-status-muted">OpenClaw Control Dashboard</p>
 	</div>
 
 	<!-- Agent Identity Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Agent Identity</h3>
 		{#if loading}
-			<div class="text-sm text-gray-400">Loading...</div>
+			<div class="text-sm text-status-muted">Loading...</div>
 		{:else}
 			<dl class="space-y-3 text-sm">
 				<div>
-					<dt class="text-gray-400">Name</dt>
+					<dt class="text-status-muted">Name</dt>
 					<dd class="mt-1 font-medium text-white">{agentIdentity?.name || 'Unknown'}</dd>
 				</div>
 				{#if agentIdentity?.description}
 					<div>
-						<dt class="text-gray-400">Description</dt>
+						<dt class="text-status-muted">Description</dt>
 						<dd class="mt-1 text-white">{agentIdentity.description}</dd>
 					</div>
 				{/if}
@@ -90,18 +90,18 @@
 	</div>
 
 	<!-- Version Information Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Version Information</h3>
 		{#if loading}
-			<div class="text-sm text-gray-400">Loading...</div>
+			<div class="text-sm text-status-muted">Loading...</div>
 		{:else}
 			<dl class="space-y-3 text-sm">
 				<div>
-					<dt class="text-gray-400">Dashboard Version</dt>
+					<dt class="text-status-muted">Dashboard Version</dt>
 					<dd class="mt-1 font-mono text-white">{dashboardVersion}</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">OpenClaw Gateway</dt>
+					<dt class="text-status-muted">OpenClaw Gateway</dt>
 					<dd class="mt-1 font-mono text-white">{serverInfo?.version || 'Unknown'}</dd>
 				</div>
 			</dl>
@@ -109,20 +109,20 @@
 	</div>
 
 	<!-- System Status Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">System Status</h3>
 		{#if loading}
-			<div class="text-sm text-gray-400">Loading...</div>
+			<div class="text-sm text-status-muted">Loading...</div>
 		{:else}
 			<dl class="space-y-3 text-sm">
 				<div>
-					<dt class="text-gray-400">Gateway Uptime</dt>
+					<dt class="text-status-muted">Gateway Uptime</dt>
 					<dd class="mt-1 font-medium text-white">
 						{gatewayStatus?.uptime ? formatUptime(gatewayStatus.uptime) : 'N/A'}
 					</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Active Sessions</dt>
+					<dt class="text-status-muted">Active Sessions</dt>
 					<dd class="mt-1 font-medium text-white">
 						{gatewayStatus?.sessionCount !== undefined ? gatewayStatus.sessionCount : 'N/A'}
 					</dd>
@@ -132,9 +132,9 @@
 	</div>
 
 	<!-- OpenClaw Platform Card -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">OpenClaw Platform</h3>
-		<p class="text-sm text-gray-300">
+		<p class="text-sm text-white/70">
 			Falcon Dash is the control dashboard for the OpenClaw AI platform, providing real-time chat,
 			project management, file browsing, and system monitoring through a unified web interface.
 		</p>

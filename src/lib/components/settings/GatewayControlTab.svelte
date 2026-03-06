@@ -23,7 +23,7 @@
 <div class="flex h-full flex-col">
 	{#if error}
 		<div class="flex flex-1 items-center justify-center">
-			<p class="text-sm text-gray-400">{error}</p>
+			<p class="text-sm text-status-muted">{error}</p>
 		</div>
 	{:else if controlUrl}
 		<iframe
@@ -34,7 +34,7 @@
 		></iframe>
 	{:else}
 		<div class="flex flex-1 items-center justify-center">
-			<p class="text-sm text-gray-400">Loading...</p>
+			<p class="text-sm text-status-muted">Loading...</p>
 		</div>
 	{/if}
 </div>

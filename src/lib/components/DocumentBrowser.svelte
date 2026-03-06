@@ -335,14 +335,14 @@
 	ondrop={handleDrop}
 >
 	<!-- Breadcrumbs -->
-	<div class="flex items-center gap-1 border-b border-gray-800 px-4 py-2">
+	<div class="flex items-center gap-1 border-b border-surface-border px-4 py-2">
 		{#each crumbs as crumb, i (crumb.path)}
 			{#if i > 0}
-				<span class="text-xs text-gray-600">/</span>
+				<span class="text-xs text-status-muted/60">/</span>
 			{/if}
 			<button
 				onclick={() => loadDirectory(crumb.path)}
-				class="text-xs text-gray-400 transition-colors hover:text-white {i === crumbs.length - 1
+				class="text-xs text-status-muted transition-colors hover:text-white {i === crumbs.length - 1
 					? 'font-medium text-white'
 					: ''}"
 			>
@@ -352,19 +352,19 @@
 	</div>
 
 	<!-- Search and toolbar -->
-	<div class="flex items-center gap-2 border-b border-gray-800 px-4 py-2">
+	<div class="flex items-center gap-2 border-b border-surface-border px-4 py-2">
 		<input
 			type="text"
 			value={query}
 			oninput={handleSearch}
 			placeholder="Search files..."
-			class="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+			class="flex-1 rounded border border-surface-border bg-surface-2 px-3 py-1.5 text-xs text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 		/>
 		<button
 			onclick={() => {
 				showNewFileDialog = true;
 			}}
-			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+			class="rounded bg-surface-3 px-2 py-1.5 text-xs text-white/70 transition-colors hover:bg-surface-3 hover:text-white"
 		>
 			+ File
 		</button>
@@ -372,13 +372,13 @@
 			onclick={() => {
 				showNewFolderDialog = true;
 			}}
-			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+			class="rounded bg-surface-3 px-2 py-1.5 text-xs text-white/70 transition-colors hover:bg-surface-3 hover:text-white"
 		>
 			+ Folder
 		</button>
 		<button
 			onclick={handleUploadClick}
-			class="rounded bg-gray-700 px-2 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-600 hover:text-white"
+			class="rounded bg-surface-3 px-2 py-1.5 text-xs text-white/70 transition-colors hover:bg-surface-3 hover:text-white"
 		>
 			Upload
 		</button>
@@ -387,18 +387,18 @@
 
 	<!-- Bulk action bar -->
 	{#if selCount > 0}
-		<div class="flex items-center gap-2 border-b border-gray-800 bg-gray-800/50 px-4 py-2">
+		<div class="flex items-center gap-2 border-b border-surface-border bg-surface-2/50 px-4 py-2">
 			<span class="text-xs text-white">{selCount} selected</span>
 			<button onclick={selectAll} class="text-xs text-blue-400 hover:text-blue-300">
 				Select All
 			</button>
-			<button onclick={clearSelection} class="text-xs text-gray-400 hover:text-white">
+			<button onclick={clearSelection} class="text-xs text-status-muted hover:text-white">
 				Clear
 			</button>
 			<div class="ml-auto flex gap-2">
 				<button
 					onclick={handleBulkDownload}
-					class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600 hover:text-white"
+					class="rounded bg-surface-3 px-2 py-1 text-xs text-white/70 hover:bg-surface-3 hover:text-white"
 				>
 					Download
 				</button>
@@ -406,7 +406,7 @@
 					onclick={() => {
 						showMoveDialog = true;
 					}}
-					class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600 hover:text-white"
+					class="rounded bg-surface-3 px-2 py-1 text-xs text-white/70 hover:bg-surface-3 hover:text-white"
 				>
 					Move
 				</button>
@@ -424,7 +424,7 @@
 
 	<!-- Column headers -->
 	<div
-		class="grid grid-cols-[24px_1fr_120px_100px] gap-2 border-b border-gray-800 px-4 py-1.5 text-xs text-gray-500"
+		class="grid grid-cols-[24px_1fr_120px_100px] gap-2 border-b border-surface-border px-4 py-1.5 text-xs text-status-muted"
 	>
 		<input
 			type="checkbox"
@@ -455,7 +455,7 @@
 		{/if}
 
 		{#if loading}
-			<div class="py-8 text-center text-xs text-gray-500">Loading...</div>
+			<div class="py-8 text-center text-xs text-status-muted">Loading...</div>
 		{:else if error}
 			<div class="py-8 text-center text-xs text-red-400">{error}</div>
 		{:else}
@@ -463,7 +463,7 @@
 			{#if path}
 				<button
 					onclick={navigateUp}
-					class="grid w-full grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs text-gray-400 transition-colors hover:bg-gray-800"
+					class="grid w-full grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs text-status-muted transition-colors hover:bg-surface-2"
 				>
 					<span></span>
 					<span>📁 ..</span>
@@ -478,10 +478,10 @@
 				<div
 					onclick={() => handleNavigate(entry)}
 					oncontextmenu={(e) => handleContextMenu(e, entry)}
-					class="group grid w-full cursor-pointer grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-gray-800 {entry.type ===
+					class="group grid w-full cursor-pointer grid-cols-[24px_1fr_120px_100px] gap-2 px-4 py-1.5 text-left text-xs transition-colors hover:bg-surface-2 {entry.type ===
 					'directory'
 						? 'text-white'
-						: 'text-gray-300'}"
+						: 'text-white/70'}"
 				>
 					<input
 						type="checkbox"
@@ -501,7 +501,7 @@
 								onkeydown={(e) => handleRenameKeydown(e, entry.path)}
 								onblur={() => handleRename(entry.path)}
 								autofocus
-								class="w-full rounded border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs text-white focus:outline-none"
+								class="w-full rounded border border-surface-border bg-surface-2 px-1 py-0.5 text-xs text-white focus:outline-none"
 								onclick={(e) => e.stopPropagation()}
 							/>
 						{:else}
@@ -517,7 +517,7 @@
 										e.stopPropagation();
 										startRename(entry);
 									}}
-									class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+									class="cursor-pointer rounded px-1 text-status-muted hover:text-white"
 									title="Rename"
 								>
 									✏️
@@ -529,7 +529,7 @@
 										e.stopPropagation();
 										copyPath(entry);
 									}}
-									class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+									class="cursor-pointer rounded px-1 text-status-muted hover:text-white"
 									title="Copy path"
 								>
 									📋
@@ -542,7 +542,7 @@
 											e.stopPropagation();
 											downloadFile(entry);
 										}}
-										class="cursor-pointer rounded px-1 text-gray-500 hover:text-white"
+										class="cursor-pointer rounded px-1 text-status-muted hover:text-white"
 										title="Download"
 									>
 										⬇️
@@ -555,7 +555,7 @@
 										e.stopPropagation();
 										confirmDelete(entry);
 									}}
-									class="cursor-pointer rounded px-1 text-gray-500 hover:text-red-400"
+									class="cursor-pointer rounded px-1 text-status-muted hover:text-red-400"
 									title="Delete"
 								>
 									🗑️
@@ -563,15 +563,15 @@
 							</span>
 						{/if}
 					</span>
-					<span class="text-gray-500" title={new Date(entry.modified).toLocaleString()}>
+					<span class="text-status-muted" title={new Date(entry.modified).toLocaleString()}>
 						{formatRelativeTime(entry.modified)}
 					</span>
-					<span class="text-right text-gray-500">{formatSize(entry.size)}</span>
+					<span class="text-right text-status-muted">{formatSize(entry.size)}</span>
 				</div>
 			{/each}
 
 			{#if entries.length === 0 && !path}
-				<div class="py-8 text-center text-xs text-gray-500">
+				<div class="py-8 text-center text-xs text-status-muted">
 					Empty folder — drag files here or use the toolbar to create
 				</div>
 			{/if}
@@ -581,33 +581,33 @@
 	<!-- Context menu -->
 	{#if contextMenu}
 		<div
-			class="fixed z-50 min-w-[140px] rounded border border-gray-700 bg-gray-800 py-1 shadow-lg"
+			class="fixed z-50 min-w-[140px] rounded border border-surface-border bg-surface-2 py-1 shadow-lg"
 			style="left: {contextMenu.x}px; top: {contextMenu.y}px"
 		>
 			<button
 				onclick={() => startRename(contextMenu!.entry)}
-				class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+				class="block w-full px-3 py-1.5 text-left text-xs text-white/70 hover:bg-surface-3 hover:text-white"
 			>
 				Rename
 			</button>
 			<button
 				onclick={() => copyPath(contextMenu!.entry)}
-				class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+				class="block w-full px-3 py-1.5 text-left text-xs text-white/70 hover:bg-surface-3 hover:text-white"
 			>
 				Copy Path
 			</button>
 			{#if contextMenu.entry.type === 'file'}
 				<button
 					onclick={() => downloadFile(contextMenu!.entry)}
-					class="block w-full px-3 py-1.5 text-left text-xs text-gray-300 hover:bg-gray-700 hover:text-white"
+					class="block w-full px-3 py-1.5 text-left text-xs text-white/70 hover:bg-surface-3 hover:text-white"
 				>
 					Download
 				</button>
 			{/if}
-			<hr class="my-1 border-gray-700" />
+			<hr class="my-1 border-surface-border" />
 			<button
 				onclick={() => confirmDelete(contextMenu!.entry)}
-				class="block w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-gray-700"
+				class="block w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-surface-3"
 			>
 				Delete
 			</button>
@@ -629,7 +629,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				class="w-80 rounded-lg border border-surface-border bg-surface-2 p-4"
 				onclick={(e) => e.stopPropagation()}
 			>
 				<h3 class="mb-3 text-sm font-medium text-white">New File</h3>
@@ -639,7 +639,7 @@
 					bind:value={newFileName}
 					placeholder="filename.txt"
 					autofocus
-					class="mb-3 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="mb-3 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 					onkeydown={(e) => {
 						if (e.key === 'Enter') handleCreateFile();
 						if (e.key === 'Escape') showNewFileDialog = false;
@@ -650,7 +650,7 @@
 						onclick={() => {
 							showNewFileDialog = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 					>
 						Cancel
 					</button>
@@ -680,7 +680,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				class="w-80 rounded-lg border border-surface-border bg-surface-2 p-4"
 				onclick={(e) => e.stopPropagation()}
 			>
 				<h3 class="mb-3 text-sm font-medium text-white">New Folder</h3>
@@ -690,7 +690,7 @@
 					bind:value={newFolderName}
 					placeholder="folder-name"
 					autofocus
-					class="mb-3 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+					class="mb-3 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 					onkeydown={(e) => {
 						if (e.key === 'Enter') handleCreateFolder();
 						if (e.key === 'Escape') showNewFolderDialog = false;
@@ -701,7 +701,7 @@
 						onclick={() => {
 							showNewFolderDialog = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 					>
 						Cancel
 					</button>
@@ -731,13 +731,13 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				class="w-80 rounded-lg border border-surface-border bg-surface-2 p-4"
 				onclick={(e) => e.stopPropagation()}
 			>
 				<h3 class="mb-2 text-sm font-medium text-white">
 					Delete {deleteTarget.type === 'directory' ? 'Folder' : 'File'}
 				</h3>
-				<p class="mb-4 text-xs text-gray-400">
+				<p class="mb-4 text-xs text-status-muted">
 					Are you sure you want to delete <span class="font-medium text-white"
 						>{deleteTarget.name}</span
 					>?
@@ -750,7 +750,7 @@
 						onclick={() => {
 							showDeleteConfirm = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 					>
 						Cancel
 					</button>
@@ -780,11 +780,11 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				class="w-80 rounded-lg border border-surface-border bg-surface-2 p-4"
 				onclick={(e) => e.stopPropagation()}
 			>
 				<h3 class="mb-2 text-sm font-medium text-white">Delete {selCount} Items</h3>
-				<p class="mb-4 text-xs text-gray-400">
+				<p class="mb-4 text-xs text-status-muted">
 					Are you sure you want to delete {selCount} selected items? This action cannot be undone.
 				</p>
 				<div class="flex justify-end gap-2">
@@ -792,7 +792,7 @@
 						onclick={() => {
 							showBulkDeleteConfirm = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 					>
 						Cancel
 					</button>
@@ -822,7 +822,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<div
-				class="w-80 rounded-lg border border-gray-700 bg-gray-800 p-4"
+				class="w-80 rounded-lg border border-surface-border bg-surface-2 p-4"
 				onclick={(e) => e.stopPropagation()}
 			>
 				<h3 class="mb-3 text-sm font-medium text-white">Move {selCount} Items</h3>
@@ -835,7 +835,7 @@
 							class="block w-full rounded px-3 py-1.5 text-left text-xs transition-colors {moveDestination ===
 							folder.path
 								? 'bg-blue-600 text-white'
-								: 'text-gray-300 hover:bg-gray-700'}"
+								: 'text-white/70 hover:bg-surface-3'}"
 						>
 							📁 {folder.name}
 						</button>
@@ -846,7 +846,7 @@
 						onclick={() => {
 							showMoveDialog = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 					>
 						Cancel
 					</button>

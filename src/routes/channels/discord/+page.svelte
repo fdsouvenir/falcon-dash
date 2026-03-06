@@ -129,24 +129,24 @@
 			<div class="space-y-2">
 				<div class="flex items-center gap-2">
 					<span class="h-2 w-2 rounded-full {isConnected ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-					<span class="text-sm text-gray-300">Gateway connected</span>
+					<span class="text-sm text-white/70">Gateway connected</span>
 				</div>
 				<div class="flex items-center gap-2">
 					<span
 						class="h-2 w-2 rounded-full {status.state !== 'not_configured'
 							? 'bg-emerald-400'
-							: 'bg-gray-500'}"
+							: 'bg-status-muted'}"
 					></span>
-					<span class="text-sm text-gray-300">
-						Discord: <span class="font-mono text-gray-400">{status.state}</span>
+					<span class="text-sm text-white/70">
+						Discord: <span class="font-mono text-status-muted">{status.state}</span>
 					</span>
 				</div>
 			</div>
 			{#if !hasDiscordRpc}
 				<div class="flex items-center gap-2">
 					<span class="h-2 w-2 rounded-full bg-amber-400"></span>
-					<span class="text-sm text-gray-300">
-						No <span class="font-mono text-gray-400">discord.*</span> RPCs — will use config fallback
+					<span class="text-sm text-white/70">
+						No <span class="font-mono text-status-muted">discord.*</span> RPCs — will use config fallback
 					</span>
 				</div>
 			{/if}
@@ -158,13 +158,13 @@
 				</div>
 			{/if}
 			{#if !isConnected}
-				<p class="text-xs text-gray-500">Connect to the gateway first to proceed.</p>
+				<p class="text-xs text-status-muted">Connect to the gateway first to proceed.</p>
 			{/if}
 		</div>
 	{:else if currentStep === 1}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Create a Discord Application</h3>
-			<ol class="list-decimal space-y-3 pl-5 text-sm text-gray-300">
+			<ol class="list-decimal space-y-3 pl-5 text-sm text-white/70">
 				<li>
 					Go to the <a
 						href="https://discord.com/developers/applications"
@@ -188,7 +188,7 @@
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Enter Credentials</h3>
 			<div>
-				<label for="discord-client-id" class="mb-1 block text-sm font-medium text-gray-300"
+				<label for="discord-client-id" class="mb-1 block text-sm font-medium text-white/70"
 					>Client ID</label
 				>
 				<input
@@ -196,12 +196,12 @@
 					type="text"
 					bind:value={clientId}
 					placeholder="1234567890123456789"
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
-				<p class="mt-1 text-xs text-gray-500">Found in "General Information" tab</p>
+				<p class="mt-1 text-xs text-status-muted">Found in "General Information" tab</p>
 			</div>
 			<div>
-				<label for="discord-bot-token" class="mb-1 block text-sm font-medium text-gray-300"
+				<label for="discord-bot-token" class="mb-1 block text-sm font-medium text-white/70"
 					>Bot Token</label
 				>
 				<input
@@ -209,16 +209,16 @@
 					type="password"
 					bind:value={botToken}
 					placeholder="Enter your bot token"
-					class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+					class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 				/>
-				<p class="mt-1 text-xs text-gray-500">Keep this secret!</p>
+				<p class="mt-1 text-xs text-status-muted">Keep this secret!</p>
 			</div>
 		</div>
 	{:else if currentStep === 3}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Add Bot to Server</h3>
 			{#if clientId.trim()}
-				<p class="text-sm text-gray-300">
+				<p class="text-sm text-white/70">
 					Click below to invite your bot with the required permissions.
 				</p>
 				<!-- eslint-disable svelte/no-navigation-without-resolve -- external Discord OAuth URL -->
@@ -244,20 +244,20 @@
 	{:else if currentStep === 4}
 		<div class="space-y-4">
 			<h3 class="text-sm font-semibold text-white">Save & Connect</h3>
-			<div class="rounded border border-gray-700/60 bg-gray-900/40 p-3">
+			<div class="rounded border border-surface-border bg-surface-1/40 p-3">
 				<div class="space-y-1 text-xs">
 					<div class="flex justify-between">
-						<span class="text-gray-400">Client ID</span><span class="font-mono text-gray-200"
+						<span class="text-status-muted">Client ID</span><span class="font-mono text-white/80"
 							>{clientId || '--'}</span
 						>
 					</div>
 					<div class="flex justify-between">
-						<span class="text-gray-400">Bot Token</span><span class="font-mono text-gray-200"
+						<span class="text-status-muted">Bot Token</span><span class="font-mono text-white/80"
 							>{botToken ? '••••••••' : '--'}</span
 						>
 					</div>
 					<div class="flex justify-between">
-						<span class="text-gray-400">Method</span><span class="font-mono text-gray-200"
+						<span class="text-status-muted">Method</span><span class="font-mono text-white/80"
 							>{hasDiscordRpc ? 'discord.configure RPC' : 'config.apply fallback'}</span
 						>
 					</div>
@@ -277,9 +277,9 @@
 			{#if checking}
 				<div class="flex items-center gap-2">
 					<div
-						class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"
+						class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-status-info"
 					></div>
-					<span class="text-sm text-gray-400">Checking...</span>
+					<span class="text-sm text-status-muted">Checking...</span>
 				</div>
 			{:else if status.state === 'connected'}
 				<div class="rounded border border-emerald-600/30 bg-emerald-900/20 p-4">
@@ -298,10 +298,10 @@
 						>
 						<span class="font-medium">Discord connected!</span>
 					</div>
-					{#if status.serverName}<p class="mt-2 text-sm text-gray-300">
+					{#if status.serverName}<p class="mt-2 text-sm text-white/70">
 							Server: {status.serverName}
 						</p>{/if}
-					{#if status.channelCount}<p class="text-sm text-gray-400">
+					{#if status.channelCount}<p class="text-sm text-status-muted">
 							{status.channelCount} channels
 						</p>{/if}
 				</div>
@@ -311,7 +311,7 @@
 				</div>
 				<button
 					onclick={checkStatus}
-					class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+					class="rounded-lg bg-surface-3 px-3 py-1.5 text-xs text-white/70 hover:bg-surface-3"
 					>Refresh</button
 				>
 			{/if}

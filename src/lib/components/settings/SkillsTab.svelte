@@ -204,11 +204,11 @@
 <div class="flex flex-col gap-4">
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-2">
-			<div class="text-xs font-medium text-gray-400">Skills Management</div>
+			<div class="text-xs font-medium text-status-muted">Skills Management</div>
 			<button
 				onclick={refreshSkills}
 				disabled={refreshing}
-				class="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200 disabled:opacity-50"
+				class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white/80 disabled:opacity-50"
 				title="Refresh skills"
 			>
 				<svg
@@ -237,7 +237,7 @@
 	{#if !loading && skills.length > 0}
 		<div class="relative">
 			<svg
-				class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500"
+				class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-status-muted"
 				fill="none"
 				stroke="currentColor"
 				viewBox="0 0 24 24"
@@ -253,7 +253,7 @@
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Filter skills..."
-				class="w-full rounded border border-gray-700 bg-gray-900 py-1.5 pl-8 pr-3 text-xs text-gray-200 placeholder-gray-500 focus:border-gray-600 focus:outline-none"
+				class="w-full rounded border border-surface-border bg-surface-1 py-1.5 pl-8 pr-3 text-xs text-white/80 placeholder-status-muted focus:border-surface-border focus:outline-none"
 			/>
 		</div>
 	{/if}
@@ -267,26 +267,26 @@
 	{#if loading}
 		<div class="flex flex-col gap-2">
 			{#each [1, 2, 3] as _i (_i)}
-				<div class="animate-pulse rounded border border-gray-700 bg-gray-800/50 p-3">
+				<div class="animate-pulse rounded border border-surface-border bg-surface-2/50 p-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex-1">
 							<div class="flex items-center gap-2">
-								<div class="h-4 w-28 rounded bg-gray-700"></div>
-								<div class="h-3 w-10 rounded bg-gray-700"></div>
+								<div class="h-4 w-28 rounded bg-surface-3"></div>
+								<div class="h-3 w-10 rounded bg-surface-3"></div>
 							</div>
-							<div class="mt-2 h-3 w-48 rounded bg-gray-700"></div>
+							<div class="mt-2 h-3 w-48 rounded bg-surface-3"></div>
 						</div>
 						<div class="flex items-center gap-2">
-							<div class="h-6 w-16 rounded bg-gray-700"></div>
-							<div class="h-4 w-4 rounded bg-gray-700"></div>
+							<div class="h-6 w-16 rounded bg-surface-3"></div>
+							<div class="h-4 w-4 rounded bg-surface-3"></div>
 						</div>
 					</div>
 				</div>
 			{/each}
 		</div>
 	{:else if skills.length === 0}
-		<div class="flex flex-col items-center gap-3 rounded border border-dashed border-gray-700 py-8">
-			<svg class="h-8 w-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<div class="flex flex-col items-center gap-3 rounded border border-dashed border-surface-border py-8">
+			<svg class="h-8 w-8 text-status-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -294,7 +294,7 @@
 					d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
 				/>
 			</svg>
-			<div class="text-xs text-gray-500">No skills installed</div>
+			<div class="text-xs text-status-muted">No skills installed</div>
 			<button
 				onclick={openInstallModal}
 				class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700"
@@ -303,13 +303,13 @@
 			</button>
 		</div>
 	{:else if filteredSkills.length === 0}
-		<div class="py-4 text-center text-xs text-gray-500">
+		<div class="py-4 text-center text-xs text-status-muted">
 			No skills match "{searchQuery}"
 		</div>
 	{:else}
 		<div class="flex flex-col gap-2">
 			{#each filteredSkills as skill (skill.name)}
-				<div class="rounded border border-gray-700 bg-gray-800/50 p-3">
+				<div class="rounded border border-surface-border bg-surface-2/50 p-3">
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex-1">
 							<div class="flex items-center gap-2">
@@ -325,20 +325,20 @@
 											: 'Enabled (may need API key)'
 										: 'Disabled'}
 								></span>
-								<span class="text-sm font-medium text-gray-200">{skill.name}</span>
-								<span class="text-xs text-gray-500">v{skill.version}</span>
+								<span class="text-sm font-medium text-white/80">{skill.name}</span>
+								<span class="text-xs text-status-muted">v{skill.version}</span>
 								{#if skill.hasApiKey}
 									<span class="rounded bg-green-900/30 px-1.5 py-0.5 text-xs text-green-400">
 										API Key Set
 									</span>
 								{/if}
 							</div>
-							<div class="mt-1 text-xs text-gray-400">{skill.description}</div>
+							<div class="mt-1 text-xs text-status-muted">{skill.description}</div>
 						</div>
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => openApiKeyModal(skill.name)}
-								class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600"
+								class="rounded bg-surface-3 px-2 py-1 text-xs text-white/70 hover:bg-surface-3"
 							>
 								API Key
 							</button>
@@ -353,14 +353,14 @@
 								<button
 									onclick={() => (uninstallConfirmSkill = null)}
 									disabled={uninstallLoading}
-									class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600 disabled:opacity-50"
+									class="rounded bg-surface-3 px-2 py-1 text-xs text-white/70 hover:bg-surface-3 disabled:opacity-50"
 								>
 									Cancel
 								</button>
 							{:else}
 								<button
 									onclick={() => (uninstallConfirmSkill = skill.name)}
-									class="rounded bg-gray-700 px-2 py-1 text-xs text-red-400 hover:bg-gray-600"
+									class="rounded bg-surface-3 px-2 py-1 text-xs text-red-400 hover:bg-surface-3"
 									title="Uninstall skill"
 								>
 									Uninstall
@@ -373,7 +373,7 @@
 									onchange={() => toggleEnabled(skill)}
 									class="rounded"
 								/>
-								<span class="text-xs text-gray-400">Enabled</span>
+								<span class="text-xs text-status-muted">Enabled</span>
 							</label>
 						</div>
 					</div>
@@ -393,7 +393,7 @@
 						</button>
 
 						{#if expandedSkill === skill.name}
-							<div class="mt-2 rounded bg-gray-900/50 p-2 text-xs text-gray-300">
+							<div class="mt-2 rounded bg-surface-1/50 p-2 text-xs text-white/70">
 								{skill.docs}
 							</div>
 						{/if}
@@ -415,21 +415,21 @@
 		}}
 	>
 		<div
-			class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-4"
+			class="w-full max-w-md rounded-lg border border-surface-border bg-surface-2 p-4"
 			role="dialog"
 			aria-labelledby="api-key-modal-title"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 		>
-			<h3 id="api-key-modal-title" class="mb-3 text-sm font-medium text-gray-200">Set API Key</h3>
+			<h3 id="api-key-modal-title" class="mb-3 text-sm font-medium text-white/80">Set API Key</h3>
 			<label for="api-key-input" class="sr-only">API Key</label>
 			<input
 				id="api-key-input"
 				type="password"
 				bind:value={apiKeyInput}
 				placeholder="Enter API key"
-				class="mb-3 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+				class="mb-3 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white/80"
 			/>
 			{#if skillErrors[apiKeyModalSkill]}
 				<div class="mb-3 rounded bg-red-900/20 px-2 py-1 text-xs text-red-400">
@@ -440,7 +440,7 @@
 				<button
 					onclick={closeApiKeyModal}
 					disabled={apiKeyLoading}
-					class="rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600 disabled:opacity-50"
+					class="rounded bg-surface-3 px-3 py-1.5 text-xs text-white/70 hover:bg-surface-3 disabled:opacity-50"
 				>
 					Cancel
 				</button>
@@ -467,33 +467,33 @@
 		}}
 	>
 		<div
-			class="w-full max-w-md rounded-lg border border-gray-700 bg-gray-800 p-4"
+			class="w-full max-w-md rounded-lg border border-surface-border bg-surface-2 p-4"
 			role="dialog"
 			aria-labelledby="install-skill-modal-title"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 		>
-			<h3 id="install-skill-modal-title" class="mb-1 text-sm font-medium text-gray-200">
+			<h3 id="install-skill-modal-title" class="mb-1 text-sm font-medium text-white/80">
 				Install Skill
 			</h3>
-			<p class="mb-3 text-xs text-gray-500">
+			<p class="mb-3 text-xs text-status-muted">
 				Skills are npm packages. Enter the full package name to install.
 			</p>
 			<div class="mb-3">
-				<label for="install-name-input" class="mb-1 block text-xs text-gray-400">Skill Name *</label
+				<label for="install-name-input" class="mb-1 block text-xs text-status-muted">Skill Name *</label
 				>
 				<input
 					id="install-name-input"
 					type="text"
 					bind:value={installName}
 					placeholder="e.g., @modelcontextprotocol/server-brave-search"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white/80"
 				/>
-				<div class="mt-1 text-xs text-gray-600">Scoped packages use @scope/package-name format</div>
+				<div class="mt-1 text-xs text-status-muted/60">Scoped packages use @scope/package-name format</div>
 			</div>
 			<div class="mb-3">
-				<label for="install-id-input" class="mb-1 block text-xs text-gray-400"
+				<label for="install-id-input" class="mb-1 block text-xs text-status-muted"
 					>Install ID (optional)</label
 				>
 				<input
@@ -501,11 +501,11 @@
 					type="text"
 					bind:value={installId}
 					placeholder="Custom identifier for this installation"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white/80"
 				/>
 			</div>
 			<div class="mb-3">
-				<label for="install-registry-input" class="mb-1 block text-xs text-gray-400"
+				<label for="install-registry-input" class="mb-1 block text-xs text-status-muted"
 					>Registry URL (optional)</label
 				>
 				<input
@@ -513,15 +513,15 @@
 					type="text"
 					bind:value={installRegistry}
 					placeholder="https://registry.npmjs.org"
-					class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-gray-200"
+					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white/80"
 				/>
-				<div class="mt-1 text-xs text-gray-600">Leave blank for default npm registry</div>
+				<div class="mt-1 text-xs text-status-muted/60">Leave blank for default npm registry</div>
 			</div>
 			<div class="flex justify-end gap-2">
 				<button
 					onclick={closeInstallModal}
 					disabled={installLoading}
-					class="rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600 disabled:opacity-50"
+					class="rounded bg-surface-3 px-3 py-1.5 text-xs text-white/70 hover:bg-surface-3 disabled:opacity-50"
 				>
 					Cancel
 				</button>

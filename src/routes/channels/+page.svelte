@@ -73,41 +73,41 @@
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-lg font-semibold text-white">Channels</h1>
-			<p class="text-sm text-gray-400">Connect your agent to messaging platforms</p>
+			<p class="text-sm text-status-muted">Connect your agent to messaging platforms</p>
 		</div>
 	</div>
 
 	{#if !isConnected}
-		<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-8 text-center">
-			<p class="text-sm text-gray-500">Connect to gateway to manage channels</p>
+		<div class="rounded-lg border border-surface-border bg-surface-1 px-4 py-8 text-center">
+			<p class="text-sm text-status-muted">Connect to gateway to manage channels</p>
 		</div>
 	{:else}
 		<div class="grid gap-3 sm:grid-cols-2">
 			{#each channelTypes as channel (channel.id)}
-				<div class="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
+				<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 					<div class="mb-3 flex items-center gap-3">
-						<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-700/50">
-							<svg class="h-5 w-5 text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+						<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-3">
+							<svg class="h-5 w-5 text-white/70" viewBox="0 0 24 24" fill="currentColor">
 								<path d={channel.icon} />
 							</svg>
 						</div>
 						<div class="min-w-0 flex-1">
-							<h3 class="text-sm font-semibold text-gray-100">{channel.name}</h3>
-							<p class="text-xs text-gray-500">{channel.description}</p>
+							<h3 class="text-sm font-semibold text-white">{channel.name}</h3>
+							<p class="text-xs text-status-muted">{channel.description}</p>
 						</div>
 						{#if channel.connected}
 							<span class="h-2 w-2 rounded-full bg-emerald-400"></span>
 						{/if}
 					</div>
 
-					<p class="mb-3 text-xs {channel.connected ? 'text-emerald-400/80' : 'text-gray-500'}">
+					<p class="mb-3 text-xs {channel.connected ? 'text-emerald-400/80' : 'text-status-muted'}">
 						{channel.statusText}
 					</p>
 
 					<a
 						href={resolve(channel.href)}
 						class="inline-flex items-center rounded-md {channel.connected
-							? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+							? 'bg-surface-3 text-white/70 hover:bg-surface-3'
 							: 'bg-blue-600/80 text-white hover:bg-blue-600'} px-3 py-1.5 text-xs font-medium transition-colors"
 					>
 						{channel.connected ? 'Configure' : 'Set Up'}

@@ -104,7 +104,7 @@
 	function getLevelColor(level: string): string {
 		switch (level) {
 			case 'debug':
-				return 'text-gray-500';
+				return 'text-status-muted';
 			case 'info':
 				return 'text-blue-400';
 			case 'warn':
@@ -112,18 +112,18 @@
 			case 'error':
 				return 'text-red-400';
 			default:
-				return 'text-gray-400';
+				return 'text-status-muted';
 		}
 	}
 </script>
 
 <div class="flex flex-col gap-6 p-6">
 	<!-- Bridge Status -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Canvas Bridge</h3>
 		<dl class="grid grid-cols-2 gap-4 text-sm">
 			<div>
-				<dt class="text-gray-400">Status</dt>
+				<dt class="text-status-muted">Status</dt>
 				<dd class="mt-1">
 					{#if bridgeStatus.registered}
 						<span
@@ -134,23 +134,23 @@
 						</span>
 					{:else}
 						<span
-							class="inline-flex items-center gap-1.5 rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300"
+							class="inline-flex items-center gap-1.5 rounded bg-surface-3 px-2 py-0.5 text-xs text-white/70"
 						>
-							<span class="h-1.5 w-1.5 rounded-full bg-gray-500"></span>
+							<span class="h-1.5 w-1.5 rounded-full bg-status-muted"></span>
 							Not Registered
 						</span>
 					{/if}
 				</dd>
 			</div>
 			<div>
-				<dt class="text-gray-400">Node ID</dt>
+				<dt class="text-status-muted">Node ID</dt>
 				<dd class="mt-1 font-mono text-xs text-white">
 					{bridgeStatus.nodeId ?? 'N/A'}
 				</dd>
 			</div>
 			{#if bridgeStatus.error}
 				<div class="col-span-2">
-					<dt class="text-gray-400">Error</dt>
+					<dt class="text-status-muted">Error</dt>
 					<dd class="mt-1 text-sm text-red-400">{bridgeStatus.error}</dd>
 				</div>
 			{/if}
@@ -158,43 +158,43 @@
 	</div>
 
 	<!-- Canvas Host & Bundle -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Canvas Host</h3>
 		<dl class="grid grid-cols-2 gap-4 text-sm">
 			<div>
-				<dt class="text-gray-400">Host URL</dt>
+				<dt class="text-status-muted">Host URL</dt>
 				<dd class="mt-1 font-mono text-xs text-white">
 					{canvasHostUrl ?? 'Not set'}
 				</dd>
 			</div>
 			<div>
-				<dt class="text-gray-400">Reachability</dt>
+				<dt class="text-status-muted">Reachability</dt>
 				<dd class="mt-1 flex items-center gap-2">
 					{#if probeStatus === 'idle'}
 						<button
 							onclick={probeCanvasHost}
-							class="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-600"
+							class="rounded bg-surface-3 px-2 py-0.5 text-xs text-white/70 hover:bg-surface-3"
 						>
 							Check
 						</button>
 					{:else if probeStatus === 'checking'}
-						<span class="text-xs text-gray-400">Checking...</span>
+						<span class="text-xs text-status-muted">Checking...</span>
 					{:else if probeStatus === 'ok'}
 						<span class="text-xs text-green-400">Reachable</span>
 						<button
 							onclick={probeCanvasHost}
-							class="rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-600"
+							class="rounded bg-surface-3 px-1.5 py-0.5 text-xs text-status-muted hover:bg-surface-3"
 						>
 							Retry
 						</button>
 					{:else}
 						<span class="text-xs text-red-400">Unreachable</span>
 						{#if probeError}
-							<span class="text-xs text-gray-500">({probeError})</span>
+							<span class="text-xs text-status-muted">({probeError})</span>
 						{/if}
 						<button
 							onclick={probeCanvasHost}
-							class="rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-600"
+							class="rounded bg-surface-3 px-1.5 py-0.5 text-xs text-status-muted hover:bg-surface-3"
 						>
 							Retry
 						</button>
@@ -202,11 +202,11 @@
 				</dd>
 			</div>
 			<div>
-				<dt class="text-gray-400">A2UI Bundle Tier</dt>
+				<dt class="text-status-muted">A2UI Bundle Tier</dt>
 				<dd class="mt-1">
 					<span
 						class="inline-block rounded px-2 py-0.5 text-xs {bundleTier === 'not-loaded'
-							? 'bg-gray-700 text-gray-300'
+							? 'bg-surface-3 text-white/70'
 							: bundleTier === 'placeholder'
 								? 'bg-yellow-900/50 text-yellow-400'
 								: 'bg-green-900/50 text-green-400'}"
@@ -219,35 +219,35 @@
 	</div>
 
 	<!-- Surface Registry -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">
 			Surfaces
-			<span class="text-sm font-normal text-gray-400">({surfaceList.length})</span>
+			<span class="text-sm font-normal text-status-muted">({surfaceList.length})</span>
 		</h3>
 		{#if surfaceList.length === 0}
-			<div class="text-sm text-gray-400">No active surfaces</div>
+			<div class="text-sm text-status-muted">No active surfaces</div>
 		{:else}
 			<div class="space-y-2">
 				{#each surfaceList as surface (surface.surfaceId)}
-					<div class="rounded border border-gray-700 bg-gray-900 p-3">
+					<div class="rounded border border-surface-border bg-surface-1 p-3">
 						<div class="flex items-start justify-between">
 							<div class="min-w-0 flex-1">
 								<div class="text-sm font-medium text-white">
 									{surface.title ?? 'Untitled'}
 								</div>
-								<div class="mt-1 font-mono text-xs text-gray-500">
+								<div class="mt-1 font-mono text-xs text-status-muted">
 									{surface.surfaceId}
 								</div>
 							</div>
 							<span
 								class="inline-block rounded px-2 py-0.5 text-xs {surface.visible
 									? 'bg-green-900/50 text-green-400'
-									: 'bg-gray-700 text-gray-300'}"
+									: 'bg-surface-3 text-white/70'}"
 							>
 								{surface.visible ? 'visible' : 'hidden'}
 							</span>
 						</div>
-						<div class="mt-2 flex flex-wrap gap-3 text-xs text-gray-400">
+						<div class="mt-2 flex flex-wrap gap-3 text-xs text-status-muted">
 							<span>Messages: {surface.messages.length}</span>
 							<span>Created: {formatDateTime(surface.createdAt)}</span>
 							{#if surface.url}
@@ -261,22 +261,22 @@
 	</div>
 
 	<!-- Pinned Apps -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">
 			Pinned Apps
-			<span class="text-sm font-normal text-gray-400">({pins.length})</span>
+			<span class="text-sm font-normal text-status-muted">({pins.length})</span>
 		</h3>
 		{#if pins.length === 0}
-			<div class="text-sm text-gray-400">No pinned apps</div>
+			<div class="text-sm text-status-muted">No pinned apps</div>
 		{:else}
 			<div class="space-y-2">
 				{#each pins as pin (pin.id)}
-					<div class="flex items-center gap-3 rounded border border-gray-700 bg-gray-900 p-3">
+					<div class="flex items-center gap-3 rounded border border-surface-border bg-surface-1 p-3">
 						<div class="min-w-0 flex-1">
 							<div class="text-sm font-medium text-white">{pin.name}</div>
-							<div class="mt-0.5 font-mono text-xs text-gray-500">{pin.surfaceId}</div>
+							<div class="mt-0.5 font-mono text-xs text-status-muted">{pin.surfaceId}</div>
 						</div>
-						<span class="text-xs text-gray-500">
+						<span class="text-xs text-status-muted">
 							{formatDateTime(pin.pinnedAt)}
 						</span>
 					</div>
@@ -286,27 +286,27 @@
 	</div>
 
 	<!-- Canvas Event Log -->
-	<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
+	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">
 			Canvas Events
-			<span class="text-sm font-normal text-gray-400">
+			<span class="text-sm font-normal text-status-muted">
 				(last {canvasEvents.length})
 			</span>
 		</h3>
 		{#if canvasEvents.length === 0}
-			<div class="text-sm text-gray-400">No canvas events recorded</div>
+			<div class="text-sm text-status-muted">No canvas events recorded</div>
 		{:else}
 			<div class="max-h-64 overflow-y-auto font-mono text-xs">
 				<div class="space-y-1">
 					{#each canvasEvents as event (event.ts + event.message)}
 						<div class="flex gap-3">
-							<span class="flex-shrink-0 text-gray-600">
+							<span class="flex-shrink-0 text-status-muted/60">
 								{formatTime(event.ts)}
 							</span>
 							<span class="w-10 flex-shrink-0 font-semibold uppercase {getLevelColor(event.level)}">
 								{event.level}
 							</span>
-							<span class="flex-1 text-gray-300">{event.message}</span>
+							<span class="flex-1 text-white/70">{event.message}</span>
 						</div>
 					{/each}
 				</div>

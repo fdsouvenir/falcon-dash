@@ -125,10 +125,10 @@
 	});
 </script>
 
-<div class="flex h-full flex-col overflow-hidden bg-gray-950">
+<div class="flex h-full flex-col overflow-hidden bg-surface-1">
 	<!-- Header -->
-	<div class="flex items-center justify-between border-b border-gray-800 px-4 py-2">
-		<span class="text-sm font-medium text-gray-300">Terminal</span>
+	<div class="flex items-center justify-between border-b border-surface-border px-4 py-2">
+		<span class="text-sm font-medium text-white/70">Terminal</span>
 		<div class="flex items-center gap-2">
 			<span
 				class="inline-block h-2 w-2 rounded-full {status === 'connected'
@@ -137,7 +137,7 @@
 						? 'bg-yellow-500'
 						: 'bg-red-500'}"
 			></span>
-			<span class="text-xs text-gray-500">{status}</span>
+			<span class="text-xs text-status-muted">{status}</span>
 		</div>
 	</div>
 

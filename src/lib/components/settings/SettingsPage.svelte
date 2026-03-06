@@ -40,7 +40,7 @@
 
 <div class="flex h-full flex-col">
 	<!-- Tab bar -->
-	<div class="border-b border-gray-700 bg-gray-900">
+	<div class="border-b border-surface-border bg-surface-1">
 		<div class="flex overflow-x-auto px-4">
 			{#each tabs as tab (tab.id)}
 				<button
@@ -48,7 +48,7 @@
 					class="whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab ===
 					tab.id
 						? 'border-blue-500 text-blue-400'
-						: 'border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}"
+						: 'border-transparent text-status-muted hover:border-surface-border hover:text-white/80'}"
 				>
 					{tab.label}
 				</button>

@@ -98,9 +98,9 @@
 	}
 </script>
 
-<div class="flex h-full flex-col bg-gray-950">
+<div class="flex h-full flex-col bg-surface-1">
 	<!-- Header -->
-	<div class="flex items-center justify-between border-b border-gray-700 px-4 py-3">
+	<div class="flex items-center justify-between border-b border-surface-border px-4 py-3">
 		{#if view === 'viewer' || path}
 			<button
 				class="flex min-h-[44px] items-center gap-2 text-sm text-blue-400"
@@ -116,7 +116,7 @@
 		{/if}
 
 		{#if view === 'viewer' && editorState}
-			<span class="truncate text-sm text-gray-400">{editorState.fileName}</span>
+			<span class="truncate text-sm text-status-muted">{editorState.fileName}</span>
 		{/if}
 	</div>
 
@@ -124,7 +124,7 @@
 		<!-- Viewer -->
 		<div class="flex-1 overflow-auto px-4 py-3 pb-[calc(1rem+var(--safe-bottom))]">
 			{#if editorState?.isLoading}
-				<div class="flex items-center justify-center py-12 text-gray-400">
+				<div class="flex items-center justify-center py-12 text-status-muted">
 					<span>Loading file...</span>
 				</div>
 			{:else if editorState?.error}
@@ -143,17 +143,17 @@
 						<img src={editorState.content} alt={editorState.fileName} class="max-w-full rounded" />
 					</div>
 				{:else}
-					<pre class="overflow-x-auto text-sm text-gray-300">{editorState.content}</pre>
+					<pre class="overflow-x-auto text-sm text-white/70">{editorState.content}</pre>
 				{/if}
 			{/if}
 		</div>
 	{:else}
 		<!-- Breadcrumbs -->
 		{#if crumbs.length > 1}
-			<div class="flex items-center gap-1 overflow-x-auto border-b border-gray-800 px-4 py-2">
+			<div class="flex items-center gap-1 overflow-x-auto border-b border-surface-border px-4 py-2">
 				{#each crumbs as crumb, i (crumb.path)}
 					{#if i > 0}
-						<span class="text-xs text-gray-600">/</span>
+						<span class="text-xs text-status-muted/60">/</span>
 					{/if}
 					<button
 						class="whitespace-nowrap text-xs {i === crumbs.length - 1
@@ -170,14 +170,14 @@
 		<!-- File List -->
 		<div class="flex-1 overflow-auto pb-[calc(1rem+var(--safe-bottom))]">
 			{#if loading}
-				<div class="flex items-center justify-center py-12 text-gray-400">
+				<div class="flex items-center justify-center py-12 text-status-muted">
 					<span>Loading...</span>
 				</div>
 			{:else if error}
 				<div class="flex flex-col items-center justify-center gap-2 py-12">
 					<span class="text-sm text-red-400">{error}</span>
 					<button
-						class="rounded-lg bg-gray-800 px-4 py-2 text-sm text-white"
+						class="rounded-lg bg-surface-2 px-4 py-2 text-sm text-white"
 						onclick={() => loadDirectory(path)}
 					>
 						Retry
@@ -186,7 +186,7 @@
 			{:else if entries.length === 0}
 				<div class="flex flex-col items-center justify-center gap-2 py-12">
 					<svg
-						class="h-10 w-10 text-gray-600"
+						class="h-10 w-10 text-status-muted/60"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke="currentColor"
@@ -198,13 +198,13 @@
 							d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
 						/>
 					</svg>
-					<span class="text-sm text-gray-400">No files in this directory</span>
+					<span class="text-sm text-status-muted">No files in this directory</span>
 				</div>
 			{:else}
-				<div class="divide-y divide-gray-800">
+				<div class="divide-y divide-surface-border">
 					{#each entries as entry (entry.path)}
 						<button
-							class="flex min-h-[44px] w-full items-center gap-3 px-4 py-3 text-left active:bg-gray-900"
+							class="flex min-h-[44px] w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-1"
 							onclick={() => handleEntryTap(entry)}
 						>
 							<!-- Icon -->
@@ -224,7 +224,7 @@
 								</svg>
 							{:else}
 								<svg
-									class="h-5 w-5 shrink-0 text-gray-500"
+									class="h-5 w-5 shrink-0 text-status-muted"
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke="currentColor"
@@ -241,7 +241,7 @@
 							<!-- Details -->
 							<div class="min-w-0 flex-1">
 								<div class="truncate text-sm text-white">{entry.name}</div>
-								<div class="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+								<div class="mt-0.5 flex items-center gap-2 text-xs text-status-muted">
 									{#if entry.type === 'file'}
 										<span>{formatSize(entry.size)}</span>
 										<span>·</span>
@@ -253,7 +253,7 @@
 							<!-- Chevron -->
 							{#if entry.type === 'directory'}
 								<svg
-									class="h-4 w-4 shrink-0 text-gray-600"
+									class="h-4 w-4 shrink-0 text-status-muted/60"
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke="currentColor"

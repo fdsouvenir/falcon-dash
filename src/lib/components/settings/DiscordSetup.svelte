@@ -122,7 +122,7 @@
 	<div class="flex items-center justify-between">
 		<h3 class="text-lg font-semibold text-white">Discord Integration</h3>
 		{#if loading}
-			<span class="text-sm text-gray-400">Loading...</span>
+			<span class="text-sm text-status-muted">Loading...</span>
 		{/if}
 	</div>
 
@@ -131,8 +131,8 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="font-medium text-green-400">Connected</p>
-					<p class="text-sm text-gray-300">Server: {status.serverName}</p>
-					<p class="text-sm text-gray-400">Channels: {status.channelCount}</p>
+					<p class="text-sm text-white/70">Server: {status.serverName}</p>
+					<p class="text-sm text-status-muted">Channels: {status.channelCount}</p>
 				</div>
 				<button
 					onclick={() => (showDisconnectConfirm = true)}
@@ -146,7 +146,7 @@
 
 		{#if showDisconnectConfirm}
 			<div class="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-				<p class="mb-3 text-sm text-gray-300">Are you sure you want to disconnect Discord?</p>
+				<p class="mb-3 text-sm text-white/70">Are you sure you want to disconnect Discord?</p>
 				<div class="flex gap-2">
 					<button
 						onclick={() => disconnect()}
@@ -158,7 +158,7 @@
 					<button
 						onclick={() => (showDisconnectConfirm = false)}
 						disabled={loading}
-						class="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50"
+						class="rounded-lg bg-surface-3 px-4 py-2 text-sm font-medium text-white hover:bg-surface-3 disabled:opacity-50"
 					>
 						Cancel
 					</button>
@@ -168,32 +168,32 @@
 	{:else if status.state === 'configured'}
 		<div class="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
 			<p class="font-medium text-blue-400">Configured</p>
-			<p class="text-sm text-gray-300">Discord bot is configured but not connected.</p>
+			<p class="text-sm text-white/70">Discord bot is configured but not connected.</p>
 		</div>
 	{:else if status.state === 'error'}
 		<div class="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
 			<p class="font-medium text-red-400">Error</p>
-			<p class="text-sm text-gray-300">{status.error || 'Unknown error'}</p>
+			<p class="text-sm text-white/70">{status.error || 'Unknown error'}</p>
 		</div>
 	{/if}
 
 	{#if status.state === 'not_configured' || status.state === 'configured'}
 		<div class="space-y-4">
-			<div class="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+			<div class="rounded-lg border border-surface-border bg-surface-2/50 p-6">
 				<h4 class="mb-4 font-medium text-white">Setup Discord Bot</h4>
 
 				<div class="mb-6 space-y-3">
 					<button
 						onclick={() => (setupStep = 1)}
-						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 text-left transition-colors hover:bg-gray-700"
+						class="w-full rounded-lg border border-surface-border bg-surface-2 p-3 text-left transition-colors hover:bg-surface-3"
 					>
 						<div class="flex items-center justify-between">
 							<span class="text-sm font-medium text-white">Step 1: Create Discord Application</span>
-							<span class="text-xs text-gray-400">{setupStep === 1 ? '▼' : '▶'}</span>
+							<span class="text-xs text-status-muted">{setupStep === 1 ? '▼' : '▶'}</span>
 						</div>
 					</button>
 					{#if setupStep === 1}
-						<div class="rounded-lg bg-gray-900/50 p-4 text-sm text-gray-300">
+						<div class="rounded-lg bg-surface-1/50 p-4 text-sm text-white/70">
 							<ol class="list-decimal space-y-2 pl-5">
 								<li>
 									Go to <a
@@ -212,23 +212,23 @@
 
 					<button
 						onclick={() => (setupStep = 2)}
-						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 text-left transition-colors hover:bg-gray-700"
+						class="w-full rounded-lg border border-surface-border bg-surface-2 p-3 text-left transition-colors hover:bg-surface-3"
 					>
 						<div class="flex items-center justify-between">
 							<span class="text-sm font-medium text-white">Step 2: Enter Client ID</span>
-							<span class="text-xs text-gray-400">{setupStep === 2 ? '▼' : '▶'}</span>
+							<span class="text-xs text-status-muted">{setupStep === 2 ? '▼' : '▶'}</span>
 						</div>
 					</button>
 					{#if setupStep === 2}
-						<div class="rounded-lg bg-gray-900/50 p-4">
-							<label class="mb-2 block text-sm font-medium text-gray-300">Client ID</label>
+						<div class="rounded-lg bg-surface-1/50 p-4">
+							<label class="mb-2 block text-sm font-medium text-white/70">Client ID</label>
 							<input
 								type="text"
 								bind:value={clientId}
 								placeholder="1234567890123456789"
-								class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+								class="w-full rounded-lg border border-surface-border bg-surface-2 px-3 py-2 text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 							/>
-							<p class="mt-2 text-xs text-gray-400">
+							<p class="mt-2 text-xs text-status-muted">
 								Find this in your Discord Application's "General Information" tab
 							</p>
 						</div>
@@ -236,37 +236,37 @@
 
 					<button
 						onclick={() => (setupStep = 3)}
-						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 text-left transition-colors hover:bg-gray-700"
+						class="w-full rounded-lg border border-surface-border bg-surface-2 p-3 text-left transition-colors hover:bg-surface-3"
 					>
 						<div class="flex items-center justify-between">
 							<span class="text-sm font-medium text-white">Step 3: Enter Bot Token</span>
-							<span class="text-xs text-gray-400">{setupStep === 3 ? '▼' : '▶'}</span>
+							<span class="text-xs text-status-muted">{setupStep === 3 ? '▼' : '▶'}</span>
 						</div>
 					</button>
 					{#if setupStep === 3}
-						<div class="rounded-lg bg-gray-900/50 p-4">
-							<label class="mb-2 block text-sm font-medium text-gray-300">Bot Token</label>
+						<div class="rounded-lg bg-surface-1/50 p-4">
+							<label class="mb-2 block text-sm font-medium text-white/70">Bot Token</label>
 							<input
 								type="password"
 								bind:value={botToken}
 								placeholder="••••••••••••••••••••••••"
-								class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+								class="w-full rounded-lg border border-surface-border bg-surface-2 px-3 py-2 text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 							/>
-							<p class="mt-2 text-xs text-gray-400">Found in the "Bot" tab. Keep this secret!</p>
+							<p class="mt-2 text-xs text-status-muted">Found in the "Bot" tab. Keep this secret!</p>
 						</div>
 					{/if}
 
 					<button
 						onclick={() => (setupStep = 4)}
-						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 text-left transition-colors hover:bg-gray-700"
+						class="w-full rounded-lg border border-surface-border bg-surface-2 p-3 text-left transition-colors hover:bg-surface-3"
 					>
 						<div class="flex items-center justify-between">
 							<span class="text-sm font-medium text-white">Step 4: Add to Server</span>
-							<span class="text-xs text-gray-400">{setupStep === 4 ? '▼' : '▶'}</span>
+							<span class="text-xs text-status-muted">{setupStep === 4 ? '▼' : '▶'}</span>
 						</div>
 					</button>
 					{#if setupStep === 4}
-						<div class="rounded-lg bg-gray-900/50 p-4">
+						<div class="rounded-lg bg-surface-1/50 p-4">
 							{#if clientId.trim()}
 								<a
 									href={generateOAuthUrl()}
@@ -276,11 +276,11 @@
 								>
 									Add to Discord Server
 								</a>
-								<p class="mt-2 text-xs text-gray-400">
+								<p class="mt-2 text-xs text-status-muted">
 									Click to authorize the bot with required permissions (Send Messages)
 								</p>
 							{:else}
-								<p class="text-sm text-gray-400">Enter Client ID in Step 2 first</p>
+								<p class="text-sm text-status-muted">Enter Client ID in Step 2 first</p>
 							{/if}
 						</div>
 					{/if}

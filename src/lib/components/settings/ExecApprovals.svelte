@@ -150,9 +150,9 @@
 </script>
 
 <div class="p-6 space-y-6">
-	<h2 class="text-2xl font-bold text-gray-100">Exec Approvals</h2>
+	<h2 class="text-2xl font-bold text-white">Exec Approvals</h2>
 
-	<p class="text-sm text-gray-400">
+	<p class="text-sm text-status-muted">
 		Exec Approvals control which commands agents can execute. When enabled, agents must request
 		approval before running commands not in the allowlist.
 	</p>
@@ -172,12 +172,12 @@
 
 	{#if !unavailable}
 		<!-- Policy Section -->
-		<div class="bg-gray-800 rounded-lg p-4">
-			<h3 class="text-lg font-semibold text-gray-100 mb-3">Ask Policy</h3>
+		<div class="bg-surface-2 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-white mb-3">Ask Policy</h3>
 			<select
 				bind:value={policy}
 				onchange={() => updatePolicy(policy)}
-				class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2"
+				class="w-full bg-surface-3 text-white border border-surface-border rounded px-3 py-2"
 			>
 				<option value="off">Off</option>
 				<option value="on-miss">On Miss</option>
@@ -186,15 +186,15 @@
 		</div>
 
 		<!-- Global Allowlist Section -->
-		<div class="bg-gray-800 rounded-lg p-4">
-			<h3 class="text-lg font-semibold text-gray-100 mb-3">Global Allowlist</h3>
+		<div class="bg-surface-2 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-white mb-3">Global Allowlist</h3>
 
 			<div class="flex gap-2 mb-4">
 				<input
 					type="text"
 					bind:value={newPattern}
 					placeholder="Command pattern (e.g., ls, git status)"
-					class="flex-1 bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2"
+					class="flex-1 bg-surface-3 text-white border border-surface-border rounded px-3 py-2"
 					onkeydown={(e) => e.key === 'Enter' && addPattern()}
 				/>
 				<button
@@ -206,14 +206,14 @@
 			</div>
 
 			{#if loading}
-				<div class="text-gray-400">Loading...</div>
+				<div class="text-status-muted">Loading...</div>
 			{:else if allowlist.length === 0}
-				<div class="text-gray-400">No patterns in allowlist</div>
+				<div class="text-status-muted">No patterns in allowlist</div>
 			{:else}
 				<ul class="space-y-2">
 					{#each allowlist as pattern (pattern)}
-						<li class="flex justify-between items-center bg-gray-700 px-3 py-2 rounded">
-							<code class="text-gray-100">{pattern}</code>
+						<li class="flex justify-between items-center bg-surface-3 px-3 py-2 rounded">
+							<code class="text-white">{pattern}</code>
 							<button
 								onclick={() => removePattern(pattern)}
 								class="text-red-400 hover:text-red-300"
@@ -227,15 +227,15 @@
 		</div>
 
 		<!-- Per-Node Allowlist Section -->
-		<div class="bg-gray-800 rounded-lg p-4">
-			<h3 class="text-lg font-semibold text-gray-100 mb-3">Per-Node Allowlist</h3>
+		<div class="bg-surface-2 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-white mb-3">Per-Node Allowlist</h3>
 
 			{#if nodes.length === 0}
-				<div class="text-gray-400">No nodes available</div>
+				<div class="text-status-muted">No nodes available</div>
 			{:else}
 				<select
 					onchange={(e) => selectNode((e.target as HTMLSelectElement).value)}
-					class="w-full bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2 mb-4"
+					class="w-full bg-surface-3 text-white border border-surface-border rounded px-3 py-2 mb-4"
 				>
 					<option value="">Select a node</option>
 					{#each nodes as node (node)}
@@ -248,7 +248,7 @@
 						<textarea
 							bind:value={nodeAllowlist}
 							placeholder="One pattern per line"
-							class="w-full h-32 bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2 font-mono text-sm"
+							class="w-full h-32 bg-surface-3 text-white border border-surface-border rounded px-3 py-2 font-mono text-sm"
 						></textarea>
 						<button
 							onclick={updateNodeAllowlist}
@@ -262,20 +262,20 @@
 		</div>
 
 		<!-- Pending Approvals Section -->
-		<div class="bg-gray-800 rounded-lg p-4">
-			<h3 class="text-lg font-semibold text-gray-100 mb-3">Pending Approvals</h3>
+		<div class="bg-surface-2 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-white mb-3">Pending Approvals</h3>
 
 			{#if localPendingApprovals.length === 0}
-				<div class="text-gray-400">No pending approvals</div>
+				<div class="text-status-muted">No pending approvals</div>
 			{:else}
 				<ul class="space-y-3">
 					{#each localPendingApprovals as approval (approval.requestId)}
-						<li class="bg-gray-700 p-3 rounded">
+						<li class="bg-surface-3 p-3 rounded">
 							<div class="mb-2">
-								<div class="text-gray-100 font-mono text-sm">
+								<div class="text-white font-mono text-sm">
 									{approval.command}
 								</div>
-								<div class="text-gray-400 text-xs mt-1">
+								<div class="text-status-muted text-xs mt-1">
 									Agent: {approval.agentId}
 								</div>
 							</div>
@@ -312,9 +312,9 @@
 		</div>
 
 		<!-- Denylist Section -->
-		<div class="bg-gray-800 rounded-lg p-4">
-			<h3 class="text-lg font-semibold text-gray-100 mb-3">Denylist</h3>
-			<p class="text-sm text-gray-400 mb-4">
+		<div class="bg-surface-2 rounded-lg p-4">
+			<h3 class="text-lg font-semibold text-white mb-3">Denylist</h3>
+			<p class="text-sm text-status-muted mb-4">
 				Commands that are automatically denied without prompting.
 			</p>
 
@@ -323,7 +323,7 @@
 					type="text"
 					bind:value={newDenyPattern}
 					placeholder="Command to deny (e.g., rm -rf)"
-					class="flex-1 bg-gray-700 text-gray-100 border border-gray-600 rounded px-3 py-2"
+					class="flex-1 bg-surface-3 text-white border border-surface-border rounded px-3 py-2"
 					onkeydown={(e) => e.key === 'Enter' && addDenyPattern()}
 				/>
 				<button
@@ -335,12 +335,12 @@
 			</div>
 
 			{#if localDenylist.length === 0}
-				<div class="text-gray-400">No denied commands</div>
+				<div class="text-status-muted">No denied commands</div>
 			{:else}
 				<ul class="space-y-2">
 					{#each localDenylist as command (command)}
-						<li class="flex justify-between items-center bg-gray-700 px-3 py-2 rounded">
-							<code class="text-gray-100">{command}</code>
+						<li class="flex justify-between items-center bg-surface-3 px-3 py-2 rounded">
+							<code class="text-white">{command}</code>
 							<button
 								onclick={() => removeFromDenylist(command)}
 								class="text-red-400 hover:text-red-300"
