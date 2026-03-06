@@ -34,10 +34,7 @@ let _refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
-export async function loadEntries(
-	types: 'exec' | 'all' = 'all',
-	limit = 100
-): Promise<void> {
+export async function loadEntries(types: 'exec' | 'all' = 'all', limit = 100): Promise<void> {
 	isLoading.set(true);
 	try {
 		const params = new URLSearchParams({ types, limit: String(limit) });

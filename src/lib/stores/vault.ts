@@ -103,7 +103,9 @@ export async function loadEntries(group?: string): Promise<void> {
 // ── Entry CRUD ────────────────────────────────────────────────────────────────
 
 export async function fetchEntry(path: string): Promise<VaultEntry> {
-	const res = await fetch(`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`);
+	const res = await fetch(
+		`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`
+	);
 	if (!res.ok) {
 		const text = await res.text();
 		throw new Error(text || `HTTP ${res.status}`);
@@ -140,11 +142,14 @@ export interface EditEntryPayload {
 }
 
 export async function editEntry(path: string, payload: EditEntryPayload): Promise<void> {
-	const res = await fetch(`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`, {
-		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(payload)
-	});
+	const res = await fetch(
+		`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`,
+		{
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		}
+	);
 	if (!res.ok) {
 		const text = await res.text();
 		throw new Error(text || `HTTP ${res.status}`);
@@ -152,9 +157,12 @@ export async function editEntry(path: string, payload: EditEntryPayload): Promis
 }
 
 export async function deleteEntry(path: string): Promise<void> {
-	const res = await fetch(`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`, {
-		method: 'DELETE'
-	});
+	const res = await fetch(
+		`/api/vault/entries/${path.split('/').map(encodeURIComponent).join('/')}`,
+		{
+			method: 'DELETE'
+		}
+	);
 	if (!res.ok) {
 		const text = await res.text();
 		throw new Error(text || `HTTP ${res.status}`);
@@ -176,9 +184,12 @@ export async function createGroup(path: string): Promise<void> {
 }
 
 export async function deleteGroup(path: string): Promise<void> {
-	const res = await fetch(`/api/vault/groups/${path.split('/').map(encodeURIComponent).join('/')}`, {
-		method: 'DELETE'
-	});
+	const res = await fetch(
+		`/api/vault/groups/${path.split('/').map(encodeURIComponent).join('/')}`,
+		{
+			method: 'DELETE'
+		}
+	);
 	if (!res.ok) {
 		const text = await res.text();
 		throw new Error(text || `HTTP ${res.status}`);

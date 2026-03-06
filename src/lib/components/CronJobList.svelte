@@ -200,16 +200,25 @@
 
 	<!-- Content -->
 	{#if loading}
-		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted">
+		<div
+			class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted"
+		>
 			Loading jobs...
 		</div>
 	{:else if error}
-		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-danger">
+		<div
+			class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-danger"
+		>
 			{error}
 		</div>
 	{:else if jobs.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center gap-3 text-status-muted">
-			<svg class="h-12 w-12 text-status-muted/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+			<svg
+				class="h-12 w-12 text-status-muted/40"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"

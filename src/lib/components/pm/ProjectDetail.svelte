@@ -109,7 +109,9 @@
 				{/if}
 
 				{#if project.due_date}
-					<span class="shrink-0 text-[length:var(--text-label)] text-status-muted">{project.due_date}</span>
+					<span class="shrink-0 text-[length:var(--text-label)] text-status-muted"
+						>{project.due_date}</span
+					>
 				{/if}
 			</div>
 
@@ -133,7 +135,8 @@
 					onclick={() => {
 						activeTab = 'status';
 					}}
-					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab === 'status'
+					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab ===
+					'status'
 						? 'border-b-2 border-status-info text-white'
 						: 'text-status-muted hover:text-white'}"
 				>
@@ -143,7 +146,8 @@
 					onclick={() => {
 						activeTab = 'activity';
 					}}
-					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab === 'activity'
+					class="min-h-[40px] px-3 py-2 text-[length:var(--text-badge)] font-medium {activeTab ===
+					'activity'
 						? 'border-b-2 border-status-info text-white'
 						: 'text-status-muted hover:text-white'}"
 				>
@@ -186,7 +190,11 @@
 						</div>
 					{/each}
 					{#if activities.length === 0}
-						<p class="p-[var(--space-card-padding)] text-[length:var(--text-body)] text-status-muted">No recent activity</p>
+						<p
+							class="p-[var(--space-card-padding)] text-[length:var(--text-body)] text-status-muted"
+						>
+							No recent activity
+						</p>
 					{/if}
 				</div>
 			{/if}

@@ -7,43 +7,43 @@
 			description: 'Connect Discord, Telegram & more',
 			href: '/channels',
 			icon: 'channels',
-			color: 'text-status-purple',
+			color: 'text-status-purple'
 		},
 		{
 			label: 'Projects',
 			description: 'Track work across domains',
 			href: '/projects',
 			icon: 'projects',
-			color: 'text-status-info',
+			color: 'text-status-info'
 		},
 		{
 			label: 'Jobs',
 			description: 'Cron jobs & scheduled tasks',
 			href: '/jobs',
 			icon: 'jobs',
-			color: 'text-status-warning',
+			color: 'text-status-warning'
 		},
 		{
 			label: 'Passwords',
 			description: 'KeePassXC vault manager',
 			href: '/passwords',
 			icon: 'passwords',
-			color: 'text-status-active',
+			color: 'text-status-active'
 		},
 		{
 			label: 'Documents',
 			description: 'Workspace knowledge base',
 			href: '/documents',
 			icon: 'documents',
-			color: 'text-status-info',
+			color: 'text-status-info'
 		},
 		{
 			label: 'Settings',
 			description: 'Gateway & agent config',
 			href: '/settings',
 			icon: 'settings',
-			color: 'text-status-muted',
-		},
+			color: 'text-status-muted'
+		}
 	] as const;
 </script>
 

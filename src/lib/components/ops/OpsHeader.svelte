@@ -39,7 +39,9 @@
 	}
 </script>
 
-<div class="flex items-center justify-between border-b border-surface-border bg-surface-1 px-[var(--space-card-padding)] py-2.5">
+<div
+	class="flex items-center justify-between border-b border-surface-border bg-surface-1 px-[var(--space-card-padding)] py-2.5"
+>
 	<!-- Left: title + stats -->
 	<div class="flex items-center gap-5">
 		<h1 class="text-[length:var(--text-card-title)] font-semibold text-white">Ops Observer</h1>
@@ -52,7 +54,10 @@
 				Exec <span class="font-medium text-status-info">{stats.execCalls}</span>
 			</span>
 			<span class="text-status-muted">
-				Errors <span class="font-medium {stats.errors > 0 ? 'text-status-danger' : 'text-status-active'}">{stats.errors}</span>
+				Errors <span
+					class="font-medium {stats.errors > 0 ? 'text-status-danger' : 'text-status-active'}"
+					>{stats.errors}</span
+				>
 			</span>
 			<span class="text-status-muted">
 				Sessions <span class="font-medium text-status-purple">{stats.uniqueSessions}</span>
@@ -67,7 +72,8 @@
 				{#each intervals as int (int.value)}
 					<button
 						onclick={() => setInterval(int.value)}
-						class="px-2 py-1 text-[length:var(--text-badge)] font-medium transition-colors {$refreshInterval === int.value
+						class="px-2 py-1 text-[length:var(--text-badge)] font-medium transition-colors {$refreshInterval ===
+						int.value
 							? 'bg-surface-3 text-white'
 							: 'text-status-muted hover:text-white'}"
 					>
@@ -83,7 +89,11 @@
 				? 'bg-status-active-bg text-status-active'
 				: 'bg-surface-2 text-status-muted'}"
 		>
-			<span class="h-1.5 w-1.5 rounded-full {$autoRefresh ? 'bg-status-active animate-pulse' : 'bg-status-muted'}"></span>
+			<span
+				class="h-1.5 w-1.5 rounded-full {$autoRefresh
+					? 'bg-status-active animate-pulse'
+					: 'bg-status-muted'}"
+			></span>
 			{$autoRefresh ? 'Live' : 'Paused'}
 		</button>
 	</div>

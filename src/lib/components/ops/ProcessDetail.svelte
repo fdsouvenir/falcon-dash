@@ -19,9 +19,13 @@
 	}
 </script>
 
-<div class="flex h-full flex-col overflow-hidden border-l border-surface-border bg-surface-1 flex-[2]">
+<div
+	class="flex h-full flex-col overflow-hidden border-l border-surface-border bg-surface-1 flex-[2]"
+>
 	{#if !entry}
-		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted/50">
+		<div
+			class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted/50"
+		>
 			Select a process to view output
 		</div>
 	{:else}
@@ -31,7 +35,9 @@
 				{getCommand(entry)}
 			</div>
 			<div class="flex flex-wrap items-center gap-3">
-				<span class="rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple">
+				<span
+					class="rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple"
+				>
 					{shortSessionId(entry.sessionId)}
 				</span>
 				{#if entry.result?.cwd}
@@ -44,15 +50,21 @@
 				</span>
 				<!-- Exit code -->
 				{#if entry.status === 'running'}
-					<span class="animate-pulse rounded-full bg-status-warning-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-warning">
+					<span
+						class="animate-pulse rounded-full bg-status-warning-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-warning"
+					>
 						running
 					</span>
 				{:else if entry.result?.exitCode === 0 || entry.result?.exitCode === undefined}
-					<span class="rounded-full bg-status-active-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-active">
+					<span
+						class="rounded-full bg-status-active-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-active"
+					>
 						exit 0
 					</span>
 				{:else}
-					<span class="rounded-full bg-status-danger-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-danger">
+					<span
+						class="rounded-full bg-status-danger-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold text-status-danger"
+					>
 						exit {entry.result?.exitCode}
 					</span>
 				{/if}
@@ -62,9 +74,13 @@
 		<!-- Terminal output -->
 		<div class="flex-1 overflow-auto bg-surface-0 p-[var(--space-card-padding)]">
 			{#if entry.result?.text}
-				<pre class="min-w-0 whitespace-pre-wrap break-words font-mono text-[length:var(--text-mono)] leading-relaxed text-green-400">{entry.result.text}</pre>
+				<pre
+					class="min-w-0 whitespace-pre-wrap break-words font-mono text-[length:var(--text-mono)] leading-relaxed text-green-400">{entry
+						.result.text}</pre>
 			{:else if entry.status === 'running'}
-				<p class="font-mono text-[length:var(--text-mono)] text-status-warning/70">Process running…</p>
+				<p class="font-mono text-[length:var(--text-mono)] text-status-warning/70">
+					Process running…
+				</p>
 			{:else}
 				<p class="font-mono text-[length:var(--text-mono)] text-status-muted/50">(no output)</p>
 			{/if}

@@ -285,7 +285,12 @@ export function readNewLines(
 			continue;
 		}
 
-		const ts = typeof raw.timestamp === 'number' ? raw.timestamp : (typeof inner.timestamp === 'number' ? inner.timestamp : lineIndex);
+		const ts =
+			typeof raw.timestamp === 'number'
+				? raw.timestamp
+				: typeof inner.timestamp === 'number'
+					? inner.timestamp
+					: lineIndex;
 
 		if (inner.role === 'assistant' && Array.isArray(inner.content)) {
 			for (const item of inner.content as RawToolCall[]) {
@@ -311,17 +316,33 @@ export function readNewLines(
 			const details = result.details ?? {};
 			const exitCode = (details.exitCode as number | null) ?? null;
 			const content = Array.isArray(result.content) ? result.content : [];
-			const text = content.map((c: { text?: string }) => c.text ?? '').join('').trim();
+			const text = content
+				.map((c: { text?: string }) => c.text ?? '')
+				.join('')
+				.trim();
 			entryResult = {
 				text,
 				exitCode: exitCode !== null ? exitCode : undefined,
 				durationMs: details.durationMs as number | undefined,
 				cwd: details.cwd as string | undefined
 			};
-			status = exitCode === null || exitCode === undefined ? 'success' : exitCode === 0 ? 'success' : 'error';
+			status =
+				exitCode === null || exitCode === undefined
+					? 'success'
+					: exitCode === 0
+						? 'success'
+						: 'error';
 		}
 
-		entries.push({ id, toolName: call.name, arguments: call.arguments ?? {}, result: entryResult, timestamp, status, sessionId });
+		entries.push({
+			id,
+			toolName: call.name,
+			arguments: call.arguments ?? {},
+			result: entryResult,
+			timestamp,
+			status,
+			sessionId
+		});
 	}
 
 	return { entries, newOffset: stat.size };

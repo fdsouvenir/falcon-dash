@@ -11,18 +11,12 @@ export const badgeVariants = tv({
 				'bg-destructive [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/70 border-transparent text-white',
 			outline: 'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
 			/* ── Semantic status variants ── */
-			active:
-				'bg-status-active-bg text-status-active border-transparent',
-			warning:
-				'bg-status-warning-bg text-status-warning border-transparent',
-			danger:
-				'bg-status-danger-bg text-status-danger border-transparent',
-			info:
-				'bg-status-info-bg text-status-info border-transparent',
-			muted:
-				'bg-status-muted-bg text-status-muted border-transparent',
-			purple:
-				'bg-status-purple-bg text-status-purple border-transparent'
+			active: 'bg-status-active-bg text-status-active border-transparent',
+			warning: 'bg-status-warning-bg text-status-warning border-transparent',
+			danger: 'bg-status-danger-bg text-status-danger border-transparent',
+			info: 'bg-status-info-bg text-status-info border-transparent',
+			muted: 'bg-status-muted-bg text-status-muted border-transparent',
+			purple: 'bg-status-purple-bg text-status-purple border-transparent'
 		}
 	},
 	defaultVariants: {

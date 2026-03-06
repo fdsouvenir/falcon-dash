@@ -62,13 +62,17 @@
 <div class="flex h-full flex-col overflow-hidden bg-surface-1">
 	<!-- Section header -->
 	<div class="border-b border-surface-border px-[var(--space-card-padding)] py-2.5">
-		<h2 class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted">
+		<h2
+			class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted"
+		>
 			Activity Feed
 		</h2>
 	</div>
 
 	{#if feedEntries.length === 0}
-		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted/60">
+		<div
+			class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted/60"
+		>
 			No activity yet
 		</div>
 	{:else}
@@ -80,9 +84,7 @@
 				{@const argSummary = getArgSummary(entry)}
 				{@const resultPreview = getResultPreview(entry)}
 
-				<div
-					class="border-b border-surface-border/40 transition-colors hover:bg-surface-3/30"
-				>
+				<div class="border-b border-surface-border/40 transition-colors hover:bg-surface-3/30">
 					<!-- Collapsed row -->
 					<button
 						onclick={() => toggleExpand(entry.id)}
@@ -96,7 +98,9 @@
 						</span>
 
 						<!-- Session tag -->
-						<span class="mt-0.5 shrink-0 rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple">
+						<span
+							class="mt-0.5 shrink-0 rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple"
+						>
 							{shortSessionId(entry.sessionId)}
 						</span>
 
@@ -117,7 +121,9 @@
 							</span>
 							<!-- Expand chevron -->
 							<svg
-								class="h-3.5 w-3.5 text-status-muted transition-transform {expanded ? 'rotate-180' : ''}"
+								class="h-3.5 w-3.5 text-status-muted transition-transform {expanded
+									? 'rotate-180'
+									: ''}"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -130,15 +136,21 @@
 
 					<!-- Expanded result -->
 					{#if expanded}
-						<div class="border-t border-surface-border/30 bg-surface-0/60 px-[var(--space-card-padding)] py-3">
+						<div
+							class="border-t border-surface-border/30 bg-surface-0/60 px-[var(--space-card-padding)] py-3"
+						>
 							{#if entry.result?.text}
-								<pre class="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[length:var(--text-mono)] leading-relaxed text-green-400/90">{entry.result.text}</pre>
+								<pre
+									class="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[length:var(--text-mono)] leading-relaxed text-green-400/90">{entry
+										.result.text}</pre>
 							{:else}
 								<p class="text-[length:var(--text-label)] text-status-muted/50">(no output)</p>
 							{/if}
 						</div>
 					{:else if resultPreview}
-						<p class="px-[var(--space-card-padding)] pb-2 font-mono text-[length:var(--text-label)] text-status-muted/70 truncate">
+						<p
+							class="px-[var(--space-card-padding)] pb-2 font-mono text-[length:var(--text-label)] text-status-muted/70 truncate"
+						>
 							{resultPreview}
 						</p>
 					{/if}

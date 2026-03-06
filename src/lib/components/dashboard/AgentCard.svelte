@@ -84,7 +84,9 @@
 	<!-- Skeleton -->
 	<div class="grid gap-[var(--space-card-gap)] sm:grid-cols-2 lg:grid-cols-3">
 		{#each [1, 2] as i (i)}
-			<div class="animate-pulse rounded-lg border border-surface-border bg-surface-2 p-[var(--space-card-padding)]">
+			<div
+				class="animate-pulse rounded-lg border border-surface-border bg-surface-2 p-[var(--space-card-padding)]"
+			>
 				<div class="mb-3 flex items-center gap-3">
 					<div class="h-10 w-10 rounded-full bg-surface-3"></div>
 					<div class="flex-1">
@@ -100,7 +102,9 @@
 	<div
 		class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-surface-border bg-surface-1 py-10"
 	>
-		<div class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-status-muted">
+		<div
+			class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-status-muted"
+		>
 			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path
 					stroke-linecap="round"

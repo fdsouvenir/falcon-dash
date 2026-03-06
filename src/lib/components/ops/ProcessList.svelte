@@ -60,7 +60,9 @@
 
 <div class="flex h-full flex-col overflow-hidden bg-surface-1">
 	<div class="border-b border-surface-border px-[var(--space-card-padding)] py-2.5">
-		<h2 class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted">
+		<h2
+			class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted"
+		>
 			Processes
 			<span class="ml-1 font-normal text-status-muted/50">({execEntries.length})</span>
 		</h2>
@@ -69,7 +71,11 @@
 	{#if execEntries.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center gap-2 text-status-muted/60">
 			<svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+				/>
 			</svg>
 			<p class="text-[length:var(--text-body)]">No processes found</p>
 		</div>
@@ -80,7 +86,8 @@
 				{@const cwd = getCwd(entry)}
 				<button
 					onclick={() => onselect(entry.id)}
-					class="w-full border-b border-surface-border/40 px-[var(--space-card-padding)] py-2.5 text-left transition-colors hover:bg-surface-3/40 {selectedId === entry.id
+					class="w-full border-b border-surface-border/40 px-[var(--space-card-padding)] py-2.5 text-left transition-colors hover:bg-surface-3/40 {selectedId ===
+					entry.id
 						? 'bg-surface-3 border-l-2 border-l-status-info'
 						: ''}"
 				>
@@ -92,7 +99,9 @@
 					<!-- Meta row: session · cwd · duration · exit code · time -->
 					<div class="mt-1 flex items-center gap-2.5 text-[length:var(--text-badge)]">
 						<!-- Session tag -->
-						<span class="shrink-0 rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-status-purple">
+						<span
+							class="shrink-0 rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-status-purple"
+						>
 							{shortSessionId(entry.sessionId)}
 						</span>
 
@@ -109,15 +118,21 @@
 						</span>
 
 						{#if entry.status === 'running'}
-							<span class="shrink-0 animate-pulse rounded-full bg-status-warning-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-warning">
+							<span
+								class="shrink-0 animate-pulse rounded-full bg-status-warning-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-warning"
+							>
 								running
 							</span>
 						{:else if entry.result?.exitCode === 0 || entry.result?.exitCode === undefined}
-							<span class="shrink-0 rounded-full bg-status-active-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-active">
+							<span
+								class="shrink-0 rounded-full bg-status-active-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-active"
+							>
 								0
 							</span>
 						{:else}
-							<span class="shrink-0 rounded-full bg-status-danger-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-danger">
+							<span
+								class="shrink-0 rounded-full bg-status-danger-bg px-[var(--space-badge-x)] py-[var(--space-badge-y)] font-semibold text-status-danger"
+							>
 								{entry.result.exitCode}
 							</span>
 						{/if}

@@ -19,7 +19,7 @@ export const SURFACE = {
 	/** Nested card / hover state */
 	3: 'bg-surface-3',
 	/** Subtle border between surfaces */
-	border: 'border-surface-border',
+	border: 'border-surface-border'
 } as const;
 
 /* ── Semantic Status Colors ── */
@@ -29,33 +29,33 @@ export const STATUS_COLORS: Record<StatusKey, { text: string; bg: string; dot: s
 	active: {
 		text: 'text-status-active',
 		bg: 'bg-status-active-bg',
-		dot: 'bg-status-active',
+		dot: 'bg-status-active'
 	},
 	warning: {
 		text: 'text-status-warning',
 		bg: 'bg-status-warning-bg',
-		dot: 'bg-status-warning',
+		dot: 'bg-status-warning'
 	},
 	danger: {
 		text: 'text-status-danger',
 		bg: 'bg-status-danger-bg',
-		dot: 'bg-status-danger',
+		dot: 'bg-status-danger'
 	},
 	info: {
 		text: 'text-status-info',
 		bg: 'bg-status-info-bg',
-		dot: 'bg-status-info',
+		dot: 'bg-status-info'
 	},
 	muted: {
 		text: 'text-status-muted',
 		bg: 'bg-status-muted-bg',
-		dot: 'bg-status-muted',
+		dot: 'bg-status-muted'
 	},
 	purple: {
 		text: 'text-status-purple',
 		bg: 'bg-status-purple-bg',
-		dot: 'bg-status-purple',
-	},
+		dot: 'bg-status-purple'
+	}
 };
 
 /* ── Status Mapping (project/task status → semantic color) ── */
@@ -75,7 +75,7 @@ export const STATUS_MAP: Record<ProjectStatus, StatusKey> = {
 	done: 'active',
 	blocked: 'danger',
 	cancelled: 'danger',
-	archived: 'muted',
+	archived: 'muted'
 };
 
 export function getStatusColor(status: string): StatusKey {
@@ -90,7 +90,7 @@ export const PRIORITY: Record<string, { emoji: string; color: StatusKey; label: 
 	high: { emoji: '🔴', color: 'danger', label: 'High' },
 	medium: { emoji: '🟡', color: 'warning', label: 'Medium' },
 	normal: { emoji: '🟢', color: 'active', label: 'Normal' },
-	low: { emoji: '🟢', color: 'active', label: 'Low' },
+	low: { emoji: '🟢', color: 'active', label: 'Low' }
 };
 
 export function getPriority(level: string | null) {
@@ -103,18 +103,18 @@ export const DOMAIN_COLORS: Record<string, string> = {
 	personal: 'var(--domain-personal)',
 	work: 'var(--domain-work)',
 	condo: 'var(--domain-condo)',
-	verl: 'var(--domain-verl)',
+	verl: 'var(--domain-verl)'
 };
 
 export const DOMAIN_CLASSES: Record<string, { text: string; bg: string; border: string }> = {
 	personal: {
 		text: 'text-domain-personal',
 		bg: 'bg-domain-personal',
-		border: 'border-domain-personal',
+		border: 'border-domain-personal'
 	},
 	work: { text: 'text-domain-work', bg: 'bg-domain-work', border: 'border-domain-work' },
 	condo: { text: 'text-domain-condo', bg: 'bg-domain-condo', border: 'border-domain-condo' },
-	verl: { text: 'text-domain-verl', bg: 'bg-domain-verl', border: 'border-domain-verl' },
+	verl: { text: 'text-domain-verl', bg: 'bg-domain-verl', border: 'border-domain-verl' }
 };
 
 export function getDomainColor(name: string): string {
@@ -141,7 +141,7 @@ export const TEXT = {
 	/** Badge text — 10px / semibold */
 	badge: 'text-[length:var(--text-badge)] font-semibold',
 	/** Monospace — 12px */
-	mono: 'text-[length:var(--text-mono)] font-mono',
+	mono: 'text-[length:var(--text-mono)] font-mono'
 } as const;
 
 /* ── Spacing Utility Classes ── */
@@ -155,7 +155,7 @@ export const SPACE = {
 	/** Row item padding */
 	rowPadding: 'px-[var(--space-row-x)] py-[var(--space-row-y)]',
 	/** Badge padding */
-	badgePadding: 'px-[var(--space-badge-x)] py-[var(--space-badge-y)]',
+	badgePadding: 'px-[var(--space-badge-x)] py-[var(--space-badge-y)]'
 } as const;
 
 /* ── Component Style Presets ── */
@@ -165,7 +165,7 @@ export const CARD = {
 	/** Card hover state */
 	hover: 'hover:bg-surface-3 transition-colors',
 	/** Selected card state */
-	selected: 'bg-surface-3 border-status-info/30',
+	selected: 'bg-surface-3 border-status-info/30'
 } as const;
 
 export const BADGE = {
@@ -175,7 +175,7 @@ export const BADGE = {
 		return `${c.text} ${c.bg} ${TEXT.badge} ${SPACE.badgePadding} rounded-full`;
 	},
 	/** Count badge — small rounded with muted style */
-	count: `${TEXT.badge} ${SPACE.badgePadding} rounded-full bg-surface-3 text-status-muted`,
+	count: `${TEXT.badge} ${SPACE.badgePadding} rounded-full bg-surface-3 text-status-muted`
 } as const;
 
 /* ── Tool Colors (for Ops Observer activity feed) ── */
@@ -193,7 +193,7 @@ export const TOOL_COLORS: Record<string, StatusKey> = {
 	memory_get: 'muted',
 	browser: 'info',
 	image: 'info',
-	gateway: 'danger',
+	gateway: 'danger'
 };
 
 export function getToolColor(toolName: string): StatusKey {

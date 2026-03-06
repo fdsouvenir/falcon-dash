@@ -49,8 +49,10 @@ export function getPriorityIndicator(
 
 /** Returns a labeled priority badge with classes. Always returns a value (normal shows as dash). */
 export function getPriorityBadge(priority: string | null): { classes: string; label: string } {
-	if (priority === 'urgent') return { classes: 'bg-status-danger-bg text-status-danger', label: 'urgent' };
-	if (priority === 'high') return { classes: 'bg-status-danger-bg text-status-danger', label: 'high' };
+	if (priority === 'urgent')
+		return { classes: 'bg-status-danger-bg text-status-danger', label: 'urgent' };
+	if (priority === 'high')
+		return { classes: 'bg-status-danger-bg text-status-danger', label: 'high' };
 	return { classes: 'text-status-muted', label: '\u2014' };
 }
 
@@ -79,8 +81,10 @@ export function getStatusPill(status: string): { classes: string; label: string 
 
 /** Returns a labeled priority tag for high/urgent, or null for normal/low. */
 export function getPriorityTag(priority: string | null): { classes: string; label: string } | null {
-	if (priority === 'urgent') return { classes: 'bg-status-danger-bg text-status-danger', label: 'urgent' };
-	if (priority === 'high') return { classes: 'bg-status-danger-bg text-status-danger', label: 'high' };
+	if (priority === 'urgent')
+		return { classes: 'bg-status-danger-bg text-status-danger', label: 'urgent' };
+	if (priority === 'high')
+		return { classes: 'bg-status-danger-bg text-status-danger', label: 'high' };
 	return null;
 }
 

@@ -50,7 +50,9 @@
 </svelte:head>
 
 {#if !checked}
-	<div class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted">
+	<div
+		class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted"
+	>
 		Loading...
 	</div>
 {:else if !available}
@@ -64,7 +66,11 @@
 	</div>
 {:else}
 	<div class="flex h-full overflow-hidden bg-surface-0 text-white">
-		<div class="min-w-0 {selectedProjectId !== null ? 'flex-[3]' : 'flex-1'} overflow-hidden transition-all duration-200">
+		<div
+			class="min-w-0 {selectedProjectId !== null
+				? 'flex-[3]'
+				: 'flex-1'} overflow-hidden transition-all duration-200"
+		>
 			<ProjectList onselect={navigateToProject} selectedId={selectedProjectId} />
 		</div>
 

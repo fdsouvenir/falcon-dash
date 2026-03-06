@@ -173,29 +173,30 @@ gateway secrets source.
 
 ```json
 {
-  "secrets": {
-    "providers": [
-      {
-        "type": "exec",
-        "name": "keepassxc",
-        "command": "/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs"
-      }
-    ]
-  }
+	"secrets": {
+		"providers": [
+			{
+				"type": "exec",
+				"name": "keepassxc",
+				"command": "/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs"
+			}
+		]
+	}
 }
 ```
 
 **Key format:**
 
-| Key | Returns |
-|-----|---------|
-| `Group/Entry` | Password field |
+| Key                    | Returns                   |
+| ---------------------- | ------------------------- |
+| `Group/Entry`          | Password field            |
 | `Group/Entry:Password` | Password field (explicit) |
-| `Group/Entry:UserName` | Username field |
-| `Group/Entry:URL` | URL field |
-| `Group/Entry:Notes` | Notes field |
+| `Group/Entry:UserName` | Username field            |
+| `Group/Entry:URL`      | URL field                 |
+| `Group/Entry:Notes`    | Notes field               |
 
 **Protocol:**
+
 - stdin: `{ "keys": ["Group/Entry", "Group/Entry:UserName"] }`
 - stdout: `{ "Group/Entry": "secret123", "Group/Entry:UserName": "admin" }`
 - exit 0 always (partial results returned with empty string on lookup failure)

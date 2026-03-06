@@ -185,17 +185,24 @@
 	{@const pri = getPriority(project.priority)}
 	{@const isSelected = selectedId === project.id}
 	<button
-		class="relative mx-2 my-[2px] flex items-center gap-2.5 overflow-hidden rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors {isSelected ? 'bg-surface-3' : 'hover:bg-surface-3/60'}"
+		class="relative mx-2 my-[2px] flex items-center gap-2.5 overflow-hidden rounded-lg py-2.5 pl-5 pr-3 text-left transition-colors {isSelected
+			? 'bg-surface-3'
+			: 'hover:bg-surface-3/60'}"
 		onclick={() => onselect?.(project.id)}
 	>
 		<!-- 5px colored left accent bar -->
-		<span class="absolute bottom-1 left-0 top-1 w-[5px] rounded-r" style="background: {accentColor}"></span>
+		<span class="absolute bottom-1 left-0 top-1 w-[5px] rounded-r" style="background: {accentColor}"
+		></span>
 
 		<!-- Title + focus on same line -->
-		<span class="min-w-0 flex-1 truncate text-[length:var(--text-card-title)] font-medium text-white">
+		<span
+			class="min-w-0 flex-1 truncate text-[length:var(--text-card-title)] font-medium text-white"
+		>
 			{project.title}
 			{#if focusName}
-				<span class="ml-1.5 text-[length:var(--text-label)] font-normal text-status-muted">· {focusName}</span>
+				<span class="ml-1.5 text-[length:var(--text-label)] font-normal text-status-muted"
+					>· {focusName}</span
+				>
 			{/if}
 		</span>
 
@@ -218,16 +225,32 @@
 
 <div class="flex h-full flex-col overflow-auto">
 	{#if loading}
-		<div class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted">Loading...</div>
+		<div
+			class="flex flex-1 items-center justify-center text-[length:var(--text-body)] text-status-muted"
+		>
+			Loading...
+		</div>
 	{:else}
 		<!-- Header: compact inline stats + filter pills -->
 		<div class="border-b border-surface-border bg-surface-1 px-4 py-2.5">
 			{#if dashStats}
 				<div class="mb-2 flex items-center gap-4 text-[length:var(--text-label)]">
-					<span class="text-status-muted">Total <span class="font-medium text-white">{dashStats.projects.total}</span></span>
-					<span class="text-status-muted">Active <span class="font-medium text-status-active">{dashStats.projects.byStatus.in_progress || 0}</span></span>
-					<span class="text-status-muted">Due Soon <span class="font-medium text-status-warning">{dashContext?.dueSoon?.length ?? 0}</span></span>
-					<span class="text-status-muted">Overdue <span class="font-medium text-status-danger">{dashStats.overdue}</span></span>
+					<span class="text-status-muted"
+						>Total <span class="font-medium text-white">{dashStats.projects.total}</span></span
+					>
+					<span class="text-status-muted"
+						>Active <span class="font-medium text-status-active"
+							>{dashStats.projects.byStatus.in_progress || 0}</span
+						></span
+					>
+					<span class="text-status-muted"
+						>Due Soon <span class="font-medium text-status-warning"
+							>{dashContext?.dueSoon?.length ?? 0}</span
+						></span
+					>
+					<span class="text-status-muted"
+						>Overdue <span class="font-medium text-status-danger">{dashStats.overdue}</span></span
+					>
 				</div>
 			{/if}
 
@@ -235,7 +258,8 @@
 			<div class="flex gap-1.5">
 				{#each filters as f (f.key)}
 					<button
-						class="rounded-full px-3 py-1 text-[length:var(--text-badge)] font-medium transition-all duration-150 {filterMode === f.key
+						class="rounded-full px-3 py-1 text-[length:var(--text-badge)] font-medium transition-all duration-150 {filterMode ===
+						f.key
 							? 'bg-surface-3 text-white'
 							: 'text-status-muted hover:text-white'}"
 						onclick={() => {
@@ -251,7 +275,9 @@
 		<!-- Grouped project list (flat rows per domain, no focus sub-headers) -->
 		<div class="flex-1 overflow-y-auto">
 			{#if grouped.length === 0 && orphanProjects.length === 0}
-				<div class="flex items-center justify-center p-8 text-[length:var(--text-body)] text-status-muted">
+				<div
+					class="flex items-center justify-center p-8 text-[length:var(--text-body)] text-status-muted"
+				>
 					No projects found
 				</div>
 			{:else}
@@ -264,7 +290,11 @@
 						onclick={() => toggleDomain(group.domain.id)}
 					>
 						<svg
-							class="h-3 w-3 text-status-muted transition-transform duration-200 {collapsedDomains.has(group.domain.id) ? '-rotate-90' : ''}"
+							class="h-3 w-3 text-status-muted transition-transform duration-200 {collapsedDomains.has(
+								group.domain.id
+							)
+								? '-rotate-90'
+								: ''}"
 							fill="currentColor"
 							viewBox="0 0 12 12"
 						>
@@ -276,7 +306,9 @@
 						>
 							{group.domain.name}
 						</span>
-						<span class="text-[length:var(--text-label)] text-status-muted/50">({group.projectCount})</span>
+						<span class="text-[length:var(--text-label)] text-status-muted/50"
+							>({group.projectCount})</span
+						>
 					</button>
 
 					<!-- Flat project rows (focus name shown inline) -->

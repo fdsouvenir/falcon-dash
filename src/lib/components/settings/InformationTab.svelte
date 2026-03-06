@@ -229,11 +229,26 @@
 
 	// Derived values from snapshot (no RPC needed)
 	let isConnected = $derived(connectionState === 'ready');
-	let authRole = $derived((snapshotData?.auth as Record<string, unknown> | undefined)?.role ?? null);
-	let authScopes = $derived(((snapshotData?.auth as Record<string, unknown> | undefined)?.scopes as string[] | undefined) ?? []);
-	let uptimeMs = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.uptimeMs as number | null ?? null);
-	let configPath = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.configPath as string | null ?? null);
-	let stateDir = $derived((snapshotData?.snapshot as Record<string, unknown> | undefined)?.stateDir as string | null ?? null);
+	let authRole = $derived(
+		(snapshotData?.auth as Record<string, unknown> | undefined)?.role ?? null
+	);
+	let authScopes = $derived(
+		((snapshotData?.auth as Record<string, unknown> | undefined)?.scopes as string[] | undefined) ??
+			[]
+	);
+	let uptimeMs = $derived(
+		((snapshotData?.snapshot as Record<string, unknown> | undefined)?.uptimeMs as number | null) ??
+			null
+	);
+	let configPath = $derived(
+		((snapshotData?.snapshot as Record<string, unknown> | undefined)?.configPath as
+			| string
+			| null) ?? null
+	);
+	let stateDir = $derived(
+		((snapshotData?.snapshot as Record<string, unknown> | undefined)?.stateDir as string | null) ??
+			null
+	);
 	let protocolVersion = $derived(snapshotData?.protocol ?? null);
 
 	let sessionUptime = $derived(
@@ -241,7 +256,9 @@
 	);
 
 	let gatewayUptime = $derived(
-		uptimeMs != null ? formatUptime((uptimeMs as number) + (currentTime - (connectedAt ?? currentTime))) : null
+		uptimeMs != null
+			? formatUptime((uptimeMs as number) + (currentTime - (connectedAt ?? currentTime)))
+			: null
 	);
 
 	let deviceCount = $derived(presence.length);

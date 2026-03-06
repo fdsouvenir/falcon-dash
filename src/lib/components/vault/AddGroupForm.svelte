@@ -14,7 +14,10 @@
 	$effect(() => {
 		const u1 = vaultGroups.subscribe((v) => (allGroups = v));
 		const u2 = currentGroup.subscribe((v) => (parentGroup = v));
-		return () => { u1(); u2(); };
+		return () => {
+			u1();
+			u2();
+		};
 	});
 
 	let name = $state('');
@@ -62,7 +65,11 @@
 		<form onsubmit={handleSubmit} class="space-y-4 p-4">
 			<!-- Parent group -->
 			<div>
-				<label for="group-parent" class="mb-1 block text-[length:var(--text-badge)] font-medium text-status-muted">Parent Group</label>
+				<label
+					for="group-parent"
+					class="mb-1 block text-[length:var(--text-badge)] font-medium text-status-muted"
+					>Parent Group</label
+				>
 				<select
 					id="group-parent"
 					bind:value={parentGroup}
@@ -77,7 +84,11 @@
 
 			<!-- Group name -->
 			<div>
-				<label for="group-name" class="mb-1 block text-[length:var(--text-badge)] font-medium text-status-muted">Group Name *</label>
+				<label
+					for="group-name"
+					class="mb-1 block text-[length:var(--text-badge)] font-medium text-status-muted"
+					>Group Name *</label
+				>
 				<input
 					id="group-name"
 					type="text"
@@ -91,7 +102,9 @@
 
 			<!-- Path preview -->
 			{#if name.trim()}
-				<div class="rounded-lg bg-surface-3 px-3 py-2 text-[length:var(--text-badge)] text-status-muted">
+				<div
+					class="rounded-lg bg-surface-3 px-3 py-2 text-[length:var(--text-badge)] text-status-muted"
+				>
 					Path: <span class="font-mono text-white">{groupPath}</span>
 				</div>
 			{/if}

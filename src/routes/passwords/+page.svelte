@@ -64,7 +64,9 @@
 </svelte:head>
 
 {#if !checked}
-	<div class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted">
+	<div
+		class="flex h-full items-center justify-center bg-surface-0 text-[length:var(--text-body)] text-status-muted"
+	>
 		Loading...
 	</div>
 {:else if !available}
@@ -95,7 +97,11 @@
 {:else}
 	<div class="flex h-full overflow-hidden bg-surface-0 text-white">
 		<div class="flex-1 overflow-hidden">
-			<EntryList onselect={openEntry} onadd={() => (showAddForm = true)} onaddgroup={() => (showAddGroupForm = true)} />
+			<EntryList
+				onselect={openEntry}
+				onadd={() => (showAddForm = true)}
+				onaddgroup={() => (showAddGroupForm = true)}
+			/>
 		</div>
 
 		{#if selectedEntryPath !== null}
@@ -109,10 +115,7 @@
 	</div>
 
 	{#if showAddForm}
-		<AddEntryForm
-			onCancel={() => (showAddForm = false)}
-			onCreated={handleCreated}
-		/>
+		<AddEntryForm onCancel={() => (showAddForm = false)} onCreated={handleCreated} />
 	{/if}
 
 	{#if showAddGroupForm}

@@ -15,10 +15,12 @@
 			if (s) {
 				sessionCount =
 					(s.activeSessions as number | undefined) ??
-					((s.sessions as unknown[] | undefined)?.length ?? 0);
+					(s.sessions as unknown[] | undefined)?.length ??
+					0;
 				cronJobCount =
 					(s.cronJobCount as number | undefined) ??
-					((s.cronJobs as unknown[] | undefined)?.length ?? 0);
+					(s.cronJobs as unknown[] | undefined)?.length ??
+					0;
 				deviceCount = (s.presence as unknown[] | undefined)?.length ?? 0;
 			}
 		});
@@ -28,7 +30,7 @@
 	const stats = $derived([
 		{ label: 'Sessions', value: sessionCount, color: 'text-status-info' },
 		{ label: 'Cron Jobs', value: cronJobCount, color: 'text-status-warning' },
-		{ label: 'Devices', value: deviceCount, color: 'text-status-active' },
+		{ label: 'Devices', value: deviceCount, color: 'text-status-active' }
 	]);
 </script>
 
@@ -39,7 +41,9 @@
 	<!-- Stat cards -->
 	<div class="grid grid-cols-3 gap-[var(--space-card-gap)]">
 		{#each stats as stat (stat.label)}
-			<div class="rounded-lg border border-surface-border bg-surface-2 px-[var(--space-card-padding)] py-3">
+			<div
+				class="rounded-lg border border-surface-border bg-surface-2 px-[var(--space-card-padding)] py-3"
+			>
 				<div class="text-[length:var(--text-page-title)] font-bold {stat.color}">
 					{stat.value}
 				</div>
@@ -52,7 +56,9 @@
 
 	<!-- Quick actions -->
 	<section>
-		<h2 class="mb-2.5 text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted">
+		<h2
+			class="mb-2.5 text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted"
+		>
 			Quick Actions
 		</h2>
 		<QuickActions />
@@ -60,7 +66,9 @@
 
 	<!-- Agents -->
 	<section>
-		<h2 class="mb-2.5 text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted">
+		<h2
+			class="mb-2.5 text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted"
+		>
 			Agents
 		</h2>
 		<AgentCard />

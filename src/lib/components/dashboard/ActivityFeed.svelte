@@ -21,7 +21,7 @@
 		health: 'text-status-active',
 		approval: 'text-status-warning',
 		session: 'text-status-purple',
-		system: 'text-status-muted',
+		system: 'text-status-muted'
 	};
 
 	const TYPE_TAG_BG: Record<string, string> = {
@@ -30,7 +30,7 @@
 		health: 'bg-status-active-bg text-status-active',
 		approval: 'bg-status-warning-bg text-status-warning',
 		session: 'bg-status-purple-bg text-status-purple',
-		system: 'bg-status-muted-bg text-status-muted',
+		system: 'bg-status-muted-bg text-status-muted'
 	};
 
 	$effect(() => {
@@ -110,7 +110,9 @@
 <div class="rounded-lg border border-surface-border bg-surface-2">
 	<!-- Header -->
 	<div class="flex items-center justify-between px-[var(--space-card-padding)] py-3">
-		<h3 class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted">
+		<h3
+			class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider text-status-muted"
+		>
 			Activity
 		</h3>
 		{#if items.length > 0}
@@ -126,7 +128,9 @@
 	<!-- Feed -->
 	<div class="max-h-72 overflow-y-auto border-t border-surface-border">
 		{#if items.length === 0}
-			<div class="px-[var(--space-card-padding)] py-8 text-center text-[length:var(--text-label)] text-status-muted/50">
+			<div
+				class="px-[var(--space-card-padding)] py-8 text-center text-[length:var(--text-label)] text-status-muted/50"
+			>
 				No recent activity
 			</div>
 		{:else}
@@ -136,7 +140,9 @@
 				>
 					<!-- Type tag -->
 					<span
-						class="shrink-0 rounded-full px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold {TYPE_TAG_BG[item.type] ?? 'bg-status-muted-bg text-status-muted'}"
+						class="shrink-0 rounded-full px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold {TYPE_TAG_BG[
+							item.type
+						] ?? 'bg-status-muted-bg text-status-muted'}"
 					>
 						{item.type}
 					</span>

@@ -143,7 +143,12 @@
 					title="Back"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						/>
 					</svg>
 				</button>
 				<span class="flex-1 text-[length:var(--text-card-title)] font-medium text-white">
@@ -155,8 +160,18 @@
 						class="rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-status-info"
 						title="Edit entry"
 					>
-						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+						<svg
+							class="h-4 w-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+							/>
 						</svg>
 					</button>
 					<button
@@ -164,8 +179,18 @@
 						class="rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-status-danger"
 						title="Delete entry"
 					>
-						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<svg
+							class="h-4 w-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
 						</svg>
 					</button>
 				{/if}
@@ -173,7 +198,9 @@
 
 			<!-- Delete confirmation -->
 			{#if confirmDelete}
-				<div class="mt-2 flex items-center gap-2 rounded-lg bg-status-danger-bg px-3 py-2 text-[length:var(--text-badge)] text-status-danger">
+				<div
+					class="mt-2 flex items-center gap-2 rounded-lg bg-status-danger-bg px-3 py-2 text-[length:var(--text-badge)] text-status-danger"
+				>
 					<span class="flex-1">Delete this entry permanently?</span>
 					<button
 						onclick={handleDelete}
@@ -196,7 +223,9 @@
 		<div class="flex-1 overflow-y-auto">
 			{#if loading}
 				<div class="flex items-center gap-2 p-6 text-[length:var(--text-body)] text-status-muted">
-					<div class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-status-info"></div>
+					<div
+						class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-status-info"
+					></div>
 					Loading entry…
 				</div>
 			{:else if error}
@@ -206,12 +235,19 @@
 			{:else if editing}
 				<!-- Edit form -->
 				<form
-					onsubmit={(e) => { e.preventDefault(); handleSave(); }}
+					onsubmit={(e) => {
+						e.preventDefault();
+						handleSave();
+					}}
 					class="space-y-4 p-4"
 				>
 					<!-- Title -->
 					<div>
-						<label for="edit-title" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Title *</label>
+						<label
+							for="edit-title"
+							class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted"
+							>Title *</label
+						>
 						<input
 							id="edit-title"
 							type="text"
@@ -223,7 +259,11 @@
 
 					<!-- Username -->
 					<div>
-						<label for="edit-username" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Username</label>
+						<label
+							for="edit-username"
+							class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted"
+							>Username</label
+						>
 						<input
 							id="edit-username"
 							type="text"
@@ -235,7 +275,11 @@
 
 					<!-- Password -->
 					<div>
-						<label for="edit-password" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Password</label>
+						<label
+							for="edit-password"
+							class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted"
+							>Password</label
+						>
 						<div class="relative">
 							<input
 								id="edit-password"
@@ -249,12 +293,30 @@
 								onclick={() => (showEditPassword = !showEditPassword)}
 								class="absolute right-2 top-1/2 -translate-y-1/2 text-status-muted hover:text-white"
 							>
-								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<svg
+									class="h-4 w-4"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									{#if showEditPassword}
-										<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+										/>
 									{:else}
-										<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-										<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+										/>
 									{/if}
 								</svg>
 							</button>
@@ -263,7 +325,11 @@
 
 					<!-- URL -->
 					<div>
-						<label for="edit-url" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">URL</label>
+						<label
+							for="edit-url"
+							class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted"
+							>URL</label
+						>
 						<input
 							id="edit-url"
 							type="url"
@@ -275,7 +341,11 @@
 
 					<!-- Notes -->
 					<div>
-						<label for="edit-notes" class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted">Notes</label>
+						<label
+							for="edit-notes"
+							class="mb-1 block text-[length:var(--text-label)] font-medium text-status-muted"
+							>Notes</label
+						>
 						<textarea
 							id="edit-notes"
 							bind:value={editNotes}
@@ -307,15 +377,21 @@
 				<div class="divide-y divide-surface-border">
 					<!-- Path -->
 					<div class="px-4 py-3">
-						<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">Path</div>
-						<div class="font-mono text-[length:var(--text-mono)] text-status-muted">{entry.path}</div>
+						<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
+							Path
+						</div>
+						<div class="font-mono text-[length:var(--text-mono)] text-status-muted">
+							{entry.path}
+						</div>
 					</div>
 
 					<!-- Username -->
 					{#if entry.username}
 						<div class="flex items-center px-4 py-3">
 							<div class="flex-1">
-								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">Username</div>
+								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
+									Username
+								</div>
 								<div class="text-[length:var(--text-body)] text-white/90">{entry.username}</div>
 							</div>
 							<button
@@ -323,8 +399,18 @@
 								class="ml-3 rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
 								title="Copy username"
 							>
-								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+								<svg
+									class="h-4 w-4"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+									/>
 								</svg>
 							</button>
 						</div>
@@ -334,7 +420,9 @@
 					{#if entry.password}
 						<div class="flex items-center px-4 py-3">
 							<div class="min-w-0 flex-1">
-								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">Password</div>
+								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
+									Password
+								</div>
 								<div class="font-mono text-[length:var(--text-mono)] text-white/90">
 									{showPassword ? entry.password : '•'.repeat(Math.min(entry.password.length, 20))}
 								</div>
@@ -346,13 +434,37 @@
 									title={showPassword ? 'Hide password' : 'Show password'}
 								>
 									{#if showPassword}
-										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+										<svg
+											class="h-4 w-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+											/>
 										</svg>
 									{:else}
-										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-											<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+										<svg
+											class="h-4 w-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+											/>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+											/>
 										</svg>
 									{/if}
 								</button>
@@ -361,8 +473,18 @@
 									class="rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
 									title="Copy password"
 								>
-									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+									<svg
+										class="h-4 w-4"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+										stroke-width="2"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+										/>
 									</svg>
 								</button>
 							</div>
@@ -373,7 +495,9 @@
 					{#if entry.url}
 						<div class="flex items-center px-4 py-3">
 							<div class="min-w-0 flex-1">
-								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">URL</div>
+								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
+									URL
+								</div>
 								<a
 									href={entry.url}
 									target="_blank"
@@ -388,8 +512,18 @@
 								class="ml-3 rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
 								title="Copy URL"
 							>
-								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+								<svg
+									class="h-4 w-4"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+									/>
 								</svg>
 							</button>
 						</div>
@@ -398,8 +532,11 @@
 					<!-- Notes -->
 					{#if entry.notes}
 						<div class="px-4 py-3">
-							<div class="mb-1 text-[length:var(--text-label)] font-medium text-status-muted">Notes</div>
-							<pre class="whitespace-pre-wrap text-[length:var(--text-mono)] text-status-muted">{entry.notes}</pre>
+							<div class="mb-1 text-[length:var(--text-label)] font-medium text-status-muted">
+								Notes
+							</div>
+							<pre
+								class="whitespace-pre-wrap text-[length:var(--text-mono)] text-status-muted">{entry.notes}</pre>
 						</div>
 					{/if}
 				</div>

@@ -110,8 +110,6 @@ export class CanvasStore {
 					params = (payload.params ?? {}) as Record<string, unknown>;
 				}
 
-				console.log('[canvas] invoke.request received:', { requestId, command, params });
-				console.log('[canvas]', `Invoke request: ${command}`, { requestId });
 				this.handleCommand(command, params, requestId);
 			})
 		);
@@ -121,7 +119,6 @@ export class CanvasStore {
 			onEvent('canvas.deliver', (payload) => {
 				const command = payload.command as string;
 				const params = (payload.params ?? payload) as Record<string, unknown>;
-				console.log('[canvas]', `Canvas deliver: ${command}`);
 				this.handleCommand(command, params);
 			})
 		);
@@ -143,8 +140,6 @@ export class CanvasStore {
 				}
 			})
 		);
-
-		console.log('[canvas]', 'Canvas store subscribed to EventBus');
 	}
 
 	/**
@@ -238,8 +233,6 @@ export class CanvasStore {
 		});
 
 		this._currentSurfaceId.set(surfaceId);
-		console.log('[canvas] handlePresent:', { surfaceId, title, url });
-		console.log('[canvas]', `Surface presented: ${surfaceId}`, { url });
 		return surfaceId;
 	}
 
@@ -250,7 +243,6 @@ export class CanvasStore {
 
 		const current = get(this._currentSurfaceId);
 		if (current) {
-			console.log(`[canvas] ${command}: no surfaceId in params, using current: ${current}`);
 			return current;
 		}
 
@@ -274,7 +266,6 @@ export class CanvasStore {
 
 		// If hiding the current surface, clear current
 		this._currentSurfaceId.update((id) => (id === surfaceId ? null : id));
-		console.log('[canvas]', `Surface hidden: ${surfaceId}`);
 	}
 
 	/** canvas.navigate — navigate a surface's webview to a new URL */
@@ -296,8 +287,6 @@ export class CanvasStore {
 			}
 			return new Map(map);
 		});
-
-		console.log('[canvas]', `Surface navigated: ${surfaceId} → ${url}`);
 	}
 
 	/** canvas.a2ui.pushJSONL — push A2UI messages to a surface */
@@ -348,7 +337,6 @@ export class CanvasStore {
 
 		// Also clear in delivery registry
 		clearSurface(surfaceId);
-		console.log('[canvas]', `Surface reset: ${surfaceId}`);
 	}
 
 	/** Push a single message to a surface, creating the surface if needed */
@@ -382,7 +370,6 @@ export class CanvasStore {
 	/** Respond OK to a canvas bridge invoke request */
 	private respondOk(requestId: string, payload?: Record<string, unknown>): void {
 		if (!this.callFn) return;
-		console.log('[canvas] respondOk:', { requestId, payload });
 		this.callFn('canvas.bridge.invokeResult', {
 			id: requestId,
 			ok: true,
@@ -395,7 +382,6 @@ export class CanvasStore {
 	/** Respond with error to a canvas bridge invoke request */
 	private respondError(requestId: string, message: string): void {
 		if (!this.callFn) return;
-		console.log('[canvas] respondError:', { requestId, message });
 		this.callFn('canvas.bridge.invokeResult', {
 			id: requestId,
 			ok: false,
@@ -429,7 +415,6 @@ export class CanvasStore {
 			}
 			return changed ? new Map(map) : map;
 		});
-		console.log('[canvas]', `Restored ${pins.length} pinned surfaces`);
 	}
 
 	/**

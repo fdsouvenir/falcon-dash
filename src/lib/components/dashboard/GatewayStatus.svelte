@@ -53,11 +53,7 @@
 	);
 
 	let statusDotColor = $derived(
-		isConnected
-			? 'bg-status-active'
-			: isConnecting
-				? 'bg-status-warning'
-				: 'bg-status-danger'
+		isConnected ? 'bg-status-active' : isConnecting ? 'bg-status-warning' : 'bg-status-danger'
 	);
 
 	let statusLabel = $derived(

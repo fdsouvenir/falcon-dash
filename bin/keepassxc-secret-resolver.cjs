@@ -47,9 +47,17 @@ const CLI = 'keepassxc-cli';
  * Returns the raw output string.
  */
 async function showEntry(entryPath) {
-  const args = ['show', '--no-password', '--key-file', KEY_FILE, '--show-protected', KDBX, entryPath];
-  const { stdout } = await execFileAsync(CLI, args, { timeout: 10000, maxBuffer: 1024 * 1024 });
-  return stdout;
+	const args = [
+		'show',
+		'--no-password',
+		'--key-file',
+		KEY_FILE,
+		'--show-protected',
+		KDBX,
+		entryPath
+	];
+	const { stdout } = await execFileAsync(CLI, args, { timeout: 10000, maxBuffer: 1024 * 1024 });
+	return stdout;
 }
 
 /**
@@ -59,9 +67,9 @@ async function showEntry(entryPath) {
  * @returns {string}
  */
 function extractField(output, field) {
-  const lines = output.split('\n');
-  const line = lines.find((l) => l.startsWith(`${field}: `));
-  return line ? line.slice(field.length + 2).trim() : '';
+	const lines = output.split('\n');
+	const line = lines.find((l) => l.startsWith(`${field}: `));
+	return line ? line.slice(field.length + 2).trim() : '';
 }
 
 /**
@@ -69,100 +77,100 @@ function extractField(output, field) {
  * Key format: "path/to/entry" or "path/to/entry:FieldName"
  */
 async function resolveKey(key) {
-  const colonIdx = key.lastIndexOf(':');
+	const colonIdx = key.lastIndexOf(':');
 
-  // Heuristic: if the part after the last colon looks like a KeePassXC field name,
-  // treat it as a field selector. Otherwise the whole key is the entry path.
-  const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
-  let entryPath = key;
-  let field = 'Password';
+	// Heuristic: if the part after the last colon looks like a KeePassXC field name,
+	// treat it as a field selector. Otherwise the whole key is the entry path.
+	const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
+	let entryPath = key;
+	let field = 'Password';
 
-  if (colonIdx !== -1) {
-    const possibleField = key.slice(colonIdx + 1);
-    if (knownFields.has(possibleField)) {
-      entryPath = key.slice(0, colonIdx);
-      field = possibleField;
-    }
-  }
+	if (colonIdx !== -1) {
+		const possibleField = key.slice(colonIdx + 1);
+		if (knownFields.has(possibleField)) {
+			entryPath = key.slice(0, colonIdx);
+			field = possibleField;
+		}
+	}
 
-  const output = await showEntry(entryPath);
-  return extractField(output, field);
+	const output = await showEntry(entryPath);
+	return extractField(output, field);
 }
 
 async function main() {
-  let input = '';
+	let input = '';
 
-  // Read all of stdin
-  await new Promise((resolve, reject) => {
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk) => (input += chunk));
-    process.stdin.on('end', resolve);
-    process.stdin.on('error', reject);
-  });
+	// Read all of stdin
+	await new Promise((resolve, reject) => {
+		process.stdin.setEncoding('utf8');
+		process.stdin.on('data', (chunk) => (input += chunk));
+		process.stdin.on('end', resolve);
+		process.stdin.on('error', reject);
+	});
 
-  let parsed;
-  try {
-    parsed = JSON.parse(input.trim());
-  } catch (err) {
-    process.stderr.write(`keepassxc-secret-resolver: invalid JSON input: ${err.message}\n`);
-    process.exit(1);
-  }
+	let parsed;
+	try {
+		parsed = JSON.parse(input.trim());
+	} catch (err) {
+		process.stderr.write(`keepassxc-secret-resolver: invalid JSON input: ${err.message}\n`);
+		process.exit(1);
+	}
 
-  const keys = parsed.keys;
-  if (!Array.isArray(keys)) {
-    process.stderr.write('keepassxc-secret-resolver: "keys" must be an array\n');
-    process.exit(1);
-  }
+	const keys = parsed.keys;
+	if (!Array.isArray(keys)) {
+		process.stderr.write('keepassxc-secret-resolver: "keys" must be an array\n');
+		process.exit(1);
+	}
 
-  const result = {};
-  const errors = [];
+	const result = {};
+	const errors = [];
 
-  // Resolve all keys (cache entries to avoid redundant CLI calls)
-  const entryCache = new Map();
+	// Resolve all keys (cache entries to avoid redundant CLI calls)
+	const entryCache = new Map();
 
-  for (const key of keys) {
-    try {
-      const colonIdx = key.lastIndexOf(':');
-      const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
-      let entryPath = key;
-      let field = 'Password';
+	for (const key of keys) {
+		try {
+			const colonIdx = key.lastIndexOf(':');
+			const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
+			let entryPath = key;
+			let field = 'Password';
 
-      if (colonIdx !== -1) {
-        const possibleField = key.slice(colonIdx + 1);
-        if (knownFields.has(possibleField)) {
-          entryPath = key.slice(0, colonIdx);
-          field = possibleField;
-        }
-      }
+			if (colonIdx !== -1) {
+				const possibleField = key.slice(colonIdx + 1);
+				if (knownFields.has(possibleField)) {
+					entryPath = key.slice(0, colonIdx);
+					field = possibleField;
+				}
+			}
 
-      let output;
-      if (entryCache.has(entryPath)) {
-        output = entryCache.get(entryPath);
-      } else {
-        output = await showEntry(entryPath);
-        entryCache.set(entryPath, output);
-      }
+			let output;
+			if (entryCache.has(entryPath)) {
+				output = entryCache.get(entryPath);
+			} else {
+				output = await showEntry(entryPath);
+				entryCache.set(entryPath, output);
+			}
 
-      result[key] = extractField(output, field);
-    } catch (err) {
-      errors.push(`${key}: ${err.message}`);
-      result[key] = '';
-    }
-  }
+			result[key] = extractField(output, field);
+		} catch (err) {
+			errors.push(`${key}: ${err.message}`);
+			result[key] = '';
+		}
+	}
 
-  process.stdout.write(JSON.stringify(result) + '\n');
+	process.stdout.write(JSON.stringify(result) + '\n');
 
-  if (errors.length > 0) {
-    process.stderr.write(`keepassxc-secret-resolver: ${errors.length} key(s) failed:\n`);
-    for (const e of errors) {
-      process.stderr.write(`  - ${e}\n`);
-    }
-    // Exit 0 anyway — partial results are still returned.
-    // Change to exit(1) if you want strict all-or-nothing behaviour.
-  }
+	if (errors.length > 0) {
+		process.stderr.write(`keepassxc-secret-resolver: ${errors.length} key(s) failed:\n`);
+		for (const e of errors) {
+			process.stderr.write(`  - ${e}\n`);
+		}
+		// Exit 0 anyway — partial results are still returned.
+		// Change to exit(1) if you want strict all-or-nothing behaviour.
+	}
 }
 
 main().catch((err) => {
-  process.stderr.write(`keepassxc-secret-resolver: fatal: ${err.message}\n`);
-  process.exit(1);
+	process.stderr.write(`keepassxc-secret-resolver: fatal: ${err.message}\n`);
+	process.exit(1);
 });

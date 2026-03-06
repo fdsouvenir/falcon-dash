@@ -92,7 +92,9 @@
 
 			<!-- Description -->
 			<div>
-				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Description</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted"
+					>Description</label
+				>
 				<input
 					type="text"
 					bind:value={description}
@@ -103,7 +105,9 @@
 
 			<!-- Schedule Type -->
 			<div>
-				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Schedule Type</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted"
+					>Schedule Type</label
+				>
 				<select
 					bind:value={scheduleType}
 					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
@@ -159,7 +163,9 @@
 
 			<!-- Payload Type -->
 			<div>
-				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted">Payload Type</label>
+				<label class="mb-1 block text-[length:var(--text-label)] text-status-muted"
+					>Payload Type</label
+				>
 				<select
 					bind:value={payloadType}
 					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
