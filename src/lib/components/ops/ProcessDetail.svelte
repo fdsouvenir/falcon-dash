@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { OpsEntry } from '$lib/stores/ops.js';
+	import { shortSessionId } from '$lib/stores/ops.js';
 
 	let { entry }: { entry: OpsEntry | null } = $props();
 
@@ -30,6 +31,9 @@
 				{getCommand(entry)}
 			</div>
 			<div class="flex flex-wrap items-center gap-3">
+				<span class="rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple">
+					{shortSessionId(entry.sessionId)}
+				</span>
 				{#if entry.result?.cwd}
 					<span class="font-mono text-[length:var(--text-label)] text-status-muted">
 						{entry.result.cwd}

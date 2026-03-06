@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { OpsEntry } from '$lib/stores/ops.js';
+	import { shortSessionId } from '$lib/stores/ops.js';
 	import { getToolColor } from '$lib/components/ui/design-tokens.js';
 	import { STATUS_COLORS } from '$lib/components/ui/design-tokens.js';
 
@@ -92,6 +93,11 @@
 							class="mt-0.5 shrink-0 rounded-full px-[var(--space-badge-x)] py-[var(--space-badge-y)] text-[length:var(--text-badge)] font-semibold {color.bg} {color.text}"
 						>
 							{entry.toolName}
+						</span>
+
+						<!-- Session tag -->
+						<span class="mt-0.5 shrink-0 rounded bg-status-purple-bg px-1.5 py-0.5 font-mono text-[length:var(--text-badge)] text-status-purple">
+							{shortSessionId(entry.sessionId)}
 						</span>
 
 						<!-- Argument summary -->

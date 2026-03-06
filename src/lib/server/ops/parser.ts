@@ -2,8 +2,9 @@
  * OpenClaw JSONL session file parser.
  *
  * JSONL format (one JSON object per line):
- * - Tool calls: type="message", role="assistant", content=[{type:"toolCall", id, name, arguments}]
- * - Tool results: type="message", role="toolResult", toolCallId, toolName, content=[{text}], details={exitCode,durationMs,cwd}
+ * - Wrapper: { type: "message", id, parentId, timestamp, message: { role, content, ... } }
+ * - Tool calls: message.role="assistant", message.content=[{type:"toolCall", id, name, arguments}]
+ * - Tool results: message.role="toolResult", message.toolCallId, message.toolName, message.content=[{text}], message.details
  *
  * Correlation: toolCall.id === toolResult.toolCallId
  */
@@ -31,6 +32,7 @@ export interface OpsEntry {
 	};
 	timestamp: number;
 	status: 'running' | 'success' | 'error';
+	sessionId: string;
 }
 
 interface RawToolCall {
@@ -40,41 +42,60 @@ interface RawToolCall {
 	arguments: Record<string, unknown>;
 }
 
-interface RawToolResult {
-	toolCallId: string;
-	toolName: string;
-	content: Array<{ type?: string; text?: string }>;
-	details?: {
-		exitCode?: number | null;
-		durationMs?: number;
-		cwd?: string;
-	};
-}
-
-interface RawMessage {
-	type: string;
+interface RawInnerMessage {
 	role?: string;
 	content?: unknown;
 	toolCallId?: string;
 	toolName?: string;
 	details?: Record<string, unknown>;
 	timestamp?: number;
-	createdAt?: string | number;
 }
 
-function extractTimestamp(raw: RawMessage, lineIndex: number): number {
+interface RawWrapper {
+	type: string;
+	timestamp?: number;
+	createdAt?: string | number;
+	message?: RawInnerMessage;
+	// Legacy flat format (fallback)
+	role?: string;
+	content?: unknown;
+	toolCallId?: string;
+	toolName?: string;
+	details?: Record<string, unknown>;
+}
+
+/**
+ * Extract the inner message from a JSONL line.
+ * Handles both wrapped format { type, message: { role, ... } }
+ * and flat format { type, role, ... }.
+ */
+function unwrap(raw: RawWrapper): RawInnerMessage | null {
+	if (raw.type !== 'message') return null;
+	// Wrapped format (standard OpenClaw)
+	if (raw.message && typeof raw.message === 'object') {
+		return raw.message;
+	}
+	// Flat format (fallback)
+	if (raw.role) {
+		return raw as unknown as RawInnerMessage;
+	}
+	return null;
+}
+
+function extractTimestamp(raw: RawWrapper, inner: RawInnerMessage, lineIndex: number): number {
+	// Prefer wrapper timestamp
 	if (typeof raw.timestamp === 'number' && raw.timestamp > 0) return raw.timestamp;
+	// Then inner message timestamp
+	if (typeof inner.timestamp === 'number' && inner.timestamp > 0) return inner.timestamp;
 	if (raw.createdAt) {
 		const t = new Date(raw.createdAt as string).getTime();
 		if (!isNaN(t)) return t;
 	}
-	// Fall back to line order — use a synthetic timestamp based on position
 	return lineIndex;
 }
 
 /**
  * Parse a JSONL session file and return correlated OpsEntry[].
- * Reading is done line-by-line for memory efficiency.
  */
 export async function parseSession(
 	sessionId: string,
@@ -85,8 +106,8 @@ export async function parseSession(
 
 	const { types = 'all', limit = 50, offset = 0 } = opts;
 
-	const toolCalls = new Map<string, { call: RawToolCall; timestamp: number; lineIndex: number }>();
-	const toolResults = new Map<string, RawToolResult>();
+	const toolCalls = new Map<string, { call: RawToolCall; timestamp: number }>();
+	const toolResults = new Map<string, RawInnerMessage>();
 
 	const rl = readline.createInterface({
 		input: fs.createReadStream(filepath, { encoding: 'utf8' }),
@@ -101,35 +122,30 @@ export async function parseSession(
 			continue;
 		}
 
-		let raw: RawMessage;
+		let raw: RawWrapper;
 		try {
 			raw = JSON.parse(line);
 		} catch {
-			// Skip malformed lines
 			lineIndex++;
 			continue;
 		}
 
-		if (raw.type !== 'message') {
+		const inner = unwrap(raw);
+		if (!inner) {
 			lineIndex++;
 			continue;
 		}
 
-		const ts = extractTimestamp(raw, lineIndex);
+		const ts = extractTimestamp(raw, inner, lineIndex);
 
-		if (raw.role === 'assistant' && Array.isArray(raw.content)) {
-			// Tool calls are embedded in assistant messages
-			for (const item of raw.content as RawToolCall[]) {
+		if (inner.role === 'assistant' && Array.isArray(inner.content)) {
+			for (const item of inner.content as RawToolCall[]) {
 				if (item.type === 'toolCall' && item.id) {
-					toolCalls.set(item.id, { call: item, timestamp: ts, lineIndex });
+					toolCalls.set(item.id, { call: item, timestamp: ts });
 				}
 			}
-		} else if (raw.role === 'toolResult') {
-			// Tool result message
-			const result = raw as unknown as RawToolResult;
-			if (result.toolCallId) {
-				toolResults.set(result.toolCallId, result);
-			}
+		} else if (inner.role === 'toolResult' && inner.toolCallId) {
+			toolResults.set(inner.toolCallId, inner);
 		}
 
 		lineIndex++;
@@ -140,26 +156,26 @@ export async function parseSession(
 
 	for (const [id, { call, timestamp }] of toolCalls) {
 		const toolName = call.name;
-
 		if (types === 'exec' && toolName !== 'exec') continue;
 
 		const result = toolResults.get(id);
-
 		let status: OpsEntry['status'] = 'running';
 		let entryResult: OpsEntry['result'] | undefined;
 
 		if (result) {
-			const exitCode = result.details?.exitCode ?? null;
-			const text = result.content
-				.map((c) => c.text ?? '')
+			const details = result.details ?? {};
+			const exitCode = (details.exitCode as number | null) ?? null;
+			const content = Array.isArray(result.content) ? result.content : [];
+			const text = content
+				.map((c: { text?: string }) => c.text ?? '')
 				.join('')
 				.trim();
 
 			entryResult = {
 				text,
 				exitCode: exitCode !== null ? exitCode : undefined,
-				durationMs: result.details?.durationMs,
-				cwd: result.details?.cwd
+				durationMs: details.durationMs as number | undefined,
+				cwd: details.cwd as string | undefined
 			};
 
 			if (exitCode === null || exitCode === undefined) {
@@ -175,14 +191,52 @@ export async function parseSession(
 			arguments: call.arguments ?? {},
 			result: entryResult,
 			timestamp,
-			status
+			status,
+			sessionId
 		});
 	}
 
-	// Sort most recent first (by timestamp desc)
 	entries.sort((a, b) => b.timestamp - a.timestamp);
-
 	return entries.slice(offset, offset + limit);
+}
+
+/**
+ * Parse ALL recent sessions and return merged entries.
+ * Reads the most recent `maxSessions` files by mtime.
+ */
+export async function parseAllSessions(
+	opts: { types?: 'exec' | 'all'; limit?: number; maxSessions?: number } = {}
+): Promise<OpsEntry[]> {
+	const { types = 'all', limit = 100, maxSessions = 10 } = opts;
+
+	let files: fs.Dirent[];
+	try {
+		files = fs.readdirSync(SESSIONS_DIR, { withFileTypes: true });
+	} catch {
+		return [];
+	}
+
+	const jsonlFiles = files
+		.filter((f) => f.isFile() && f.name.endsWith('.jsonl') && !f.name.endsWith('.lock'))
+		.map((f) => {
+			const filepath = path.join(SESSIONS_DIR, f.name);
+			const stat = fs.statSync(filepath);
+			return { name: f.name, sessionId: f.name.replace(/\.jsonl$/, ''), mtime: stat.mtimeMs };
+		})
+		.sort((a, b) => b.mtime - a.mtime)
+		.slice(0, maxSessions);
+
+	const allEntries: OpsEntry[] = [];
+
+	for (const file of jsonlFiles) {
+		// Parse each session with a generous limit, we'll sort and trim after
+		const entries = await parseSession(file.sessionId, { types, limit: 500 });
+		allEntries.push(...entries);
+	}
+
+	// Sort all entries by timestamp descending, return limited
+	allEntries.sort((a, b) => b.timestamp - a.timestamp);
+	return allEntries.slice(0, limit);
 }
 
 /**
@@ -208,7 +262,7 @@ export function readNewLines(
 	const lines = text.split('\n');
 
 	const toolCalls = new Map<string, { call: RawToolCall; timestamp: number }>();
-	const toolResults = new Map<string, RawToolResult>();
+	const toolResults = new Map<string, RawInnerMessage>();
 	let lineIndex = 0;
 
 	for (const line of lines) {
@@ -217,7 +271,7 @@ export function readNewLines(
 			continue;
 		}
 
-		let raw: RawMessage;
+		let raw: RawWrapper;
 		try {
 			raw = JSON.parse(line);
 		} catch {
@@ -225,24 +279,22 @@ export function readNewLines(
 			continue;
 		}
 
-		if (raw.type !== 'message') {
+		const inner = unwrap(raw);
+		if (!inner) {
 			lineIndex++;
 			continue;
 		}
 
-		const ts = extractTimestamp(raw, lineIndex);
+		const ts = typeof raw.timestamp === 'number' ? raw.timestamp : (typeof inner.timestamp === 'number' ? inner.timestamp : lineIndex);
 
-		if (raw.role === 'assistant' && Array.isArray(raw.content)) {
-			for (const item of raw.content as RawToolCall[]) {
+		if (inner.role === 'assistant' && Array.isArray(inner.content)) {
+			for (const item of inner.content as RawToolCall[]) {
 				if (item.type === 'toolCall' && item.id) {
 					toolCalls.set(item.id, { call: item, timestamp: ts });
 				}
 			}
-		} else if (raw.role === 'toolResult') {
-			const result = raw as unknown as RawToolResult;
-			if (result.toolCallId) {
-				toolResults.set(result.toolCallId, result);
-			}
+		} else if (inner.role === 'toolResult' && inner.toolCallId) {
+			toolResults.set(inner.toolCallId, inner);
 		}
 
 		lineIndex++;
@@ -256,21 +308,20 @@ export function readNewLines(
 		let entryResult: OpsEntry['result'] | undefined;
 
 		if (result) {
-			const exitCode = result.details?.exitCode ?? null;
-			const text = result.content
-				.map((c) => c.text ?? '')
-				.join('')
-				.trim();
+			const details = result.details ?? {};
+			const exitCode = (details.exitCode as number | null) ?? null;
+			const content = Array.isArray(result.content) ? result.content : [];
+			const text = content.map((c: { text?: string }) => c.text ?? '').join('').trim();
 			entryResult = {
 				text,
 				exitCode: exitCode !== null ? exitCode : undefined,
-				durationMs: result.details?.durationMs,
-				cwd: result.details?.cwd
+				durationMs: details.durationMs as number | undefined,
+				cwd: details.cwd as string | undefined
 			};
 			status = exitCode === null || exitCode === undefined ? 'success' : exitCode === 0 ? 'success' : 'error';
 		}
 
-		entries.push({ id, toolName: call.name, arguments: call.arguments ?? {}, result: entryResult, timestamp, status });
+		entries.push({ id, toolName: call.name, arguments: call.arguments ?? {}, result: entryResult, timestamp, status, sessionId });
 	}
 
 	return { entries, newOffset: stat.size };
