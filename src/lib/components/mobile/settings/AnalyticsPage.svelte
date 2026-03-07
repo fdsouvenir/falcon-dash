@@ -110,12 +110,12 @@
 	}
 </script>
 
-<div class="flex h-full flex-col bg-gray-950">
+<div class="flex h-full flex-col bg-surface-0">
 	<!-- Header -->
-	<header class="flex items-center gap-3 border-b border-gray-700 px-4 py-3">
+	<header class="flex items-center gap-3 border-b border-surface-border px-4 py-3">
 		<button
 			onclick={onback}
-			class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-400"
+			class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-status-muted"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -125,7 +125,7 @@
 		<button
 			onclick={refresh}
 			disabled={refreshing || loading}
-			class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-gray-400 hover:text-white disabled:opacity-50"
+			class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-status-muted hover:text-white disabled:opacity-50"
 			title="Refresh"
 		>
 			<svg
@@ -149,21 +149,21 @@
 			<!-- Loading skeletons -->
 			<div class="mt-4 grid grid-cols-2 gap-3">
 				{#each [1, 2] as _i (_i)}
-					<div class="animate-pulse rounded-xl border border-gray-800 bg-gray-900 p-4">
-						<div class="h-3 w-16 rounded bg-gray-700"></div>
-						<div class="mt-3 h-7 w-24 rounded bg-gray-700"></div>
+					<div class="animate-pulse rounded-xl border border-surface-border bg-surface-1 p-4">
+						<div class="h-3 w-16 rounded bg-surface-3"></div>
+						<div class="mt-3 h-7 w-24 rounded bg-surface-3"></div>
 					</div>
 				{/each}
 			</div>
-			<div class="mt-4 animate-pulse rounded-xl border border-gray-800 bg-gray-900 p-4">
-				<div class="h-2 w-full rounded-full bg-gray-800"></div>
+			<div class="mt-4 animate-pulse rounded-xl border border-surface-border bg-surface-1 p-4">
+				<div class="h-2 w-full rounded-full bg-surface-2"></div>
 			</div>
 			<div class="mt-3 space-y-3">
 				{#each [1, 2, 3] as _i (_i)}
-					<div class="animate-pulse rounded-xl border border-gray-800 bg-gray-900 p-4">
+					<div class="animate-pulse rounded-xl border border-surface-border bg-surface-1 p-4">
 						<div class="flex items-center justify-between">
-							<div class="h-4 w-24 rounded bg-gray-700"></div>
-							<div class="h-4 w-16 rounded bg-gray-700"></div>
+							<div class="h-4 w-24 rounded bg-surface-3"></div>
+							<div class="h-4 w-16 rounded bg-surface-3"></div>
 						</div>
 					</div>
 				{/each}
@@ -172,7 +172,7 @@
 			<!-- Empty state -->
 			<div class="flex flex-col items-center justify-center py-16 text-center">
 				<svg
-					class="mb-3 h-10 w-10 text-gray-600"
+					class="mb-3 h-10 w-10 text-status-muted"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -184,35 +184,35 @@
 						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 					/>
 				</svg>
-				<p class="text-sm text-gray-500">No usage data yet</p>
-				<p class="mt-1 text-xs text-gray-600">
+				<p class="text-sm text-status-muted">No usage data yet</p>
+				<p class="mt-1 text-xs text-status-muted">
 					Token usage will appear here once you start chatting
 				</p>
 			</div>
 		{:else}
 			<!-- Summary cards -->
 			<div class="mt-4 grid grid-cols-2 gap-3">
-				<div class="rounded-xl border border-gray-800 bg-gray-900 p-4">
-					<div class="text-xs font-medium uppercase tracking-wider text-gray-500">Tokens</div>
+				<div class="rounded-xl border border-surface-border bg-surface-1 p-4">
+					<div class="text-xs font-medium uppercase tracking-wider text-status-muted">Tokens</div>
 					<div class="mt-1 font-mono text-2xl font-bold text-white">
 						{formatTokens(totalTokens)}
 					</div>
 				</div>
-				<div class="rounded-xl border border-gray-800 bg-gray-900 p-4">
-					<div class="text-xs font-medium uppercase tracking-wider text-gray-500">Sessions</div>
+				<div class="rounded-xl border border-surface-border bg-surface-1 p-4">
+					<div class="text-xs font-medium uppercase tracking-wider text-status-muted">Sessions</div>
 					<div class="mt-1 font-mono text-2xl font-bold text-white">
 						{totalSessions}
 					</div>
 				</div>
 			</div>
 
-			<p class="mt-3 text-center text-xs text-gray-600">
+			<p class="mt-3 text-center text-xs text-status-muted">
 				Totals reflect active sessions only — deleted sessions are not counted.
 			</p>
 
 			<!-- Distribution bar -->
 			{#if modelBreakdown.length > 1}
-				<div class="mt-4 overflow-hidden rounded-full bg-gray-800">
+				<div class="mt-4 overflow-hidden rounded-full bg-surface-2">
 					<div class="flex h-2">
 						{#each modelBreakdown as entry, i (entry.model)}
 							<div
@@ -229,16 +229,16 @@
 
 			<!-- Model breakdown -->
 			<div class="mt-4 space-y-2">
-				<div class="text-xs font-medium uppercase tracking-wider text-gray-500">By model</div>
+				<div class="text-xs font-medium uppercase tracking-wider text-status-muted">By model</div>
 				{#each modelBreakdown as entry, i (entry.model)}
-					<div class="rounded-xl border border-gray-800 bg-gray-900 p-4">
+					<div class="rounded-xl border border-surface-border bg-surface-1 p-4">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2.5">
 								<span class="h-2.5 w-2.5 rounded-full {colorFor(i)}"></span>
 								<span class="text-sm font-medium text-white">{entry.model}</span>
 							</div>
 							{#if modelBreakdown.length > 1}
-								<span class="text-xs text-gray-500">
+								<span class="text-xs text-status-muted">
 									{modelPercentage(entry).toFixed(0)}%
 								</span>
 							{/if}
@@ -248,10 +248,10 @@
 								<span class="font-mono text-lg font-semibold {textColorFor(i)}">
 									{formatTokens(entry.tokens)}
 								</span>
-								<span class="ml-1 text-xs text-gray-500">tokens</span>
+								<span class="ml-1 text-xs text-status-muted">tokens</span>
 							</div>
 							<div class="ml-auto">
-								<span class="text-xs text-gray-500">
+								<span class="text-xs text-status-muted">
 									{entry.sessionCount} session{entry.sessionCount === 1 ? '' : 's'}
 								</span>
 							</div>

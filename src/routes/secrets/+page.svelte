@@ -96,7 +96,7 @@
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-lg font-semibold text-white">Secrets</h1>
-			<p class="text-sm text-gray-400">Manage secret providers for API keys and credentials</p>
+			<p class="text-sm text-status-muted">Manage secret providers for API keys and credentials</p>
 		</div>
 		{#if isConnected}
 			<button
@@ -109,8 +109,8 @@
 	</div>
 
 	{#if !isConnected}
-		<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-8 text-center">
-			<p class="text-sm text-gray-500">Connect to gateway to manage secrets</p>
+		<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-8 text-center">
+			<p class="text-sm text-status-muted">Connect to gateway to manage secrets</p>
 		</div>
 	{:else}
 		<!-- Add provider form -->
@@ -119,7 +119,7 @@
 				<h3 class="mb-3 text-sm font-semibold text-white">New Provider</h3>
 				<div class="space-y-3">
 					<div>
-						<label for="provider-name" class="mb-1 block text-xs font-medium text-gray-400"
+						<label for="provider-name" class="mb-1 block text-xs font-medium text-status-muted"
 							>Name</label
 						>
 						<input
@@ -127,17 +127,17 @@
 							type="text"
 							bind:value={newName}
 							placeholder="my-secrets"
-							class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 						/>
 					</div>
 					<div>
-						<label for="provider-type" class="mb-1 block text-xs font-medium text-gray-400"
+						<label for="provider-type" class="mb-1 block text-xs font-medium text-status-muted"
 							>Type</label
 						>
 						<select
 							id="provider-type"
 							bind:value={newType}
-							class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white focus:border-status-info focus:outline-none"
 						>
 							<option value="env">Environment Variables</option>
 							<option value="file">File</option>
@@ -146,7 +146,7 @@
 					</div>
 					{#if newType === 'file'}
 						<div>
-							<label for="provider-path" class="mb-1 block text-xs font-medium text-gray-400"
+							<label for="provider-path" class="mb-1 block text-xs font-medium text-status-muted"
 								>File Path</label
 							>
 							<input
@@ -154,13 +154,13 @@
 								type="text"
 								bind:value={newPath}
 								placeholder="/path/to/secrets.json"
-								class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 							/>
 						</div>
 					{/if}
 					{#if newType === 'exec'}
 						<div>
-							<label for="provider-command" class="mb-1 block text-xs font-medium text-gray-400"
+							<label for="provider-command" class="mb-1 block text-xs font-medium text-status-muted"
 								>Command</label
 							>
 							<input
@@ -168,7 +168,7 @@
 								type="text"
 								bind:value={newCommand}
 								placeholder="/usr/bin/secret-tool"
-								class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 							/>
 						</div>
 					{/if}
@@ -187,17 +187,17 @@
 		{#if loading}
 			<div class="flex items-center gap-2 py-4">
 				<div
-					class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"
+					class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-blue-400"
 				></div>
-				<span class="text-sm text-gray-400">Loading providers...</span>
+				<span class="text-sm text-status-muted">Loading providers...</span>
 			</div>
 		{:else if error}
 			<div class="rounded-lg border border-red-600/30 bg-red-900/10 p-3">
 				<p class="text-sm text-red-400">{error}</p>
 			</div>
 		{:else if providers.length === 0}
-			<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-8 text-center">
-				<div class="mb-2 text-3xl text-gray-600">
+			<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-8 text-center">
+				<div class="mb-2 text-3xl text-status-muted">
 					<svg
 						class="mx-auto h-10 w-10"
 						fill="none"
@@ -212,25 +212,25 @@
 						/>
 					</svg>
 				</div>
-				<p class="text-sm text-gray-500">No secret providers configured</p>
-				<p class="mt-1 text-xs text-gray-600">Add a provider to manage API keys and credentials</p>
+				<p class="text-sm text-status-muted">No secret providers configured</p>
+				<p class="mt-1 text-xs text-status-muted">Add a provider to manage API keys and credentials</p>
 			</div>
 		{:else}
 			<div class="space-y-3">
 				{#each providers as provider, i (provider.name ?? i)}
 					<div
-						class="flex items-center justify-between rounded-lg border border-gray-700/60 bg-gray-800/40 p-4"
+						class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-4"
 					>
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
-								<span class="rounded bg-gray-700 px-1.5 py-0.5 text-xs font-mono text-gray-300"
+								<span class="rounded bg-surface-3 px-1.5 py-0.5 text-xs font-mono text-white/80"
 									>{provider.type}</span
 								>
 								<span class="text-sm font-medium text-white"
 									>{provider.name || `Provider ${i + 1}`}</span
 								>
 							</div>
-							<div class="mt-1 text-xs text-gray-500">
+							<div class="mt-1 text-xs text-status-muted">
 								{#if provider.type === 'env'}
 									Reads secrets from environment variables
 								{:else if provider.type === 'file'}
@@ -252,22 +252,22 @@
 		{/if}
 
 		<!-- Info section -->
-		<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 p-4">
-			<h3 class="mb-2 text-xs font-semibold uppercase text-gray-500">About Secrets</h3>
-			<div class="space-y-2 text-xs text-gray-500">
+		<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 p-4">
+			<h3 class="mb-2 text-xs font-semibold uppercase text-status-muted">About Secrets</h3>
+			<div class="space-y-2 text-xs text-status-muted">
 				<p>
-					<span class="font-semibold text-gray-400">env</span> — Reads secrets from environment variables
+					<span class="font-semibold text-status-muted">env</span> — Reads secrets from environment variables
 				</p>
 				<p>
-					<span class="font-semibold text-gray-400">file</span> — Reads secrets from a JSON or single-value
+					<span class="font-semibold text-status-muted">file</span> — Reads secrets from a JSON or single-value
 					file
 				</p>
 				<p>
-					<span class="font-semibold text-gray-400">exec</span> — Runs a command to fetch secrets on demand
+					<span class="font-semibold text-status-muted">exec</span> — Runs a command to fetch secrets on demand
 				</p>
 				<p class="mt-2">
 					Providers are resolved eagerly at gateway startup. Run
-					<span class="rounded bg-gray-700 px-1 py-0.5 font-mono text-gray-300"
+					<span class="rounded bg-surface-3 px-1 py-0.5 font-mono text-white/80"
 						>openclaw secrets audit --check</span
 					>
 					to verify all secrets resolve correctly.

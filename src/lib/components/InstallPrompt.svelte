@@ -47,13 +47,13 @@
 
 {#if visible}
 	<div
-		class="fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-gray-700 bg-gray-900 p-4 shadow-lg sm:left-auto sm:right-4"
+		class="fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-surface-border bg-surface-1 p-4 shadow-lg sm:left-auto sm:right-4"
 	>
 		<img src="/icon-192.png" alt="Falcon" class="h-10 w-10 rounded-lg" />
 		<div class="flex-1">
 			{#if isIOS}
-				<p class="text-sm font-medium text-gray-100">Install Falcon Dashboard</p>
-				<p class="text-xs text-gray-400">
+				<p class="text-sm font-medium text-white">Install Falcon Dashboard</p>
+				<p class="text-xs text-status-muted">
 					Tap <svg
 						class="inline h-4 w-4 align-text-bottom text-blue-400"
 						fill="none"
@@ -69,8 +69,8 @@
 					</svg> then "Add to Home Screen"
 				</p>
 			{:else}
-				<p class="text-sm font-medium text-gray-100">Install Falcon Dashboard</p>
-				<p class="text-xs text-gray-400">Add to your home screen for quick access</p>
+				<p class="text-sm font-medium text-white">Install Falcon Dashboard</p>
+				<p class="text-xs text-status-muted">Add to your home screen for quick access</p>
 			{/if}
 		</div>
 		{#if !isIOS}
@@ -81,7 +81,7 @@
 				Install
 			</button>
 		{/if}
-		<button onclick={handleDismiss} class="text-gray-500 hover:text-gray-300" aria-label="Dismiss">
+		<button onclick={handleDismiss} class="text-status-muted hover:text-white/80" aria-label="Dismiss">
 			<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 			</svg>

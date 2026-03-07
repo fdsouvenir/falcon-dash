@@ -65,7 +65,7 @@
 	<!-- Sheet -->
 	<div
 		bind:this={sheetEl}
-		class="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-gray-900"
+		class="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-surface-1"
 		style="max-height: {maxHeight}; transform: translateY({translateY}px); transition: {dragging
 			? 'none'
 			: 'transform 0.2s ease-out'};"
@@ -78,7 +78,7 @@
 			onpointerup={handlePointerUp}
 			role="presentation"
 		>
-			<div class="h-1 w-10 rounded-full bg-gray-600"></div>
+			<div class="h-1 w-10 rounded-full bg-surface-3"></div>
 		</div>
 
 		<!-- Content -->

@@ -25,13 +25,13 @@
 	}
 </script>
 
-<div class="group relative my-3 rounded-lg border border-gray-700 bg-gray-900">
+<div class="group relative my-3 rounded-lg border border-surface-border bg-surface-1">
 	<!-- Header with language label and copy button -->
-	<div class="flex items-center justify-between border-b border-gray-700 px-4 py-1.5">
-		<span class="text-xs font-medium text-gray-400">{lang || 'text'}</span>
+	<div class="flex items-center justify-between border-b border-surface-border px-4 py-1.5">
+		<span class="text-xs font-medium text-status-muted">{lang || 'text'}</span>
 		<button
 			onclick={copyToClipboard}
-			class="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+			class="text-xs text-status-muted hover:text-white/80 transition-colors"
 			aria-label="Copy code"
 		>
 			{copied ? 'Copied!' : 'Copy'}

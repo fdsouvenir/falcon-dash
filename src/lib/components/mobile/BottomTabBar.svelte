@@ -48,7 +48,7 @@
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
 {#if !kbVisible && !hidden}
 	<nav
-		class="flex shrink-0 items-stretch border-t border-gray-800 bg-gray-900 pb-[var(--safe-bottom)]"
+		class="flex shrink-0 items-stretch border-t border-surface-border bg-surface-1 pb-[var(--safe-bottom)]"
 	>
 		<a
 			href="/"
@@ -56,7 +56,7 @@
 				'/'
 			)
 				? 'text-blue-400'
-				: 'text-gray-500'}"
+				: 'text-status-muted'}"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -81,7 +81,7 @@
 				'/projects'
 			)
 				? 'text-blue-400'
-				: 'text-gray-500'}"
+				: 'text-status-muted'}"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -99,7 +99,7 @@
 				'/jobs'
 			)
 				? 'text-blue-400'
-				: 'text-gray-500'}"
+				: 'text-status-muted'}"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -117,7 +117,7 @@
 				'/documents'
 			)
 				? 'text-blue-400'
-				: 'text-gray-500'}"
+				: 'text-status-muted'}"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -135,7 +135,7 @@
 				'/channels'
 			)
 				? 'text-blue-400'
-				: 'text-gray-500'}"
+				: 'text-status-muted'}"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -150,7 +150,7 @@
 		{#if hasApps}
 			<button
 				onclick={onmore}
-				class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs text-gray-500"
+				class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs text-status-muted"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />

@@ -51,7 +51,7 @@
 	<div class="flex items-center gap-3">
 		<button
 			onclick={goBack}
-			class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			class="flex h-8 w-8 items-center justify-center rounded-lg text-status-muted transition-colors hover:bg-surface-2 hover:text-white"
 			aria-label="Back to channels"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -73,7 +73,7 @@
 						? 'bg-emerald-600 text-white'
 						: i === currentStep
 							? 'bg-blue-600 text-white'
-							: 'bg-gray-700 text-gray-400'}"
+							: 'bg-surface-3 text-status-muted'}"
 				>
 					{#if i < currentStep}
 						<svg
@@ -90,19 +90,19 @@
 					{/if}
 				</div>
 				<span
-					class="hidden text-xs sm:inline {i === currentStep ? 'text-gray-200' : 'text-gray-500'}"
+					class="hidden text-xs sm:inline {i === currentStep ? 'text-white/90' : 'text-status-muted'}"
 				>
 					{step.label}
 				</span>
 				{#if i < steps.length - 1}
-					<div class="h-px w-4 sm:w-8 {i < currentStep ? 'bg-emerald-600' : 'bg-gray-700'}"></div>
+					<div class="h-px w-4 sm:w-8 {i < currentStep ? 'bg-emerald-600' : 'bg-surface-3'}"></div>
 				{/if}
 			</div>
 		{/each}
 	</div>
 
 	<!-- Step content -->
-	<div class="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4 sm:p-6">
+	<div class="rounded-lg border border-surface-border/60 bg-surface-2/40 p-4 sm:p-6">
 		{@render children()}
 	</div>
 
@@ -111,11 +111,11 @@
 		<button
 			onclick={prev}
 			disabled={isFirstStep}
-			class="rounded-lg px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 disabled:invisible"
+			class="rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-surface-2 disabled:invisible"
 		>
 			Back
 		</button>
-		<span class="text-xs text-gray-500">
+		<span class="text-xs text-status-muted">
 			Step {currentStep + 1} of {steps.length}
 		</span>
 		<button

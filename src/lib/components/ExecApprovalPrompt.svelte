@@ -16,7 +16,7 @@
 	let commandDisplay = $derived(`$ ${approval.command}`);
 </script>
 
-<div class="exec-approval-prompt rounded-lg border border-amber-800/50 bg-gray-900 p-4">
+<div class="exec-approval-prompt rounded-lg border border-amber-800/50 bg-surface-1 p-4">
 	<!-- Header -->
 	<div class="mb-3 flex items-center gap-2">
 		<svg
@@ -43,14 +43,14 @@
 	</div>
 
 	<!-- Command -->
-	<div class="mb-2 overflow-x-auto rounded-md bg-gray-950 px-3 py-2">
+	<div class="mb-2 overflow-x-auto rounded-md bg-surface-0 px-3 py-2">
 		<code class="whitespace-pre-wrap break-all font-mono text-sm text-green-400">
 			{commandDisplay}
 		</code>
 	</div>
 
 	<!-- Node ID -->
-	<p class="mb-4 text-xs text-gray-500">Agent: {approval.agentId}</p>
+	<p class="mb-4 text-xs text-status-muted">Agent: {approval.agentId}</p>
 
 	<!-- Action buttons -->
 	<div class="flex flex-wrap gap-2">
@@ -74,7 +74,7 @@
 		</button>
 		<button
 			onclick={() => onAlwaysDeny(approval.requestId, approval.command)}
-			class="rounded-md bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-300"
+			class="rounded-md bg-surface-2 px-3 py-1.5 text-sm font-medium text-status-muted transition-colors hover:bg-surface-3 hover:text-white/80"
 		>
 			Always Deny
 		</button>

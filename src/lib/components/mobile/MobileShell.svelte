@@ -34,7 +34,7 @@
 	}
 </script>
 
-<div class="flex h-screen flex-col bg-gray-950 text-white" style="height: 100dvh">
+<div class="flex h-screen flex-col bg-surface-0 text-white" style="height: 100dvh">
 	<MobileHeader onNotifications={() => (notificationsOpen = true)} />
 
 	<main class="flex-1 overflow-y-auto">

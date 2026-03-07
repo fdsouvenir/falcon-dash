@@ -72,7 +72,7 @@
 {#snippet notifBell()}
 	{#if notifCount > 0}
 		<button
-			class="touch-target relative flex items-center justify-center text-gray-400 hover:text-white"
+			class="touch-target relative flex items-center justify-center text-status-muted hover:text-white"
 			aria-label="Notifications"
 			onclick={onNotifications}
 		>
@@ -93,11 +93,11 @@
 {/snippet}
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
-<header class="flex shrink-0 items-center border-b border-gray-800 bg-gray-900 px-3 py-2">
+<header class="flex shrink-0 items-center border-b border-surface-border bg-surface-1 px-3 py-2">
 	{#if isSecondaryRoute}
 		<a
 			href="/"
-			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
+			class="touch-target flex items-center justify-center text-status-muted hover:text-white"
 			aria-label="Back to dashboard"
 		>
 			<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -108,7 +108,7 @@
 		{@render notifBell()}
 		<a
 			href="/settings"
-			class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
+			class="touch-target flex items-center justify-center text-status-muted hover:text-white"
 			aria-label="Settings"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -127,7 +127,7 @@
 			{@render notifBell()}
 			<a
 				href="/settings"
-				class="touch-target flex items-center justify-center text-gray-400 hover:text-white"
+				class="touch-target flex items-center justify-center text-status-muted hover:text-white"
 				aria-label="Settings"
 			>
 				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

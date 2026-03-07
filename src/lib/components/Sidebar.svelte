@@ -78,13 +78,13 @@
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- routes will be created in later stories -->
 <aside
-	class="flex h-full w-64 flex-col border-r border-gray-800 bg-gray-900 transition-transform duration-200 {collapsed
+	class="flex h-full w-64 flex-col border-r border-surface-border bg-surface-1 transition-transform duration-200 {collapsed
 		? '-translate-x-full'
 		: 'translate-x-0'} fixed inset-y-0 left-0 z-40 md:relative md:translate-x-0"
 >
 	<!-- Header -->
 	<div
-		class="flex items-center justify-between border-b border-gray-800 px-4 py-3 shadow-sm shadow-black/20"
+		class="flex items-center justify-between border-b border-surface-border px-4 py-3 shadow-sm shadow-black/20"
 	>
 		<div class="flex items-center gap-2">
 			<ConnectionStatus />
@@ -93,7 +93,7 @@
 			>
 		</div>
 		<button
-			class="text-gray-400 hover:text-white md:hidden"
+			class="text-status-muted hover:text-white md:hidden"
 			onclick={onToggle}
 			aria-label="Close sidebar"
 		>
@@ -112,14 +112,14 @@
 	<nav class="flex flex-1 flex-col overflow-y-auto">
 		<!-- Navigation -->
 		<div class="px-3 py-3">
-			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-status-muted">
 				Navigation
 			</h2>
 			<a
 				href={resolve('/')}
 				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/')
-					? 'bg-gray-800 text-white'
-					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+					? 'bg-surface-2 text-white'
+					: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path
@@ -133,8 +133,8 @@
 			<a
 				href="/channels"
 				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/channels')
-					? 'bg-gray-800 text-white'
-					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+					? 'bg-surface-2 text-white'
+					: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path
@@ -149,10 +149,10 @@
 
 		<!-- Apps section -->
 		<div class="px-3 py-3">
-			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Apps</h2>
+			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-status-muted">Apps</h2>
 			<a
 				href="/projects"
-				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
@@ -166,7 +166,7 @@
 			</a>
 			<a
 				href="/documents"
-				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
@@ -180,7 +180,7 @@
 			</a>
 			<a
 				href="/jobs"
-				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
@@ -194,7 +194,7 @@
 			</a>
 			<a
 				href="/skills"
-				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
@@ -209,8 +209,8 @@
 			<a
 				href="/ops"
 				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/ops')
-					? 'bg-gray-800 text-white'
-					: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+					? 'bg-surface-2 text-white'
+					: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
@@ -227,13 +227,13 @@
 		<!-- Custom Apps section (pinned canvas apps) -->
 		{#if $pinnedApps.length > 0}
 			<div class="px-3 py-3">
-				<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+				<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-status-muted">
 					Custom Apps
 				</h2>
 				{#each $pinnedApps as app (app.id)}
 					{#if confirmingId === app.surfaceId}
-						<div class="rounded bg-gray-800 px-2 py-2">
-							<p class="mb-2 text-xs text-gray-300">Remove "{app.name}" from sidebar?</p>
+						<div class="rounded bg-surface-2 px-2 py-2">
+							<p class="mb-2 text-xs text-white/80">Remove "{app.name}" from sidebar?</p>
 							<div class="flex gap-2">
 								<button
 									class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-300 hover:bg-red-900"
@@ -242,7 +242,7 @@
 									Remove
 								</button>
 								<button
-									class="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-700 hover:text-white"
+									class="rounded px-2 py-1 text-xs text-status-muted hover:bg-surface-3 hover:text-white"
 									onclick={cancelRemove}
 								>
 									Cancel
@@ -253,7 +253,7 @@
 						<div class="flex items-center gap-1 px-2 py-1">
 							<input
 								type="text"
-								class="flex-1 rounded border border-gray-600 bg-gray-800 px-1.5 py-0.5 text-sm text-white outline-none focus:border-blue-500"
+								class="flex-1 rounded border border-surface-border bg-surface-2 px-1.5 py-0.5 text-sm text-white outline-none focus:border-status-info"
 								bind:value={editName}
 								onkeydown={(e) => handleRenameKeydown(e, app.surfaceId)}
 								onblur={() => commitRename(app.surfaceId)}
@@ -261,10 +261,10 @@
 							/>
 						</div>
 					{:else}
-						<div class="group flex items-center rounded px-2 py-1.5 hover:bg-gray-800">
+						<div class="group flex items-center rounded px-2 py-1.5 hover:bg-surface-2">
 							<a
 								href="/apps/{app.surfaceId}"
-								class="flex flex-1 items-center gap-2 text-sm text-gray-300 hover:text-white"
+								class="flex flex-1 items-center gap-2 text-sm text-white/80 hover:text-white"
 							>
 								<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2" />
@@ -275,7 +275,7 @@
 							</a>
 							<div class="flex shrink-0 gap-0.5 opacity-0 group-hover:opacity-100">
 								<button
-									class="rounded p-0.5 text-gray-500 hover:bg-gray-700 hover:text-gray-300"
+									class="rounded p-0.5 text-status-muted hover:bg-surface-3 hover:text-white/80"
 									onclick={() => startRename(app.surfaceId, app.name)}
 									aria-label="Rename app"
 									title="Rename"
@@ -292,7 +292,7 @@
 									</svg>
 								</button>
 								<button
-									class="rounded p-0.5 text-gray-500 hover:bg-gray-700 hover:text-red-400"
+									class="rounded p-0.5 text-status-muted hover:bg-surface-3 hover:text-red-400"
 									onclick={() => startConfirmRemove(app.surfaceId)}
 									aria-label="Remove app"
 									title="Remove"
@@ -316,11 +316,11 @@
 	</nav>
 
 	<!-- Bottom section -->
-	<div class="border-t border-gray-800 px-3 py-3">
+	<div class="border-t border-surface-border px-3 py-3">
 		<NotificationCenter />
 		<a
 			href="/settings"
-			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
@@ -341,8 +341,8 @@
 		<a
 			href="/passwords"
 			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/passwords')
-				? 'bg-gray-800 text-white'
-				: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+				? 'bg-surface-2 text-white'
+				: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
@@ -357,8 +357,8 @@
 		<a
 			href="/secrets"
 			class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/secrets')
-				? 'bg-gray-800 text-white'
-				: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+				? 'bg-surface-2 text-white'
+				: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path

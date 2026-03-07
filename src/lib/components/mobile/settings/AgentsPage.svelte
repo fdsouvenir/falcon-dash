@@ -5,11 +5,11 @@
 	let { onback }: { onback: () => void } = $props();
 </script>
 
-<div class="flex h-full flex-col bg-gray-950">
-	<header class="flex items-center gap-3 border-b border-gray-700 px-4 py-3">
+<div class="flex h-full flex-col bg-surface-0">
+	<header class="flex items-center gap-3 border-b border-surface-border px-4 py-3">
 		<button onclick={onback} class="flex min-h-[44px] min-w-[44px] items-center justify-center">
 			<svg
-				class="h-5 w-5 text-gray-400"
+				class="h-5 w-5 text-status-muted"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -25,7 +25,7 @@
 			aria-label="Add agent"
 		>
 			<svg
-				class="h-5 w-5 text-gray-400"
+				class="h-5 w-5 text-status-muted"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"

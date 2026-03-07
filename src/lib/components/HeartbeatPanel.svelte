@@ -113,26 +113,26 @@
 
 <div class="flex h-full flex-col">
 	<!-- Header -->
-	<div class="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+	<div class="flex items-center justify-between border-b border-surface-border px-4 py-3">
 		<h2 class="text-sm font-medium text-white">Heartbeat Configuration</h2>
 	</div>
 
 	{#if loading}
-		<div class="flex flex-1 items-center justify-center text-sm text-gray-500">Loading...</div>
+		<div class="flex flex-1 items-center justify-center text-sm text-status-muted">Loading...</div>
 	{:else if error}
 		<div class="flex flex-1 items-center justify-center text-sm text-red-400">{error}</div>
 	{:else}
 		<div class="flex-1 overflow-y-auto p-4">
 			<!-- Status Section -->
-			<div class="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-4">
+			<div class="mb-6 rounded-lg border border-surface-border bg-surface-1 p-4">
 				<div class="mb-3 flex items-center justify-between">
-					<h3 class="text-xs font-medium uppercase tracking-wide text-gray-500">Status</h3>
+					<h3 class="text-xs font-medium uppercase tracking-wide text-status-muted">Status</h3>
 					{#if config}
 						<button
 							onclick={toggleHeartbeat}
 							class="rounded px-2 py-1 text-xs {config.enabled
 								? 'bg-green-600/30 text-green-400'
-								: 'bg-gray-700 text-gray-400'}"
+								: 'bg-surface-3 text-status-muted'}"
 						>
 							{config.enabled ? 'Active' : 'Paused'}
 						</button>
@@ -141,17 +141,17 @@
 				{#if status}
 					<div class="grid grid-cols-3 gap-4 text-xs">
 						<div>
-							<span class="text-gray-500">Interval</span>
+							<span class="text-status-muted">Interval</span>
 							<p class="mt-1 text-white">{config ? `${config.intervalMinutes}m` : '—'}</p>
 						</div>
 						<div>
-							<span class="text-gray-500">Last Run</span>
+							<span class="text-status-muted">Last Run</span>
 							<p class="mt-1 text-white">
 								{status.lastRun ? formatRelativeTime(status.lastRun) : '—'}
 							</p>
 						</div>
 						<div>
-							<span class="text-gray-500">Next Run</span>
+							<span class="text-status-muted">Next Run</span>
 							<p class="mt-1 text-white">
 								{status.nextRun ? formatRelativeTime(status.nextRun) : '—'}
 							</p>
@@ -161,9 +161,9 @@
 			</div>
 
 			<!-- Configuration Section -->
-			<div class="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-4">
+			<div class="mb-6 rounded-lg border border-surface-border bg-surface-1 p-4">
 				<div class="mb-3 flex items-center justify-between">
-					<h3 class="text-xs font-medium uppercase tracking-wide text-gray-500">Configuration</h3>
+					<h3 class="text-xs font-medium uppercase tracking-wide text-status-muted">Configuration</h3>
 					<button onclick={openConfigEdit} class="text-xs text-blue-400 hover:text-blue-300">
 						Edit
 					</button>
@@ -171,17 +171,17 @@
 				{#if config}
 					<div class="grid grid-cols-2 gap-4 text-xs">
 						<div>
-							<span class="text-gray-500">Active Hours</span>
+							<span class="text-status-muted">Active Hours</span>
 							<p class="mt-1 text-white">
 								{config.activeHours.start} — {config.activeHours.end}
 							</p>
 						</div>
 						<div>
-							<span class="text-gray-500">Timezone</span>
+							<span class="text-status-muted">Timezone</span>
 							<p class="mt-1 text-white">{config.activeHours.timezone}</p>
 						</div>
 						<div>
-							<span class="text-gray-500">Delivery Target</span>
+							<span class="text-status-muted">Delivery Target</span>
 							<p class="mt-1 text-white">{config.deliveryTarget}</p>
 						</div>
 					</div>
@@ -189,9 +189,9 @@
 			</div>
 
 			<!-- HEARTBEAT.md Section -->
-			<div class="rounded-lg border border-gray-800 bg-gray-900 p-4">
+			<div class="rounded-lg border border-surface-border bg-surface-1 p-4">
 				<div class="mb-3 flex items-center justify-between">
-					<h3 class="text-xs font-medium uppercase tracking-wide text-gray-500">
+					<h3 class="text-xs font-medium uppercase tracking-wide text-status-muted">
 						HEARTBEAT.md Template
 					</h3>
 					{#if !editingTemplate}
@@ -203,7 +203,7 @@
 				{#if editingTemplate}
 					<textarea
 						bind:value={templateDraft}
-						class="mb-3 h-64 w-full resize-none rounded border border-gray-700 bg-gray-950 p-3 font-mono text-xs text-gray-300 focus:border-blue-500 focus:outline-none"
+						class="mb-3 h-64 w-full resize-none rounded border border-surface-border bg-surface-0 p-3 font-mono text-xs text-white/80 focus:border-status-info focus:outline-none"
 						spellcheck="false"
 					></textarea>
 					<div class="flex justify-end gap-2">
@@ -211,7 +211,7 @@
 							onclick={() => {
 								editingTemplate = false;
 							}}
-							class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white"
+							class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white"
 						>
 							Cancel
 						</button>
@@ -224,8 +224,8 @@
 						</button>
 					</div>
 					{#if templateDraft}
-						<div class="mt-3 border-t border-gray-800 pt-3">
-							<span class="mb-2 block text-[10px] font-medium uppercase tracking-wide text-gray-600"
+						<div class="mt-3 border-t border-surface-border pt-3">
+							<span class="mb-2 block text-[10px] font-medium uppercase tracking-wide text-status-muted"
 								>Preview</span
 							>
 							<MarkdownRenderer content={templateDraft} />
@@ -234,7 +234,7 @@
 				{:else if template}
 					<MarkdownRenderer content={template} />
 				{:else}
-					<p class="text-xs text-gray-500">No HEARTBEAT.md template found</p>
+					<p class="text-xs text-status-muted">No HEARTBEAT.md template found</p>
 				{/if}
 			</div>
 
@@ -259,43 +259,43 @@
 				if (e.key === 'Escape') showConfigEdit = false;
 			}}
 		>
-			<div class="w-96 rounded-lg border border-gray-700 bg-gray-800 p-5">
+			<div class="w-96 rounded-lg border border-surface-border bg-surface-2 p-5">
 				<h3 class="mb-4 text-sm font-medium text-white">Edit Heartbeat Config</h3>
 				<div class="space-y-3">
 					<div class="grid grid-cols-2 gap-3">
 						<div>
-							<label class="mb-1 block text-xs text-gray-400">Start Hour</label>
+							<label class="mb-1 block text-xs text-status-muted">Start Hour</label>
 							<input
 								type="text"
 								bind:value={editStart}
 								placeholder="09:00"
-								class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+								class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white focus:border-status-info focus:outline-none"
 							/>
 						</div>
 						<div>
-							<label class="mb-1 block text-xs text-gray-400">End Hour</label>
+							<label class="mb-1 block text-xs text-status-muted">End Hour</label>
 							<input
 								type="text"
 								bind:value={editEnd}
 								placeholder="17:00"
-								class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+								class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white focus:border-status-info focus:outline-none"
 							/>
 						</div>
 					</div>
 					<div>
-						<label class="mb-1 block text-xs text-gray-400">Timezone</label>
+						<label class="mb-1 block text-xs text-status-muted">Timezone</label>
 						<input
 							type="text"
 							bind:value={editTimezone}
 							placeholder="America/New_York"
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+							class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white focus:border-status-info focus:outline-none"
 						/>
 					</div>
 					<div>
-						<label class="mb-1 block text-xs text-gray-400">Delivery Target</label>
+						<label class="mb-1 block text-xs text-status-muted">Delivery Target</label>
 						<select
 							bind:value={editTarget}
-							class="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-xs text-white focus:border-blue-500 focus:outline-none"
+							class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-xs text-white focus:border-status-info focus:outline-none"
 						>
 							<option value="last">Last Active Channel</option>
 							<option value="none">None (Disabled)</option>
@@ -308,7 +308,7 @@
 						onclick={() => {
 							showConfigEdit = false;
 						}}
-						class="rounded px-3 py-1.5 text-xs text-gray-400 hover:text-white">Cancel</button
+						class="rounded px-3 py-1.5 text-xs text-status-muted hover:text-white">Cancel</button
 					>
 					<button
 						onclick={handleSaveConfig}

@@ -161,7 +161,7 @@
 	{#each segments as segment (segment.id)}
 		{#if segment.type === 'mermaid'}
 			{#if isStreaming}
-				<pre class="rounded-lg bg-gray-900 p-4"><code>{segment.content}</code></pre>
+				<pre class="rounded-lg bg-surface-1 p-4"><code>{segment.content}</code></pre>
 			{:else}
 				<MermaidDiagram code={segment.content} />
 			{/if}

@@ -66,7 +66,7 @@
 <div class="notification-center relative">
 	<button
 		onclick={toggle}
-		class="relative flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+		class="relative flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"
 		aria-label="Notifications"
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,22 +89,22 @@
 
 	{#if open}
 		<div
-			class="absolute bottom-full left-0 z-50 mb-2 w-80 rounded-lg border border-gray-700 bg-gray-800 shadow-xl"
+			class="absolute bottom-full left-0 z-50 mb-2 w-80 rounded-lg border border-surface-border bg-surface-2 shadow-xl"
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-700 px-3 py-2">
+			<div class="flex items-center justify-between border-b border-surface-border px-3 py-2">
 				<span class="text-sm font-semibold text-white">Notifications</span>
 				<div class="flex gap-1">
 					{#if items.length > 0}
 						<button
 							onclick={markAllNotificationsRead}
-							class="rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-700 hover:text-white"
+							class="rounded px-2 py-0.5 text-xs text-status-muted hover:bg-surface-3 hover:text-white"
 						>
 							Mark all read
 						</button>
 						<button
 							onclick={clearNotifications}
-							class="rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-700 hover:text-white"
+							class="rounded px-2 py-0.5 text-xs text-status-muted hover:bg-surface-3 hover:text-white"
 						>
 							Clear
 						</button>
@@ -115,17 +115,17 @@
 			<!-- List -->
 			<div class="max-h-80 overflow-y-auto">
 				{#if items.length === 0}
-					<div class="px-3 py-6 text-center text-sm text-gray-500">No notifications</div>
+					<div class="px-3 py-6 text-center text-sm text-status-muted">No notifications</div>
 				{:else}
 					{#each items as n (n.id)}
 						<button
 							onclick={() => handleClickNotification(n)}
-							class="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-gray-700/50 {n.read
+							class="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-3/50 {n.read
 								? 'opacity-60'
 								: ''}"
 						>
 							<svg
-								class="mt-0.5 h-4 w-4 shrink-0 {n.read ? 'text-gray-500' : 'text-blue-400'}"
+								class="mt-0.5 h-4 w-4 shrink-0 {n.read ? 'text-status-muted' : 'text-blue-400'}"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -136,14 +136,14 @@
 							<div class="min-w-0 flex-1">
 								<div class="flex items-baseline justify-between gap-2">
 									<span
-										class="truncate text-xs font-medium {n.read ? 'text-gray-400' : 'text-white'}"
+										class="truncate text-xs font-medium {n.read ? 'text-status-muted' : 'text-white'}"
 										>{n.title}</span
 									>
-									<span class="shrink-0 text-[10px] text-gray-500"
+									<span class="shrink-0 text-[10px] text-status-muted"
 										>{formatRelativeTime(n.timestamp)}</span
 									>
 								</div>
-								<p class="truncate text-xs text-gray-400">{n.body}</p>
+								<p class="truncate text-xs text-status-muted">{n.body}</p>
 							</div>
 							{#if !n.read}
 								<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>

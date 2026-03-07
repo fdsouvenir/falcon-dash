@@ -54,9 +54,9 @@
 </script>
 
 {#if mobile}
-	<div class="flex h-full flex-col items-center justify-center bg-gray-950 px-6 text-center">
+	<div class="flex h-full flex-col items-center justify-center bg-surface-0 px-6 text-center">
 		<svg
-			class="mb-4 h-12 w-12 text-gray-600"
+			class="mb-4 h-12 w-12 text-status-muted"
 			fill="none"
 			viewBox="0 0 24 24"
 			stroke="currentColor"
@@ -69,7 +69,7 @@
 			/>
 		</svg>
 		<h2 class="text-lg font-semibold text-white">Desktop Only</h2>
-		<p class="mt-2 text-sm text-gray-400">
+		<p class="mt-2 text-sm text-status-muted">
 			Canvas apps require a desktop browser for the best experience.
 		</p>
 	</div>
@@ -79,7 +79,7 @@
 			<h1 class="text-lg font-semibold text-white">{surface.title}</h1>
 			{#if pinned}
 				{#if confirmingUnpin}
-					<span class="text-xs text-gray-400">Remove from sidebar?</span>
+					<span class="text-xs text-status-muted">Remove from sidebar?</span>
 					<button
 						class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-300 hover:bg-red-900"
 						onclick={handleUnpin}
@@ -87,14 +87,14 @@
 						Remove
 					</button>
 					<button
-						class="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-white"
+						class="rounded px-2 py-1 text-xs text-status-muted hover:bg-surface-2 hover:text-white"
 						onclick={cancelUnpin}
 					>
 						Cancel
 					</button>
 				{:else}
 					<button
-						class="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-white"
+						class="rounded px-2 py-1 text-xs text-status-muted hover:bg-surface-2 hover:text-white"
 						onclick={handleUnpin}
 					>
 						Unpin
@@ -107,23 +107,23 @@
 		</div>
 	</div>
 {:else if surface && loadingTimedOut}
-	<div class="flex h-full flex-col items-center justify-center gap-2 text-gray-400">
+	<div class="flex h-full flex-col items-center justify-center gap-2 text-status-muted">
 		<span>No canvas content received.</span>
-		<span class="text-sm text-gray-500"
+		<span class="text-sm text-status-muted"
 			>The agent created this surface but hasn't sent any content yet.</span
 		>
 	</div>
 {:else if surface}
 	<div class="flex h-full items-center justify-center">
-		<div class="flex items-center gap-2 text-gray-400">
+		<div class="flex items-center gap-2 text-status-muted">
 			<div
-				class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-gray-400"
+				class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-status-info"
 			></div>
 			<span>Loading canvas...</span>
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full items-center justify-center text-gray-500">
+	<div class="flex h-full items-center justify-center text-status-muted">
 		Surface not found. It may have been cleared or the gateway was restarted.
 	</div>
 {/if}

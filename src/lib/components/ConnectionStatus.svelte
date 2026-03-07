@@ -131,7 +131,7 @@
 
 <div class="connection-status-container relative">
 	<button
-		class="flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-800 transition-colors"
+		class="flex items-center gap-2 rounded px-2 py-1 hover:bg-surface-2 transition-colors"
 		onclick={toggleDetails}
 		aria-label="Connection status"
 	>
@@ -139,45 +139,45 @@
 		<div class="flex flex-col items-start">
 			<span class="text-xs font-medium text-white">{statusText(connectionState)}</span>
 			{#if serverInfo?.host}
-				<span class="text-xs text-gray-400">{serverInfo.host}</span>
+				<span class="text-xs text-status-muted">{serverInfo.host}</span>
 			{/if}
 		</div>
 	</button>
 
 	{#if showDetails}
 		<div
-			class="absolute left-0 top-full mt-1 w-72 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-xl z-50"
+			class="absolute left-0 top-full mt-1 w-72 rounded-lg border border-surface-border bg-surface-2 p-4 shadow-xl z-50"
 		>
 			<h3 class="mb-3 text-sm font-semibold text-white">Connection Details</h3>
 			<dl class="space-y-2 text-xs">
 				<div>
-					<dt class="text-gray-400">Status</dt>
+					<dt class="text-status-muted">Status</dt>
 					<dd class="text-white">{statusText(connectionState)}</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Gateway Host</dt>
+					<dt class="text-status-muted">Gateway Host</dt>
 					<dd class="text-white">{serverInfo?.host || 'N/A'}</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Connection ID</dt>
+					<dt class="text-status-muted">Connection ID</dt>
 					<dd class="font-mono text-white">{serverInfo?.connId || 'N/A'}</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Uptime</dt>
+					<dt class="text-status-muted">Uptime</dt>
 					<dd class="text-white">{uptime}</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Protocol Version</dt>
+					<dt class="text-status-muted">Protocol Version</dt>
 					<dd class="text-white">3</dd>
 				</div>
 				<div>
-					<dt class="text-gray-400">Server Version</dt>
+					<dt class="text-status-muted">Server Version</dt>
 					<dd class="text-white">{serverInfo?.version || 'N/A'}</dd>
 				</div>
 
 				<!-- Reconnecting info -->
 				{#if connectionState === 'reconnecting'}
-					<div class="border-t border-gray-700 pt-2 mt-2">
+					<div class="border-t border-surface-border pt-2 mt-2">
 						<p class="text-yellow-400">SSE reconnecting automatically...</p>
 						<button
 							class="mt-2 w-full rounded bg-blue-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
@@ -190,7 +190,7 @@
 
 				<!-- Disconnected recovery -->
 				{#if connectionState === 'disconnected'}
-					<div class="border-t border-gray-700 pt-2 mt-2">
+					<div class="border-t border-surface-border pt-2 mt-2">
 						<button
 							class="w-full rounded bg-blue-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
 							onclick={handleRetryConnection}
@@ -202,9 +202,9 @@
 
 				<!-- Ready state info -->
 				{#if connectionState === 'ready'}
-					<div class="border-t border-gray-700 pt-2 mt-2">
+					<div class="border-t border-surface-border pt-2 mt-2">
 						<div>
-							<dt class="text-gray-400">Last tick</dt>
+							<dt class="text-status-muted">Last tick</dt>
 							<dd class="text-white">
 								{lastTickAgo !== null ? `${lastTickAgo}s ago` : 'N/A'}
 							</dd>
@@ -214,7 +214,7 @@
 
 				<!-- Auth failed recovery -->
 				{#if connectionState === 'auth_failed'}
-					<div class="border-t border-gray-700 pt-2 mt-2">
+					<div class="border-t border-surface-border pt-2 mt-2">
 						<button
 							class="w-full rounded bg-red-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
 							onclick={handleReenterToken}
@@ -226,9 +226,9 @@
 
 				<!-- Pairing required recovery -->
 				{#if connectionState === 'pairing_required'}
-					<div class="border-t border-gray-700 pt-2 mt-2">
+					<div class="border-t border-surface-border pt-2 mt-2">
 						<p class="text-yellow-400 mb-1">Approve device in gateway admin</p>
-						<p class="text-xs text-gray-400 mb-2">
+						<p class="text-xs text-status-muted mb-2">
 							Run <code class="font-mono">openclaw devices approve</code>
 						</p>
 						<button
@@ -242,9 +242,9 @@
 			</dl>
 
 			<!-- View Diagnostics button -->
-			<div class="mt-3 border-t border-gray-700 pt-3">
+			<div class="mt-3 border-t border-surface-border pt-3">
 				<button
-					class="w-full rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
+					class="w-full rounded border border-surface-border px-3 py-1.5 text-xs text-white/80 hover:bg-surface-3 transition-colors"
 					onclick={handleOpenDiagnostics}
 				>
 					View Diagnostics

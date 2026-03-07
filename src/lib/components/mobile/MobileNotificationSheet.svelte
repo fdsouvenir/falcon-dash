@@ -57,20 +57,20 @@
 		<h2 class="text-sm font-semibold text-white">
 			Notifications
 			{#if unreadCount > 0}
-				<span class="ml-1 text-xs font-normal text-gray-400">({unreadCount} unread)</span>
+				<span class="ml-1 text-xs font-normal text-status-muted">({unreadCount} unread)</span>
 			{/if}
 		</h2>
 		<div class="flex gap-2">
 			{#if items.length > 0}
 				<button
 					onclick={markAllNotificationsRead}
-					class="rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-700 hover:text-white"
+					class="rounded px-2 py-0.5 text-xs text-status-muted hover:bg-surface-3 hover:text-white"
 				>
 					Mark all read
 				</button>
 				<button
 					onclick={clearNotifications}
-					class="rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-700 hover:text-white"
+					class="rounded px-2 py-0.5 text-xs text-status-muted hover:bg-surface-3 hover:text-white"
 				>
 					Clear
 				</button>
@@ -79,7 +79,7 @@
 	</div>
 
 	{#if items.length === 0}
-		<div class="py-8 text-center text-sm text-gray-500">No notifications</div>
+		<div class="py-8 text-center text-sm text-status-muted">No notifications</div>
 	{:else}
 		<div class="flex flex-col gap-1">
 			{#each items as n (n.id)}
@@ -87,10 +87,10 @@
 					onclick={() => handleClick(n)}
 					class="flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left {n.read
 						? 'opacity-60'
-						: 'bg-gray-800/50'}"
+						: 'bg-surface-2/50'}"
 				>
 					<svg
-						class="mt-0.5 h-5 w-5 shrink-0 {n.read ? 'text-gray-500' : 'text-blue-400'}"
+						class="mt-0.5 h-5 w-5 shrink-0 {n.read ? 'text-status-muted' : 'text-blue-400'}"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke="currentColor"
@@ -100,12 +100,12 @@
 					</svg>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline justify-between gap-2">
-							<span class="truncate text-sm font-medium {n.read ? 'text-gray-400' : 'text-white'}"
+							<span class="truncate text-sm font-medium {n.read ? 'text-status-muted' : 'text-white'}"
 								>{n.title}</span
 							>
-							<span class="shrink-0 text-xs text-gray-500">{formatRelativeTime(n.timestamp)}</span>
+							<span class="shrink-0 text-xs text-status-muted">{formatRelativeTime(n.timestamp)}</span>
 						</div>
-						<p class="mt-0.5 text-xs text-gray-400">{n.body}</p>
+						<p class="mt-0.5 text-xs text-status-muted">{n.body}</p>
 					</div>
 					{#if !n.read}
 						<span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>

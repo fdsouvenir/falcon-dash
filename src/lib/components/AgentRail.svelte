@@ -316,8 +316,8 @@
 	/* Rail container */
 	.agent-rail {
 		width: 72px;
-		background: color-mix(in oklab, var(--color-gray-900) 94%, black);
-		border-right: 1px solid var(--color-gray-800);
+		background: color-mix(in oklab, var(--surface-1) 94%, black);
+		border-right: 1px solid var(--surface-2);
 	}
 	.agent-rail--mobile {
 		width: 56px;
@@ -362,7 +362,7 @@
 		width: 48px;
 		height: 48px;
 		border-radius: 50%;
-		background: var(--color-gray-800);
+		background: var(--surface-2);
 		cursor: pointer;
 		position: relative;
 		transition:
@@ -412,7 +412,7 @@
 		height: 12px;
 		border-radius: 50%;
 		background: var(--color-emerald-500);
-		border: 2.5px solid color-mix(in oklab, var(--color-gray-900) 94%, black);
+		border: 2.5px solid color-mix(in oklab, var(--surface-1) 94%, black);
 		transition: border-color 0.2s ease;
 	}
 	.agent-dot--active {
@@ -421,11 +421,11 @@
 
 	/* Home button */
 	.agent-icon--home {
-		background: var(--color-gray-800);
-		color: var(--color-gray-400);
+		background: var(--surface-2);
+		color: var(--status-muted);
 	}
 	.agent-icon--home:hover {
-		background: var(--color-gray-700);
+		background: var(--surface-3);
 		color: var(--color-white);
 		border-radius: 16px;
 		box-shadow: none;
@@ -434,8 +434,8 @@
 	/* Add button */
 	.agent-icon--add {
 		background: transparent;
-		color: var(--color-gray-500);
-		border: 2px dashed var(--color-gray-700);
+		color: var(--status-muted);
+		border: 2px dashed var(--surface-3);
 		text-decoration: none;
 	}
 	.agent-icon--add:hover {
@@ -453,8 +453,8 @@
 		transform: translateY(-50%);
 		margin-left: 14px;
 		padding: 6px 10px;
-		background: var(--color-gray-950);
-		border: 1px solid var(--color-gray-800);
+		background: var(--surface-0);
+		border: 1px solid var(--surface-2);
 		border-radius: 6px;
 		white-space: nowrap;
 		pointer-events: none;
@@ -479,7 +479,7 @@
 	}
 	.agent-tooltip__count {
 		font-size: 0.6875rem;
-		color: var(--color-gray-400);
+		color: var(--status-muted);
 		line-height: 1.3;
 	}
 
@@ -487,7 +487,7 @@
 	.agent-separator {
 		width: 32px;
 		height: 1px;
-		background: var(--color-gray-700);
+		background: var(--surface-3);
 		margin: 4px 0;
 		border-radius: 1px;
 	}
@@ -500,8 +500,8 @@
 		transform: translateY(-50%);
 		margin-left: 14px;
 		padding: 10px 12px;
-		background: var(--color-gray-900);
-		border: 1px solid var(--color-gray-700);
+		background: var(--surface-1);
+		border: 1px solid var(--surface-3);
 		border-radius: 8px;
 		white-space: nowrap;
 		z-index: 50;
@@ -526,7 +526,7 @@
 	.spawn-confirm__text {
 		font-size: 0.8125rem;
 		font-weight: 500;
-		color: var(--color-gray-300);
+		color: rgba(255,255,255,0.8);
 		line-height: 1;
 	}
 	.spawn-confirm__actions {
@@ -547,10 +547,10 @@
 	}
 	.spawn-confirm__btn--cancel {
 		background: transparent;
-		color: var(--color-gray-500);
+		color: var(--status-muted);
 	}
 	.spawn-confirm__btn--cancel:hover {
-		color: var(--color-gray-300);
+		color: rgba(255,255,255,0.8);
 	}
 	.spawn-confirm__btn--go {
 		background: var(--color-emerald-600);

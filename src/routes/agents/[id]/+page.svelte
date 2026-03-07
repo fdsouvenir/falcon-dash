@@ -175,7 +175,7 @@
 	<div class="flex items-center gap-3">
 		<button
 			onclick={() => goto(resolve('/'))}
-			class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			class="flex h-8 w-8 items-center justify-center rounded-lg text-status-muted transition-colors hover:bg-surface-2 hover:text-white"
 			aria-label="Back to dashboard"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -187,31 +187,31 @@
 				<span class="text-2xl">{emoji}</span>
 			{:else}
 				<div
-					class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-700 text-sm font-semibold text-white"
+					class="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-3 text-sm font-semibold text-white"
 				>
 					{displayName.charAt(0).toUpperCase()}
 				</div>
 			{/if}
 			<div>
 				<h1 class="text-lg font-semibold text-white">{displayName}</h1>
-				<p class="text-xs text-gray-500 font-mono">{agentId}</p>
+				<p class="text-xs text-status-muted font-mono">{agentId}</p>
 			</div>
 		</div>
 	</div>
 
 	{#if !isConnected}
-		<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-8 text-center">
-			<p class="text-sm text-gray-500">Connect to gateway to manage this agent</p>
+		<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-8 text-center">
+			<p class="text-sm text-status-muted">Connect to gateway to manage this agent</p>
 		</div>
 	{:else}
 		<!-- Tab bar -->
-		<div class="flex gap-1 border-b border-gray-700/60">
+		<div class="flex gap-1 border-b border-surface-border/60">
 			{#each tabs as tab (tab.id)}
 				<button
 					onclick={() => (activeTab = tab.id)}
 					class="px-4 py-2 text-sm font-medium transition-colors {activeTab === tab.id
 						? 'border-b-2 border-blue-500 text-white'
-						: 'text-gray-400 hover:text-gray-200'}"
+						: 'text-status-muted hover:text-white/90'}"
 				>
 					{tab.label}
 				</button>
@@ -223,44 +223,44 @@
 			{#if activeTab === 'config'}
 				<div class="space-y-5">
 					<!-- Identity display -->
-					<div class="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
+					<div class="rounded-lg border border-surface-border/60 bg-surface-2/40 p-4">
 						<h3 class="mb-3 text-sm font-semibold text-white">Identity</h3>
 						<div class="space-y-2 text-sm">
 							<div class="flex justify-between">
-								<span class="text-gray-400">Name</span>
-								<span class="text-gray-200">{displayName}</span>
+								<span class="text-status-muted">Name</span>
+								<span class="text-white/90">{displayName}</span>
 							</div>
 							<div class="flex justify-between">
-								<span class="text-gray-400">Emoji</span>
-								<span class="text-gray-200">{emoji || '—'}</span>
+								<span class="text-status-muted">Emoji</span>
+								<span class="text-white/90">{emoji || '—'}</span>
 							</div>
 							<div class="flex justify-between">
-								<span class="text-gray-400">Agent ID</span>
-								<span class="font-mono text-gray-200">{agentId}</span>
+								<span class="text-status-muted">Agent ID</span>
+								<span class="font-mono text-white/90">{agentId}</span>
 							</div>
 							{#if agentConfig?.workspace}
 								<div class="flex justify-between">
-									<span class="text-gray-400">Workspace</span>
-									<span class="font-mono text-xs text-gray-200">{agentConfig.workspace}</span>
+									<span class="text-status-muted">Workspace</span>
+									<span class="font-mono text-xs text-white/90">{agentConfig.workspace}</span>
 								</div>
 							{/if}
 						</div>
-						<p class="mt-3 text-xs text-gray-500">
+						<p class="mt-3 text-xs text-status-muted">
 							Name and emoji are set by the agent itself. Ask the agent in chat to change them.
 						</p>
 					</div>
 
 					<!-- Theme/role editing -->
-					<div class="rounded-lg border border-gray-700/60 bg-gray-800/40 p-4">
+					<div class="rounded-lg border border-surface-border/60 bg-surface-2/40 p-4">
 						<h3 class="mb-3 text-sm font-semibold text-white">Role / Theme</h3>
-						<p class="mb-2 text-xs text-gray-500">
+						<p class="mb-2 text-xs text-status-muted">
 							Tells other agents what this agent's purpose is.
 						</p>
 						<textarea
 							bind:value={formTheme}
 							rows="3"
 							placeholder="e.g., Customer support agent for Discord"
-							class="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 						></textarea>
 						<button
 							onclick={saveTheme}
@@ -278,7 +278,7 @@
 						<div class="flex gap-2">
 							<button
 								onclick={() => loadAgentLifecycle()}
-								class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+								class="rounded-lg bg-surface-3 px-3 py-1.5 text-xs text-white/80 hover:bg-surface-3"
 							>
 								Refresh
 							</button>
@@ -295,19 +295,19 @@
 					{#if lifecycleLoading}
 						<div class="flex items-center gap-2 py-4">
 							<div
-								class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-blue-400"
+								class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-blue-400"
 							></div>
-							<span class="text-sm text-gray-400">Loading...</span>
+							<span class="text-sm text-status-muted">Loading...</span>
 						</div>
 					{:else if activeAgents.length === 0}
-						<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-6 text-center">
-							<p class="text-sm text-gray-500">No active runs</p>
+						<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center">
+							<p class="text-sm text-status-muted">No active runs</p>
 						</div>
 					{:else}
 						<div class="space-y-2">
 							{#each activeAgents as run (run.runId)}
 								<div
-									class="flex items-center justify-between rounded-lg border border-gray-700/60 bg-gray-800/40 p-3"
+									class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-3"
 								>
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center gap-2">
@@ -316,7 +316,7 @@
 												>{run.task || 'Running'}</span
 											>
 										</div>
-										<div class="mt-1 flex gap-3 text-xs text-gray-500">
+										<div class="mt-1 flex gap-3 text-xs text-status-muted">
 											{#if run.model}<span>{run.model}</span>{/if}
 											{#if run.tokens}<span>{run.tokens.toLocaleString()} tokens</span>{/if}
 											{#if run.startedAt}<span
@@ -343,7 +343,7 @@
 					<div class="space-y-3">
 						<!-- Discord -->
 						<div
-							class="flex items-center justify-between rounded-lg border border-gray-700/60 bg-gray-800/40 p-3"
+							class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-3"
 						>
 							<div class="flex items-center gap-3">
 								<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865F2]/20">
@@ -354,8 +354,8 @@
 									</svg>
 								</div>
 								<div>
-									<span class="text-sm font-medium text-gray-200">Discord</span>
-									<p class="text-xs {discord.connected ? 'text-emerald-400/80' : 'text-gray-500'}">
+									<span class="text-sm font-medium text-white/90">Discord</span>
+									<p class="text-xs {discord.connected ? 'text-emerald-400/80' : 'text-status-muted'}">
 										{discord.connected
 											? `Connected${discord.guildName ? ` to ${discord.guildName}` : ''}`
 											: 'Not connected'}
@@ -368,7 +368,7 @@
 								{/if}
 								<a
 									href={resolve('/channels/discord')}
-									class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+									class="rounded-lg bg-surface-3 px-3 py-1.5 text-xs text-white/80 hover:bg-surface-3"
 								>
 									{discord.connected ? 'Configure' : 'Set Up'}
 								</a>
@@ -377,7 +377,7 @@
 
 						<!-- Telegram -->
 						<div
-							class="flex items-center justify-between rounded-lg border border-gray-700/60 bg-gray-800/40 p-3"
+							class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-3"
 						>
 							<div class="flex items-center gap-3">
 								<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20">
@@ -388,20 +388,20 @@
 									</svg>
 								</div>
 								<div>
-									<span class="text-sm font-medium text-gray-200">Telegram</span>
-									<p class="text-xs text-gray-500">Not configured</p>
+									<span class="text-sm font-medium text-white/90">Telegram</span>
+									<p class="text-xs text-status-muted">Not configured</p>
 								</div>
 							</div>
 							<a
 								href={resolve('/channels/telegram')}
-								class="rounded-lg bg-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-600"
+								class="rounded-lg bg-surface-3 px-3 py-1.5 text-xs text-white/80 hover:bg-surface-3"
 							>
 								Set Up
 							</a>
 						</div>
 					</div>
 
-					<p class="text-xs text-gray-500">
+					<p class="text-xs text-status-muted">
 						Manage channel connections from the <a
 							href={resolve('/channels')}
 							class="text-blue-400 underline">Channels</a
@@ -413,15 +413,15 @@
 					<h3 class="text-sm font-semibold text-white">Pending Approvals</h3>
 
 					{#if localPendingApprovals.length === 0}
-						<div class="rounded-lg border border-gray-700/40 bg-gray-800/20 px-4 py-6 text-center">
-							<p class="text-sm text-gray-500">No pending approvals</p>
+						<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center">
+							<p class="text-sm text-status-muted">No pending approvals</p>
 						</div>
 					{:else}
 						<div class="space-y-2">
 							{#each localPendingApprovals as approval (approval.requestId)}
 								<div class="rounded-lg border border-amber-600/30 bg-amber-900/10 p-3">
 									<div class="mb-2">
-										<span class="font-mono text-sm text-gray-200">{approval.command}</span>
+										<span class="font-mono text-sm text-white/90">{approval.command}</span>
 									</div>
 									<div class="flex gap-2">
 										<button
@@ -442,7 +442,7 @@
 						</div>
 					{/if}
 
-					<p class="text-xs text-gray-500">
+					<p class="text-xs text-status-muted">
 						Configure approval policies in <a
 							href={resolve('/settings')}
 							class="text-blue-400 underline">Settings → Approvals</a

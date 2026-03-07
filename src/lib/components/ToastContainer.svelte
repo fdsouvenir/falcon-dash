@@ -13,7 +13,7 @@
 	function typeClasses(type: Toast['type']): string {
 		if (type === 'success') return 'border-green-700 bg-green-900/90 text-green-300';
 		if (type === 'error') return 'border-red-700 bg-red-900/90 text-red-300';
-		return 'border-gray-700 bg-gray-800/90 text-gray-300';
+		return 'border-surface-border bg-surface-2/90 text-white/80';
 	}
 </script>
 

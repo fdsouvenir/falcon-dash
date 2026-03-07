@@ -25,7 +25,7 @@
 {#if error}
 	<div class="rounded border border-red-800 bg-red-950 p-3 text-sm text-red-300">
 		<p class="font-mono">{error}</p>
-		<pre class="mt-2 overflow-x-auto text-xs text-gray-400">{code}</pre>
+		<pre class="mt-2 overflow-x-auto text-xs text-status-muted">{code}</pre>
 	</div>
 {:else if rendered}
 	<div class="my-4 flex min-h-[200px] items-center justify-center">
@@ -34,6 +34,6 @@
 	</div>
 {:else}
 	<div class="my-4 flex min-h-[200px] items-center justify-center">
-		<div class="animate-pulse text-sm text-gray-500">Loading diagram...</div>
+		<div class="animate-pulse text-sm text-status-muted">Loading diagram...</div>
 	</div>
 {/if}

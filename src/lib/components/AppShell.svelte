@@ -45,7 +45,7 @@
 	});
 </script>
 
-<div class="flex h-screen bg-gray-950 text-white">
+<div class="flex h-screen bg-surface-0 text-white">
 	<!-- Agent rail — always visible on desktop, hidden on mobile -->
 	<div class="hidden md:flex">
 		<AgentRail bind:selectedAgentId />
@@ -65,9 +65,9 @@
 	<!-- Main content -->
 	<main class="flex flex-1 flex-col overflow-hidden">
 		<!-- Mobile header with menu button -->
-		<header class="flex items-center border-b border-gray-800 px-4 py-2 md:hidden">
+		<header class="flex items-center border-b border-surface-border px-4 py-2 md:hidden">
 			<button
-				class="text-gray-400 hover:text-white"
+				class="text-status-muted hover:text-white"
 				onclick={toggleSidebar}
 				aria-label="Open sidebar"
 			>
@@ -84,7 +84,7 @@
 		</header>
 
 		{#if approvals.length > 0}
-			<div class="shrink-0 border-b border-gray-800 p-3">
+			<div class="shrink-0 border-b border-surface-border p-3">
 				<ExecApprovalPrompt
 					approval={approvals[0]}
 					pendingCount={approvals.length}
@@ -100,14 +100,14 @@
 
 		<!-- Floating canvas panel: visible on ALL pages when a surface is active -->
 		{#if currentSurface && currentSurface.visible}
-			<div class="canvas-float-panel border-t border-gray-800">
+			<div class="canvas-float-panel border-t border-surface-border">
 				<div class="flex items-center justify-between px-3 py-1.5">
-					<span class="text-xs font-medium text-gray-400">
+					<span class="text-xs font-medium text-status-muted">
 						Canvas: {currentSurface.title}
 					</span>
 					<button
 						onclick={() => (canvasPanelMinimized = !canvasPanelMinimized)}
-						class="text-xs text-gray-500 hover:text-gray-300"
+						class="text-xs text-status-muted hover:text-white/80"
 						aria-label={canvasPanelMinimized ? 'Expand canvas' : 'Minimize canvas'}
 					>
 						{canvasPanelMinimized ? 'Expand' : 'Minimize'}

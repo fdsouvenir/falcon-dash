@@ -79,7 +79,7 @@
 			case 'info':
 				return 'bg-blue-900 text-blue-300';
 			case 'debug':
-				return 'bg-gray-700 text-gray-400';
+				return 'bg-surface-3 text-status-muted';
 		}
 	}
 
@@ -98,7 +98,7 @@
 			case 'error':
 				return 'text-red-400';
 			default:
-				return 'text-gray-400';
+				return 'text-status-muted';
 		}
 	}
 
@@ -114,13 +114,13 @@
 
 {#if open}
 	<div
-		class="fixed inset-y-0 left-0 z-50 flex w-96 flex-col border-r border-gray-700 bg-gray-900 shadow-2xl"
+		class="fixed inset-y-0 left-0 z-50 flex w-96 flex-col border-r border-surface-border bg-surface-1 shadow-2xl"
 	>
 		<!-- Header -->
-		<div class="flex items-center justify-between border-b border-gray-700 px-4 py-3">
+		<div class="flex items-center justify-between border-b border-surface-border px-4 py-3">
 			<h2 class="text-sm font-semibold text-white">Connection Diagnostics</h2>
 			<button
-				class="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+				class="rounded p-1 text-status-muted hover:bg-surface-2 hover:text-white transition-colors"
 				onclick={handleClose}
 				aria-label="Close diagnostics"
 			>
@@ -136,22 +136,22 @@
 		</div>
 
 		<!-- Summary row -->
-		<div class="flex gap-4 border-b border-gray-700 px-4 py-2 text-xs">
-			<span class="text-gray-400">
+		<div class="flex gap-4 border-b border-surface-border px-4 py-2 text-xs">
+			<span class="text-status-muted">
 				Events: <span class="text-white">{entries.length}</span>
 			</span>
-			<span class="text-gray-400">
+			<span class="text-status-muted">
 				Errors: <span class="text-red-400">{errorCount}</span>
 			</span>
-			<span class="text-gray-400">
+			<span class="text-status-muted">
 				Warnings: <span class="text-yellow-400">{warnCount}</span>
 			</span>
 		</div>
 
 		<!-- Controls -->
-		<div class="flex items-center gap-2 border-b border-gray-700 px-4 py-2">
+		<div class="flex items-center gap-2 border-b border-surface-border px-4 py-2">
 			<select
-				class="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white"
+				class="rounded border border-surface-border bg-surface-2 px-2 py-1 text-xs text-white"
 				bind:value={levelFilter}
 			>
 				<option value="all">All levels</option>
@@ -161,19 +161,19 @@
 				<option value="debug">Debug</option>
 			</select>
 			<button
-				class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+				class="rounded border border-surface-border px-2 py-1 text-xs text-white/80 hover:bg-surface-2 transition-colors"
 				onclick={handleCopySummary}
 			>
 				Copy Summary
 			</button>
 			<button
-				class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+				class="rounded border border-surface-border px-2 py-1 text-xs text-white/80 hover:bg-surface-2 transition-colors"
 				onclick={handleCopyLog}
 			>
 				Copy Log
 			</button>
 			<button
-				class="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+				class="rounded border border-surface-border px-2 py-1 text-xs text-white/80 hover:bg-surface-2 transition-colors"
 				onclick={handleClear}
 			>
 				Clear
@@ -187,12 +187,12 @@
 			onscroll={handleScroll}
 		>
 			{#if filteredEntries.length === 0}
-				<div class="p-4 text-center text-gray-500">No diagnostic events</div>
+				<div class="p-4 text-center text-status-muted">No diagnostic events</div>
 			{:else}
 				{#each filteredEntries as entry (entry.ts + entry.message)}
-					<div class="border-b border-gray-800 px-3 py-1.5 hover:bg-gray-800/50">
+					<div class="border-b border-surface-border px-3 py-1.5 hover:bg-surface-2/50">
 						<div class="flex items-center gap-2">
-							<span class="text-gray-500">{formatTime(entry.ts)}</span>
+							<span class="text-status-muted">{formatTime(entry.ts)}</span>
 							<span class="rounded px-1.5 py-0.5 text-[10px] font-medium {levelColor(entry.level)}">
 								{entry.level.toUpperCase()}
 							</span>
@@ -200,9 +200,9 @@
 								{entry.category}
 							</span>
 						</div>
-						<div class="mt-0.5 text-gray-300">{entry.message}</div>
+						<div class="mt-0.5 text-white/80">{entry.message}</div>
 						{#if entry.detail}
-							<div class="mt-0.5 text-gray-500">
+							<div class="mt-0.5 text-status-muted">
 								{JSON.stringify(entry.detail)}
 							</div>
 						{/if}
