@@ -115,16 +115,10 @@ async function main() {
 		process.exit(1);
 	}
 
-	if (parsed.protocolVersion !== 1) {
-		process.stderr.write(
-			`keepassxc-secret-resolver: unsupported protocol version: ${parsed.protocolVersion}\n`
-		);
-		process.exit(1);
-	}
-
-	const ids = parsed.ids;
+	const isV1 = parsed.protocolVersion === 1;
+	const ids = parsed.ids || parsed.keys;
 	if (!Array.isArray(ids)) {
-		process.stderr.write('keepassxc-secret-resolver: "ids" must be an array\n');
+		process.stderr.write('keepassxc-secret-resolver: "ids" (or "keys") must be an array\n');
 		process.exit(1);
 	}
 
@@ -155,9 +149,15 @@ async function main() {
 		}
 	}
 
-	const response = { protocolVersion: 1, values };
-	if (Object.keys(errors).length > 0) {
-		response.errors = errors;
+	let response;
+	if (isV1) {
+		response = { protocolVersion: 1, values };
+		if (Object.keys(errors).length > 0) {
+			response.errors = errors;
+		}
+	} else {
+		// Legacy flat format: { "key": "value" }
+		response = values;
 	}
 
 	process.stdout.write(JSON.stringify(response) + '\n');
