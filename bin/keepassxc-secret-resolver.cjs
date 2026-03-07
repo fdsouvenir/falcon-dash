@@ -2,16 +2,17 @@
 /**
  * keepassxc-secret-resolver.cjs
  *
- * Gateway exec provider for reading secrets from the KeePassXC vault.
+ * OpenClaw exec secrets provider for KeePassXC vault.
  *
- * Protocol
- * --------
- * stdin:  JSON object  { "keys": ["path/to/entry", "path/to/entry:UserName", ...] }
- * stdout: JSON object  { "path/to/entry": "password_value", "path/to/entry:UserName": "username_value" }
- * exit 0 on success, exit 1 on fatal error (prints error to stderr).
+ * Protocol (OpenClaw exec provider v1)
+ * ------------------------------------
+ * stdin:  { "protocolVersion": 1, "provider": "keepassxc", "ids": ["Group/Entry", ...] }
+ * stdout: { "protocolVersion": 1, "values": { "Group/Entry": "secret_value" } }
+ *         Optional per-id errors:
+ *         { "protocolVersion": 1, "values": {}, "errors": { "id": { "message": "..." } } }
  *
- * Key format
- * ----------
+ * ID format
+ * ---------
  * "Group/Entry"               → returns the entry's Password field
  * "Group/Entry:Password"      → same as above (explicit)
  * "Group/Entry:UserName"      → returns the UserName field
@@ -24,11 +25,21 @@
  * Keyfile: ~/.openclaw/vault.key
  * Auth:    --no-password --key-file
  *
- * Usage (as an openclaw exec provider)
- * -------------------------------------
- *   command: /path/to/bin/keepassxc-secret-resolver.cjs
+ * Gateway config example
+ * ----------------------
+ *   secrets.providers.keepassxc = {
+ *     source: "exec",
+ *     command: "/usr/lib/node_modules/@fdsouvenir/falcon-dash/bin/keepassxc-secret-resolver.cjs",
+ *     passEnv: ["PATH", "HOME"],
+ *     jsonOnly: true
+ *   }
+ *
+ * SecretRef usage
+ * ---------------
+ *   { source: "exec", provider: "keepassxc", id: "Providers/anthropic/apiKey" }
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 'use strict';
 
 const { execFile } = require('child_process');
@@ -42,9 +53,10 @@ const KDBX = join(homedir(), '.openclaw', 'passwords.kdbx');
 const KEY_FILE = join(homedir(), '.openclaw', 'vault.key');
 const CLI = 'keepassxc-cli';
 
+const KNOWN_FIELDS = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
+
 /**
  * Run keepassxc-cli show --show-protected for an entry.
- * Returns the raw output string.
  */
 async function showEntry(entryPath) {
 	const args = [
@@ -61,10 +73,7 @@ async function showEntry(entryPath) {
 }
 
 /**
- * Parse `keepassxc-cli show -s` output and extract a named attribute.
- * @param {string} output - raw stdout from keepassxc-cli show
- * @param {string} field  - attribute name: Password, UserName, URL, Notes, Title
- * @returns {string}
+ * Parse keepassxc-cli show output and extract a named attribute.
  */
 function extractField(output, field) {
 	const lines = output.split('\n');
@@ -73,34 +82,24 @@ function extractField(output, field) {
 }
 
 /**
- * Resolve a single key to its value.
- * Key format: "path/to/entry" or "path/to/entry:FieldName"
+ * Parse an id into entry path and field name.
+ * "Group/Entry" → { entryPath: "Group/Entry", field: "Password" }
+ * "Group/Entry:UserName" → { entryPath: "Group/Entry", field: "UserName" }
  */
-async function resolveKey(key) {
-	const colonIdx = key.lastIndexOf(':');
-
-	// Heuristic: if the part after the last colon looks like a KeePassXC field name,
-	// treat it as a field selector. Otherwise the whole key is the entry path.
-	const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
-	let entryPath = key;
-	let field = 'Password';
-
+function parseId(id) {
+	const colonIdx = id.lastIndexOf(':');
 	if (colonIdx !== -1) {
-		const possibleField = key.slice(colonIdx + 1);
-		if (knownFields.has(possibleField)) {
-			entryPath = key.slice(0, colonIdx);
-			field = possibleField;
+		const possibleField = id.slice(colonIdx + 1);
+		if (KNOWN_FIELDS.has(possibleField)) {
+			return { entryPath: id.slice(0, colonIdx), field: possibleField };
 		}
 	}
-
-	const output = await showEntry(entryPath);
-	return extractField(output, field);
+	return { entryPath: id, field: 'Password' };
 }
 
 async function main() {
 	let input = '';
 
-	// Read all of stdin
 	await new Promise((resolve, reject) => {
 		process.stdin.setEncoding('utf8');
 		process.stdin.on('data', (chunk) => (input += chunk));
@@ -111,37 +110,31 @@ async function main() {
 	let parsed;
 	try {
 		parsed = JSON.parse(input.trim());
-	} catch (err) {
-		process.stderr.write(`keepassxc-secret-resolver: invalid JSON input: ${err.message}\n`);
+	} catch {
+		process.stderr.write('keepassxc-secret-resolver: invalid JSON input\n');
 		process.exit(1);
 	}
 
-	const keys = parsed.keys;
-	if (!Array.isArray(keys)) {
-		process.stderr.write('keepassxc-secret-resolver: "keys" must be an array\n');
+	if (parsed.protocolVersion !== 1) {
+		process.stderr.write(
+			`keepassxc-secret-resolver: unsupported protocol version: ${parsed.protocolVersion}\n`
+		);
 		process.exit(1);
 	}
 
-	const result = {};
-	const errors = [];
+	const ids = parsed.ids;
+	if (!Array.isArray(ids)) {
+		process.stderr.write('keepassxc-secret-resolver: "ids" must be an array\n');
+		process.exit(1);
+	}
 
-	// Resolve all keys (cache entries to avoid redundant CLI calls)
+	const values = {};
+	const errors = {};
 	const entryCache = new Map();
 
-	for (const key of keys) {
+	for (const id of ids) {
 		try {
-			const colonIdx = key.lastIndexOf(':');
-			const knownFields = new Set(['Password', 'UserName', 'URL', 'Notes', 'Title', 'Uuid']);
-			let entryPath = key;
-			let field = 'Password';
-
-			if (colonIdx !== -1) {
-				const possibleField = key.slice(colonIdx + 1);
-				if (knownFields.has(possibleField)) {
-					entryPath = key.slice(0, colonIdx);
-					field = possibleField;
-				}
-			}
+			const { entryPath, field } = parseId(id);
 
 			let output;
 			if (entryCache.has(entryPath)) {
@@ -151,22 +144,28 @@ async function main() {
 				entryCache.set(entryPath, output);
 			}
 
-			result[key] = extractField(output, field);
+			const value = extractField(output, field);
+			if (!value) {
+				errors[id] = { message: `field "${field}" is empty or not found` };
+			} else {
+				values[id] = value;
+			}
 		} catch (err) {
-			errors.push(`${key}: ${err.message}`);
-			result[key] = '';
+			errors[id] = { message: err.message };
 		}
 	}
 
-	process.stdout.write(JSON.stringify(result) + '\n');
+	const response = { protocolVersion: 1, values };
+	if (Object.keys(errors).length > 0) {
+		response.errors = errors;
+	}
 
-	if (errors.length > 0) {
-		process.stderr.write(`keepassxc-secret-resolver: ${errors.length} key(s) failed:\n`);
-		for (const e of errors) {
-			process.stderr.write(`  - ${e}\n`);
-		}
-		// Exit 0 anyway — partial results are still returned.
-		// Change to exit(1) if you want strict all-or-nothing behaviour.
+	process.stdout.write(JSON.stringify(response) + '\n');
+
+	// Exit 0 for partial success (values returned + per-id errors).
+	// Exit 1 only if zero values resolved and there were errors.
+	if (Object.keys(values).length === 0 && Object.keys(errors).length > 0) {
+		process.exit(1);
 	}
 }
 
