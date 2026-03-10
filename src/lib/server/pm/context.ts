@@ -23,16 +23,16 @@ export function generateDashboardContext(): DashboardContextResponse {
 	const activeProjects = db
 		.prepare(
 			`
-		SELECT p.*, f.name as focus_name, d.name as domain_name
+		SELECT p.*, c.name as category_name, s.name as subcategory_name
 		FROM projects p
-		JOIN focuses f ON p.focus_id = f.id
-		JOIN domains d ON f.domain_id = d.id
+		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN subcategories s ON p.subcategory_id = s.id
 		WHERE p.status IN ('todo', 'in_progress', 'review')
 		ORDER BY p.last_activity_at DESC
 		LIMIT 20
 	`
 		)
-		.all() as (Project & { focus_name: string; domain_name: string })[];
+		.all() as (Project & { category_name: string; subcategory_name: string | null })[];
 
 	// Due soon (next 7 days) — projects only
 	const dueSoon = db
@@ -69,7 +69,10 @@ export function generateDashboardContext(): DashboardContextResponse {
 
 	md += `## Active Projects (${activeProjects.length})\n`;
 	for (const p of activeProjects) {
-		md += `- **${p.title}** [${p.status}] — ${p.domain_name}/${p.focus_name}\n`;
+		const categoryPath = p.subcategory_name 
+			? `${p.category_name}/${p.subcategory_name}` 
+			: p.category_name;
+		md += `- **${p.title}** [${p.status}] — ${categoryPath}\n`;
 	}
 
 	if (dueSoon.length > 0) {
@@ -99,46 +102,65 @@ export function generateDashboardContext(): DashboardContextResponse {
 	};
 }
 
-// Domain context: deep dive into a domain
-export function generateDomainContext(domainId: string): ContextResponse {
+// Category context: deep dive into a category
+export function generateCategoryContext(categoryId: string): ContextResponse {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 
-	const domain = db.prepare('SELECT * FROM domains WHERE id = ?').get(domainId) as
-		| { id: string; name: string; description: string | null }
+	const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(categoryId) as
+		| { id: string; name: string; description: string | null; color: string | null }
 		| undefined;
-	if (!domain) throw new Error('Domain not found');
+	if (!category) throw new Error('Category not found');
 
-	const focuses = db
-		.prepare('SELECT * FROM focuses WHERE domain_id = ? ORDER BY sort_order')
-		.all(domainId) as { id: string; name: string; description: string | null }[];
+	const subcategories = db
+		.prepare('SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order')
+		.all(categoryId) as { id: string; name: string; description: string | null }[];
 
 	// Count projects for stats
 	const projectCountResult = db
-		.prepare(
-			'SELECT COUNT(*) as c FROM projects p JOIN focuses f ON p.focus_id = f.id WHERE f.domain_id = ?'
-		)
-		.get(domainId) as { c: number } | undefined;
+		.prepare('SELECT COUNT(*) as c FROM projects WHERE category_id = ?')
+		.get(categoryId) as { c: number } | undefined;
 	const projectCount = projectCountResult?.c ?? 0;
 
-	let md = `# Domain: ${domain.name}\n`;
-	if (domain.description) md += `${domain.description}\n`;
+	let md = `# Category: ${category.name}\n`;
+	if (category.description) md += `${category.description}\n`;
 	md += '\n';
 
-	for (const focus of focuses) {
-		md += `## Focus: ${focus.name}\n`;
-		if (focus.description) md += `${focus.description}\n`;
+	for (const subcategory of subcategories) {
+		md += `## Subcategory: ${subcategory.name}\n`;
+		if (subcategory.description) md += `${subcategory.description}\n`;
 
 		const projects = db
 			.prepare(
 				`
 			SELECT p.*
-			FROM projects p WHERE p.focus_id = ? ORDER BY p.last_activity_at DESC
+			FROM projects p WHERE p.subcategory_id = ? ORDER BY p.last_activity_at DESC
 		`
 			)
-			.all(focus.id) as Project[];
+			.all(subcategory.id) as Project[];
 
 		for (const p of projects) {
+			md += `\n### P-${p.id}: ${p.title} [${p.status}]\n`;
+			if (p.description) md += `${p.description}\n`;
+			if (p.due_date) md += `Due: ${p.due_date}\n`;
+		}
+		md += '\n';
+	}
+
+	// Projects without subcategory
+	const directProjects = db
+		.prepare(
+			`
+		SELECT p.*
+		FROM projects p WHERE p.category_id = ? AND p.subcategory_id IS NULL 
+		ORDER BY p.last_activity_at DESC
+	`
+		)
+		.all(categoryId) as Project[];
+
+	if (directProjects.length > 0) {
+		md += `## Direct Projects\n`;
+		for (const p of directProjects) {
 			md += `\n### P-${p.id}: ${p.title} [${p.status}]\n`;
 			if (p.description) md += `${p.description}\n`;
 			if (p.due_date) md += `Due: ${p.due_date}\n`;
@@ -150,7 +172,7 @@ export function generateDomainContext(domainId: string): ContextResponse {
 		markdown: md,
 		generated_at: now,
 		stats: {
-			focuses: focuses.length,
+			subcategories: subcategories.length,
 			projects: projectCount
 		}
 	};
@@ -164,14 +186,14 @@ export function generateProjectContext(projectId: number): ContextResponse {
 	const project = db
 		.prepare(
 			`
-		SELECT p.*, f.name as focus_name, d.name as domain_name
+		SELECT p.*, c.name as category_name, s.name as subcategory_name
 		FROM projects p
-		JOIN focuses f ON p.focus_id = f.id
-		JOIN domains d ON f.domain_id = d.id
+		JOIN categories c ON p.category_id = c.id
+		LEFT JOIN subcategories s ON p.subcategory_id = s.id
 		WHERE p.id = ?
 	`
 		)
-		.get(projectId) as (Project & { focus_name: string; domain_name: string }) | undefined;
+		.get(projectId) as (Project & { category_name: string; subcategory_name: string | null }) | undefined;
 
 	if (!project) throw new Error('Project not found');
 
@@ -179,9 +201,24 @@ export function generateProjectContext(projectId: number): ContextResponse {
 		.prepare('SELECT * FROM activities WHERE project_id = ? ORDER BY created_at DESC LIMIT 20')
 		.all(projectId) as Activity[];
 
+	// Get plans for this project
+	const plans = db
+		.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order')
+		.all(projectId) as Array<{
+		id: number;
+		title: string;
+		description: string | null;
+		result: string | null;
+		status: string;
+	}>;
+
 	// Build markdown
+	const categoryPath = project.subcategory_name 
+		? `${project.category_name}/${project.subcategory_name}` 
+		: project.category_name;
+	
 	let md = `# P-${project.id}: ${project.title}\n`;
-	md += `**Status:** ${project.status} | **Priority:** ${project.priority ?? 'normal'} | **Focus:** ${project.domain_name}/${project.focus_name}\n`;
+	md += `**Status:** ${project.status} | **Priority:** ${project.priority ?? 'normal'} | **Category:** ${categoryPath}\n`;
 	if (project.description) md += `\n${project.description}\n`;
 	if (project.due_date) md += `**Due:** ${project.due_date}\n`;
 	md += '\n';
@@ -189,6 +226,17 @@ export function generateProjectContext(projectId: number): ContextResponse {
 	// Body
 	if (project.body) {
 		md += `## Status\n\n${project.body}\n\n`;
+	}
+
+	// Plans
+	if (plans.length > 0) {
+		md += `## Plans (${plans.length})\n`;
+		for (const plan of plans) {
+			md += `\n### ${plan.title} [${plan.status}]\n`;
+			if (plan.description) md += `${plan.description}\n`;
+			if (plan.result) md += `\n**Result:** ${plan.result}\n`;
+		}
+		md += '\n';
 	}
 
 	// Activity
@@ -203,7 +251,11 @@ export function generateProjectContext(projectId: number): ContextResponse {
 		markdown: md,
 		generated_at: now,
 		stats: {
-			activities: activities.length
+			activities: activities.length,
+			plans: plans.length
 		}
 	};
 }
+
+// Compatibility alias for existing domain routes
+export const generateDomainContext = generateCategoryContext;

@@ -12,10 +12,12 @@
 	import CanvasDiagnosticsTab from './CanvasDiagnosticsTab.svelte';
 	import GatewayControlTab from './GatewayControlTab.svelte';
 	import TerminalTab from './TerminalTab.svelte';
+	import ProjectsTab from './ProjectsTab.svelte';
 
 	const tabs = [
 		{ id: 'user', label: 'User', component: UserTab },
 		{ id: 'agents', label: 'Agents', component: AgentsTab },
+		{ id: 'projects', label: 'Projects', component: ProjectsTab },
 		{ id: 'preferences', label: 'Preferences', component: PreferencesTab },
 		{ id: 'information', label: 'Information', component: InformationTab },
 		{ id: 'config', label: 'Config', component: ConfigEditor },

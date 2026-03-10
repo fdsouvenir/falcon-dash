@@ -3,16 +3,18 @@
 		loadProjects,
 		projects,
 		projectsLoading,
+		createProject,
 		type Project
 	} from '$lib/stores/pm-projects.js';
 	import {
-		domains,
-		focuses,
-		loadDomains,
-		loadFocuses,
-		type Domain,
-		type Focus
-	} from '$lib/stores/pm-domains.js';
+		categories,
+		subcategories,
+		loadCategories,
+		loadSubcategories,
+		type Category,
+		type Subcategory,
+		getSubcategoriesByCategory
+	} from '$lib/stores/pm-categories.js';
 	import {
 		getPMStats,
 		getDashboardContext,
@@ -20,7 +22,7 @@
 		type DashboardContext
 	} from '$lib/stores/pm-operations.js';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { formatDueDate, formatStatusLabel, getDomainAccentColor } from './pm-utils.js';
+	import { formatDueDate, formatStatusLabel } from './pm-utils.js';
 	import { getStatusColor, BADGE, getPriority } from '$lib/components/ui/design-tokens.js';
 
 	interface Props {
@@ -31,23 +33,34 @@
 	let { onselect, selectedId = null }: Props = $props();
 
 	let projectList = $state<Project[]>([]);
-	let domainList = $state<Domain[]>([]);
-	let focusList = $state<Focus[]>([]);
+	let categoryList = $state<Category[]>([]);
+	let subcategoryList = $state<Subcategory[]>([]);
 	let loading = $state(false);
 	let filterMode = $state<'active' | 'all' | 'done' | 'archived'>('active');
-	let collapsedDomains = new SvelteSet<string>();
+	let searchQuery = $state('');
+	let collapsedCategories = new SvelteSet<string>();
 	let dashStats = $state<PMStats | null>(null);
 	let dashContext = $state<DashboardContext | null>(null);
+
+	// New project form state
+	let showNewForm = $state(false);
+	let newTitle = $state('');
+	let newCategoryId = $state('');
+	let newSubcategoryId = $state('');
+	let newStatus = $state('todo');
+	let newPriority = $state('');
+	let newDueDate = $state('');
+	let newDescription = $state('');
 
 	$effect(() => {
 		const u1 = projects.subscribe((v) => {
 			projectList = v;
 		});
-		const u2 = domains.subscribe((v) => {
-			domainList = v;
+		const u2 = categories.subscribe((v) => {
+			categoryList = v;
 		});
-		const u3 = focuses.subscribe((v) => {
-			focusList = v;
+		const u3 = subcategories.subscribe((v) => {
+			subcategoryList = v;
 		});
 		const u4 = projectsLoading.subscribe((v) => {
 			loading = v;
@@ -62,8 +75,8 @@
 
 	$effect(() => {
 		loadProjects();
-		loadDomains();
-		loadFocuses();
+		loadCategories();
+		loadSubcategories();
 		Promise.all([getPMStats(), getDashboardContext()])
 			.then(([s, c]) => {
 				dashStats = s;
@@ -74,12 +87,12 @@
 			});
 	});
 
-	/** Flat project list per domain — focus name shown inline on each row. */
-	interface DomainGroup {
-		domain: Domain;
+	/** Project list grouped by category with subcategory names inline */
+	interface CategoryGroup {
+		category: Category;
 		projects: Project[];
-		/** Maps focus_id -> focus.name for inline display */
-		focusNames: Record<string, string>;
+		/** Maps subcategory_id -> subcategory.name for inline display */
+		subcategoryNames: Record<string, string>;
 		projectCount: number;
 	}
 
@@ -93,7 +106,7 @@
 	}
 
 	const filtered = $derived.by(() => {
-		return projectList.filter((p) => {
+		let result = projectList.filter((p) => {
 			switch (filterMode) {
 				case 'active':
 					return p.status === 'todo' || p.status === 'in_progress' || p.status === 'review';
@@ -105,41 +118,54 @@
 					return true;
 			}
 		});
+
+		// Apply search filter
+		if (searchQuery.trim()) {
+			const q = searchQuery.toLowerCase().trim();
+			result = result.filter((p) =>
+				p.title.toLowerCase().includes(q) ||
+				p.description?.toLowerCase().includes(q)
+			);
+		}
+
+		return result;
 	});
 
 	const grouped = $derived.by(() => {
-		const focusMap: Record<string, Focus> = {};
-		for (const f of focusList) focusMap[f.id] = f;
+		const subcategoryMap: Record<string, Subcategory> = {};
+		for (const s of subcategoryList) subcategoryMap[s.id] = s;
 
-		const projectsByDomain: Record<string, Project[]> = {};
-		const focusNamesByDomain: Record<string, Record<string, string>> = {};
+		const projectsByCategory: Record<string, Project[]> = {};
+		const subcategoryNamesByCategory: Record<string, Record<string, string>> = {};
 
 		for (const p of filtered) {
-			const focus = focusMap[p.focus_id];
-			const domainId = focus?.domain_id;
-			if (!domainId) continue;
-			if (!projectsByDomain[domainId]) {
-				projectsByDomain[domainId] = [];
-				focusNamesByDomain[domainId] = {};
+			if (!projectsByCategory[p.category_id]) {
+				projectsByCategory[p.category_id] = [];
+				subcategoryNamesByCategory[p.category_id] = {};
 			}
-			projectsByDomain[domainId].push(p);
-			if (focus) focusNamesByDomain[domainId][p.focus_id] = focus.name;
+			projectsByCategory[p.category_id].push(p);
+			if (p.subcategory_id) {
+				const subcategory = subcategoryMap[p.subcategory_id];
+				if (subcategory) {
+					subcategoryNamesByCategory[p.category_id][p.subcategory_id] = subcategory.name;
+				}
+			}
 		}
 
-		for (const key of Object.keys(projectsByDomain)) {
-			projectsByDomain[key] = sortProjects(projectsByDomain[key]);
+		for (const key of Object.keys(projectsByCategory)) {
+			projectsByCategory[key] = sortProjects(projectsByCategory[key]);
 		}
 
-		const result: DomainGroup[] = [];
-		const sortedDomains = [...domainList].sort((a, b) => a.sort_order - b.sort_order);
+		const result: CategoryGroup[] = [];
+		const sortedCategories = [...categoryList].sort((a, b) => a.sort_order - b.sort_order);
 
-		for (const domain of sortedDomains) {
-			const projs = projectsByDomain[domain.id];
+		for (const category of sortedCategories) {
+			const projs = projectsByCategory[category.id];
 			if (projs && projs.length > 0) {
 				result.push({
-					domain,
+					category,
 					projects: projs,
-					focusNames: focusNamesByDomain[domain.id] || {},
+					subcategoryNames: subcategoryNamesByCategory[category.id] || {},
 					projectCount: projs.length
 				});
 			}
@@ -148,26 +174,54 @@
 		return result;
 	});
 
-	// Orphan projects: focus doesn't belong to any known domain
+	// Orphan projects: category doesn't exist
 	const orphanProjects = $derived.by(() => {
-		const focusMap: Record<string, Focus> = {};
-		for (const f of focusList) focusMap[f.id] = f;
-		const knownDomainIds: Record<string, true> = {};
-		for (const d of domainList) knownDomainIds[d.id] = true;
-		const orphanFocusIds: Record<string, true> = {};
-		for (const f of focusList) {
-			if (!knownDomainIds[f.domain_id]) orphanFocusIds[f.id] = true;
-		}
-		return sortProjects(
-			filtered.filter((p) => orphanFocusIds[p.focus_id] || !focusMap[p.focus_id])
-		);
+		const knownCategoryIds: Record<string, true> = {};
+		for (const c of categoryList) knownCategoryIds[c.id] = true;
+		return sortProjects(filtered.filter((p) => !knownCategoryIds[p.category_id]));
 	});
 
-	function toggleDomain(domainId: string) {
-		if (collapsedDomains.has(domainId)) {
-			collapsedDomains.delete(domainId);
+	function toggleCategory(categoryId: string) {
+		if (collapsedCategories.has(categoryId)) {
+			collapsedCategories.delete(categoryId);
 		} else {
-			collapsedDomains.add(domainId);
+			collapsedCategories.add(categoryId);
+		}
+	}
+
+	// New project form functions
+	function resetForm() {
+		newTitle = '';
+		newCategoryId = '';
+		newSubcategoryId = '';
+		newStatus = 'todo';
+		newPriority = '';
+		newDueDate = '';
+		newDescription = '';
+		showNewForm = false;
+	}
+
+	const availableSubcategories = $derived.by(() => {
+		if (!newCategoryId) return [];
+		return getSubcategoriesByCategory(newCategoryId);
+	});
+
+	async function handleCreateProject() {
+		if (!newTitle.trim() || !newCategoryId) return;
+
+		try {
+			await createProject({
+				title: newTitle.trim(),
+				category_id: newCategoryId,
+				subcategory_id: newSubcategoryId || undefined,
+				status: newStatus,
+				priority: newPriority || undefined,
+				due_date: newDueDate || undefined,
+				description: newDescription.trim() || undefined
+			});
+			resetForm();
+		} catch (err) {
+			console.error('Failed to create project:', err);
 		}
 	}
 
@@ -177,9 +231,27 @@
 		{ key: 'done', label: 'Done' },
 		{ key: 'archived', label: 'Archived' }
 	];
+
+	const statusOptions = [
+		{ value: 'todo', label: 'To Do' },
+		{ value: 'in_progress', label: 'In Progress' },
+		{ value: 'review', label: 'Review' },
+		{ value: 'done', label: 'Done' },
+		{ value: 'cancelled', label: 'Cancelled' },
+		{ value: 'archived', label: 'Archived' }
+	];
+
+	const priorityOptions = [
+		{ value: '', label: '—' },
+		{ value: 'urgent', label: 'Urgent' },
+		{ value: 'high', label: 'High' },
+		{ value: 'medium', label: 'Medium' },
+		{ value: 'normal', label: 'Normal' },
+		{ value: 'low', label: 'Low' }
+	];
 </script>
 
-{#snippet projectRow(project: Project, accentColor: string, focusName: string | null)}
+{#snippet projectRow(project: Project, accentColor: string, subcategoryName: string | null)}
 	{@const statusKey = getStatusColor(project.status)}
 	{@const due = formatDueDate(project.due_date)}
 	{@const pri = getPriority(project.priority)}
@@ -194,14 +266,14 @@
 		<span class="absolute bottom-1 left-0 top-1 w-[5px] rounded-r" style="background: {accentColor}"
 		></span>
 
-		<!-- Title + focus on same line -->
+		<!-- Title + subcategory on same line -->
 		<span
 			class="min-w-0 flex-1 truncate text-[length:var(--text-card-title)] font-medium text-white"
 		>
 			{project.title}
-			{#if focusName}
+			{#if subcategoryName}
 				<span class="ml-1.5 text-[length:var(--text-label)] font-normal text-status-muted"
-					>· {focusName}</span
+					>· {subcategoryName}</span
 				>
 			{/if}
 		</span>
@@ -231,7 +303,7 @@
 			Loading...
 		</div>
 	{:else}
-		<!-- Header: compact inline stats + filter pills -->
+		<!-- Header: stats, filters, search, + New -->
 		<div class="border-b border-surface-border bg-surface-1 px-4 py-2.5">
 			{#if dashStats}
 				<div class="mb-2 flex items-center gap-4 text-[length:var(--text-label)]">
@@ -254,44 +326,203 @@
 				</div>
 			{/if}
 
-			<!-- Filter pills -->
-			<div class="flex gap-1.5">
-				{#each filters as f (f.key)}
-					<button
-						class="rounded-full px-3 py-1 text-[length:var(--text-badge)] font-medium transition-all duration-150 {filterMode ===
-						f.key
-							? 'bg-surface-3 text-white'
-							: 'text-status-muted hover:text-white'}"
-						onclick={() => {
-							filterMode = f.key;
-						}}
-					>
-						{f.label}
-					</button>
-				{/each}
+			<!-- Filter pills and controls -->
+			<div class="mb-3 flex items-center gap-2">
+				<div class="flex gap-1.5">
+					{#each filters as f (f.key)}
+						<button
+							class="rounded-full px-3 py-1 text-[length:var(--text-badge)] font-medium transition-all duration-150 {filterMode ===
+							f.key
+								? 'bg-surface-3 text-white'
+								: 'text-status-muted hover:text-white'}"
+							onclick={() => {
+								filterMode = f.key;
+							}}
+						>
+							{f.label}
+						</button>
+					{/each}
+				</div>
+
+				<div class="flex-1"></div>
+
+				<!-- + New Project button -->
+				<button
+					class="rounded-lg bg-status-active px-3 py-1.5 text-[length:var(--text-badge)] font-medium text-white hover:bg-status-active/80"
+					onclick={() => (showNewForm = !showNewForm)}
+				>
+					+ New Project
+				</button>
+			</div>
+
+			<!-- Search input -->
+			<div class="relative">
+				<input
+					type="text"
+					placeholder="Search projects..."
+					bind:value={searchQuery}
+					class="w-full rounded-lg border border-surface-border bg-surface-2 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
+				/>
+				<svg
+					class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-status-muted"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<circle cx="11" cy="11" r="8"></circle>
+					<path d="m21 21-4.35-4.35"></path>
+				</svg>
 			</div>
 		</div>
 
-		<!-- Grouped project list (flat rows per domain, no focus sub-headers) -->
+		<!-- New project form -->
+		{#if showNewForm}
+			<div class="border-b border-surface-border bg-surface-2 px-4 py-4">
+				<h3 class="mb-3 text-[length:var(--text-card-title)] font-medium text-white">
+					New Project
+				</h3>
+				<div class="space-y-3">
+					<!-- Title (required) -->
+					<div>
+						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+							Title *
+						</label>
+						<input
+							type="text"
+							bind:value={newTitle}
+							placeholder="Project title"
+							class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
+						/>
+					</div>
+
+					<!-- Category (required) -->
+					<div>
+						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+							Category *
+						</label>
+						<select
+							bind:value={newCategoryId}
+							class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
+						>
+							<option value="">Select a category</option>
+							{#each categoryList as category (category.id)}
+								<option value={category.id}>{category.name}</option>
+							{/each}
+						</select>
+					</div>
+
+					<!-- Subcategory (optional) -->
+					<div>
+						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+							Subcategory
+						</label>
+						<select
+							bind:value={newSubcategoryId}
+							disabled={!newCategoryId}
+							class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none disabled:opacity-50"
+						>
+							<option value="">None</option>
+							{#each availableSubcategories as subcategory (subcategory.id)}
+								<option value={subcategory.id}>{subcategory.name}</option>
+							{/each}
+						</select>
+					</div>
+
+					<!-- Status, Priority, Due date row -->
+					<div class="grid grid-cols-3 gap-3">
+						<div>
+							<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+								Status
+							</label>
+							<select
+								bind:value={newStatus}
+								class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
+							>
+								{#each statusOptions as option (option.value)}
+									<option value={option.value}>{option.label}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div>
+							<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+								Priority
+							</label>
+							<select
+								bind:value={newPriority}
+								class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
+							>
+								{#each priorityOptions as option (option.value)}
+									<option value={option.value}>{option.label}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div>
+							<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+								Due Date
+							</label>
+							<input
+								type="date"
+								bind:value={newDueDate}
+								class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
+							/>
+						</div>
+					</div>
+
+					<!-- Description -->
+					<div>
+						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
+							Description
+						</label>
+						<textarea
+							bind:value={newDescription}
+							placeholder="Project description"
+							rows="3"
+							class="mt-1 w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none resize-none"
+						></textarea>
+					</div>
+
+					<!-- Actions -->
+					<div class="flex gap-2">
+						<button
+							onclick={handleCreateProject}
+							disabled={!newTitle.trim() || !newCategoryId}
+							class="rounded-lg bg-status-active px-4 py-2 text-[length:var(--text-body)] font-medium text-white hover:bg-status-active/80 disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							Create Project
+						</button>
+						<button
+							onclick={resetForm}
+							class="rounded-lg border border-surface-border bg-surface-1 px-4 py-2 text-[length:var(--text-body)] text-white hover:bg-surface-3"
+						>
+							Cancel
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Grouped project list -->
 		<div class="flex-1 overflow-y-auto">
 			{#if grouped.length === 0 && orphanProjects.length === 0}
 				<div
 					class="flex items-center justify-center p-8 text-[length:var(--text-body)] text-status-muted"
 				>
-					No projects found
+					{searchQuery.trim() ? 'No projects match your search' : 'No projects found'}
 				</div>
 			{:else}
-				{#each grouped as group (group.domain.id)}
-					{@const accentColor = getDomainAccentColor(group.domain.name)}
+				{#each grouped as group (group.category.id)}
+					{@const accentColor = group.category.color || '#6b7280'}
 
-					<!-- Domain section header -->
+					<!-- Category section header -->
 					<button
 						class="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-surface-3/40"
-						onclick={() => toggleDomain(group.domain.id)}
+						onclick={() => toggleCategory(group.category.id)}
 					>
 						<svg
-							class="h-3 w-3 text-status-muted transition-transform duration-200 {collapsedDomains.has(
-								group.domain.id
+							class="h-3 w-3 text-status-muted transition-transform duration-200 {collapsedCategories.has(
+								group.category.id
 							)
 								? '-rotate-90'
 								: ''}"
@@ -304,21 +535,23 @@
 							class="text-[length:var(--text-section-header)] font-bold uppercase tracking-wider"
 							style="color: {accentColor}"
 						>
-							{group.domain.name}
+							{group.category.name}
 						</span>
 						<span class="text-[length:var(--text-label)] text-status-muted/50"
 							>({group.projectCount})</span
 						>
 					</button>
 
-					<!-- Flat project rows (focus name shown inline) -->
-					<div class="collapse-section {collapsedDomains.has(group.domain.id) ? 'collapsed' : ''}">
+					<!-- Projects in category -->
+					<div
+						class="collapse-section {collapsedCategories.has(group.category.id) ? 'collapsed' : ''}"
+					>
 						<div>
 							{#each group.projects as project (project.id)}
 								{@render projectRow(
 									project,
 									accentColor,
-									group.focusNames[project.focus_id] ?? null
+									group.subcategoryNames[project.subcategory_id || ''] ?? null
 								)}
 							{/each}
 						</div>

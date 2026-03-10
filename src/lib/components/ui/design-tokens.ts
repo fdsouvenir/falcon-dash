@@ -98,31 +98,20 @@ export function getPriority(level: string | null) {
 	return PRIORITY[level] ?? null;
 }
 
-/* ── Domain Colors ── */
-export const DOMAIN_COLORS: Record<string, string> = {
-	personal: 'var(--domain-personal)',
-	work: 'var(--domain-work)',
-	condo: 'var(--domain-condo)',
-	verl: 'var(--domain-verl)'
+/* ── Plan Status Colors ── */
+export type PlanStatus = 'planning' | 'assigned' | 'in_progress' | 'needs_review' | 'complete' | 'cancelled';
+
+export const PLAN_STATUS_MAP: Record<PlanStatus, StatusKey> = {
+	planning: 'info',
+	assigned: 'purple',
+	in_progress: 'active',
+	needs_review: 'warning',
+	complete: 'active',
+	cancelled: 'muted'
 };
 
-export const DOMAIN_CLASSES: Record<string, { text: string; bg: string; border: string }> = {
-	personal: {
-		text: 'text-domain-personal',
-		bg: 'bg-domain-personal',
-		border: 'border-domain-personal'
-	},
-	work: { text: 'text-domain-work', bg: 'bg-domain-work', border: 'border-domain-work' },
-	condo: { text: 'text-domain-condo', bg: 'bg-domain-condo', border: 'border-domain-condo' },
-	verl: { text: 'text-domain-verl', bg: 'bg-domain-verl', border: 'border-domain-verl' }
-};
-
-export function getDomainColor(name: string): string {
-	return DOMAIN_COLORS[name.toLowerCase()] ?? '#6b7280';
-}
-
-export function getDomainClasses(name: string) {
-	return DOMAIN_CLASSES[name.toLowerCase()] ?? DOMAIN_CLASSES['personal'];
+export function getPlanStatusColor(status: string): StatusKey {
+	return PLAN_STATUS_MAP[status as PlanStatus] ?? 'muted';
 }
 
 /* ── Typography Utility Classes ── */

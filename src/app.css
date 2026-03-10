@@ -57,11 +57,7 @@
 	--color-status-purple: var(--status-purple);
 	--color-status-purple-bg: var(--status-purple-bg);
 
-	/* ── Domain accent classes ── */
-	--color-domain-personal: var(--domain-personal);
-	--color-domain-work: var(--domain-work);
-	--color-domain-condo: var(--domain-condo);
-	--color-domain-verl: var(--domain-verl);
+
 }
 
 :root {
@@ -116,11 +112,7 @@
 	--status-purple: #a78bfa;
 	--status-purple-bg: rgba(167, 139, 250, 0.12);
 
-	/* ── Domain accent colors ── */
-	--domain-personal: #60a5fa;
-	--domain-work: #a78bfa;
-	--domain-condo: #34d399;
-	--domain-verl: #fb923c;
+
 
 	/* ── Typography scale ── */
 	--text-page-title: 1.25rem;

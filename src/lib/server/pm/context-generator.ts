@@ -76,103 +76,104 @@ function generatePMApiDoc(): string {
 > Base URL: \`${base}\`
 
 All list endpoints return: \`{ items: [...], total, page, limit, hasMore }\`
-All IDs: projects use numeric IDs; domains/focuses use string slug IDs.
+All IDs: projects use numeric IDs; categories/subcategories use string slug IDs.
 Statuses: \`todo\`, \`in_progress\`, \`review\`, \`done\`, \`cancelled\`, \`archived\`
 Priorities: \`low\`, \`normal\`, \`high\`, \`urgent\`
+Plan Statuses: \`planning\`, \`assigned\`, \`in_progress\`, \`needs_review\`, \`complete\`, \`cancelled\`
 Dates: ISO 8601 date format \`YYYY-MM-DD\`
 
 ---
 
-## Domains
+## Categories
 
-### List domains
+### List categories
 \`\`\`
-GET ${base}/domains?page=1&limit=50
+GET ${base}/categories?page=1&limit=50
 \`\`\`
 
-### Create domain
+### Create category
 \`\`\`
-POST ${base}/domains
+POST ${base}/categories
 Content-Type: application/json
 
-{"id": "my-domain", "name": "My Domain", "description": "Optional description"}
+{"id": "my-category", "name": "My Category", "description": "Optional description", "color": "#60a5fa"}
 \`\`\`
 
-### Get domain
+### Get category
 \`\`\`
-GET ${base}/domains/{id}
+GET ${base}/categories/{id}
 \`\`\`
 
-### Update domain
+### Update category
 \`\`\`
-PATCH ${base}/domains/{id}
+PATCH ${base}/categories/{id}
 Content-Type: application/json
 
-{"name": "New Name", "description": "Updated description"}
+{"name": "New Name", "description": "Updated description", "color": "#a78bfa"}
 \`\`\`
 
-### Delete domain
+### Delete category
 \`\`\`
-DELETE ${base}/domains/{id}
+DELETE ${base}/categories/{id}
 \`\`\`
 
-### Reorder domains
+### Reorder categories
 \`\`\`
-POST ${base}/domains/reorder
+POST ${base}/categories/reorder
 Content-Type: application/json
 
-{"ids": ["domain-a", "domain-b", "domain-c"]}
+{"ids": ["category-a", "category-b", "category-c"]}
 \`\`\`
 
 ---
 
-## Focuses
+## Subcategories
 
-### List focuses
+### List subcategories
 \`\`\`
-GET ${base}/focuses?domain_id=my-domain&page=1&limit=50
+GET ${base}/subcategories?category_id=my-category&page=1&limit=50
 \`\`\`
 
-### Create focus
+### Create subcategory
 \`\`\`
-POST ${base}/focuses
+POST ${base}/subcategories
 Content-Type: application/json
 
-{"id": "my-focus", "domain_id": "my-domain", "name": "My Focus", "description": "Optional"}
+{"id": "my-subcategory", "category_id": "my-category", "name": "My Subcategory", "description": "Optional"}
 \`\`\`
 
-### Get focus
+### Get subcategory
 \`\`\`
-GET ${base}/focuses/{id}
+GET ${base}/subcategories/{id}
 \`\`\`
 
-### Update focus
+### Update subcategory
 \`\`\`
-PATCH ${base}/focuses/{id}
+PATCH ${base}/subcategories/{id}
 Content-Type: application/json
 
-{"name": "New Name", "description": "Updated", "domain_id": "other-domain"}
+{"name": "New Name", "description": "Updated", "category_id": "other-category"}
 \`\`\`
 
-### Delete focus
+### Delete subcategory
 \`\`\`
-DELETE ${base}/focuses/{id}
+DELETE ${base}/subcategories/{id}
 \`\`\`
 
-### Move focus to another domain
+### Move subcategory to another category
 \`\`\`
-POST ${base}/focuses/{id}/move
+POST ${base}/subcategories/{id}/move
 Content-Type: application/json
 
-{"domain_id": "target-domain"}
+{"category_id": "target-category"}
 \`\`\`
 
-### Reorder focuses
+### Reorder subcategories
 \`\`\`
-POST ${base}/focuses/reorder
+POST ${base}/subcategories/reorder
 Content-Type: application/json
 
-{"ids": ["focus-a", "focus-b", "focus-c"]}
+{"ids": ["subcategory-a", "subcategory-b", "subcategory-c"]}
 \`\`\`
 
 ---
@@ -181,7 +182,7 @@ Content-Type: application/json
 
 ### List projects
 \`\`\`
-GET ${base}/projects?focus_id=my-focus&status=in_progress&page=1&limit=50
+GET ${base}/projects?category_id=my-category&subcategory_id=my-subcategory&status=in_progress&page=1&limit=50
 \`\`\`
 
 ### Create project
@@ -189,9 +190,9 @@ GET ${base}/projects?focus_id=my-focus&status=in_progress&page=1&limit=50
 POST ${base}/projects
 Content-Type: application/json
 
-{"focus_id": "my-focus", "title": "Project Title", "description": "Optional", "body": "Rich markdown content", "status": "todo", "priority": "normal", "due_date": "2025-12-31"}
+{"category_id": "my-category", "subcategory_id": "my-subcategory", "title": "Project Title", "description": "Optional", "body": "Rich markdown content", "status": "todo", "priority": "normal", "due_date": "2025-12-31"}
 \`\`\`
-Required: \`focus_id\`, \`title\`. Optional: \`description\`, \`body\` (rich markdown), \`status\` (default: todo), \`priority\`, \`due_date\`.
+Required: \`category_id\`, \`title\`. Optional: \`subcategory_id\`, \`description\`, \`body\` (rich markdown), \`status\` (default: todo), \`priority\`, \`due_date\`.
 
 ### Get project
 \`\`\`
@@ -203,12 +204,69 @@ GET ${base}/projects/{id}
 PATCH ${base}/projects/{id}
 Content-Type: application/json
 
-{"title": "New Title", "status": "in_progress", "priority": "high", "due_date": "2025-12-31", "focus_id": "new-focus", "description": "Updated", "body": "Updated rich markdown content"}
+{"title": "New Title", "status": "in_progress", "priority": "high", "due_date": "2025-12-31", "category_id": "new-category", "subcategory_id": "new-subcategory", "description": "Updated", "body": "Updated rich markdown content"}
 \`\`\`
 
 ### Delete project
 \`\`\`
 DELETE ${base}/projects/{id}
+\`\`\`
+
+---
+
+## Plans
+
+### List plans for a project
+\`\`\`
+GET ${base}/plans?project_id=1&page=1&limit=50
+\`\`\`
+
+### Create plan
+\`\`\`
+POST ${base}/plans
+Content-Type: application/json
+
+{"project_id": 1, "title": "Plan Title", "description": "Plan description", "status": "planning"}
+\`\`\`
+Required: \`project_id\`, \`title\`. Optional: \`description\`, \`result\`, \`status\` (default: planning).
+
+### Get plan
+\`\`\`
+GET ${base}/plans/{id}
+\`\`\`
+
+### Update plan (auto-versions on edit)
+\`\`\`
+PATCH ${base}/plans/{id}
+Content-Type: application/json
+
+{"title": "Updated Title", "description": "Updated description", "result": "Plan outcome", "status": "complete"}
+\`\`\`
+
+### Delete plan
+\`\`\`
+DELETE ${base}/plans/{id}
+\`\`\`
+
+### Reorder plans
+\`\`\`
+POST ${base}/plans/reorder
+Content-Type: application/json
+
+{"ids": [1, 2, 3]}
+\`\`\`
+
+### List plan versions
+\`\`\`
+GET ${base}/plans/{id}/versions
+\`\`\`
+
+### Revert to plan version
+\`\`\`
+POST ${base}/plans/{id}/revert
+Content-Type: application/json
+
+{"version": 2}
 \`\`\`
 
 ---
@@ -282,27 +340,34 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 	const activeProjects = db
 		.prepare(
 			`
-			SELECT p.*, f.name as focus_name, d.name as domain_name
+			SELECT p.*, 
+			       c.name as category_name, 
+			       s.name as subcategory_name,
+			       c.color as category_color
 			FROM projects p
-			JOIN focuses f ON p.focus_id = f.id
-			JOIN domains d ON f.domain_id = d.id
+			JOIN categories c ON p.category_id = c.id
+			LEFT JOIN subcategories s ON p.subcategory_id = s.id
 			WHERE p.status IN ('todo', 'in_progress', 'review')
 			ORDER BY p.last_activity_at DESC
 		`
 		)
 		.all() as (Project & {
-		focus_name: string;
-		domain_name: string;
+		category_name: string;
+		subcategory_name: string | null;
+		category_color: string | null;
 	})[];
 
 	let projectsMd = '# Active Projects\n\n';
 	projectsMd += `> Generated: ${new Date().toISOString()}\n\n`;
 
 	if (activeProjects.length > 0) {
-		projectsMd += '| ID | Title | Status | Domain/Focus | Due |\n';
+		projectsMd += '| ID | Title | Status | Category/Subcategory | Due |\n';
 		projectsMd += '|---|---|---|---|---|\n';
 		for (const p of activeProjects) {
-			projectsMd += `| P-${p.id} | ${p.title} | ${p.status} | ${p.domain_name}/${p.focus_name} | ${p.due_date ?? '-'} |\n`;
+			const categoryPath = p.subcategory_name 
+				? `${p.category_name}/${p.subcategory_name}` 
+				: p.category_name;
+			projectsMd += `| P-${p.id} | ${p.title} | ${p.status} | ${categoryPath} | ${p.due_date ?? '-'} |\n`;
 		}
 	} else {
 		projectsMd += 'No active projects.\n';

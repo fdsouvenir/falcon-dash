@@ -88,20 +88,25 @@ export function getPriorityTag(priority: string | null): { classes: string; labe
 	return null;
 }
 
-/** Named accent colors for domains (keyed by lowercase domain name). */
-export const DOMAIN_ACCENT_COLORS: Record<string, string> = {
-	personal: 'var(--domain-personal)',
-	work: 'var(--domain-work)',
-	condo: 'var(--domain-condo)',
-	verl: 'var(--domain-verl)'
-};
+/** Plan status formatting and styling utilities. */
+export function formatPlanStatusLabel(status: string): string {
+	return status.replace('_', ' ');
+}
 
-/**
- * Returns a CSS color value for a domain name.
- * Falls back to gray for unknown domains.
- */
-export function getDomainAccentColor(domainName: string): string {
-	return DOMAIN_ACCENT_COLORS[domainName.toLowerCase()] ?? '#6b7280';
+export function getPlanStatusPill(status: string): { classes: string; label: string } {
+	const statusMap: Record<string, string> = {
+		planning: 'bg-status-info-bg text-status-info',
+		assigned: 'bg-status-purple-bg text-status-purple',
+		in_progress: 'bg-status-active-bg text-status-active',
+		needs_review: 'bg-status-warning-bg text-status-warning',
+		complete: 'bg-status-active-bg text-status-active',
+		cancelled: 'bg-status-muted-bg text-status-muted'
+	};
+
+	return {
+		classes: statusMap[status] || statusMap.planning,
+		label: formatPlanStatusLabel(status)
+	};
 }
 
 /**
