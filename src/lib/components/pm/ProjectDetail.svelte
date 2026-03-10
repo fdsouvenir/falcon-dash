@@ -63,6 +63,9 @@
 	let deleteType = $state<'project' | 'plan'>('project');
 	let deleteTargetId = $state<number | null>(null);
 
+	// Inline status dropdown state (Plan 8)
+	let openStatusDropdownId = $state<number | null>(null);
+
 	// Get data from stores
 	let categoryList = $state<Category[]>([]);
 	let subcategoryList = $state<Subcategory[]>([]);
@@ -90,7 +93,7 @@
 
 	async function loadData() {
 		if (!projectId) return;
-		
+
 		loading = true;
 		try {
 			await loadCategories();
@@ -182,6 +185,17 @@
 		}
 	}
 
+	// Plan 8: inline status change without opening the edit modal
+	async function changePlanStatus(planId: number, newStatus: string) {
+		try {
+			await updatePlan(planId, { status: newStatus });
+		} catch (err) {
+			console.error('Failed to update plan status:', err);
+		} finally {
+			openStatusDropdownId = null;
+		}
+	}
+
 	async function openVersionHistory(planId: number) {
 		try {
 			await loadPlanVersions(planId);
@@ -247,8 +261,8 @@
 
 	function formatDateTime(unixSeconds: number): string {
 		const date = new Date(unixSeconds * 1000);
-		return date.toLocaleDateString('en-US', { 
-			month: 'short', 
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
 			minute: '2-digit'
@@ -265,290 +279,326 @@
 		Project not found.
 	</div>
 {:else}
-	<div class="h-full flex flex-col">
-		<!-- Top bar -->
-		<div class="flex-shrink-0 p-4 bg-surface-2 border-b {SURFACE.border}">
+	<!-- Plan 10: sticky header layout — top bar, header card, and tab bar are all flex-shrink-0;
+	     only the tab content area scrolls -->
+	<div class="h-full flex flex-col overflow-hidden">
+
+		<!-- Top bar (sticky) -->
+		<div class="flex-shrink-0 px-4 py-2 bg-surface-2 border-b {SURFACE.border}">
 			<div class="flex items-center justify-between">
 				<button
 					onclick={onClose}
-					class="flex items-center gap-2 text-status-muted hover:text-white transition-colors"
+					class="flex items-center gap-2 text-status-muted hover:text-white transition-colors {TEXT.body}"
 				>
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
 					</svg>
 					Back to Projects
 				</button>
 				<button
 					onclick={() => confirmDelete('project')}
-					class="px-3 py-1.5 bg-status-danger/20 text-status-danger hover:bg-status-danger/30 rounded-lg {TEXT.badge} font-medium transition-colors"
+					class="px-3 py-1 bg-status-danger/20 text-status-danger hover:bg-status-danger/30 rounded-lg {TEXT.badge} font-medium transition-colors"
 				>
 					Delete Project
 				</button>
 			</div>
 		</div>
 
-		<!-- Content -->
-		<div class="flex-1 overflow-auto custom-scrollbar p-6">
-			<div class="max-w-4xl mx-auto space-y-6">
-				<!-- Header card -->
-				<div class="bg-surface-2 rounded-xl p-6">
-					<div class="flex items-start gap-4">
-						<div
-							class="w-4 h-4 rounded-full mt-1 flex-shrink-0"
-							style="background: {category?.color || '#6366f1'}"
-						></div>
-						<div class="flex-1">
-							<input
-								type="text"
-								value={project.title}
-								oninput={(e) => updateField('title', e.currentTarget.value)}
-								class="{TEXT.pageTitle} font-bold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-status-info rounded w-full"
-							/>
-							<div class="flex flex-wrap gap-2 mt-2 {TEXT.body} text-status-muted">
-								<span>{category?.name || 'No category'}</span>
-								{#if subcategory}
-									<span>• {subcategory.name}</span>
-								{/if}
-							</div>
-						</div>
-					</div>
-
-					<!-- Grid of dropdowns -->
-					<div class="grid sm:grid-cols-4 gap-4 mt-6">
-						<div>
-							<label class="block {TEXT.label} text-status-muted mb-1">Status</label>
-							<select
-								value={project.status}
-								onchange={(e) => updateField('status', e.currentTarget.value)}
-								class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-							>
-								{#each statusOptions as option}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						</div>
-						<div>
-							<label class="block {TEXT.label} text-status-muted mb-1">Priority</label>
-							<select
-								value={project.priority || 'medium'}
-								onchange={(e) => updateField('priority', e.currentTarget.value)}
-								class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-							>
-								{#each priorityOptions as option}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						</div>
-						<div>
-							<label class="block {TEXT.label} text-status-muted mb-1">Due Date</label>
-							<input
-								type="date"
-								value={project.due_date || ''}
-								onchange={(e) => updateField('due_date', e.currentTarget.value || null)}
-								class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-							/>
-						</div>
-						<div>
-							<label class="block {TEXT.label} text-status-muted mb-1">Category</label>
-							<select
-								value={project.category_id}
-								onchange={(e) => updateField('category_id', e.currentTarget.value)}
-								class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-							>
-								{#each categoryList as cat}
-									<option value={cat.id}>{cat.name}</option>
-								{/each}
-							</select>
-						</div>
-					</div>
-
-					<!-- Description -->
-					<div class="mt-4">
-						<label class="block {TEXT.label} text-status-muted mb-1">Description</label>
-						<textarea
-							value={project.description || ''}
-							oninput={(e) => updateField('description', e.currentTarget.value || null)}
-							rows="2"
-							class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none"
-						></textarea>
-					</div>
-				</div>
-
-				<!-- Tab bar -->
-				<div class="flex gap-2 border-b {SURFACE.border}">
-					<button
-						onclick={() => (activeTab = 'overview')}
-						class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'overview'
-							? 'border-status-info text-white'
-							: 'border-transparent text-status-muted hover:text-white'}"
-					>
-						Overview
-					</button>
-					<button
-						onclick={() => (activeTab = 'plans')}
-						class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'plans'
-							? 'border-status-info text-white'
-							: 'border-transparent text-status-muted hover:text-white'}"
-					>
-						Plans ({projectPlans.length})
-					</button>
-					<button
-						onclick={() => (activeTab = 'activity')}
-						class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'activity'
-							? 'border-status-info text-white'
-							: 'border-transparent text-status-muted hover:text-white'}"
-					>
-						Activity
-					</button>
-				</div>
-
-				<!-- Tab content -->
-				{#if activeTab === 'overview'}
-					<div class="bg-surface-2 rounded-xl p-6">
-						<div class="flex items-center justify-between mb-4">
-							<h3 class="font-semibold">Body</h3>
-							<button
-								onclick={toggleBodyEdit}
-								class="{TEXT.body} text-status-info hover:text-status-info/80"
-							>
-								{editingBody ? 'Save' : 'Edit'}
-							</button>
-						</div>
-						{#if editingBody}
-							<div>
-								<textarea
-									bind:value={bodyContent}
-									rows="12"
-									class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none font-mono"
-								></textarea>
-								<div class="flex justify-end gap-2 mt-3">
-									<button
-										onclick={() => {
-											bodyContent = project?.body || '';
-											editingBody = false;
-										}}
-										class="px-3 py-1.5 {TEXT.body} text-status-muted hover:text-white"
-									>
-										Cancel
-									</button>
-								</div>
-							</div>
-						{:else}
-							<div class="prose prose-invert max-w-none">
-								{#if project.body}
-									<MarkdownRenderer content={project.body} />
-								{:else}
-									<p class="text-status-muted">No content yet. Click Edit to add some.</p>
-								{/if}
-							</div>
+		<!-- Header card (compact, sticky) -->
+		<div class="flex-shrink-0 px-4 pt-3 pb-0 bg-surface-1">
+			<div class="bg-surface-2 rounded-xl px-4 py-3">
+				<div class="flex items-center gap-3">
+					<div
+						class="w-3 h-3 rounded-full flex-shrink-0"
+						style="background: {category?.color || '#6366f1'}"
+					></div>
+					<input
+						type="text"
+						value={project.title}
+						oninput={(e) => updateField('title', e.currentTarget.value)}
+						class="text-lg font-bold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-status-info rounded flex-1 min-w-0"
+					/>
+					<div class="flex items-center gap-2 {TEXT.body} text-status-muted flex-shrink-0">
+						<span>{category?.name || 'No category'}</span>
+						{#if subcategory}
+							<span>• {subcategory.name}</span>
 						{/if}
 					</div>
-				{:else if activeTab === 'plans'}
-					<div class="space-y-4">
-						<div class="flex justify-end">
-							<button
-								onclick={() => openPlanModal()}
-								class="px-4 py-2 bg-status-info hover:bg-status-info/80 rounded-lg {TEXT.body} font-medium flex items-center gap-2"
-							>
-								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-								</svg>
-								New Plan
-							</button>
-						</div>
-						{#if projectPlans.length === 0}
-							<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
-								No plans yet. Create your first plan to organize your work.
-							</div>
-						{:else}
-							<div class="space-y-3">
-								{#each projectPlans as plan, idx (plan.id)}
-									{@const statusPill = getPlanStatusPill(plan.status)}
-									{@const versionCount = versions.filter((v) => v.plan_id === plan.id).length}
+				</div>
 
-									<div class="bg-surface-2 rounded-xl p-4">
-										<div class="flex items-start justify-between gap-4">
-											<div class="flex items-start gap-3 flex-1 min-w-0">
-												<span class="text-status-muted font-mono {TEXT.body} mt-0.5">{idx + 1}.</span>
-												<div class="flex-1 min-w-0">
-													<h4 class="font-medium text-white">{plan.title}</h4>
-													<div class="flex items-center gap-2 mt-1">
-														<span class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes}">
-															{statusPill.label}
-														</span>
-														{#if versionCount > 0}
-															<button
-																onclick={() => openVersionHistory(plan.id)}
-																class="{TEXT.badge} text-status-muted hover:text-status-info"
-															>
-																{versionCount} version{versionCount > 1 ? 's' : ''}
-															</button>
-														{/if}
-													</div>
-													{#if plan.description}
-														<div class="mt-3 {TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none">
-															<MarkdownRenderer content={plan.description} />
-														</div>
-													{/if}
-													{#if plan.result}
-														<div class="mt-3 p-3 bg-surface-3 rounded-lg">
-															<p class="{TEXT.label} text-status-muted mb-1">Result</p>
-															<div class="{TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none">
-																<MarkdownRenderer content={plan.result} />
-															</div>
+				<!-- Grid of dropdowns -->
+				<div class="grid sm:grid-cols-4 gap-3 mt-3">
+					<div>
+						<label class="block {TEXT.label} text-status-muted mb-0.5">Status</label>
+						<select
+							value={project.status}
+							onchange={(e) => updateField('status', e.currentTarget.value)}
+							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						>
+							{#each statusOptions as option}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<label class="block {TEXT.label} text-status-muted mb-0.5">Priority</label>
+						<select
+							value={project.priority || 'medium'}
+							onchange={(e) => updateField('priority', e.currentTarget.value)}
+							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						>
+							{#each priorityOptions as option}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<label class="block {TEXT.label} text-status-muted mb-0.5">Due Date</label>
+						<input
+							type="date"
+							value={project.due_date || ''}
+							onchange={(e) => updateField('due_date', e.currentTarget.value || null)}
+							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						/>
+					</div>
+					<div>
+						<label class="block {TEXT.label} text-status-muted mb-0.5">Category</label>
+						<select
+							value={project.category_id}
+							onchange={(e) => updateField('category_id', e.currentTarget.value)}
+							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						>
+							{#each categoryList as cat}
+								<option value={cat.id}>{cat.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<!-- Description -->
+				<div class="mt-3">
+					<label class="block {TEXT.label} text-status-muted mb-0.5">Description</label>
+					<textarea
+						value={project.description || ''}
+						oninput={(e) => updateField('description', e.currentTarget.value || null)}
+						rows="2"
+						class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none"
+					></textarea>
+				</div>
+			</div>
+		</div>
+
+		<!-- Tab bar with inline "+ New Plan" button (Plan 10: sticky, Plan 10: right-aligned button) -->
+		<div class="flex-shrink-0 px-4 mt-3 flex items-center justify-between border-b {SURFACE.border} bg-surface-1">
+			<div class="flex gap-1">
+				<button
+					onclick={() => (activeTab = 'overview')}
+					class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'overview'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Overview
+				</button>
+				<button
+					onclick={() => (activeTab = 'plans')}
+					class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'plans'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Plans ({projectPlans.length})
+				</button>
+				<button
+					onclick={() => (activeTab = 'activity')}
+					class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'activity'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Activity
+				</button>
+			</div>
+			<!-- "+ New Plan" only visible on Plans tab -->
+			{#if activeTab === 'plans'}
+				<button
+					onclick={() => openPlanModal()}
+					class="mb-1 px-3 py-1.5 bg-status-info hover:bg-status-info/80 rounded-lg {TEXT.body} font-medium flex items-center gap-1.5 transition-colors"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					New Plan
+				</button>
+			{/if}
+		</div>
+
+		<!-- Scrollable tab content (full width, minimal padding) -->
+		<div class="flex-1 overflow-auto custom-scrollbar px-4 py-4">
+
+			{#if activeTab === 'overview'}
+				<div class="bg-surface-2 rounded-xl p-5">
+					<div class="flex items-center justify-between mb-3">
+						<h3 class="font-semibold">Body</h3>
+						<button
+							onclick={toggleBodyEdit}
+							class="{TEXT.body} text-status-info hover:text-status-info/80"
+						>
+							{editingBody ? 'Save' : 'Edit'}
+						</button>
+					</div>
+					{#if editingBody}
+						<div>
+							<textarea
+								bind:value={bodyContent}
+								rows="12"
+								class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none font-mono"
+							></textarea>
+							<div class="flex justify-end gap-2 mt-3">
+								<button
+									onclick={() => {
+										bodyContent = project?.body || '';
+										editingBody = false;
+									}}
+									class="px-3 py-1.5 {TEXT.body} text-status-muted hover:text-white"
+								>
+									Cancel
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="prose prose-invert max-w-none">
+							{#if project.body}
+								<MarkdownRenderer content={project.body} />
+							{:else}
+								<p class="text-status-muted">No content yet. Click Edit to add some.</p>
+							{/if}
+						</div>
+					{/if}
+				</div>
+
+			{:else if activeTab === 'plans'}
+				{#if projectPlans.length === 0}
+					<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
+						No plans yet. Create your first plan to organize your work.
+					</div>
+				{:else}
+					<div class="space-y-3">
+						{#each projectPlans as plan (plan.id)}
+							{@const statusPill = getPlanStatusPill(plan.status)}
+							{@const versionCount = versions.filter((v) => v.plan_id === plan.id).length}
+
+							<div class="bg-surface-2 rounded-xl p-4">
+								<div class="flex items-start justify-between gap-4">
+									<div class="flex items-start gap-3 flex-1 min-w-0">
+										<!-- Plan 9: use plan.id instead of loop index -->
+										<span class="text-status-muted font-mono {TEXT.body} mt-0.5">{plan.id}.</span>
+										<div class="flex-1 min-w-0">
+											<h4 class="font-medium text-white">{plan.title}</h4>
+											<div class="flex items-center gap-2 mt-1">
+
+												<!-- Plan 8: clickable inline status dropdown -->
+												<div class="relative">
+													<button
+														onclick={() => openStatusDropdownId = openStatusDropdownId === plan.id ? null : plan.id}
+														class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes} hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1"
+														title="Click to change status"
+													>
+														{statusPill.label}
+														<svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+														</svg>
+													</button>
+													{#if openStatusDropdownId === plan.id}
+														<!-- Backdrop to close on outside click -->
+														<div
+															class="fixed inset-0 z-10"
+															onclick={() => openStatusDropdownId = null}
+														></div>
+														<div class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36">
+															{#each planStatusOptions as opt}
+																{@const optPill = getPlanStatusPill(opt.value)}
+																<button
+																	onclick={() => changePlanStatus(plan.id, opt.value)}
+																	class="w-full text-left px-3 py-1.5 {TEXT.body} hover:bg-surface-2 transition-colors flex items-center gap-2 {plan.status === opt.value ? 'bg-surface-2' : ''}"
+																>
+																	<span class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {optPill.classes}">{optPill.label}</span>
+																</button>
+															{/each}
 														</div>
 													{/if}
 												</div>
+
+												{#if versionCount > 0}
+													<button
+														onclick={() => openVersionHistory(plan.id)}
+														class="{TEXT.badge} text-status-muted hover:text-status-info"
+													>
+														{versionCount} version{versionCount > 1 ? 's' : ''}
+													</button>
+												{/if}
 											</div>
-											<div class="flex items-center gap-1">
-												<button
-													onclick={() => openPlanModal(plan.id)}
-													class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
-													title="Edit"
-												>
-													<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-													</svg>
-												</button>
-												<button
-													onclick={() => confirmDelete('plan', plan.id)}
-													class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
-													title="Delete"
-												>
-													<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-													</svg>
-												</button>
-											</div>
+											{#if plan.description}
+												<div class="mt-3 {TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none">
+													<MarkdownRenderer content={plan.description} />
+												</div>
+											{/if}
+											{#if plan.result}
+												<div class="mt-3 p-3 bg-surface-3 rounded-lg">
+													<p class="{TEXT.label} text-status-muted mb-1">Result</p>
+													<div class="{TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none">
+														<MarkdownRenderer content={plan.result} />
+													</div>
+												</div>
+											{/if}
 										</div>
 									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{:else if activeTab === 'activity'}
-					{#if activities.length === 0}
-						<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
-							No activity recorded yet.
-						</div>
-					{:else}
-						<div class="bg-surface-2 rounded-xl divide-y divide-surface-border">
-							{#each activities as activity}
-								<div class="p-4 flex items-start gap-3">
-									<div class="w-2 h-2 rounded-full bg-status-info mt-2 flex-shrink-0"></div>
-									<div class="flex-1 min-w-0">
-										<p class="{TEXT.body} text-white">{activity.action}</p>
-										{#if activity.details}
-											<p class="{TEXT.label} text-status-muted mt-0.5">{activity.details}</p>
-										{/if}
-										<p class="{TEXT.label} text-status-muted mt-1">{formatDateTime(activity.created_at)}</p>
+									<div class="flex items-center gap-1">
+										<button
+											onclick={() => openPlanModal(plan.id)}
+											class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
+											title="Edit"
+										>
+											<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+											</svg>
+										</button>
+										<button
+											onclick={() => confirmDelete('plan', plan.id)}
+											class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
+											title="Delete"
+										>
+											<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+											</svg>
+										</button>
 									</div>
 								</div>
-							{/each}
-						</div>
-					{/if}
+							</div>
+						{/each}
+					</div>
 				{/if}
-			</div>
+
+			{:else if activeTab === 'activity'}
+				{#if activities.length === 0}
+					<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
+						No activity recorded yet.
+					</div>
+				{:else}
+					<div class="bg-surface-2 rounded-xl divide-y divide-surface-border">
+						{#each activities as activity}
+							<div class="p-4 flex items-start gap-3">
+								<div class="w-2 h-2 rounded-full bg-status-info mt-2 flex-shrink-0"></div>
+								<div class="flex-1 min-w-0">
+									<p class="{TEXT.body} text-white">{activity.action}</p>
+									{#if activity.details}
+										<p class="{TEXT.label} text-status-muted mt-0.5">{activity.details}</p>
+									{/if}
+									<p class="{TEXT.label} text-status-muted mt-1">{formatDateTime(activity.created_at)}</p>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/if}
+
 		</div>
 	</div>
 {/if}
