@@ -23,7 +23,7 @@ These are non-optional operating rules:
 - **Every execution starts with a plan.** No exceptions — build a plan, get operator approval, then execute.
 - **Plans start in `planning` status** until the operator approves (sets to `assigned`, or explicitly says "go ahead"). Discussion is not permission.
 - **When you create a plan for approval, message the operator** — do not silently create plans and wait.
-- **Set plans to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress, set to `complete` or `needs_review` when done.
+- **Set plans to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress. When done, **write a result summary** in the plan's `result` field and set status to `complete` or `needs_review`.
 - **On heartbeat, check for `assigned` plans** — these are your queue. Pick them up and execute.
 - **Plans are specifications.** A plan's description is a carefully crafted instruction set — the spec for the work, the sub-agent prompt. Write them with care.
 
