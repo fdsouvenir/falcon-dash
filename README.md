@@ -83,6 +83,12 @@ openclaw plugins install ./openclaw-canvas-bridge
 
 Restart the gateway after installing plugins.
 
+### KeePassXC Secret Resolver
+
+Bridges KeePassXC vault entries to OpenClaw's secrets system so provider configs can reference credentials by vault path instead of storing them in plaintext.
+
+See [docs/secretrefs.md](docs/secretrefs.md) for setup and configuration details.
+
 ## Scripts
 
 | Command                 | Description                          |
