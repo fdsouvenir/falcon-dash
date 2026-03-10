@@ -1,10 +1,12 @@
 <script lang="ts">
 	import ProjectList from '$lib/components/pm/ProjectList.svelte';
 	import ProjectDetail from '$lib/components/pm/ProjectDetail.svelte';
+	import PlansInbox from '$lib/components/pm/PlansInbox.svelte';
 
 	import { pmAvailable, checkPMAvailability, hydratePMStores } from '$lib/stores/pm-store.js';
 
 	let selectedProjectId = $state<number | null>(null);
+	let viewMode = $state<'projects' | 'inbox'>('projects');
 	let available = $derived($pmAvailable);
 	let checked = $state(false);
 
@@ -24,6 +26,7 @@
 
 	function navigateToProject(projectId: number) {
 		selectedProjectId = projectId;
+		viewMode = 'projects';
 		history.pushState({ pmNav: { projectId } satisfies PMNavState }, '');
 	}
 
@@ -66,10 +69,36 @@
 		</div>
 	</div>
 {:else}
-	<!-- Full-page view switching: Show EITHER list OR detail, not both -->
-	<div class="h-full overflow-hidden bg-surface-0 text-white">
+	<!-- Full-page view switching: Show EITHER list/inbox OR detail, not both -->
+	<div class="h-full overflow-hidden bg-surface-0 text-white flex flex-col">
 		{#if selectedProjectId === null}
-			<ProjectList onselect={navigateToProject} />
+			<!-- View toggle tab bar -->
+			<div class="flex-shrink-0 flex items-center gap-1 px-4 pt-2 border-b border-surface-border bg-surface-2">
+				<button
+					onclick={() => (viewMode = 'projects')}
+					class="px-4 py-2 text-[length:var(--text-body)] font-medium border-b-2 transition-colors {viewMode === 'projects'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Projects
+				</button>
+				<button
+					onclick={() => (viewMode = 'inbox')}
+					class="px-4 py-2 text-[length:var(--text-body)] font-medium border-b-2 transition-colors {viewMode === 'inbox'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Plans Inbox
+				</button>
+			</div>
+
+			<div class="flex-1 overflow-hidden">
+				{#if viewMode === 'projects'}
+					<ProjectList onselect={navigateToProject} />
+				{:else}
+					<PlansInbox onNavigateToProject={navigateToProject} />
+				{/if}
+			</div>
 		{:else}
 			<ProjectDetail projectId={selectedProjectId} onClose={navigateBack} />
 		{/if}

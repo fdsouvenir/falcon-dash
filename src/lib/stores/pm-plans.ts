@@ -172,3 +172,15 @@ export function getPlansByProject(projectId: number): Plan[] {
 	const currentPlans = get(plans);
 	return currentPlans.filter((p) => p.project_id === projectId);
 }
+
+// Cross-project plans (Plan 7)
+export interface CrossProjectPlan extends Plan {
+	project_title: string;
+}
+
+export async function loadCrossProjectPlans(status?: string): Promise<CrossProjectPlan[]> {
+	const params: Record<string, string> = {};
+	if (status) params.status = status;
+	const res = await pmGet<{ items: CrossProjectPlan[]; total: number }>('/api/pm/plans', params);
+	return res.items;
+}
