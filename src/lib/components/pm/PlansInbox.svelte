@@ -195,6 +195,7 @@
 										class="{TEXT.badge} text-status-info hover:text-status-info/80 transition-colors flex-shrink-0 truncate max-w-32"
 										title="Go to project: {plan.project_title}"
 									>
+										<span class="text-status-muted font-mono">P-{plan.project_id}:</span>
 										{plan.project_title}
 									</button>
 

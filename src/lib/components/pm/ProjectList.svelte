@@ -371,7 +371,11 @@
 									>
 										<div class="flex items-start justify-between gap-4">
 											<div class="flex-1 min-w-0">
-												<h4 class="font-medium text-white truncate">{project.title}</h4>
+												<h4 class="font-medium text-white truncate">
+													<span class="text-status-muted font-mono {TEXT.badge} mr-1.5"
+														>P-{project.id}</span
+													>{project.title}
+												</h4>
 												{#if subcategoryName}
 													<div class="{TEXT.label} text-status-muted">{subcategoryName}</div>
 												{/if}

@@ -382,6 +382,7 @@
 						class="w-3 h-3 rounded-full flex-shrink-0"
 						style="background: {category?.color || '#6366f1'}"
 					></div>
+					<span class="text-status-muted font-mono text-sm flex-shrink-0">P-{project.id}</span>
 					<input
 						type="text"
 						value={project.title}
