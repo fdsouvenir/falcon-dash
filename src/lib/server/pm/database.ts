@@ -64,24 +64,6 @@ export interface PlanVersion {
 	created_at: number;
 }
 
-// Legacy interfaces for migration
-export interface Domain {
-	id: string;
-	name: string;
-	description: string | null;
-	sort_order: number;
-	created_at: number;
-}
-
-export interface Focus {
-	id: string;
-	domain_id: string;
-	name: string;
-	description: string | null;
-	sort_order: number;
-	created_at: number;
-}
-
 export interface Activity {
 	id: number;
 	project_id: number;
@@ -282,17 +264,10 @@ export function getDb(): Database.Database {
 			// Enable foreign key constraints
 			instance.pragma('foreign_keys = ON');
 
-			// Initialize schema first (to ensure pm_meta table exists)
+			// Initialize schema
 			instance.exec(SCHEMA);
 
-			// Check if migration is needed
-			const needsMigration = checkMigrationNeeded(instance);
-			
-			if (needsMigration) {
-				runMigration(instance);
-			}
-			
-			// Seed default categories if needed
+			// Seed default categories if none exist
 			seedDefaultCategories(instance);
 		} catch (err) {
 			instance.close();
@@ -313,185 +288,6 @@ export function closeDb(): void {
 		db.close();
 		db = null;
 	}
-}
-
-/**
- * Check if migration from old schema is needed
- */
-function checkMigrationNeeded(db: Database.Database): boolean {
-	try {
-		// Check if old domains table exists and new categories table doesn't
-		const hasDomains = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='domains'`).get();
-		const hasCategories = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='categories'`).get();
-		
-		return hasDomains && !hasCategories;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Run migration from domains/focuses to categories/subcategories
- */
-function runMigration(db: Database.Database): void {
-	console.log('🔄 Starting PM schema migration to v0.17.0...');
-	
-	// Start transaction
-	const transaction = db.transaction(() => {
-		// Create new tables first
-		db.exec(`
-			CREATE TABLE categories (
-				id TEXT PRIMARY KEY,
-				name TEXT NOT NULL,
-				description TEXT,
-				color TEXT,
-				sort_order INTEGER DEFAULT 0,
-				created_at INTEGER DEFAULT (unixepoch())
-			);
-			
-			CREATE TABLE subcategories (
-				id TEXT PRIMARY KEY,
-				category_id TEXT NOT NULL REFERENCES categories(id),
-				name TEXT NOT NULL,
-				description TEXT,
-				sort_order INTEGER DEFAULT 0,
-				created_at INTEGER DEFAULT (unixepoch())
-			);
-			
-			CREATE TABLE projects_new (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				category_id TEXT NOT NULL REFERENCES categories(id),
-				subcategory_id TEXT REFERENCES subcategories(id),
-				title TEXT NOT NULL,
-				description TEXT,
-				body TEXT,
-				status TEXT CHECK(status IN ('todo','in_progress','review','done','cancelled','archived')) DEFAULT 'todo',
-				due_date TEXT,
-				priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
-				external_ref TEXT,
-				created_at INTEGER DEFAULT (unixepoch()),
-				updated_at INTEGER DEFAULT (unixepoch()),
-				last_activity_at INTEGER DEFAULT (unixepoch())
-			);
-		`);
-		
-		// Migrate domains to categories (add default colors)
-		const domains = db.prepare('SELECT * FROM domains').all() as Domain[];
-		const insertCategory = db.prepare(`
-			INSERT INTO categories (id, name, description, color, sort_order, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`);
-		
-		for (const domain of domains) {
-			// Set default colors based on common domain names
-			let color = null;
-			if (domain.name.toLowerCase().includes('personal')) color = '#60a5fa';
-			else if (domain.name.toLowerCase().includes('work')) color = '#a78bfa';
-			
-			insertCategory.run(
-				domain.id,
-				domain.name,
-				domain.description,
-				color,
-				domain.sort_order,
-				domain.created_at
-			);
-		}
-		
-		// Migrate focuses to subcategories
-		const focuses = db.prepare('SELECT * FROM focuses').all() as Focus[];
-		const insertSubcategory = db.prepare(`
-			INSERT INTO subcategories (id, category_id, name, description, sort_order, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`);
-		
-		for (const focus of focuses) {
-			insertSubcategory.run(
-				focus.id,
-				focus.domain_id,
-				focus.name,
-				focus.description,
-				focus.sort_order,
-				focus.created_at
-			);
-		}
-		
-		// Migrate projects (focus_id becomes subcategory_id, get category_id from focus)
-		// Use LEFT JOIN to catch orphaned projects and assign them to a default category
-		const oldProjects = db.prepare(`
-			SELECT p.*, f.domain_id 
-			FROM projects p 
-			LEFT JOIN focuses f ON p.focus_id = f.id
-		`).all();
-		
-		// Get or create a default category for orphaned projects
-		let defaultCategoryId = 'uncategorized';
-		const hasUncategorized = db.prepare('SELECT id FROM categories WHERE id = ?').get(defaultCategoryId);
-		if (!hasUncategorized) {
-			insertCategory.run(
-				defaultCategoryId,
-				'Uncategorized',
-				'Projects without a valid category',
-				'#94a3b8',
-				999,
-				Math.floor(Date.now() / 1000)
-			);
-		}
-		
-		const insertProject = db.prepare(`
-			INSERT INTO projects_new (
-				id, category_id, subcategory_id, title, description, body, 
-				status, due_date, priority, external_ref, 
-				created_at, updated_at, last_activity_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`);
-		
-		for (const project of oldProjects) {
-			// Use default category for orphaned projects
-			const categoryId = project.domain_id || defaultCategoryId;
-			const subcategoryId = project.focus_id || null;  // null for orphaned projects
-			
-			insertProject.run(
-				project.id,
-				categoryId,
-				subcategoryId,
-				project.title,
-				project.description,
-				project.body,
-				project.status,
-				project.due_date,
-				project.priority,
-				project.external_ref,
-				project.created_at,
-				project.updated_at,
-				project.last_activity_at
-			);
-		}
-		
-		// Disable FK constraints for table drops
-		db.pragma('foreign_keys = OFF');
-		
-		// Drop old tables
-		db.exec('DROP TABLE projects');
-		db.exec('DROP TABLE focuses');
-		db.exec('DROP TABLE domains');
-		
-		// Re-enable FK constraints
-		db.pragma('foreign_keys = ON');
-		
-		// Rename new projects table
-		db.exec('ALTER TABLE projects_new RENAME TO projects');
-		
-		// Mark migration as complete
-		db.prepare(`
-			INSERT INTO pm_meta (key, value) 
-			VALUES ('schema_version', '0.17.0')
-			ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = (unixepoch())
-		`).run();
-	});
-	
-	transaction();
-	console.log('✅ PM schema migration complete');
 }
 
 /**
