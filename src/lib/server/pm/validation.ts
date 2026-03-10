@@ -138,6 +138,17 @@ export function validatePriority(priority: unknown): string {
 	return priority;
 }
 
+export function validatePlanStatus(status: unknown): string {
+	const valid = ['planning', 'assigned', 'in_progress', 'needs_review', 'complete', 'cancelled'];
+	if (typeof status !== 'string' || !valid.includes(status)) {
+		throw new PMError(
+			PM_ERRORS.PM_CONSTRAINT,
+			`Invalid plan status. Must be one of: ${valid.join(', ')}`
+		);
+	}
+	return status;
+}
+
 export function requireIdempotencyKey(params: Record<string, unknown>): string {
 	const key = params.idempotencyKey;
 	if (typeof key !== 'string' || !key.trim()) {
@@ -150,19 +161,19 @@ export function requireIdempotencyKey(params: Record<string, unknown>): string {
 }
 
 // Validate entity exists
-export function validateDomainExists(id: string): void {
+export function validateCategoryExists(id: string): void {
 	const db = getDb();
-	const result = db.prepare('SELECT id FROM domains WHERE id = ?').get(id);
+	const result = db.prepare('SELECT id FROM categories WHERE id = ?').get(id);
 	if (!result) {
-		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Domain with id "${id}" not found`);
+		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Category with id "${id}" not found`);
 	}
 }
 
-export function validateFocusExists(id: string): void {
+export function validateSubcategoryExists(id: string): void {
 	const db = getDb();
-	const result = db.prepare('SELECT id FROM focuses WHERE id = ?').get(id);
+	const result = db.prepare('SELECT id FROM subcategories WHERE id = ?').get(id);
 	if (!result) {
-		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Focus with id "${id}" not found`);
+		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory with id "${id}" not found`);
 	}
 }
 
@@ -171,6 +182,14 @@ export function validateProjectExists(id: number): void {
 	const result = db.prepare('SELECT id FROM projects WHERE id = ?').get(id);
 	if (!result) {
 		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Project with id ${id} not found`);
+	}
+}
+
+export function validatePlanExists(id: number): void {
+	const db = getDb();
+	const result = db.prepare('SELECT id FROM plans WHERE id = ?').get(id);
+	if (!result) {
+		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Plan with id ${id} not found`);
 	}
 }
 
@@ -185,19 +204,19 @@ export function validateDateFormat(date: string): void {
 	}
 }
 
-// Validate duplicate domain/focus ID
-export function validateDomainIdUnique(id: string): void {
+// Validate duplicate category/subcategory ID
+export function validateCategoryIdUnique(id: string): void {
 	const db = getDb();
-	const result = db.prepare('SELECT id FROM domains WHERE id = ?').get(id);
+	const result = db.prepare('SELECT id FROM categories WHERE id = ?').get(id);
 	if (result) {
-		throw new PMError(PM_ERRORS.PM_DUPLICATE, `Domain with id "${id}" already exists`);
+		throw new PMError(PM_ERRORS.PM_DUPLICATE, `Category with id "${id}" already exists`);
 	}
 }
 
-export function validateFocusIdUnique(id: string): void {
+export function validateSubcategoryIdUnique(id: string): void {
 	const db = getDb();
-	const result = db.prepare('SELECT id FROM focuses WHERE id = ?').get(id);
+	const result = db.prepare('SELECT id FROM subcategories WHERE id = ?').get(id);
 	if (result) {
-		throw new PMError(PM_ERRORS.PM_DUPLICATE, `Focus with id "${id}" already exists`);
+		throw new PMError(PM_ERRORS.PM_DUPLICATE, `Subcategory with id "${id}" already exists`);
 	}
 }

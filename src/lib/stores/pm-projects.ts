@@ -3,7 +3,8 @@ import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
 
 export interface Project {
 	id: number;
-	focus_id: string;
+	category_id: string;
+	subcategory_id: string | null;
 	title: string;
 	description: string | null;
 	body: string | null;
@@ -31,13 +32,15 @@ export const projectsLoading: Readable<boolean> = readonly(_projectsLoading);
 
 // Project methods
 export async function loadProjects(filters?: {
-	focus_id?: string;
+	category_id?: string;
+	subcategory_id?: string;
 	status?: string;
 }): Promise<void> {
 	_projectsLoading.set(true);
 	try {
 		const params: Record<string, string | number | undefined> = { limit: '500' };
-		if (filters?.focus_id) params.focus_id = filters.focus_id;
+		if (filters?.category_id) params.category_id = filters.category_id;
+		if (filters?.subcategory_id) params.subcategory_id = filters.subcategory_id;
 		if (filters?.status) params.status = filters.status;
 		const res = await pmGet<PaginatedResponse<Project>>('/api/pm/projects', params);
 		_projects.set(res.items);
@@ -53,13 +56,15 @@ export async function getProject(id: number): Promise<Project> {
 }
 
 export async function createProject(data: {
-	focus_id: string;
+	category_id: string;
+	subcategory_id?: string;
 	title: string;
 	description?: string;
 	body?: string;
 	status?: string;
 	due_date?: string;
 	priority?: string;
+	external_ref?: string;
 }): Promise<Project> {
 	const project = await pmPost<Project>('/api/pm/projects', data);
 	await loadProjects();
@@ -75,7 +80,8 @@ export async function updateProject(
 		status?: string;
 		due_date?: string;
 		priority?: string;
-		focus_id?: string;
+		category_id?: string;
+		subcategory_id?: string;
 	}
 ): Promise<Project> {
 	const project = await pmPatch<Project>(`/api/pm/projects/${id}`, data);

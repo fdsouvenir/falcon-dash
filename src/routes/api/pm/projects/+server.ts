@@ -9,11 +9,13 @@ export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const page = parseInt(url.searchParams.get('page') ?? '1');
 		const limit = parseInt(url.searchParams.get('limit') ?? '50');
-		const focusId = url.searchParams.get('focus_id') ?? undefined;
+		const categoryId = url.searchParams.get('category_id') ?? undefined;
+		const subcategoryId = url.searchParams.get('subcategory_id') ?? undefined;
 		const status = url.searchParams.get('status') ?? undefined;
 
-		const filters: { focus_id?: string; status?: string } = {};
-		if (focusId) filters.focus_id = focusId;
+		const filters: { category_id?: string; subcategory_id?: string; status?: string } = {};
+		if (categoryId) filters.category_id = categoryId;
+		if (subcategoryId) filters.subcategory_id = subcategoryId;
 		if (status) filters.status = status;
 
 		const items = listProjects(Object.keys(filters).length > 0 ? filters : undefined);

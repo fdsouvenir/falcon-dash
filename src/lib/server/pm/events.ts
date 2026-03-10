@@ -1,8 +1,8 @@
 // PM Event System - Server-side
 // Handles PM mutations broadcasting and state versioning
 
-export type PMAction = 'created' | 'updated' | 'deleted' | 'moved' | 'reordered' | 'status_changed';
-export type PMEntityType = 'domain' | 'focus' | 'project';
+export type PMAction = 'created' | 'updated' | 'deleted' | 'moved' | 'reordered' | 'status_changed' | 'plan_created' | 'plan_updated' | 'plan_status_changed';
+export type PMEntityType = 'category' | 'subcategory' | 'project' | 'plan';
 
 export interface PMEvent {
 	action: PMAction;

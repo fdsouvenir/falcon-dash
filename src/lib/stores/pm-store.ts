@@ -1,7 +1,8 @@
 import { writable, derived, readonly, type Readable, type Writable } from 'svelte/store';
 import { pmGet } from './pm-api.js';
 import type { Project } from './pm-projects.js';
-import type { Domain, Focus } from './pm-domains.js';
+import type { Category, Subcategory } from './pm-categories.js';
+import type { Plan } from './pm-plans.js';
 
 // Feature detection via HTTP
 const _pmAvailable: Writable<boolean> = writable(false);
@@ -18,9 +19,10 @@ export async function checkPMAvailability(): Promise<void> {
 }
 
 // Internal caches
-const _domainCache: Writable<Map<string, Domain>> = writable(new Map());
-const _focusCache: Writable<Map<string, Focus>> = writable(new Map());
+const _categoryCache: Writable<Map<string, Category>> = writable(new Map());
+const _subcategoryCache: Writable<Map<string, Subcategory>> = writable(new Map());
 const _projectCache: Writable<Map<number, Project>> = writable(new Map());
+const _planCache: Writable<Map<number, Plan>> = writable(new Map());
 
 interface PaginatedResponse<T> {
 	items: T[];
@@ -30,19 +32,19 @@ interface PaginatedResponse<T> {
 // Hydrate all caches
 export async function hydratePMStores(): Promise<void> {
 	try {
-		const [domainsRes, focusesRes, projectsRes] = await Promise.all([
-			pmGet<PaginatedResponse<Domain>>('/api/pm/domains', { limit: '500' }),
-			pmGet<PaginatedResponse<Focus>>('/api/pm/focuses', { limit: '500' }),
+		const [categoriesRes, subcategoriesRes, projectsRes] = await Promise.all([
+			pmGet<PaginatedResponse<Category>>('/api/pm/categories', { limit: '500' }),
+			pmGet<PaginatedResponse<Subcategory>>('/api/pm/subcategories', { limit: '500' }),
 			pmGet<PaginatedResponse<Project>>('/api/pm/projects', { limit: '500' })
 		]);
 
-		const domainMap = new Map<string, Domain>();
-		for (const d of domainsRes.items) domainMap.set(d.id, d);
-		_domainCache.set(domainMap);
+		const categoryMap = new Map<string, Category>();
+		for (const c of categoriesRes.items) categoryMap.set(c.id, c);
+		_categoryCache.set(categoryMap);
 
-		const focusMap = new Map<string, Focus>();
-		for (const f of focusesRes.items) focusMap.set(f.id, f);
-		_focusCache.set(focusMap);
+		const subcategoryMap = new Map<string, Subcategory>();
+		for (const s of subcategoriesRes.items) subcategoryMap.set(s.id, s);
+		_subcategoryCache.set(subcategoryMap);
 
 		const projectMap = new Map<number, Project>();
 		for (const p of projectsRes.items) projectMap.set(p.id, p);

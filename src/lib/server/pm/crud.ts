@@ -1,39 +1,39 @@
 import { getDb } from './database.js';
-import type { Domain, Focus, Project, Activity } from './database.js';
+import type { Category, Subcategory, Project, Plan, PlanVersion, Activity } from './database.js';
 
 // ============================================================================
-// DOMAINS
+// CATEGORIES
 // ============================================================================
 
-export function listDomains(): Domain[] {
+export function listCategories(): Category[] {
 	const db = getDb();
-	return db.prepare('SELECT * FROM domains ORDER BY sort_order ASC, name ASC').all() as Domain[];
+	return db.prepare('SELECT * FROM categories ORDER BY sort_order ASC, name ASC').all() as Category[];
 }
 
-export function getDomain(id: string): Domain | undefined {
+export function getCategory(id: string): Category | undefined {
 	const db = getDb();
-	return db.prepare('SELECT * FROM domains WHERE id = ?').get(id) as Domain | undefined;
+	return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as Category | undefined;
 }
 
-export function createDomain(data: { id: string; name: string; description?: string }): Domain {
+export function createCategory(data: { id: string; name: string; description?: string; color?: string }): Category {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
-	const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM domains').get() as {
+	const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM categories').get() as {
 		max: number | null;
 	};
 	const sortOrder = (maxOrder.max ?? -1) + 1;
 
 	db.prepare(
-		'INSERT INTO domains (id, name, description, sort_order, created_at) VALUES (?, ?, ?, ?, ?)'
-	).run(data.id, data.name, data.description ?? null, sortOrder, now);
+		'INSERT INTO categories (id, name, description, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+	).run(data.id, data.name, data.description ?? null, data.color ?? null, sortOrder, now);
 
-	return getDomain(data.id)!;
+	return getCategory(data.id)!;
 }
 
-export function updateDomain(
+export function updateCategory(
 	id: string,
-	data: { name?: string; description?: string }
-): Domain | undefined {
+	data: { name?: string; description?: string; color?: string }
+): Category | undefined {
 	const db = getDb();
 	const updates: string[] = [];
 	const values: unknown[] = [];
@@ -46,25 +46,29 @@ export function updateDomain(
 		updates.push('description = ?');
 		values.push(data.description);
 	}
+	if (data.color !== undefined) {
+		updates.push('color = ?');
+		values.push(data.color);
+	}
 
-	if (updates.length === 0) return getDomain(id);
+	if (updates.length === 0) return getCategory(id);
 
 	values.push(id);
-	db.prepare(`UPDATE domains SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	db.prepare(`UPDATE categories SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
-	return getDomain(id);
+	return getCategory(id);
 }
 
-export function deleteDomain(id: string): boolean {
+export function deleteCategory(id: string): boolean {
 	const db = getDb();
-	const result = db.prepare('DELETE FROM domains WHERE id = ?').run(id);
+	const result = db.prepare('DELETE FROM categories WHERE id = ?').run(id);
 	return result.changes > 0;
 }
 
-export function reorderDomains(ids: string[]): void {
+export function reorderCategories(ids: string[]): void {
 	const db = getDb();
 	const transaction = db.transaction(() => {
-		const stmt = db.prepare('UPDATE domains SET sort_order = ? WHERE id = ?');
+		const stmt = db.prepare('UPDATE categories SET sort_order = ? WHERE id = ?');
 		ids.forEach((id, index) => {
 			stmt.run(index, id);
 		});
@@ -73,48 +77,48 @@ export function reorderDomains(ids: string[]): void {
 }
 
 // ============================================================================
-// FOCUSES
+// SUBCATEGORIES
 // ============================================================================
 
-export function listFocuses(domainId?: string): Focus[] {
+export function listSubcategories(categoryId?: string): Subcategory[] {
 	const db = getDb();
-	if (domainId) {
+	if (categoryId) {
 		return db
-			.prepare('SELECT * FROM focuses WHERE domain_id = ? ORDER BY sort_order ASC, name ASC')
-			.all(domainId) as Focus[];
+			.prepare('SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order ASC, name ASC')
+			.all(categoryId) as Subcategory[];
 	}
-	return db.prepare('SELECT * FROM focuses ORDER BY sort_order ASC, name ASC').all() as Focus[];
+	return db.prepare('SELECT * FROM subcategories ORDER BY sort_order ASC, name ASC').all() as Subcategory[];
 }
 
-export function getFocus(id: string): Focus | undefined {
+export function getSubcategory(id: string): Subcategory | undefined {
 	const db = getDb();
-	return db.prepare('SELECT * FROM focuses WHERE id = ?').get(id) as Focus | undefined;
+	return db.prepare('SELECT * FROM subcategories WHERE id = ?').get(id) as Subcategory | undefined;
 }
 
-export function createFocus(data: {
+export function createSubcategory(data: {
 	id: string;
-	domain_id: string;
+	category_id: string;
 	name: string;
 	description?: string;
-}): Focus {
+}): Subcategory {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 	const maxOrder = db
-		.prepare('SELECT MAX(sort_order) as max FROM focuses WHERE domain_id = ?')
-		.get(data.domain_id) as { max: number | null };
+		.prepare('SELECT MAX(sort_order) as max FROM subcategories WHERE category_id = ?')
+		.get(data.category_id) as { max: number | null };
 	const sortOrder = (maxOrder.max ?? -1) + 1;
 
 	db.prepare(
-		'INSERT INTO focuses (id, domain_id, name, description, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-	).run(data.id, data.domain_id, data.name, data.description ?? null, sortOrder, now);
+		'INSERT INTO subcategories (id, category_id, name, description, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+	).run(data.id, data.category_id, data.name, data.description ?? null, sortOrder, now);
 
-	return getFocus(data.id)!;
+	return getSubcategory(data.id)!;
 }
 
-export function updateFocus(
+export function updateSubcategory(
 	id: string,
-	data: { name?: string; description?: string; domain_id?: string }
-): Focus | undefined {
+	data: { name?: string; description?: string; category_id?: string }
+): Subcategory | undefined {
 	const db = getDb();
 	const updates: string[] = [];
 	const values: unknown[] = [];
@@ -127,29 +131,29 @@ export function updateFocus(
 		updates.push('description = ?');
 		values.push(data.description);
 	}
-	if (data.domain_id !== undefined) {
-		updates.push('domain_id = ?');
-		values.push(data.domain_id);
+	if (data.category_id !== undefined) {
+		updates.push('category_id = ?');
+		values.push(data.category_id);
 	}
 
-	if (updates.length === 0) return getFocus(id);
+	if (updates.length === 0) return getSubcategory(id);
 
 	values.push(id);
-	db.prepare(`UPDATE focuses SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	db.prepare(`UPDATE subcategories SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
-	return getFocus(id);
+	return getSubcategory(id);
 }
 
-export function deleteFocus(id: string): boolean {
+export function deleteSubcategory(id: string): boolean {
 	const db = getDb();
-	const result = db.prepare('DELETE FROM focuses WHERE id = ?').run(id);
+	const result = db.prepare('DELETE FROM subcategories WHERE id = ?').run(id);
 	return result.changes > 0;
 }
 
-export function reorderFocuses(ids: string[]): void {
+export function reorderSubcategories(ids: string[]): void {
 	const db = getDb();
 	const transaction = db.transaction(() => {
-		const stmt = db.prepare('UPDATE focuses SET sort_order = ? WHERE id = ?');
+		const stmt = db.prepare('UPDATE subcategories SET sort_order = ? WHERE id = ?');
 		ids.forEach((id, index) => {
 			stmt.run(index, id);
 		});
@@ -157,27 +161,27 @@ export function reorderFocuses(ids: string[]): void {
 	transaction();
 }
 
-export function moveFocus(id: string, newDomainId: string): Focus | undefined {
+export function moveSubcategory(id: string, newCategoryId: string): Subcategory | undefined {
 	const db = getDb();
 	const maxOrder = db
-		.prepare('SELECT MAX(sort_order) as max FROM focuses WHERE domain_id = ?')
-		.get(newDomainId) as { max: number | null };
+		.prepare('SELECT MAX(sort_order) as max FROM subcategories WHERE category_id = ?')
+		.get(newCategoryId) as { max: number | null };
 	const sortOrder = (maxOrder.max ?? -1) + 1;
 
-	db.prepare('UPDATE focuses SET domain_id = ?, sort_order = ? WHERE id = ?').run(
-		newDomainId,
+	db.prepare('UPDATE subcategories SET category_id = ?, sort_order = ? WHERE id = ?').run(
+		newCategoryId,
 		sortOrder,
 		id
 	);
 
-	return getFocus(id);
+	return getSubcategory(id);
 }
 
 // ============================================================================
 // PROJECTS
 // ============================================================================
 
-export function listProjects(filters?: { focus_id?: string; status?: string }): Project[] {
+export function listProjects(filters?: { category_id?: string; subcategory_id?: string; status?: string }): Project[] {
 	const db = getDb();
 
 	if (!filters || Object.keys(filters).length === 0) {
@@ -187,9 +191,13 @@ export function listProjects(filters?: { focus_id?: string; status?: string }): 
 	const conditions: string[] = [];
 	const values: unknown[] = [];
 
-	if (filters.focus_id !== undefined) {
-		conditions.push('focus_id = ?');
-		values.push(filters.focus_id);
+	if (filters.category_id !== undefined) {
+		conditions.push('category_id = ?');
+		values.push(filters.category_id);
+	}
+	if (filters.subcategory_id !== undefined) {
+		conditions.push('subcategory_id = ?');
+		values.push(filters.subcategory_id);
 	}
 	if (filters.status !== undefined) {
 		conditions.push('status = ?');
@@ -206,13 +214,15 @@ export function getProject(id: number): Project | undefined {
 }
 
 export function createProject(data: {
-	focus_id: string;
+	category_id: string;
+	subcategory_id?: string;
 	title: string;
 	description?: string;
 	body?: string;
 	status?: string;
 	due_date?: string;
 	priority?: string;
+	external_ref?: string;
 }): Project {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
@@ -220,18 +230,20 @@ export function createProject(data: {
 	const result = db
 		.prepare(
 			`
-		INSERT INTO projects (focus_id, title, description, body, status, due_date, priority, created_at, updated_at, last_activity_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO projects (category_id, subcategory_id, title, description, body, status, due_date, priority, external_ref, created_at, updated_at, last_activity_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 		)
 		.run(
-			data.focus_id,
+			data.category_id,
+			data.subcategory_id ?? null,
 			data.title,
 			data.description ?? null,
 			data.body ?? null,
 			data.status ?? 'todo',
 			data.due_date ?? null,
 			data.priority ?? null,
+			data.external_ref ?? null,
 			now,
 			now,
 			now
@@ -258,7 +270,7 @@ export function updateProject(
 	data: Partial<
 		Pick<
 			Project,
-			'title' | 'description' | 'body' | 'status' | 'due_date' | 'priority' | 'focus_id'
+			'title' | 'description' | 'body' | 'status' | 'due_date' | 'priority' | 'category_id' | 'subcategory_id'
 		>
 	>
 ): Project | undefined {
@@ -291,9 +303,13 @@ export function updateProject(
 		updates.push('priority = ?');
 		values.push(data.priority);
 	}
-	if (data.focus_id !== undefined) {
-		updates.push('focus_id = ?');
-		values.push(data.focus_id);
+	if (data.category_id !== undefined) {
+		updates.push('category_id = ?');
+		values.push(data.category_id);
+	}
+	if (data.subcategory_id !== undefined) {
+		updates.push('subcategory_id = ?');
+		values.push(data.subcategory_id);
 	}
 
 	if (updates.length === 2) return getProject(id);
@@ -369,4 +385,232 @@ export function logActivity(data: {
 
 	const activityId = result.lastInsertRowid as number;
 	return db.prepare('SELECT * FROM activities WHERE id = ?').get(activityId) as Activity;
+}
+
+// ============================================================================
+// PLANS
+// ============================================================================
+
+export function listPlans(projectId: number): Plan[] {
+	const db = getDb();
+	return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(projectId) as Plan[];
+}
+
+export function getPlan(id: number): Plan | undefined {
+	const db = getDb();
+	return db.prepare('SELECT * FROM plans WHERE id = ?').get(id) as Plan | undefined;
+}
+
+export function createPlan(data: {
+	project_id: number;
+	title: string;
+	description?: string;
+	result?: string;
+	status?: string;
+}): Plan {
+	const db = getDb();
+	const now = Math.floor(Date.now() / 1000);
+	const maxOrder = db
+		.prepare('SELECT MAX(sort_order) as max FROM plans WHERE project_id = ?')
+		.get(data.project_id) as { max: number | null };
+	const sortOrder = (maxOrder.max ?? -1) + 1;
+
+	const result = db
+		.prepare(
+			`INSERT INTO plans (project_id, title, description, result, status, sort_order, created_by, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			data.project_id,
+			data.title,
+			data.description ?? null,
+			data.result ?? null,
+			data.status ?? 'planning',
+			sortOrder,
+			'user',
+			now,
+			now
+		);
+
+	const planId = result.lastInsertRowid as number;
+	const plan = getPlan(planId)!;
+
+	// Create initial version
+	createPlanVersion(planId, plan.description, plan.result, plan.status, 'system');
+
+	// Log activity
+	logActivity({
+		project_id: data.project_id,
+		actor: 'system',
+		action: 'plan_created',
+		target_type: 'plan',
+		target_id: planId,
+		target_title: data.title
+	});
+
+	return plan;
+}
+
+export function updatePlan(
+	id: number,
+	data: { title?: string; description?: string; result?: string; status?: string }
+): Plan | undefined {
+	const db = getDb();
+	const currentPlan = getPlan(id);
+	if (!currentPlan) return undefined;
+
+	const now = Math.floor(Date.now() / 1000);
+	const updates: string[] = ['updated_at = ?'];
+	const values: unknown[] = [now];
+
+	// Track what changed for versioning
+	let descriptionChanged = false;
+	let resultChanged = false;
+	let statusChanged = false;
+
+	if (data.title !== undefined) {
+		updates.push('title = ?');
+		values.push(data.title);
+	}
+	if (data.description !== undefined && data.description !== currentPlan.description) {
+		updates.push('description = ?');
+		values.push(data.description);
+		descriptionChanged = true;
+	}
+	if (data.result !== undefined && data.result !== currentPlan.result) {
+		updates.push('result = ?');
+		values.push(data.result);
+		resultChanged = true;
+	}
+	if (data.status !== undefined && data.status !== currentPlan.status) {
+		updates.push('status = ?');
+		values.push(data.status);
+		statusChanged = true;
+	}
+
+	if (updates.length === 1) return currentPlan;
+
+	values.push(id);
+	db.prepare(`UPDATE plans SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+	const updatedPlan = getPlan(id)!;
+
+	// Create version if content changed
+	if (descriptionChanged || resultChanged || statusChanged) {
+		createPlanVersion(
+			id,
+			updatedPlan.description,
+			updatedPlan.result,
+			updatedPlan.status,
+			'user'
+		);
+	}
+
+	// Log activity
+	const action = statusChanged ? 'plan_status_changed' : 'plan_updated';
+	logActivity({
+		project_id: updatedPlan.project_id,
+		actor: 'system',
+		action,
+		target_type: 'plan',
+		target_id: id,
+		target_title: updatedPlan.title,
+		details: statusChanged ? `Status changed to ${updatedPlan.status}` : undefined
+	});
+
+	return updatedPlan;
+}
+
+export function deletePlan(id: number): boolean {
+	const db = getDb();
+	const result = db.prepare('DELETE FROM plans WHERE id = ?').run(id);
+	return result.changes > 0;
+}
+
+export function reorderPlans(ids: number[]): void {
+	const db = getDb();
+	const transaction = db.transaction(() => {
+		const stmt = db.prepare('UPDATE plans SET sort_order = ? WHERE id = ?');
+		ids.forEach((id, index) => {
+			stmt.run(index, id);
+		});
+	});
+	transaction();
+}
+
+// ============================================================================
+// PLAN VERSIONS
+// ============================================================================
+
+export function listPlanVersions(planId: number): PlanVersion[] {
+	const db = getDb();
+	return db.prepare('SELECT * FROM plan_versions WHERE plan_id = ? ORDER BY version DESC').all(planId) as PlanVersion[];
+}
+
+export function createPlanVersion(
+	planId: number,
+	description: string | null,
+	result: string | null,
+	status: string,
+	createdBy: string = 'system'
+): PlanVersion {
+	const db = getDb();
+	const now = Math.floor(Date.now() / 1000);
+
+	// Get next version number
+	const lastVersion = db
+		.prepare('SELECT MAX(version) as max FROM plan_versions WHERE plan_id = ?')
+		.get(planId) as { max: number | null };
+	const version = (lastVersion.max ?? 0) + 1;
+
+	const result_insert = db
+		.prepare(
+			`INSERT INTO plan_versions (plan_id, version, description, result, status, created_by, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(planId, version, description, result, status, createdBy, now);
+
+	const versionId = result_insert.lastInsertRowid as number;
+	return db.prepare('SELECT * FROM plan_versions WHERE id = ?').get(versionId) as PlanVersion;
+}
+
+export function revertPlanVersion(planId: number, version: number): Plan | undefined {
+	const db = getDb();
+
+	// Get the version to revert to
+	const versionData = db
+		.prepare('SELECT * FROM plan_versions WHERE plan_id = ? AND version = ?')
+		.get(planId, version) as PlanVersion | undefined;
+
+	if (!versionData) return undefined;
+
+	// Update the plan
+	const now = Math.floor(Date.now() / 1000);
+	db.prepare(
+		`UPDATE plans SET description = ?, result = ?, status = ?, updated_at = ? WHERE id = ?`
+	).run(versionData.description, versionData.result, versionData.status, now, planId);
+
+	const updatedPlan = getPlan(planId)!;
+
+	// Create new version for the revert
+	createPlanVersion(
+		planId,
+		versionData.description,
+		versionData.result,
+		versionData.status,
+		'user'
+	);
+
+	// Log activity
+	logActivity({
+		project_id: updatedPlan.project_id,
+		actor: 'system',
+		action: 'plan_updated',
+		target_type: 'plan',
+		target_id: planId,
+		target_title: updatedPlan.title,
+		details: `Reverted to version ${version}`
+	});
+
+	return updatedPlan;
 }
