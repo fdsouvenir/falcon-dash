@@ -59,3 +59,7 @@ The vault uses **keyfile authentication** (no master password). Every command mu
 - **Do not create or destroy the vault** — it is provisioned and managed by Falcon Dash.
 - **Do not reorganize the group structure** without explicit operator approval.
 - **Entries are organized in groups** (folders). Use `ls` to understand the existing structure before adding entries.
+
+## SecretRef Integration
+
+The vault can also back OpenClaw's SecretRef system via the exec provider — see https://docs.openclaw.ai/gateway/secrets.

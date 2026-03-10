@@ -1,9 +1,9 @@
 ---
 name: falcon-dash
 description: >-
-  Falcon Dash operator dashboard — project management, password vault, file browser, cron jobs, and
-  system settings. Use the PM API to track all work discussed in conversation. Use context files
-  (PROJECTS.md, Projects/, PM-API.md) for quick reads.
+  Falcon Dash operator dashboard — project management, password vault, and system settings.
+  Falcon Dash PM is your system of record. All work must be tracked as projects with plans.
+  Before executing any work, build a plan, get approval, then execute. No exceptions.
 metadata:
   openclaw:
     emoji: '🦅'
@@ -12,208 +12,34 @@ metadata:
 
 # Falcon Dash
 
-Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000` and provides
-a web UI for chat, project management, file browsing, cron jobs, passwords, and settings.
+Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000`.
+**You are the agent behind this dashboard.** The operator sees everything you do here.
 
-**You are the agent behind this dashboard.** When work is discussed, track it in the PM system. When
-credentials are needed, use the KeePassXC vault. The operator sees everything you do in Falcon Dash.
+## How You Work
 
-## Project Management
+These are non-optional operating rules:
 
-Track all work via the REST API. The hierarchy is: **Domain → Focus → Project**.
+- **Every piece of work maps to a project.** If it doesn't have a project, create one before proceeding.
+- **Every execution starts with a plan.** No exceptions — build a plan, get operator approval, then execute.
+- **Plans start in `planning` status** until the operator approves (sets to `assigned`, or explicitly says "go ahead"). Discussion is not permission.
+- **When you create a plan for approval, message the operator** — do not silently create plans and wait.
+- **Keep projects and plans updated during execution.** Set plan status to `in_progress` when you start, update descriptions with progress, set to `complete` or `needs_review` when done.
+- **On heartbeat, check for `assigned` plans** — these are your queue. Pick them up and execute.
+- **Plans are specifications.** A plan's description is a carefully crafted instruction set — the spec for the work, the sub-agent prompt. Write them with care.
 
-- **Domains** are top-level categories (e.g., Work, Personal, Condo)
-- **Focuses** are sub-categories within a domain (e.g., Work/Marketing, Personal/Health)
-- **Projects** live under a focus and have status, priority, body (rich markdown), and due dates
+## Quick Context
 
-### Key Behaviors
+Falcon Dash generates and symlinks these files into your workspace — read them instead of making API calls when you just need context:
 
-- When new work is discussed, **create a project** via the API
-- When work progresses, **update the project status and body**
-- When work completes, **set status to `done`**
-- Use the project `body` field for rich markdown notes, progress updates, and context
-- Activities are auto-generated on every mutation — no need to log them manually
-
-### Quick Context
-
-Falcon Dash generates and symlinks these files into your workspace:
-
-- `PROJECTS.md` — summary table of all active projects (read for quick overview)
+- `PROJECTS.md` — summary table of all active projects
 - `Projects/{id}.md` — full detail per active project
-- `PM-API.md` — complete API reference
+- `PM-API.md` — complete PM API reference
 
-Read these files instead of making API calls when you just need context.
+For the full PM API (endpoints, fields, examples), load the **falcon-dash-pm** skill.
 
-### PM API Reference
+## Password Vault
 
-Base URL: `http://localhost:3000/api/pm`
-
-All list endpoints return: `{ items: [...], total, page, limit, hasMore }`
-
-**IDs:** Projects use numeric IDs. Domains and focuses use string slug IDs. **Statuses:** `todo`,
-`in_progress`, `review`, `done`, `cancelled`, `archived` **Priorities:** `low`, `normal`, `high`,
-`urgent` **Dates:** ISO 8601 `YYYY-MM-DD`
-
-#### Domains
-
-```
-GET    /api/pm/domains                    # List (page, limit)
-POST   /api/pm/domains                    # Create: {id, name, description?}
-GET    /api/pm/domains/{id}               # Get
-PATCH  /api/pm/domains/{id}               # Update: {name?, description?}
-DELETE /api/pm/domains/{id}               # Delete
-POST   /api/pm/domains/reorder            # Reorder: {ids: [...]}
-```
-
-#### Focuses
-
-```
-GET    /api/pm/focuses                    # List (domain_id, page, limit)
-POST   /api/pm/focuses                    # Create: {id, domain_id, name, description?}
-GET    /api/pm/focuses/{id}               # Get
-PATCH  /api/pm/focuses/{id}               # Update: {name?, description?, domain_id?}
-DELETE /api/pm/focuses/{id}               # Delete
-POST   /api/pm/focuses/{id}/move          # Move: {domain_id}
-POST   /api/pm/focuses/reorder            # Reorder: {ids: [...]}
-```
-
-#### Projects
-
-```
-GET    /api/pm/projects                   # List (focus_id, status, page, limit)
-POST   /api/pm/projects                   # Create: {focus_id, title, description?, body?, status?, priority?, due_date?}
-GET    /api/pm/projects/{id}              # Get
-PATCH  /api/pm/projects/{id}              # Update: {title?, status?, priority?, due_date?, focus_id?, description?, body?}
-DELETE /api/pm/projects/{id}              # Delete
-```
-
-#### Activities
-
-```
-GET    /api/pm/activities                 # List (project_id required, page, limit)
-```
-
-Read-only — auto-generated by project mutations.
-
-#### Search
-
-```
-GET    /api/pm/search                     # Full-text search (q required, entity_type?, project_id?, limit?, offset?)
-```
-
-#### Context
-
-```
-GET    /api/pm/context                    # Dashboard overview (markdown)
-POST   /api/pm/context                    # Force context file regeneration
-GET    /api/pm/context/project/{id}       # Project detail (markdown)
-GET    /api/pm/context/domain/{id}        # Domain detail (markdown)
-```
-
-#### Stats
-
-```
-GET    /api/pm/stats                      # PM statistics
-```
-
-### Example: Create a project
-
-```bash
-curl -X POST http://localhost:3000/api/pm/projects \
-  -H "Content-Type: application/json" \
-  -d '{"focus_id": "marketing", "title": "Q1 Campaign", "status": "in_progress", "priority": "high", "body": "## Goals\n- Launch by March\n- 10k impressions"}'
-```
-
-## Password Vault (KeePassXC)
-
-Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx` with key-file auth
-(`~/.openclaw/vault.key`, no master password). The **Passwords** page at `/passwords` provides a
-two-panel UI for browsing groups and entries.
-
-### Vault REST API
-
-Base URL: `http://localhost:3000/api/vault`
-
-#### Status
-
-```
-GET  /api/vault/status          # { available: bool, error?: string }
-```
-
-#### Entries
-
-```
-GET    /api/vault/entries               # List entries in root (or ?group=Group/Sub)
-POST   /api/vault/entries               # Create: { path, username?, password?, url?, notes? }
-GET    /api/vault/entries/{path}        # Get entry (includes password in clear)
-PATCH  /api/vault/entries/{path}        # Edit: { title?, username?, password?, url?, notes? }
-DELETE /api/vault/entries/{path}        # Delete entry
-```
-
-Entry paths use the full KeePassXC path, e.g. `Work/APIs/GitHub`.
-
-#### Groups
-
-```
-GET    /api/vault/groups                # List all groups recursively → { groups: string[] }
-POST   /api/vault/groups                # Create: { path }
-DELETE /api/vault/groups/{path}         # Delete (must be empty)
-```
-
-### Entry fields
-
-Each entry has: `title`, `username`, `password`, `url`, `notes`, `path`.
-
-### Secret Resolver (exec provider)
-
-`bin/keepassxc-secret-resolver.cjs` implements the OpenClaw exec provider protocol for use as a
-gateway secrets source.
-
-**Register it in the gateway:**
-
-```json
-{
-	"secrets": {
-		"providers": [
-			{
-				"type": "exec",
-				"name": "keepassxc",
-				"command": "/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs"
-			}
-		]
-	}
-}
-```
-
-**Key format:**
-
-| Key                    | Returns                   |
-| ---------------------- | ------------------------- |
-| `Group/Entry`          | Password field            |
-| `Group/Entry:Password` | Password field (explicit) |
-| `Group/Entry:UserName` | Username field            |
-| `Group/Entry:URL`      | URL field                 |
-| `Group/Entry:Notes`    | Notes field               |
-
-**Protocol:**
-
-- stdin: `{ "keys": ["Group/Entry", "Group/Entry:UserName"] }`
-- stdout: `{ "Group/Entry": "secret123", "Group/Entry:UserName": "admin" }`
-- exit 0 always (partial results returned with empty string on lookup failure)
-
-### Example: Read an entry
-
-```bash
-curl http://localhost:3000/api/vault/entries/Work/APIs/GitHub
-```
-
-### Example: Create an entry
-
-```bash
-curl -X POST http://localhost:3000/api/vault/entries \
-  -H "Content-Type: application/json" \
-  -d '{"path": "Work/APIs/GitHub", "username": "octocat", "password": "ghp_secret", "url": "https://github.com"}'
-```
+Falcon Dash manages the KeePassXC vault at `~/.openclaw/passwords.kdbx`. See the **keepassxc** skill for vault operations. The vault can also back OpenClaw's SecretRef system via the exec provider — see https://docs.openclaw.ai/gateway/secrets.
 
 ## Other Features
 
