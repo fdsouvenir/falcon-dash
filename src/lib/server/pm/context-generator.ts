@@ -373,6 +373,26 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 		projectsMd += 'No active projects.\n';
 	}
 
+	// Active plans section
+	const activePlans = db
+		.prepare(
+			`
+			SELECT pl.id, pl.title, pl.status, pl.project_id, p.title as project_title
+			FROM plans pl
+			JOIN projects p ON pl.project_id = p.id
+			WHERE pl.status IN ('planning', 'assigned', 'in_progress', 'needs_review')
+			ORDER BY pl.project_id ASC, pl.sort_order ASC
+		`
+		)
+		.all() as { id: number; title: string; status: string; project_id: number; project_title: string }[];
+
+	if (activePlans.length > 0) {
+		projectsMd += '\n## Active Plans\n\n';
+		for (const plan of activePlans) {
+			projectsMd += `- [${plan.status}] "${plan.title}" — P-${plan.project_id}: ${plan.project_title}\n`;
+		}
+	}
+
 	projectsMd += '\n---\n\n' + dashboard.markdown;
 
 	writeFileSync(join(dir, 'PROJECTS.md'), projectsMd, 'utf-8');

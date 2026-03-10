@@ -50,6 +50,19 @@ export function generateDashboardContext(): DashboardContextResponse {
 		due_date: string;
 	}[];
 
+	// Active plans (planning, assigned, in_progress, needs_review)
+	const activePlans = db
+		.prepare(
+			`
+		SELECT pl.id, pl.title, pl.status, pl.project_id, p.title as project_title
+		FROM plans pl
+		JOIN projects p ON pl.project_id = p.id
+		WHERE pl.status IN ('planning', 'assigned', 'in_progress', 'needs_review')
+		ORDER BY pl.project_id ASC, pl.sort_order ASC
+	`
+		)
+		.all() as { id: number; title: string; status: string; project_id: number; project_title: string }[];
+
 	// Recent activity
 	const recentActivity = db
 		.prepare(
@@ -75,6 +88,13 @@ export function generateDashboardContext(): DashboardContextResponse {
 		md += `- **${p.title}** [${p.status}] — ${categoryPath}\n`;
 	}
 
+	if (activePlans.length > 0) {
+		md += `\n## Active Plans (${activePlans.length})\n`;
+		for (const plan of activePlans) {
+			md += `- [${plan.status}] "${plan.title}" — P-${plan.project_id}: ${plan.project_title}\n`;
+		}
+	}
+
 	if (dueSoon.length > 0) {
 		md += `\n## Due Soon (${dueSoon.length})\n`;
 		for (const d of dueSoon) {
@@ -94,6 +114,7 @@ export function generateDashboardContext(): DashboardContextResponse {
 		generated_at: now,
 		stats: {
 			activeProjects: activeProjects.length,
+			activePlans: activePlans.length,
 			dueSoon: dueSoon.length,
 			recentActivity: recentActivity.length
 		},

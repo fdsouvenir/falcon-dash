@@ -391,9 +391,41 @@ export function logActivity(data: {
 // PLANS
 // ============================================================================
 
-export function listPlans(projectId: number): Plan[] {
+export function listPlans(filters: { project_id?: number; status?: string } | number): (Plan & { project_title?: string })[] {
 	const db = getDb();
-	return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(projectId) as Plan[];
+
+	// Backwards-compat: accept plain projectId number
+	if (typeof filters === 'number') {
+		return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(filters) as Plan[];
+	}
+
+	const { project_id, status } = filters;
+
+	if (project_id !== undefined && status === undefined) {
+		return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(project_id) as Plan[];
+	}
+
+	const conditions: string[] = [];
+	const values: unknown[] = [];
+
+	if (project_id !== undefined) {
+		conditions.push('pl.project_id = ?');
+		values.push(project_id);
+	}
+	if (status !== undefined) {
+		conditions.push('pl.status = ?');
+		values.push(status);
+	}
+
+	const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+	const query = `
+		SELECT pl.*, p.title as project_title
+		FROM plans pl
+		JOIN projects p ON pl.project_id = p.id
+		${where}
+		ORDER BY pl.sort_order ASC, pl.created_at ASC
+	`;
+	return db.prepare(query).all(...values) as (Plan & { project_title: string })[];
 }
 
 export function getPlan(id: number): Plan | undefined {

@@ -2,20 +2,21 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { listPlans, createPlan } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
-import { PMError, PM_ERRORS, requireNumber } from '$lib/server/pm/validation.js';
+import { requireNumber } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';
 import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const projectIdParam = url.searchParams.get('project_id');
-		if (!projectIdParam) {
-			throw new PMError(PM_ERRORS.PM_CONSTRAINT, 'project_id parameter is required');
-		}
-		
-		const projectId = requireNumber(projectIdParam, 'project_id');
-		const items = listPlans(projectId);
-		
+		const statusParam = url.searchParams.get('status');
+
+		const filters: { project_id?: number; status?: string } = {};
+		if (projectIdParam) filters.project_id = requireNumber(projectIdParam, 'project_id');
+		if (statusParam) filters.status = statusParam;
+
+		const items = listPlans(filters);
+
 		return json({ items, total: items.length });
 	} catch (err) {
 		return handlePMError(err);
