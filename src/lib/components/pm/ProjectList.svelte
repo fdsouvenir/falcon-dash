@@ -70,6 +70,36 @@
 		loadSubcategories();
 	});
 
+	// SSE live refresh (Plan 11)
+	let sseSource: EventSource | null = null;
+
+	$effect(() => {
+		function connectSSE() {
+			if (sseSource) sseSource.close();
+			sseSource = new EventSource('/api/pm/events');
+			sseSource.addEventListener('pm-event', (e: MessageEvent) => {
+				try {
+					const event = JSON.parse(e.data);
+					if (event.entityType === 'project' || event.entityType === 'plan') {
+						loadProjects();
+					}
+				} catch {
+					// ignore
+				}
+			});
+			sseSource.onerror = () => {
+				sseSource?.close();
+				sseSource = null;
+				setTimeout(connectSSE, 5000);
+			};
+		}
+		connectSSE();
+		return () => {
+			sseSource?.close();
+			sseSource = null;
+		};
+	});
+
 	/** Project list grouped by category */
 	interface CategoryGroup {
 		category: Category;

@@ -66,6 +66,35 @@
 	// Inline status dropdown state (Plan 8)
 	let openStatusDropdownId = $state<number | null>(null);
 
+	// SSE live refresh (Plan 11)
+	let sseSource: EventSource | null = null;
+
+	function connectSSE() {
+		if (sseSource) sseSource.close();
+		const url = `/api/pm/events`;
+		sseSource = new EventSource(url);
+		sseSource.addEventListener('pm-event', (e: MessageEvent) => {
+			try {
+				const event = JSON.parse(e.data);
+				// Re-fetch if the event belongs to our project, or is a project/plan event
+				if (
+					event.projectId === projectId ||
+					(event.entityType === 'project' && event.entityId === projectId)
+				) {
+					loadData();
+				}
+			} catch {
+				// ignore parse errors
+			}
+		});
+		sseSource.onerror = () => {
+			// On error, close and reconnect after 5s
+			sseSource?.close();
+			sseSource = null;
+			setTimeout(connectSSE, 5000);
+		};
+	}
+
 	// Get data from stores
 	let categoryList = $state<Category[]>([]);
 	let subcategoryList = $state<Subcategory[]>([]);
@@ -119,6 +148,11 @@
 
 	$effect(() => {
 		loadData();
+		connectSSE();
+		return () => {
+			sseSource?.close();
+			sseSource = null;
+		};
 	});
 
 	async function updateField(field: string, value: any) {
@@ -295,12 +329,23 @@
 					</svg>
 					Back to Projects
 				</button>
-				<button
-					onclick={() => confirmDelete('project')}
-					class="px-3 py-1 bg-status-danger/20 text-status-danger hover:bg-status-danger/30 rounded-lg {TEXT.badge} font-medium transition-colors"
-				>
-					Delete Project
-				</button>
+				<div class="flex items-center gap-2">
+					<button
+						onclick={loadData}
+						title="Refresh"
+						class="p-1.5 text-status-muted hover:text-white transition-colors rounded-lg hover:bg-surface-3"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+						</svg>
+					</button>
+					<button
+						onclick={() => confirmDelete('project')}
+						class="px-3 py-1 bg-status-danger/20 text-status-danger hover:bg-status-danger/30 rounded-lg {TEXT.badge} font-medium transition-colors"
+					>
+						Delete Project
+					</button>
+				</div>
 			</div>
 		</div>
 
