@@ -417,8 +417,8 @@ export function createPlan(data: {
 
 	const result = db
 		.prepare(
-			`INSERT INTO plans (project_id, title, description, result, status, sort_order, created_by, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO plans (project_id, title, description, result, status, sort_order, version, created_by, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			data.project_id,
@@ -427,6 +427,7 @@ export function createPlan(data: {
 			data.result ?? null,
 			data.status ?? 'planning',
 			sortOrder,
+			1, // Initial version
 			'user',
 			now,
 			now
@@ -467,6 +468,7 @@ export function updatePlan(
 	let descriptionChanged = false;
 	let resultChanged = false;
 	let statusChanged = false;
+	let needsVersionIncrement = false;
 
 	if (data.title !== undefined) {
 		updates.push('title = ?');
@@ -476,16 +478,24 @@ export function updatePlan(
 		updates.push('description = ?');
 		values.push(data.description);
 		descriptionChanged = true;
+		needsVersionIncrement = true;
 	}
 	if (data.result !== undefined && data.result !== currentPlan.result) {
 		updates.push('result = ?');
 		values.push(data.result);
 		resultChanged = true;
+		needsVersionIncrement = true;
 	}
 	if (data.status !== undefined && data.status !== currentPlan.status) {
 		updates.push('status = ?');
 		values.push(data.status);
 		statusChanged = true;
+		needsVersionIncrement = true;
+	}
+
+	// Increment version if content changed
+	if (needsVersionIncrement) {
+		updates.push('version = version + 1');
 	}
 
 	if (updates.length === 1) return currentPlan;

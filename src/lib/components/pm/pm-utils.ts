@@ -58,7 +58,7 @@ export function getPriorityBadge(priority: string | null): { classes: string; la
 
 /** Format a status string for display (replace underscores with spaces). */
 export function formatStatusLabel(status: string): string {
-	return status.replace('_', ' ');
+	return status.replaceAll('_', ' ');
 }
 
 /** Translucent pill classes keyed by status, for inline row use. */
@@ -90,7 +90,7 @@ export function getPriorityTag(priority: string | null): { classes: string; labe
 
 /** Plan status formatting and styling utilities. */
 export function formatPlanStatusLabel(status: string): string {
-	return status.replace('_', ' ');
+	return status.replaceAll('_', ' ');
 }
 
 export function getPlanStatusPill(status: string): { classes: string; label: string } {

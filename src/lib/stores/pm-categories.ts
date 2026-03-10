@@ -1,4 +1,4 @@
-import { writable, readonly, type Readable, type Writable } from 'svelte/store';
+import { writable, readonly, get, type Readable, type Writable } from 'svelte/store';
 import { pmGet, pmPost, pmPatch, pmDelete } from './pm-api.js';
 
 // Re-export types for UI components
@@ -200,9 +200,11 @@ export async function reorderSubcategories(ids: string[]): Promise<void> {
 	try {
 		await pmPost('/api/pm/subcategories/reorder', { ids });
 		// Optimistically update the order
-		_subcategories.update((subcategories) => {
-			const ordered = ids.map((id) => subcategories.find((s) => s.id === id)).filter(Boolean) as Subcategory[];
-			return ordered;
+		_subcategories.update((all) => {
+			const reorderedSet = new Set(ids);
+			const others = all.filter(s => !reorderedSet.has(s.id));
+			const reordered = ids.map(id => all.find(s => s.id === id)).filter(Boolean) as Subcategory[];
+			return [...reordered, ...others];
 		});
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -232,25 +234,18 @@ export async function moveSubcategory(id: string, newCategoryId: string): Promis
 
 // Helper functions
 export function getCategoriesBySubcategory(subcategoryId: string): Category | undefined {
-	let category: Category | undefined;
-	let subcategory: Subcategory | undefined;
+	const cats = get(categories);
+	const subs = get(subcategories);
 	
-	categories.subscribe((cats) => {
-		subcategories.subscribe((subs) => {
-			subcategory = subs.find((s) => s.id === subcategoryId);
-			if (subcategory) {
-				category = cats.find((c) => c.id === subcategory!.category_id);
-			}
-		});
-	});
+	const subcategory = subs.find((s) => s.id === subcategoryId);
+	if (subcategory) {
+		return cats.find((c) => c.id === subcategory.category_id);
+	}
 	
-	return category;
+	return undefined;
 }
 
 export function getSubcategoriesByCategory(categoryId: string): Subcategory[] {
-	let result: Subcategory[] = [];
-	subcategories.subscribe((subs) => {
-		result = subs.filter((s) => s.category_id === categoryId);
-	});
-	return result;
+	const subs = get(subcategories);
+	return subs.filter((s) => s.category_id === categoryId);
 }

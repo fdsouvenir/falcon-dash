@@ -95,8 +95,8 @@ export async function listActivities(projectId: number, limit?: number): Promise
 export async function getDashboardContext(): Promise<DashboardContext> {
 	return pmGet<DashboardContext>('/api/pm/context');
 }
-export async function getDomainContext(domainId: string): Promise<DomainContext> {
-	return pmGet<DomainContext>(`/api/pm/context/domain/${domainId}`);
+export async function getCategoryContext(categoryId: string): Promise<DomainContext> {
+	return pmGet<DomainContext>(`/api/pm/context/category/${categoryId}`);
 }
 export async function getProjectContext(projectId: number): Promise<ProjectContext> {
 	return pmGet<ProjectContext>(`/api/pm/context/project/${projectId}`);

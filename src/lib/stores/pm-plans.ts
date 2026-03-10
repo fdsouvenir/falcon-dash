@@ -9,6 +9,7 @@ export interface Plan {
 	result: string | null;
 	status: string;
 	sort_order: number;
+	version: number;
 	created_by: string;
 	created_at: number;
 	updated_at: number;
@@ -42,8 +43,16 @@ export const currentPlan: Readable<Plan | null> = readonly(_currentPlan);
 export const planVersions: Readable<PlanVersion[]> = readonly(_planVersions);
 export const plansLoading: Readable<boolean> = readonly(_plansLoading);
 
+// Clear plans store
+export function clearPlans(): void {
+	_plans.set([]);
+	_currentPlan.set(null);
+}
+
 // Plan methods
 export async function loadPlans(projectId: number): Promise<void> {
+	// Clear existing plans first to avoid showing stale data
+	clearPlans();
 	_plansLoading.set(true);
 	try {
 		const res = await pmGet<PaginatedResponse<Plan>>('/api/pm/plans', { project_id: projectId.toString() });
@@ -160,9 +169,6 @@ export const PLAN_STATUSES = [
 export type PlanStatus = typeof PLAN_STATUSES[number];
 
 export function getPlansByProject(projectId: number): Plan[] {
-	let result: Plan[] = [];
-	plans.subscribe((plans) => {
-		result = plans.filter((p) => p.project_id === projectId);
-	});
-	return result;
+	const currentPlans = get(plans);
+	return currentPlans.filter((p) => p.project_id === projectId);
 }

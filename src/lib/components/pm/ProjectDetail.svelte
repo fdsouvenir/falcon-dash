@@ -221,7 +221,7 @@
 		}
 	}
 
-	async function startEditPlan(plan: Plan) {
+	function startEditPlan(plan: Plan) {
 		editingPlan = plan.id;
 		editPlanData = {
 			title: plan.title,
@@ -456,6 +456,7 @@
 						onchange={() => handleFieldUpdate('category_id', editCategoryId)}
 						class="mt-1 w-full rounded border border-surface-border bg-surface-2 px-2 py-1 text-[length:var(--text-badge)] text-white focus:border-status-info focus:outline-none"
 					>
+						<option value="" disabled>Select category</option>
 						{#each categoryList as cat (cat.id)}
 							<option value={cat.id}>{cat.name}</option>
 						{/each}

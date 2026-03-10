@@ -76,10 +76,12 @@
 
 	// Helper functions
 	function generateId(name: string): string {
-		return name
+		const id = name
 			.toLowerCase()
 			.replace(/[^a-z0-9]+/g, '-')
 			.replace(/^-|-$/g, '');
+		if (!id) throw new Error('Name must contain at least one letter or number');
+		return id;
 	}
 
 	function getProjectCount(categoryId: string, subcategoryId?: string): number {

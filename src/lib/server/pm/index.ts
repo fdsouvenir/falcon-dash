@@ -1,26 +1,34 @@
 // Barrel re-exports for PM server module
 export { getDb, closeDb } from './database.js';
-export type { Domain, Focus, Project, Activity } from './database.js';
+export type { Category, Subcategory, Project, Plan, PlanVersion, Activity } from './database.js';
 
 export {
-	listDomains,
-	getDomain,
-	createDomain,
-	updateDomain,
-	deleteDomain,
-	reorderDomains,
-	listFocuses,
-	getFocus,
-	createFocus,
-	updateFocus,
-	deleteFocus,
-	reorderFocuses,
-	moveFocus,
+	listCategories,
+	getCategory,
+	createCategory,
+	updateCategory,
+	deleteCategory,
+	reorderCategories,
+	listSubcategories,
+	getSubcategory,
+	createSubcategory,
+	updateSubcategory,
+	deleteSubcategory,
+	reorderSubcategories,
+	moveSubcategory,
 	listProjects,
 	getProject,
 	createProject,
 	updateProject,
 	deleteProject,
+	listPlans,
+	getPlan,
+	createPlan,
+	updatePlan,
+	deletePlan,
+	reorderPlans,
+	listPlanVersions,
+	revertPlanVersion,
 	listActivities,
 	logActivity
 } from './crud.js';
@@ -33,7 +41,7 @@ export type { PMStats } from './stats.js';
 
 export {
 	generateDashboardContext,
-	generateDomainContext,
+	generateCategoryContext,
 	generateProjectContext
 } from './context.js';
 export type { ContextResponse } from './context.js';

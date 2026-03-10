@@ -47,6 +47,7 @@ export interface Plan {
 	result: string | null;
 	status: string;
 	sort_order: number;
+	version: number;
 	created_by: string;
 	created_at: number;
 	updated_at: number;
@@ -141,6 +142,7 @@ CREATE TABLE IF NOT EXISTS plans (
   result TEXT,
   status TEXT CHECK(status IN ('planning','assigned','in_progress','needs_review','complete','cancelled')) DEFAULT 'planning',
   sort_order INTEGER DEFAULT 0,
+  version INTEGER DEFAULT 1,
   created_by TEXT DEFAULT 'user',
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch())
@@ -280,15 +282,15 @@ export function getDb(): Database.Database {
 			// Enable foreign key constraints
 			instance.pragma('foreign_keys = ON');
 
+			// Initialize schema first (to ensure pm_meta table exists)
+			instance.exec(SCHEMA);
+
 			// Check if migration is needed
 			const needsMigration = checkMigrationNeeded(instance);
 			
 			if (needsMigration) {
 				runMigration(instance);
 			}
-
-			// Initialize schema
-			instance.exec(SCHEMA);
 			
 			// Seed default categories if needed
 			seedDefaultCategories(instance);
@@ -415,11 +417,26 @@ function runMigration(db: Database.Database): void {
 		}
 		
 		// Migrate projects (focus_id becomes subcategory_id, get category_id from focus)
+		// Use LEFT JOIN to catch orphaned projects and assign them to a default category
 		const oldProjects = db.prepare(`
 			SELECT p.*, f.domain_id 
 			FROM projects p 
-			JOIN focuses f ON p.focus_id = f.id
+			LEFT JOIN focuses f ON p.focus_id = f.id
 		`).all();
+		
+		// Get or create a default category for orphaned projects
+		let defaultCategoryId = 'uncategorized';
+		const hasUncategorized = db.prepare('SELECT id FROM categories WHERE id = ?').get(defaultCategoryId);
+		if (!hasUncategorized) {
+			insertCategory.run(
+				defaultCategoryId,
+				'Uncategorized',
+				'Projects without a valid category',
+				'#94a3b8',
+				999,
+				Math.floor(Date.now() / 1000)
+			);
+		}
 		
 		const insertProject = db.prepare(`
 			INSERT INTO projects_new (
@@ -430,10 +447,14 @@ function runMigration(db: Database.Database): void {
 		`);
 		
 		for (const project of oldProjects) {
+			// Use default category for orphaned projects
+			const categoryId = project.domain_id || defaultCategoryId;
+			const subcategoryId = project.focus_id || null;  // null for orphaned projects
+			
 			insertProject.run(
 				project.id,
-				project.domain_id,  // category_id comes from focus.domain_id
-				project.focus_id,   // subcategory_id is the old focus_id
+				categoryId,
+				subcategoryId,
 				project.title,
 				project.description,
 				project.body,
@@ -447,10 +468,16 @@ function runMigration(db: Database.Database): void {
 			);
 		}
 		
+		// Disable FK constraints for table drops
+		db.pragma('foreign_keys = OFF');
+		
 		// Drop old tables
 		db.exec('DROP TABLE projects');
 		db.exec('DROP TABLE focuses');
 		db.exec('DROP TABLE domains');
+		
+		// Re-enable FK constraints
+		db.pragma('foreign_keys = ON');
 		
 		// Rename new projects table
 		db.exec('ALTER TABLE projects_new RENAME TO projects');
