@@ -17,38 +17,38 @@
 		getSubcategoriesByCategory
 	} from '$lib/stores/pm-categories.js';
 	import { projects, loadProjects, type Project } from '$lib/stores/pm-projects.js';
+	import { SURFACE, TEXT, SPACE, STATUS_COLORS } from '$lib/components/ui/design-tokens.js';
 
 	let categoryList = $state<Category[]>([]);
 	let subcategoryList = $state<Subcategory[]>([]);
 	let projectList = $state<Project[]>([]);
 
 	// Category state
-	let showNewCategory = $state(false);
-	let newCategoryName = $state('');
-	let newCategoryDescription = $state('');
-	let newCategoryColor = $state('#60a5fa');
-	let editingCategory = $state<string | null>(null);
-	let editCategoryData = $state<Partial<Category>>({});
+	let showCategoryModal = $state(false);
+	let editingCategoryId = $state<string | null>(null);
+	let categoryName = $state('');
+	let categoryColor = $state('#6366f1');
 
 	// Subcategory state
 	let selectedCategoryId = $state('');
-	let showNewSubcategory = $state(false);
-	let newSubcategoryName = $state('');
-	let newSubcategoryDescription = $state('');
-	let editingSubcategory = $state<string | null>(null);
-	let editSubcategoryData = $state<Partial<Subcategory>>({});
+	let showSubcategoryModal = $state(false);
+	let editingSubcategoryId = $state<string | null>(null);
+	let subcategoryName = $state('');
+
+	// Delete confirmation
+	let showDeleteConfirm = $state(false);
+	let deleteType = $state<'category' | 'subcategory'>('category');
+	let deleteTargetId = $state<string | null>(null);
 
 	const colorPresets = [
-		'#60a5fa', // blue
-		'#a78bfa', // purple
-		'#34d399', // green
-		'#fb923c', // orange
-		'#f87171', // red
-		'#fbbf24', // yellow
-		'#06b6d4', // cyan
+		'#6366f1', // indigo
 		'#ec4899', // pink
+		'#10b981', // emerald
+		'#f59e0b', // amber
+		'#3b82f6', // blue
 		'#8b5cf6', // violet
-		'#10b981'  // emerald
+		'#ef4444', // red
+		'#14b8a6'  // teal
 	];
 
 	$effect(() => {
@@ -74,7 +74,6 @@
 		loadProjects();
 	});
 
-	// Helper functions
 	function generateId(name: string): string {
 		const id = name
 			.toLowerCase()
@@ -94,612 +93,415 @@
 	}
 
 	// Category functions
-	async function handleCreateCategory() {
-		if (!newCategoryName.trim()) return;
+	function openCategoryModal(categoryId?: string) {
+		const category = categoryId ? categoryList.find((c) => c.id === categoryId) : null;
+		editingCategoryId = categoryId || null;
+		categoryName = category?.name || '';
+		categoryColor = category?.color || '#6366f1';
+		showCategoryModal = true;
+	}
+
+	function resetCategoryModal() {
+		showCategoryModal = false;
+		editingCategoryId = null;
+		categoryName = '';
+		categoryColor = '#6366f1';
+	}
+
+	async function saveCategory() {
+		if (!categoryName.trim()) return;
+
 		try {
-			await createCategory({
-				id: generateId(newCategoryName),
-				name: newCategoryName.trim(),
-				description: newCategoryDescription.trim() || undefined,
-				color: newCategoryColor
-			});
-			resetCategoryForm();
+			if (editingCategoryId) {
+				await updateCategory(editingCategoryId, {
+					name: categoryName.trim(),
+					color: categoryColor
+				});
+			} else {
+				await createCategory({
+					id: generateId(categoryName),
+					name: categoryName.trim(),
+					color: categoryColor
+				});
+			}
+			resetCategoryModal();
 		} catch (err) {
-			console.error('Failed to create category:', err);
+			console.error('Failed to save category:', err);
 		}
 	}
 
-	function resetCategoryForm() {
-		newCategoryName = '';
-		newCategoryDescription = '';
-		newCategoryColor = '#60a5fa';
-		showNewCategory = false;
+	async function moveCategoryUp(categoryId: string) {
+		const idx = categoryList.findIndex((c) => c.id === categoryId);
+		if (idx <= 0) return;
+
+		const ids = categoryList.map((c) => c.id);
+		[ids[idx], ids[idx - 1]] = [ids[idx - 1], ids[idx]];
+		await reorderCategories(ids);
 	}
 
-	function startEditCategory(category: Category) {
-		editingCategory = category.id;
-		editCategoryData = {
-			name: category.name,
-			description: category.description || '',
-			color: category.color || '#60a5fa'
-		};
-	}
+	async function moveCategoryDown(categoryId: string) {
+		const idx = categoryList.findIndex((c) => c.id === categoryId);
+		if (idx >= categoryList.length - 1) return;
 
-	async function handleUpdateCategory() {
-		if (editingCategory === null || !editCategoryData.name?.trim()) return;
-		try {
-			await updateCategory(editingCategory, {
-				name: editCategoryData.name.trim(),
-				description: editCategoryData.description?.trim() || undefined,
-				color: editCategoryData.color
-			});
-			editingCategory = null;
-			editCategoryData = {};
-		} catch (err) {
-			console.error('Failed to update category:', err);
-		}
-	}
-
-	async function handleDeleteCategory(categoryId: string) {
-		const projectCount = getProjectCount(categoryId);
-		if (projectCount > 0) {
-			alert(`Cannot delete category: ${projectCount} projects are using it.`);
-			return;
-		}
-		if (!confirm('Delete this category?')) return;
-		try {
-			await deleteCategory(categoryId);
-		} catch (err) {
-			console.error('Failed to delete category:', err);
-		}
-	}
-
-	async function moveCategoryUp(index: number) {
-		if (index === 0) return;
-		const newOrder = [...categoryList];
-		[newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-		try {
-			await reorderCategories(newOrder.map((c) => c.id));
-		} catch (err) {
-			console.error('Failed to reorder categories:', err);
-		}
-	}
-
-	async function moveCategoryDown(index: number) {
-		if (index === categoryList.length - 1) return;
-		const newOrder = [...categoryList];
-		[newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-		try {
-			await reorderCategories(newOrder.map((c) => c.id));
-		} catch (err) {
-			console.error('Failed to reorder categories:', err);
-		}
+		const ids = categoryList.map((c) => c.id);
+		[ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
+		await reorderCategories(ids);
 	}
 
 	// Subcategory functions
-	const selectedCategorySubcategories = $derived.by(() => {
+	const filteredSubcategories = $derived.by(() => {
 		if (!selectedCategoryId) return [];
-		return getSubcategoriesByCategory(selectedCategoryId);
+		return subcategoryList.filter((s) => s.category_id === selectedCategoryId);
 	});
 
-	async function handleCreateSubcategory() {
-		if (!newSubcategoryName.trim() || !selectedCategoryId) return;
+	function openSubcategoryModal(subcategoryId?: string) {
+		const subcategory = subcategoryId ? subcategoryList.find((s) => s.id === subcategoryId) : null;
+		editingSubcategoryId = subcategoryId || null;
+		subcategoryName = subcategory?.name || '';
+		showSubcategoryModal = true;
+	}
+
+	function resetSubcategoryModal() {
+		showSubcategoryModal = false;
+		editingSubcategoryId = null;
+		subcategoryName = '';
+	}
+
+	async function saveSubcategory() {
+		if (!subcategoryName.trim() || !selectedCategoryId) return;
+
 		try {
-			await createSubcategory({
-				id: generateId(newSubcategoryName),
-				category_id: selectedCategoryId,
-				name: newSubcategoryName.trim(),
-				description: newSubcategoryDescription.trim() || undefined
-			});
-			resetSubcategoryForm();
+			if (editingSubcategoryId) {
+				await updateSubcategory(editingSubcategoryId, {
+					name: subcategoryName.trim()
+				});
+			} else {
+				await createSubcategory({
+					id: generateId(subcategoryName),
+					category_id: selectedCategoryId,
+					name: subcategoryName.trim()
+				});
+			}
+			resetSubcategoryModal();
 		} catch (err) {
-			console.error('Failed to create subcategory:', err);
+			console.error('Failed to save subcategory:', err);
 		}
 	}
 
-	function resetSubcategoryForm() {
-		newSubcategoryName = '';
-		newSubcategoryDescription = '';
-		showNewSubcategory = false;
+	async function moveSubcategoryUp(subcategoryId: string) {
+		const filtered = filteredSubcategories;
+		const idx = filtered.findIndex((s) => s.id === subcategoryId);
+		if (idx <= 0) return;
+
+		const ids = filtered.map((s) => s.id);
+		[ids[idx], ids[idx - 1]] = [ids[idx - 1], ids[idx]];
+		await reorderSubcategories(ids);
 	}
 
-	function startEditSubcategory(subcategory: Subcategory) {
-		editingSubcategory = subcategory.id;
-		editSubcategoryData = {
-			name: subcategory.name,
-			description: subcategory.description || ''
-		};
+	async function moveSubcategoryDown(subcategoryId: string) {
+		const filtered = filteredSubcategories;
+		const idx = filtered.findIndex((s) => s.id === subcategoryId);
+		if (idx >= filtered.length - 1) return;
+
+		const ids = filtered.map((s) => s.id);
+		[ids[idx], ids[idx + 1]] = [ids[idx + 1], ids[idx]];
+		await reorderSubcategories(ids);
 	}
 
-	async function handleUpdateSubcategory() {
-		if (editingSubcategory === null || !editSubcategoryData.name?.trim()) return;
+	function confirmDelete(type: 'category' | 'subcategory', targetId: string) {
+		deleteType = type;
+		deleteTargetId = targetId;
+		showDeleteConfirm = true;
+	}
+
+	async function executeDelete() {
+		if (!deleteTargetId) return;
+
 		try {
-			await updateSubcategory(editingSubcategory, {
-				name: editSubcategoryData.name.trim(),
-				description: editSubcategoryData.description?.trim() || undefined
-			});
-			editingSubcategory = null;
-			editSubcategoryData = {};
+			if (deleteType === 'category') {
+				await deleteCategory(deleteTargetId);
+			} else {
+				await deleteSubcategory(deleteTargetId);
+			}
+			showDeleteConfirm = false;
 		} catch (err) {
-			console.error('Failed to update subcategory:', err);
-		}
-	}
-
-	async function handleDeleteSubcategory(subcategoryId: string, categoryId: string) {
-		const projectCount = getProjectCount(categoryId, subcategoryId);
-		if (projectCount > 0) {
-			alert(`Cannot delete subcategory: ${projectCount} projects are using it.`);
-			return;
-		}
-		if (!confirm('Delete this subcategory?')) return;
-		try {
-			await deleteSubcategory(subcategoryId);
-		} catch (err) {
-			console.error('Failed to delete subcategory:', err);
-		}
-	}
-
-	async function moveSubcategoryUp(index: number) {
-		if (index === 0) return;
-		const newOrder = [...selectedCategorySubcategories];
-		[newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-		try {
-			await reorderSubcategories(newOrder.map((s) => s.id));
-		} catch (err) {
-			console.error('Failed to reorder subcategories:', err);
-		}
-	}
-
-	async function moveSubcategoryDown(index: number) {
-		if (index === selectedCategorySubcategories.length - 1) return;
-		const newOrder = [...selectedCategorySubcategories];
-		[newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-		try {
-			await reorderSubcategories(newOrder.map((s) => s.id));
-		} catch (err) {
-			console.error('Failed to reorder subcategories:', err);
+			console.error('Failed to delete:', err);
 		}
 	}
 </script>
 
-<div class="space-y-8">
-	<!-- Categories Section -->
-	<div>
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-[length:var(--text-card-title)] font-semibold text-white">Categories</h2>
-			<button
-				onclick={() => (showNewCategory = !showNewCategory)}
-				class="rounded-lg bg-status-active px-3 py-1.5 text-[length:var(--text-badge)] font-medium text-white hover:bg-status-active/80"
-			>
-				+ Add Category
-			</button>
-		</div>
-
-		<!-- Add new category form -->
-		{#if showNewCategory}
-			<div class="mb-4 rounded-lg border border-surface-border bg-surface-2 p-4">
-				<h3 class="mb-3 text-[length:var(--text-body)] font-medium text-white">New Category</h3>
-				<div class="space-y-3">
-					<div>
-						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-							Name *
-						</label>
-						<input
-							type="text"
-							bind:value={newCategoryName}
-							placeholder="Category name"
-							class="mt-1 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-						/>
-					</div>
-
-					<div>
-						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-							Description
-						</label>
-						<input
-							type="text"
-							bind:value={newCategoryDescription}
-							placeholder="Optional description"
-							class="mt-1 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-						/>
-					</div>
-
-					<div>
-						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-							Color
-						</label>
-						<div class="mt-2 flex gap-2">
-							{#each colorPresets as color (color)}
-								<button
-									onclick={() => (newCategoryColor = color)}
-									class="h-8 w-8 rounded border-2 {newCategoryColor === color
-										? 'border-white'
-										: 'border-surface-border'}"
-									style="background-color: {color}"
-									title={color}
-								></button>
-							{/each}
-							<input
-								type="color"
-								bind:value={newCategoryColor}
-								class="h-8 w-16 rounded border border-surface-border bg-surface-1"
-							/>
-						</div>
-					</div>
-
-					<div class="flex gap-2">
-						<button
-							onclick={handleCreateCategory}
-							disabled={!newCategoryName.trim()}
-							class="rounded bg-status-active px-3 py-2 text-[length:var(--text-badge)] font-medium text-white hover:bg-status-active/80 disabled:opacity-50"
-						>
-							Create
-						</button>
-						<button
-							onclick={resetCategoryForm}
-							class="rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-badge)] text-white hover:bg-surface-3"
-						>
-							Cancel
-						</button>
-					</div>
-				</div>
+<div class="p-6">
+	<h2 class="{TEXT.pageTitle} mb-6">Settings</h2>
+	<div class="grid md:grid-cols-2 gap-6">
+		<!-- Categories -->
+		<div class="bg-surface-2 rounded-xl p-6">
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="{TEXT.cardTitle} font-semibold">Categories</h3>
+				<button
+					onclick={() => openCategoryModal()}
+					class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+				</button>
 			</div>
-		{/if}
-
-		<!-- Categories list -->
-		<div class="space-y-2">
-			{#each categoryList as category, index (category.id)}
-				<div class="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-2 p-3">
-					<!-- Color swatch -->
-					<div
-						class="h-4 w-4 rounded"
-						style="background-color: {category.color || '#6b7280'}"
-					></div>
-
-					<!-- Category info -->
-					<div class="flex-1">
-						{#if editingCategory === category.id}
-							<div class="space-y-2">
-								<input
-									type="text"
-									bind:value={editCategoryData.name}
-									class="w-full rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-body)] font-medium text-white focus:border-status-info focus:outline-none"
-								/>
-								<input
-									type="text"
-									bind:value={editCategoryData.description}
-									placeholder="Optional description"
-									class="w-full rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-label)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-								/>
-								<div class="flex gap-1">
-									{#each colorPresets as color (color)}
-										<button
-											onclick={() => (editCategoryData.color = color)}
-											class="h-6 w-6 rounded border {editCategoryData.color === color
-												? 'border-white'
-												: 'border-surface-border'}"
-											style="background-color: {color}"
-										></button>
-									{/each}
-									<input
-										type="color"
-										bind:value={editCategoryData.color}
-										class="h-6 w-12 rounded border border-surface-border bg-surface-1"
-									/>
-								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={handleUpdateCategory}
-										class="rounded bg-status-active px-2 py-1 text-[length:var(--text-badge)] text-white hover:bg-status-active/80"
-									>
-										Save
-									</button>
-									<button
-										onclick={() => {
-											editingCategory = null;
-											editCategoryData = {};
-										}}
-										class="rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-badge)] text-white hover:bg-surface-3"
-									>
-										Cancel
-									</button>
-								</div>
-							</div>
-						{:else}
-							<div>
-								<div class="text-[length:var(--text-body)] font-medium text-white">
-									{category.name}
-									<span class="ml-2 text-[length:var(--text-label)] text-status-muted">
-										({getProjectCount(category.id)} projects)
-									</span>
-								</div>
-								{#if category.description}
-									<div class="text-[length:var(--text-label)] text-status-muted">
-										{category.description}
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
-
-					<!-- Actions -->
-					{#if editingCategory !== category.id}
-						<div class="flex shrink-0 gap-1">
-							<!-- Move up -->
-							<button
-								onclick={() => moveCategoryUp(index)}
-								disabled={index === 0}
-								class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white disabled:opacity-30"
-								title="Move up"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
-								</svg>
-							</button>
-
-							<!-- Move down -->
-							<button
-								onclick={() => moveCategoryDown(index)}
-								disabled={index === categoryList.length - 1}
-								class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white disabled:opacity-30"
-								title="Move down"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-								</svg>
-							</button>
-
-							<!-- Edit -->
-							<button
-								onclick={() => startEditCategory(category)}
-								class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white"
-								title="Edit"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-									></path>
-								</svg>
-							</button>
-
-							<!-- Delete -->
-							<button
-								onclick={() => handleDeleteCategory(category.id)}
-								class="rounded p-1 text-status-danger hover:bg-status-danger-bg"
-								title="Delete"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-									></path>
-								</svg>
-							</button>
-						</div>
-					{/if}
-				</div>
-			{/each}
-
-			{#if categoryList.length === 0}
-				<div class="py-8 text-center text-[length:var(--text-body)] text-status-muted">
-					No categories yet. Create one to organize your projects.
-				</div>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Subcategories Section -->
-	<div>
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-[length:var(--text-card-title)] font-semibold text-white">Subcategories</h2>
-			<button
-				onclick={() => (showNewSubcategory = !showNewSubcategory)}
-				disabled={!selectedCategoryId}
-				class="rounded-lg bg-status-active px-3 py-1.5 text-[length:var(--text-badge)] font-medium text-white hover:bg-status-active/80 disabled:opacity-50"
-			>
-				+ Add Subcategory
-			</button>
-		</div>
-
-		<!-- Category filter -->
-		<div class="mb-4">
-			<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-				Filter by Category
-			</label>
-			<select
-				bind:value={selectedCategoryId}
-				class="mt-1 w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-[length:var(--text-body)] text-white focus:border-status-info focus:outline-none"
-			>
-				<option value="">Select a category</option>
-				{#each categoryList as category (category.id)}
-					<option value={category.id}>{category.name}</option>
-				{/each}
-			</select>
-		</div>
-
-		<!-- Add new subcategory form -->
-		{#if showNewSubcategory && selectedCategoryId}
-			<div class="mb-4 rounded-lg border border-surface-border bg-surface-2 p-4">
-				<h3 class="mb-3 text-[length:var(--text-body)] font-medium text-white">
-					New Subcategory
-				</h3>
-				<div class="space-y-3">
-					<div>
-						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-							Name *
-						</label>
-						<input
-							type="text"
-							bind:value={newSubcategoryName}
-							placeholder="Subcategory name"
-							class="mt-1 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-						/>
-					</div>
-
-					<div>
-						<label class="block text-[length:var(--text-label)] font-medium text-status-muted">
-							Description
-						</label>
-						<input
-							type="text"
-							bind:value={newSubcategoryDescription}
-							placeholder="Optional description"
-							class="mt-1 w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-						/>
-					</div>
-
-					<div class="flex gap-2">
-						<button
-							onclick={handleCreateSubcategory}
-							disabled={!newSubcategoryName.trim()}
-							class="rounded bg-status-active px-3 py-2 text-[length:var(--text-badge)] font-medium text-white hover:bg-status-active/80 disabled:opacity-50"
-						>
-							Create
-						</button>
-						<button
-							onclick={resetSubcategoryForm}
-							class="rounded border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-badge)] text-white hover:bg-surface-3"
-						>
-							Cancel
-						</button>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Subcategories list -->
-		{#if selectedCategoryId}
 			<div class="space-y-2">
-				{#each selectedCategorySubcategories as subcategory, index (subcategory.id)}
-					<div class="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-2 p-3">
-						<!-- Subcategory info -->
-						<div class="flex-1">
-							{#if editingSubcategory === subcategory.id}
-								<div class="space-y-2">
-									<input
-										type="text"
-										bind:value={editSubcategoryData.name}
-										class="w-full rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-body)] font-medium text-white focus:border-status-info focus:outline-none"
-									/>
-									<input
-										type="text"
-										bind:value={editSubcategoryData.description}
-										placeholder="Optional description"
-										class="w-full rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-label)] text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-									/>
-									<div class="flex gap-2">
-										<button
-											onclick={handleUpdateSubcategory}
-											class="rounded bg-status-active px-2 py-1 text-[length:var(--text-badge)] text-white hover:bg-status-active/80"
-										>
-											Save
-										</button>
-										<button
-											onclick={() => {
-												editingSubcategory = null;
-												editSubcategoryData = {};
-											}}
-											class="rounded border border-surface-border bg-surface-1 px-2 py-1 text-[length:var(--text-badge)] text-white hover:bg-surface-3"
-										>
-											Cancel
-										</button>
-									</div>
-								</div>
-							{:else}
-								<div>
-									<div class="text-[length:var(--text-body)] font-medium text-white">
-										{subcategory.name}
-										<span class="ml-2 text-[length:var(--text-label)] text-status-muted">
-											({getProjectCount(selectedCategoryId, subcategory.id)} projects)
-										</span>
-									</div>
-									{#if subcategory.description}
-										<div class="text-[length:var(--text-label)] text-status-muted">
-											{subcategory.description}
-										</div>
-									{/if}
-								</div>
-							{/if}
-						</div>
-
-						<!-- Actions -->
-						{#if editingSubcategory !== subcategory.id}
-							<div class="flex shrink-0 gap-1">
-								<!-- Move up -->
+				{#if categoryList.length === 0}
+					<p class="text-status-muted {TEXT.body}">No categories yet.</p>
+				{:else}
+					{#each categoryList as category, idx (category.id)}
+						{@const projectCount = getProjectCount(category.id)}
+						<div class="flex items-center gap-2 p-2 bg-surface-3 rounded-lg group">
+							<div class="w-3 h-3 rounded-full flex-shrink-0" style="background: {category.color}"></div>
+							<span class="flex-1 truncate">{category.name}</span>
+							<span class="{TEXT.badge} text-status-muted">{projectCount}</span>
+							<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+								{#if idx > 0}
+									<button
+										onclick={() => moveCategoryUp(category.id)}
+										class="p-1 hover:bg-surface-2 rounded"
+									>
+										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+										</svg>
+									</button>
+								{/if}
+								{#if idx < categoryList.length - 1}
+									<button
+										onclick={() => moveCategoryDown(category.id)}
+										class="p-1 hover:bg-surface-2 rounded"
+									>
+										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										</svg>
+									</button>
+								{/if}
 								<button
-									onclick={() => moveSubcategoryUp(index)}
-									disabled={index === 0}
-									class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white disabled:opacity-30"
-									title="Move up"
+									onclick={() => openCategoryModal(category.id)}
+									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
 									</svg>
 								</button>
-
-								<!-- Move down -->
 								<button
-									onclick={() => moveSubcategoryDown(index)}
-									disabled={index === selectedCategorySubcategories.length - 1}
-									class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white disabled:opacity-30"
-									title="Move down"
+									onclick={() => confirmDelete('category', category.id)}
+									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-									</svg>
-								</button>
-
-								<!-- Edit -->
-								<button
-									onclick={() => startEditSubcategory(subcategory)}
-									class="rounded p-1 text-status-muted hover:bg-surface-3 hover:text-white"
-									title="Edit"
-								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-										></path>
-									</svg>
-								</button>
-
-								<!-- Delete -->
-								<button
-									onclick={() => handleDeleteSubcategory(subcategory.id, selectedCategoryId)}
-									class="rounded p-1 text-status-danger hover:bg-status-danger-bg"
-									title="Delete"
-								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-										></path>
+									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
 									</svg>
 								</button>
 							</div>
-						{/if}
-					</div>
-				{/each}
-
-				{#if selectedCategorySubcategories.length === 0}
-					<div class="py-8 text-center text-[length:var(--text-body)] text-status-muted">
-						No subcategories in this category yet.
-					</div>
+						</div>
+					{/each}
 				{/if}
 			</div>
-		{:else}
-			<div class="py-8 text-center text-[length:var(--text-body)] text-status-muted">
-				Select a category to view its subcategories.
+		</div>
+
+		<!-- Subcategories -->
+		<div class="bg-surface-2 rounded-xl p-6">
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="{TEXT.cardTitle} font-semibold">Subcategories</h3>
+				<button
+					onclick={() => openSubcategoryModal()}
+					disabled={!selectedCategoryId}
+					class="p-2 hover:bg-surface-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+				</button>
 			</div>
-		{/if}
+			<div class="mb-4">
+				<select
+					bind:value={selectedCategoryId}
+					class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+				>
+					<option value="">Select a category first</option>
+					{#each categoryList as category (category.id)}
+						<option value={category.id}>{category.name}</option>
+					{/each}
+				</select>
+			</div>
+			<div class="space-y-2">
+				{#if !selectedCategoryId}
+					<p class="text-status-muted {TEXT.body}">Select a category to manage its subcategories.</p>
+				{:else if filteredSubcategories.length === 0}
+					<p class="text-status-muted {TEXT.body}">No subcategories yet.</p>
+				{:else}
+					{#each filteredSubcategories as subcategory, idx (subcategory.id)}
+						{@const projectCount = getProjectCount(selectedCategoryId, subcategory.id)}
+						<div class="flex items-center gap-2 p-2 bg-surface-3 rounded-lg group">
+							<span class="flex-1 truncate">{subcategory.name}</span>
+							<span class="{TEXT.badge} text-status-muted">{projectCount}</span>
+							<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+								{#if idx > 0}
+									<button
+										onclick={() => moveSubcategoryUp(subcategory.id)}
+										class="p-1 hover:bg-surface-2 rounded"
+									>
+										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+										</svg>
+									</button>
+								{/if}
+								{#if idx < filteredSubcategories.length - 1}
+									<button
+										onclick={() => moveSubcategoryDown(subcategory.id)}
+										class="p-1 hover:bg-surface-2 rounded"
+									>
+										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										</svg>
+									</button>
+								{/if}
+								<button
+									onclick={() => openSubcategoryModal(subcategory.id)}
+									class="p-1 hover:bg-surface-2 rounded"
+								>
+									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+									</svg>
+								</button>
+								<button
+									onclick={() => confirmDelete('subcategory', subcategory.id)}
+									class="p-1 hover:bg-surface-2 rounded"
+								>
+									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+		</div>
 	</div>
 </div>
+
+<!-- Category Modal -->
+{#if showCategoryModal}
+	<div class="fixed inset-0 bg-black/60 z-40"></div>
+	<div class="fixed inset-0 flex items-center justify-center z-50 p-4">
+		<div class="bg-surface-2 rounded-xl w-full max-w-md">
+			<div class="p-6">
+				<h3 class="{TEXT.pageTitle} mb-6">{editingCategoryId ? 'Edit Category' : 'New Category'}</h3>
+				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveCategory(); }}>
+					<div>
+						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Name *</label>
+						<input
+							type="text"
+							bind:value={categoryName}
+							required
+							class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						/>
+					</div>
+					<div>
+						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Color</label>
+						<div class="flex gap-2 flex-wrap">
+							{#each colorPresets as color}
+								<button
+									type="button"
+									onclick={() => (categoryColor = color)}
+									class="w-8 h-8 rounded-lg {categoryColor === color
+										? 'ring-2 ring-white ring-offset-2 ring-offset-surface-2'
+										: ''}"
+									style="background: {color}"
+								></button>
+							{/each}
+						</div>
+					</div>
+					<div class="flex justify-end gap-3 pt-4">
+						<button
+							type="button"
+							onclick={resetCategoryModal}
+							class="px-4 py-2 text-status-muted hover:text-white transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							class="px-4 py-2 bg-status-info hover:bg-status-info/80 rounded-lg font-medium transition-colors"
+						>
+							Save
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Subcategory Modal -->
+{#if showSubcategoryModal}
+	<div class="fixed inset-0 bg-black/60 z-40"></div>
+	<div class="fixed inset-0 flex items-center justify-center z-50 p-4">
+		<div class="bg-surface-2 rounded-xl w-full max-w-md">
+			<div class="p-6">
+				<h3 class="{TEXT.pageTitle} mb-6">{editingSubcategoryId ? 'Edit Subcategory' : 'New Subcategory'}</h3>
+				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveSubcategory(); }}>
+					<div>
+						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Name *</label>
+						<input
+							type="text"
+							bind:value={subcategoryName}
+							required
+							class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+						/>
+					</div>
+					<div class="flex justify-end gap-3 pt-4">
+						<button
+							type="button"
+							onclick={resetSubcategoryModal}
+							class="px-4 py-2 text-status-muted hover:text-white transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							class="px-4 py-2 bg-status-info hover:bg-status-info/80 rounded-lg font-medium transition-colors"
+						>
+							Save
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Confirm Delete Modal -->
+{#if showDeleteConfirm}
+	<div class="fixed inset-0 bg-black/60 z-40"></div>
+	<div class="fixed inset-0 flex items-center justify-center z-50 p-4">
+		<div class="bg-surface-2 rounded-xl w-full max-w-md">
+			<div class="p-6">
+				<h3 class="{TEXT.pageTitle} mb-4">Confirm Delete</h3>
+				<p class="{TEXT.body} text-status-muted mb-6">
+					{#if deleteType === 'category'}
+						Are you sure you want to delete this category? Projects using this category will lose their category assignment.
+					{:else}
+						Are you sure you want to delete this subcategory? Projects using this subcategory will lose their subcategory assignment.
+					{/if}
+				</p>
+				<div class="flex justify-end gap-3">
+					<button
+						onclick={() => (showDeleteConfirm = false)}
+						class="px-4 py-2 text-status-muted hover:text-white transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						onclick={executeDelete}
+						class="px-4 py-2 bg-status-danger hover:bg-status-danger/80 rounded-lg font-medium transition-colors"
+					>
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}

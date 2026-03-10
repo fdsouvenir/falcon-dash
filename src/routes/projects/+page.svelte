@@ -28,6 +28,7 @@
 	}
 
 	function navigateBack() {
+		selectedProjectId = null;
 		history.back();
 	}
 
@@ -65,16 +66,11 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex h-full overflow-hidden bg-surface-0 text-white">
-		<div
-			class="min-w-0 {selectedProjectId !== null
-				? 'flex-[3]'
-				: 'flex-1'} overflow-hidden transition-all duration-200"
-		>
-			<ProjectList onselect={navigateToProject} selectedId={selectedProjectId} />
-		</div>
-
-		{#if selectedProjectId !== null}
+	<!-- Full-page view switching: Show EITHER list OR detail, not both -->
+	<div class="h-full overflow-hidden bg-surface-0 text-white">
+		{#if selectedProjectId === null}
+			<ProjectList onselect={navigateToProject} />
+		{:else}
 			<ProjectDetail projectId={selectedProjectId} onClose={navigateBack} />
 		{/if}
 	</div>

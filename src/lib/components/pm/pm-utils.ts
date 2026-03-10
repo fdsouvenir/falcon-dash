@@ -56,9 +56,20 @@ export function getPriorityBadge(priority: string | null): { classes: string; la
 	return { classes: 'text-status-muted', label: '\u2014' };
 }
 
-/** Format a status string for display (replace underscores with spaces). */
+/** Format a status string for display (replace underscores with spaces and map to mockup labels). */
 export function formatStatusLabel(status: string): string {
-	return status.replaceAll('_', ' ');
+	// Map DB statuses to mockup display labels
+	const statusMap: Record<string, string> = {
+		todo: 'active',
+		in_progress: 'active', 
+		review: 'on hold',
+		done: 'done',
+		cancelled: 'archived',
+		archived: 'archived'
+	};
+	
+	const mapped = statusMap[status] || status;
+	return mapped.replaceAll('_', ' ');
 }
 
 /** Translucent pill classes keyed by status, for inline row use. */
