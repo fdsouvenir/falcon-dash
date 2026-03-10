@@ -135,7 +135,8 @@
 						<div class="bg-surface-2 rounded-xl divide-y divide-surface-border">
 							{#each sectionPlans as plan (plan.id)}
 								{@const statusPill = getPlanStatusPill(plan.status)}
-								<div class="p-3 flex items-center gap-3">
+								{@const isBlocked = (plan.blocked_by?.length ?? 0) > 0}
+								<div class="p-3 flex items-center gap-3 {isBlocked ? 'opacity-60' : ''}">
 									<!-- Status pill (clickable) -->
 									<div class="relative flex-shrink-0">
 										<button
@@ -186,8 +187,15 @@
 										{/if}
 									</div>
 
-									<!-- Plan title -->
-									<span class="flex-1 font-medium text-white truncate">{plan.title}</span>
+									<!-- Plan title + blockers -->
+									<div class="flex-1 min-w-0">
+										<span class="font-medium text-white truncate block">{plan.title}</span>
+										{#if plan.blocked_by && plan.blocked_by.length > 0}
+											<span class="{TEXT.badge} text-status-muted">
+												🔒 Blocked by: {plan.blocked_by.map((b) => b.title).join(', ')}
+											</span>
+										{/if}
+									</div>
 
 									<!-- Project name (clickable) -->
 									<button

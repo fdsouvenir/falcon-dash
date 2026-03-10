@@ -68,6 +68,7 @@
 	let planStatus = $state('planning');
 	let planDescription = $state('');
 	let planResult = $state('');
+	let planDependsOn = $state<number[]>([]);
 
 	// Version modal state
 	let showVersionModal = $state(false);
@@ -197,6 +198,7 @@
 		planStatus = plan?.status || 'planning';
 		planDescription = plan?.description || '';
 		planResult = plan?.result || '';
+		planDependsOn = plan?.depends_on ? [...plan.depends_on] : [];
 		showPlanModal = true;
 	}
 
@@ -207,6 +209,15 @@
 		planStatus = 'planning';
 		planDescription = '';
 		planResult = '';
+		planDependsOn = [];
+	}
+
+	function toggleDependency(depId: number) {
+		if (planDependsOn.includes(depId)) {
+			planDependsOn = planDependsOn.filter((id) => id !== depId);
+		} else {
+			planDependsOn = [...planDependsOn, depId];
+		}
 	}
 
 	async function savePlan() {
@@ -218,7 +229,8 @@
 					title: planTitle.trim(),
 					status: planStatus,
 					description: planDescription.trim() || undefined,
-					result: planResult.trim() || undefined
+					result: planResult.trim() || undefined,
+					depends_on: planDependsOn
 				});
 			} else {
 				await createPlan({
@@ -226,7 +238,8 @@
 					title: planTitle.trim(),
 					status: planStatus,
 					description: planDescription.trim() || undefined,
-					result: planResult.trim() || undefined
+					result: planResult.trim() || undefined,
+					depends_on: planDependsOn.length > 0 ? planDependsOn : undefined
 				});
 			}
 			resetPlanModal();
@@ -556,14 +569,30 @@
 						{#each projectPlans as plan (plan.id)}
 							{@const statusPill = getPlanStatusPill(plan.status)}
 							{@const versionCount = versions.filter((v) => v.plan_id === plan.id).length}
+							{@const isBlocked = (plan.blocked_by?.length ?? 0) > 0}
+							{@const depth = plan.depth ?? 0}
 
-							<div class="bg-surface-2 rounded-xl p-4">
+							<div class="bg-surface-2 rounded-xl p-4 {isBlocked ? 'opacity-60' : ''}" style="margin-left: {depth * 16}px">
 								<div class="flex items-start justify-between gap-4">
 									<div class="flex items-start gap-3 flex-1 min-w-0">
 										<!-- Plan 9: use plan.id instead of loop index -->
 										<span class="text-status-muted font-mono {TEXT.body} mt-0.5">{plan.id}.</span>
 										<div class="flex-1 min-w-0">
-											<h4 class="font-medium text-white">{plan.title}</h4>
+											<div class="flex items-center gap-2">
+												{#if isBlocked}
+													<span title="Blocked by dependencies">🔒</span>
+												{/if}
+												<h4 class="font-medium text-white">{plan.title}</h4>
+											</div>
+											{#if plan.blocked_by && plan.blocked_by.length > 0}
+												<div class="flex flex-wrap gap-1 mt-1">
+													{#each plan.blocked_by as dep}
+														<span class="inline-flex items-center px-1.5 py-0.5 rounded {TEXT.badge} bg-surface-3 text-status-muted">
+															Depends on: {dep.title}
+														</span>
+													{/each}
+												</div>
+											{/if}
 											<div class="flex items-center gap-2 mt-1">
 												<!-- Plan 8: clickable inline status dropdown -->
 												<div class="relative">
@@ -752,6 +781,27 @@
 							{/each}
 						</select>
 					</div>
+					<!-- Dependencies multi-select -->
+					{#if projectPlans.length > (editingPlanId ? 1 : 0)}
+						<div>
+							<label class="block {TEXT.label} font-medium text-status-muted mb-1">Dependencies</label>
+							<div class="max-h-40 overflow-auto bg-surface-3 border {SURFACE.border} rounded-lg p-2 space-y-1">
+								{#each projectPlans.filter((p) => p.id !== editingPlanId) as dep (dep.id)}
+									{@const depStatusPill = getPlanStatusPill(dep.status)}
+									<label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-2 cursor-pointer">
+										<input
+											type="checkbox"
+											checked={planDependsOn.includes(dep.id)}
+											onchange={() => toggleDependency(dep.id)}
+											class="rounded border-surface-border"
+										/>
+										<span class="{TEXT.body} text-white truncate flex-1">{dep.title}</span>
+										<span class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {depStatusPill.classes} flex-shrink-0">{depStatusPill.label}</span>
+									</label>
+								{/each}
+							</div>
+						</div>
+					{/if}
 					<div>
 						<label class="block {TEXT.label} font-medium text-status-muted mb-1"
 							>Description (Markdown)</label

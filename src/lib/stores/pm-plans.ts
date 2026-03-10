@@ -13,6 +13,9 @@ export interface Plan {
 	created_by: string;
 	created_at: number;
 	updated_at: number;
+	depends_on?: number[];
+	depth?: number;
+	blocked_by?: Array<{ id: number; title: string; status: string }>;
 }
 
 export interface PlanVersion {
@@ -76,6 +79,7 @@ export async function createPlan(data: {
 	description?: string;
 	result?: string;
 	status?: string;
+	depends_on?: number[];
 }): Promise<Plan> {
 	_plansLoading.set(true);
 	try {
@@ -94,6 +98,7 @@ export async function updatePlan(
 		description?: string;
 		result?: string;
 		status?: string;
+		depends_on?: number[];
 	}
 ): Promise<Plan> {
 	_plansLoading.set(true);

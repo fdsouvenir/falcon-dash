@@ -183,6 +183,19 @@ JOIN categories c ON p.category_id = c.id
 LEFT JOIN subcategories s ON p.subcategory_id = s.id
 WHERE p.status IN ('todo', 'in_progress', 'review');
 
+-- Plan dependencies
+CREATE TABLE IF NOT EXISTS plan_dependencies (
+  plan_id INTEGER NOT NULL,
+  depends_on_plan_id INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (plan_id, depends_on_plan_id),
+  FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE CASCADE,
+  FOREIGN KEY (depends_on_plan_id) REFERENCES plans(id) ON DELETE CASCADE,
+  CHECK (plan_id != depends_on_plan_id)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_deps_plan ON plan_dependencies(plan_id);
+CREATE INDEX IF NOT EXISTS idx_plan_deps_depends ON plan_dependencies(depends_on_plan_id);
+
 -- FTS5 search table
 CREATE VIRTUAL TABLE IF NOT EXISTS pm_search USING fts5(
   entity_type,

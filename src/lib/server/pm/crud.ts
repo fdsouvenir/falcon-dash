@@ -1,5 +1,6 @@
 import { getDb } from './database.js';
 import type { Category, Subcategory, Project, Plan, PlanVersion, Activity } from './database.js';
+import { PMError, PM_ERRORS } from './validation.js';
 
 // ============================================================================
 // CATEGORIES
@@ -413,50 +414,177 @@ export function logActivity(data: {
 // PLANS
 // ============================================================================
 
+export type EnrichedPlan = Plan & {
+	project_title?: string;
+	depends_on: number[];
+	depth: number;
+	blocked_by: Array<{ id: number; title: string; status: string }>;
+};
+
+function enrichPlansWithDependencies(rawPlans: (Plan & { project_title?: string })[]): EnrichedPlan[] {
+	if (rawPlans.length === 0) return [];
+
+	const db = getDb();
+	const planIds = rawPlans.map((p) => p.id);
+	const planIdSet = new Set(planIds);
+
+	// Fetch all dependencies for these plans
+	const placeholders = planIds.map(() => '?').join(',');
+	const deps = db
+		.prepare(`SELECT plan_id, depends_on_plan_id FROM plan_dependencies WHERE plan_id IN (${placeholders})`)
+		.all(...planIds) as Array<{ plan_id: number; depends_on_plan_id: number }>;
+
+	// Build dependency map
+	const depsMap = new Map<number, number[]>();
+	for (const d of deps) {
+		if (!depsMap.has(d.plan_id)) depsMap.set(d.plan_id, []);
+		depsMap.get(d.plan_id)!.push(d.depends_on_plan_id);
+	}
+
+	// Topological sort (Kahn's algorithm) — only within returned plans
+	const inDegree = new Map<number, number>();
+	const adj = new Map<number, number[]>(); // depends_on_plan_id -> [plan_id, ...]
+
+	for (const id of planIds) {
+		inDegree.set(id, 0);
+	}
+
+	for (const d of deps) {
+		if (planIdSet.has(d.depends_on_plan_id)) {
+			inDegree.set(d.plan_id, (inDegree.get(d.plan_id) ?? 0) + 1);
+			if (!adj.has(d.depends_on_plan_id)) adj.set(d.depends_on_plan_id, []);
+			adj.get(d.depends_on_plan_id)!.push(d.plan_id);
+		}
+	}
+
+	const depthMap = new Map<number, number>();
+	const queue: Array<{ id: number; depth: number }> = [];
+
+	for (const id of planIds) {
+		if ((inDegree.get(id) ?? 0) === 0) {
+			queue.push({ id, depth: 0 });
+			depthMap.set(id, 0);
+		}
+	}
+
+	let idx = 0;
+	while (idx < queue.length) {
+		const { id, depth } = queue[idx++];
+		const dependents = adj.get(id) || [];
+		for (const dep of dependents) {
+			inDegree.set(dep, (inDegree.get(dep) ?? 1) - 1);
+			const newDepth = depth + 1;
+			if (!depthMap.has(dep) || newDepth > depthMap.get(dep)!) {
+				depthMap.set(dep, newDepth);
+			}
+			if (inDegree.get(dep) === 0) {
+				queue.push({ id: dep, depth: depthMap.get(dep)! });
+			}
+		}
+	}
+
+	// Plans not reached (cycles) get max depth
+	for (const id of planIds) {
+		if (!depthMap.has(id)) depthMap.set(id, 999);
+	}
+
+	// Fetch blocked_by info (incomplete deps) for all plans in one query
+	const blockedByMap = new Map<number, Array<{ id: number; title: string; status: string }>>();
+	if (deps.length > 0) {
+		const allDepIds = [...new Set(deps.map((d) => d.depends_on_plan_id))];
+		const depPlaceholders = allDepIds.map(() => '?').join(',');
+		const depPlans = db
+			.prepare(`SELECT id, title, status FROM plans WHERE id IN (${depPlaceholders}) AND status NOT IN ('complete', 'cancelled')`)
+			.all(...allDepIds) as Array<{ id: number; title: string; status: string }>;
+		const depPlanMap = new Map(depPlans.map((p) => [p.id, p]));
+
+		for (const d of deps) {
+			const depPlan = depPlanMap.get(d.depends_on_plan_id);
+			if (depPlan) {
+				if (!blockedByMap.has(d.plan_id)) blockedByMap.set(d.plan_id, []);
+				blockedByMap.get(d.plan_id)!.push(depPlan);
+			}
+		}
+	}
+
+	// Build enriched plans
+	const enriched: EnrichedPlan[] = rawPlans.map((p) => ({
+		...p,
+		depends_on: depsMap.get(p.id) || [],
+		depth: depthMap.get(p.id) ?? 0,
+		blocked_by: blockedByMap.get(p.id) || []
+	}));
+
+	// Sort by depth ASC, then sort_order ASC, then created_at ASC
+	enriched.sort((a, b) => {
+		if (a.depth !== b.depth) return a.depth - b.depth;
+		if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+		return a.created_at - b.created_at;
+	});
+
+	return enriched;
+}
+
 export function listPlans(
 	filters: { project_id?: number; status?: string } | number
-): (Plan & { project_title?: string })[] {
+): EnrichedPlan[] {
 	const db = getDb();
+
+	let rawPlans: (Plan & { project_title?: string })[];
 
 	// Backwards-compat: accept plain projectId number
 	if (typeof filters === 'number') {
-		return db
+		rawPlans = db
 			.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC')
 			.all(filters) as Plan[];
+	} else {
+		const { project_id, status } = filters;
+
+		if (project_id !== undefined && status === undefined) {
+			rawPlans = db
+				.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC')
+				.all(project_id) as Plan[];
+		} else {
+			const conditions: string[] = [];
+			const values: unknown[] = [];
+
+			if (project_id !== undefined) {
+				conditions.push('pl.project_id = ?');
+				values.push(project_id);
+			}
+			if (status !== undefined) {
+				conditions.push('pl.status = ?');
+				values.push(status);
+			}
+
+			const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+			const query = `
+				SELECT pl.*, p.title as project_title
+				FROM plans pl
+				JOIN projects p ON pl.project_id = p.id
+				${where}
+				ORDER BY pl.sort_order ASC, pl.created_at ASC
+			`;
+			rawPlans = db.prepare(query).all(...values) as (Plan & { project_title: string })[];
+		}
 	}
 
-	const { project_id, status } = filters;
-
-	if (project_id !== undefined && status === undefined) {
-		return db
-			.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC')
-			.all(project_id) as Plan[];
-	}
-
-	const conditions: string[] = [];
-	const values: unknown[] = [];
-
-	if (project_id !== undefined) {
-		conditions.push('pl.project_id = ?');
-		values.push(project_id);
-	}
-	if (status !== undefined) {
-		conditions.push('pl.status = ?');
-		values.push(status);
-	}
-
-	const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-	const query = `
-		SELECT pl.*, p.title as project_title
-		FROM plans pl
-		JOIN projects p ON pl.project_id = p.id
-		${where}
-		ORDER BY pl.sort_order ASC, pl.created_at ASC
-	`;
-	return db.prepare(query).all(...values) as (Plan & { project_title: string })[];
+	return enrichPlansWithDependencies(rawPlans);
 }
 
-export function getPlan(id: number): Plan | undefined {
+export function getPlan(id: number): (Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> }) | undefined {
+	const db = getDb();
+	const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(id) as Plan | undefined;
+	if (!plan) return undefined;
+	return {
+		...plan,
+		depends_on: getDependencies(id),
+		blocked_by: getDependenciesEnriched(id)
+	};
+}
+
+// Internal getter without enrichment (used during updates to avoid recursion)
+function getPlanRaw(id: number): Plan | undefined {
 	const db = getDb();
 	return db.prepare('SELECT * FROM plans WHERE id = ?').get(id) as Plan | undefined;
 }
@@ -467,7 +595,8 @@ export function createPlan(data: {
 	description?: string;
 	result?: string;
 	status?: string;
-}): Plan {
+	depends_on?: number[];
+}): Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> } {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 	const maxOrder = db
@@ -494,7 +623,12 @@ export function createPlan(data: {
 		);
 
 	const planId = result.lastInsertRowid as number;
-	const plan = getPlan(planId)!;
+	const plan = getPlanRaw(planId)!;
+
+	// Set dependencies if provided
+	if (data.depends_on && data.depends_on.length > 0) {
+		setDependencies(planId, data.depends_on);
+	}
 
 	// Create initial version
 	createPlanVersion(planId, plan.description, plan.result, plan.status, 'system');
@@ -509,15 +643,19 @@ export function createPlan(data: {
 		target_title: data.title
 	});
 
-	return plan;
+	return {
+		...plan,
+		depends_on: getDependencies(planId),
+		blocked_by: getDependenciesEnriched(planId)
+	};
 }
 
 export function updatePlan(
 	id: number,
-	data: { title?: string; description?: string; result?: string; status?: string }
-): Plan | undefined {
+	data: { title?: string; description?: string; result?: string; status?: string; depends_on?: number[] }
+): (Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> }) | undefined {
 	const db = getDb();
-	const currentPlan = getPlan(id);
+	const currentPlan = getPlanRaw(id);
 	if (!currentPlan) return undefined;
 
 	const now = Math.floor(Date.now() / 1000);
@@ -558,31 +696,54 @@ export function updatePlan(
 		updates.push('version = version + 1');
 	}
 
-	if (updates.length === 1) return currentPlan;
+	if (updates.length === 1 && !data.depends_on) return { ...currentPlan, depends_on: getDependencies(id), blocked_by: getDependenciesEnriched(id) };
 
-	values.push(id);
-	db.prepare(`UPDATE plans SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	// Status constraint: can't assign/start plans with incomplete deps
+	if (data.status && (data.status === 'assigned' || data.status === 'in_progress')) {
+		const blockers = getDependenciesEnriched(id);
+		if (blockers.length > 0) {
+			const titles = blockers.map((b) => `"${b.title}" (${b.status})`).join(', ');
+			throw new PMError(
+				PM_ERRORS.PM_CONSTRAINT,
+				`Cannot set status to ${data.status}: blocked by incomplete dependencies: ${titles}`
+			);
+		}
+	}
 
-	const updatedPlan = getPlan(id)!;
+	if (updates.length > 1) {
+		values.push(id);
+		db.prepare(`UPDATE plans SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	}
+
+	// Set dependencies if provided
+	if (data.depends_on !== undefined) {
+		setDependencies(id, data.depends_on);
+	}
+
+	const updatedPlanRaw = getPlanRaw(id)!;
 
 	// Create version if content changed
 	if (descriptionChanged || resultChanged || statusChanged) {
-		createPlanVersion(id, updatedPlan.description, updatedPlan.result, updatedPlan.status, 'user');
+		createPlanVersion(id, updatedPlanRaw.description, updatedPlanRaw.result, updatedPlanRaw.status, 'user');
 	}
 
 	// Log activity
 	const action = statusChanged ? 'plan_status_changed' : 'plan_updated';
 	logActivity({
-		project_id: updatedPlan.project_id,
+		project_id: updatedPlanRaw.project_id,
 		actor: 'system',
 		action,
 		target_type: 'plan',
 		target_id: id,
-		target_title: updatedPlan.title,
-		details: statusChanged ? `Status changed to ${updatedPlan.status}` : undefined
+		target_title: updatedPlanRaw.title,
+		details: statusChanged ? `Status changed to ${updatedPlanRaw.status}` : undefined
 	});
 
-	return updatedPlan;
+	return {
+		...updatedPlanRaw,
+		depends_on: getDependencies(id),
+		blocked_by: getDependenciesEnriched(id)
+	};
 }
 
 export function deletePlan(id: number): boolean {
@@ -598,6 +759,149 @@ export function reorderPlans(ids: number[]): void {
 		ids.forEach((id, index) => {
 			stmt.run(index, id);
 		});
+	});
+	transaction();
+}
+
+// ============================================================================
+// PLAN DEPENDENCIES
+// ============================================================================
+
+export function getDependencies(planId: number): number[] {
+	const db = getDb();
+	const rows = db
+		.prepare('SELECT depends_on_plan_id FROM plan_dependencies WHERE plan_id = ? ORDER BY depends_on_plan_id')
+		.all(planId) as Array<{ depends_on_plan_id: number }>;
+	return rows.map((r) => r.depends_on_plan_id);
+}
+
+export function getDependenciesEnriched(
+	planId: number
+): Array<{ id: number; title: string; status: string }> {
+	const db = getDb();
+	return db
+		.prepare(
+			`SELECT p.id, p.title, p.status
+			FROM plan_dependencies pd
+			JOIN plans p ON pd.depends_on_plan_id = p.id
+			WHERE pd.plan_id = ?
+			AND p.status NOT IN ('complete', 'cancelled')
+			ORDER BY p.id`
+		)
+		.all(planId) as Array<{ id: number; title: string; status: string }>;
+}
+
+export function getDependents(
+	planId: number
+): Array<{ id: number; title: string; status: string }> {
+	const db = getDb();
+	return db
+		.prepare(
+			`SELECT p.id, p.title, p.status
+			FROM plan_dependencies pd
+			JOIN plans p ON pd.plan_id = p.id
+			WHERE pd.depends_on_plan_id = ?
+			ORDER BY p.id`
+		)
+		.all(planId) as Array<{ id: number; title: string; status: string }>;
+}
+
+export function setDependencies(planId: number, dependsOn: number[]): void {
+	const db = getDb();
+	const plan = db.prepare('SELECT id, project_id FROM plans WHERE id = ?').get(planId) as
+		| { id: number; project_id: number }
+		| undefined;
+	if (!plan) {
+		throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Plan ${planId} not found`);
+	}
+
+	// Deduplicate and remove self
+	const uniqueDeps = [...new Set(dependsOn)].filter((id) => id !== planId);
+
+	if (uniqueDeps.length > 0) {
+		// Validate all IDs exist and belong to same project
+		const placeholders = uniqueDeps.map(() => '?').join(',');
+		const existing = db
+			.prepare(
+				`SELECT id, project_id FROM plans WHERE id IN (${placeholders})`
+			)
+			.all(...uniqueDeps) as Array<{ id: number; project_id: number }>;
+
+		if (existing.length !== uniqueDeps.length) {
+			const foundIds = new Set(existing.map((e) => e.id));
+			const missing = uniqueDeps.filter((id) => !foundIds.has(id));
+			throw new PMError(
+				PM_ERRORS.PM_CONSTRAINT,
+				`Dependency plan(s) not found: ${missing.join(', ')}`
+			);
+		}
+
+		const wrongProject = existing.filter((e) => e.project_id !== plan.project_id);
+		if (wrongProject.length > 0) {
+			throw new PMError(
+				PM_ERRORS.PM_CONSTRAINT,
+				`Dependency plan(s) belong to different project: ${wrongProject.map((p) => p.id).join(', ')}`
+			);
+		}
+
+		// Cycle detection via DFS
+		// Build adjacency: start with existing graph minus current plan's deps, then add proposed
+		const allDeps = db
+			.prepare('SELECT plan_id, depends_on_plan_id FROM plan_dependencies')
+			.all() as Array<{ plan_id: number; depends_on_plan_id: number }>;
+
+		const adj = new Map<number, Set<number>>();
+		for (const row of allDeps) {
+			if (row.plan_id === planId) continue; // skip current plan's old deps
+			if (!adj.has(row.plan_id)) adj.set(row.plan_id, new Set());
+			adj.get(row.plan_id)!.add(row.depends_on_plan_id);
+		}
+		// Add proposed deps
+		adj.set(planId, new Set(uniqueDeps));
+
+		// DFS cycle detection from planId
+		const visited = new Set<number>();
+		const recursionStack = new Set<number>();
+
+		function hasCycle(node: number): boolean {
+			visited.add(node);
+			recursionStack.add(node);
+			const neighbors = adj.get(node);
+			if (neighbors) {
+				for (const neighbor of neighbors) {
+					if (!visited.has(neighbor)) {
+						if (hasCycle(neighbor)) return true;
+					} else if (recursionStack.has(neighbor)) {
+						return true;
+					}
+				}
+			}
+			recursionStack.delete(node);
+			return false;
+		}
+
+		// Check cycle starting from each node involved
+		visited.clear();
+		recursionStack.clear();
+		if (hasCycle(planId)) {
+			throw new PMError(
+				PM_ERRORS.PM_CONSTRAINT,
+				'Circular dependency detected'
+			);
+		}
+	}
+
+	// Replace deps in a transaction
+	const transaction = db.transaction(() => {
+		db.prepare('DELETE FROM plan_dependencies WHERE plan_id = ?').run(planId);
+		if (uniqueDeps.length > 0) {
+			const insert = db.prepare(
+				'INSERT INTO plan_dependencies (plan_id, depends_on_plan_id) VALUES (?, ?)'
+			);
+			for (const depId of uniqueDeps) {
+				insert.run(planId, depId);
+			}
+		}
 	});
 	transaction();
 }
