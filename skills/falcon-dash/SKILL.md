@@ -23,9 +23,18 @@ These are non-optional operating rules:
 - **Every execution starts with a plan.** No exceptions — build a plan, get operator approval, then execute.
 - **Plans start in `planning` status** until the operator approves (sets to `assigned`, or explicitly says "go ahead"). Discussion is not permission.
 - **When you create a plan for approval, message the operator** — do not silently create plans and wait.
-- **Keep projects and plans updated during execution.** Set plan status to `in_progress` when you start, update descriptions with progress, set to `complete` or `needs_review` when done.
+- **Set plans to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress, set to `complete` or `needs_review` when done.
 - **On heartbeat, check for `assigned` plans** — these are your queue. Pick them up and execute.
 - **Plans are specifications.** A plan's description is a carefully crafted instruction set — the spec for the work, the sub-agent prompt. Write them with care.
+
+### Sub-agent Execution
+
+When dispatching work to sub-agents (ACP sessions, acpx, etc.):
+
+1. **Set each plan to `in_progress`** before dispatching the sub-agent
+2. **Create a 5-min monitoring cron** — `systemEvent`, `sessionTarget: main`, with session IDs, plan numbers, and reporting channel in the text
+3. **On each cron fire**, poll the sessions and report status to the originating channel
+4. **When all work completes**, set plans to `complete`, remove the cron, verify commits, tag and push
 
 ## Quick Context
 
