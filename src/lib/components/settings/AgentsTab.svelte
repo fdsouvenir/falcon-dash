@@ -324,7 +324,10 @@
 	{#if error}
 		<div class="rounded-xl border border-red-800/50 bg-red-900/20 py-8 text-center">
 			<p class="text-sm text-red-400">{error}</p>
-			<button onclick={fetchAgents} class="mt-2 text-xs text-status-muted underline hover:text-white">
+			<button
+				onclick={fetchAgents}
+				class="mt-2 text-xs text-status-muted underline hover:text-white"
+			>
 				Retry
 			</button>
 		</div>
@@ -521,7 +524,9 @@
 						/>
 					</div>
 				</div>
-				<p class="text-xs text-status-muted/60">Want to change my name or emoji? Just ask me in chat!</p>
+				<p class="text-xs text-status-muted/60">
+					Want to change my name or emoji? Just ask me in chat!
+				</p>
 
 				<div>
 					<label for="edit-agent-role" class="mb-1 block text-xs text-status-muted">Role</label>

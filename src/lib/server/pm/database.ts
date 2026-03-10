@@ -295,16 +295,16 @@ export function closeDb(): void {
  */
 function seedDefaultCategories(db: Database.Database): void {
 	const count = db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number };
-	
+
 	if (count.count === 0) {
 		const insert = db.prepare(`
 			INSERT INTO categories (id, name, description, color, sort_order)
 			VALUES (?, ?, ?, ?, ?)
 		`);
-		
+
 		insert.run('personal', 'Personal', 'Personal projects and tasks', '#60a5fa', 0);
 		insert.run('work', 'Work', 'Work-related projects and tasks', '#a78bfa', 1);
-		
+
 		console.log('🌱 Seeded default categories');
 	}
 }

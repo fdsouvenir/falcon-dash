@@ -300,7 +300,9 @@
 							<span class="text-sm text-status-muted">Loading...</span>
 						</div>
 					{:else if activeAgents.length === 0}
-						<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center">
+						<div
+							class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center"
+						>
 							<p class="text-sm text-status-muted">No active runs</p>
 						</div>
 					{:else}
@@ -355,7 +357,11 @@
 								</div>
 								<div>
 									<span class="text-sm font-medium text-white/90">Discord</span>
-									<p class="text-xs {discord.connected ? 'text-emerald-400/80' : 'text-status-muted'}">
+									<p
+										class="text-xs {discord.connected
+											? 'text-emerald-400/80'
+											: 'text-status-muted'}"
+									>
 										{discord.connected
 											? `Connected${discord.guildName ? ` to ${discord.guildName}` : ''}`
 											: 'Not connected'}
@@ -413,7 +419,9 @@
 					<h3 class="text-sm font-semibold text-white">Pending Approvals</h3>
 
 					{#if localPendingApprovals.length === 0}
-						<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center">
+						<div
+							class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-6 text-center"
+						>
 							<p class="text-sm text-status-muted">No pending approvals</p>
 						</div>
 					{:else}

@@ -9,7 +9,8 @@ import { triggerContextGeneration } from '$lib/server/pm/context-scheduler.js';
 export const GET: RequestHandler = async ({ params }) => {
 	try {
 		const subcategory = getSubcategory(params.id);
-		if (!subcategory) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
+		if (!subcategory)
+			throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
 		return json(subcategory);
 	} catch (err) {
 		return handlePMError(err);
@@ -20,7 +21,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	try {
 		const body = await request.json();
 		const subcategory = updateSubcategory(params.id, body);
-		if (!subcategory) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
+		if (!subcategory)
+			throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
 		emitPMEvent({ action: 'updated', entityType: 'subcategory', entityId: params.id, data: body });
 		triggerContextGeneration();
 		return json(subcategory);

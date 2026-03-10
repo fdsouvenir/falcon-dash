@@ -7,7 +7,9 @@ import type { Category, Subcategory, Project, Plan, PlanVersion, Activity } from
 
 export function listCategories(): Category[] {
 	const db = getDb();
-	return db.prepare('SELECT * FROM categories ORDER BY sort_order ASC, name ASC').all() as Category[];
+	return db
+		.prepare('SELECT * FROM categories ORDER BY sort_order ASC, name ASC')
+		.all() as Category[];
 }
 
 export function getCategory(id: string): Category | undefined {
@@ -15,7 +17,12 @@ export function getCategory(id: string): Category | undefined {
 	return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as Category | undefined;
 }
 
-export function createCategory(data: { id: string; name: string; description?: string; color?: string }): Category {
+export function createCategory(data: {
+	id: string;
+	name: string;
+	description?: string;
+	color?: string;
+}): Category {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 	const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM categories').get() as {
@@ -84,10 +91,14 @@ export function listSubcategories(categoryId?: string): Subcategory[] {
 	const db = getDb();
 	if (categoryId) {
 		return db
-			.prepare('SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order ASC, name ASC')
+			.prepare(
+				'SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order ASC, name ASC'
+			)
 			.all(categoryId) as Subcategory[];
 	}
-	return db.prepare('SELECT * FROM subcategories ORDER BY sort_order ASC, name ASC').all() as Subcategory[];
+	return db
+		.prepare('SELECT * FROM subcategories ORDER BY sort_order ASC, name ASC')
+		.all() as Subcategory[];
 }
 
 export function getSubcategory(id: string): Subcategory | undefined {
@@ -181,7 +192,11 @@ export function moveSubcategory(id: string, newCategoryId: string): Subcategory 
 // PROJECTS
 // ============================================================================
 
-export function listProjects(filters?: { category_id?: string; subcategory_id?: string; status?: string }): Project[] {
+export function listProjects(filters?: {
+	category_id?: string;
+	subcategory_id?: string;
+	status?: string;
+}): Project[] {
 	const db = getDb();
 
 	if (!filters || Object.keys(filters).length === 0) {
@@ -270,7 +285,14 @@ export function updateProject(
 	data: Partial<
 		Pick<
 			Project,
-			'title' | 'description' | 'body' | 'status' | 'due_date' | 'priority' | 'category_id' | 'subcategory_id'
+			| 'title'
+			| 'description'
+			| 'body'
+			| 'status'
+			| 'due_date'
+			| 'priority'
+			| 'category_id'
+			| 'subcategory_id'
 		>
 	>
 ): Project | undefined {
@@ -391,18 +413,24 @@ export function logActivity(data: {
 // PLANS
 // ============================================================================
 
-export function listPlans(filters: { project_id?: number; status?: string } | number): (Plan & { project_title?: string })[] {
+export function listPlans(
+	filters: { project_id?: number; status?: string } | number
+): (Plan & { project_title?: string })[] {
 	const db = getDb();
 
 	// Backwards-compat: accept plain projectId number
 	if (typeof filters === 'number') {
-		return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(filters) as Plan[];
+		return db
+			.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC')
+			.all(filters) as Plan[];
 	}
 
 	const { project_id, status } = filters;
 
 	if (project_id !== undefined && status === undefined) {
-		return db.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC').all(project_id) as Plan[];
+		return db
+			.prepare('SELECT * FROM plans WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC')
+			.all(project_id) as Plan[];
 	}
 
 	const conditions: string[] = [];
@@ -539,13 +567,7 @@ export function updatePlan(
 
 	// Create version if content changed
 	if (descriptionChanged || resultChanged || statusChanged) {
-		createPlanVersion(
-			id,
-			updatedPlan.description,
-			updatedPlan.result,
-			updatedPlan.status,
-			'user'
-		);
+		createPlanVersion(id, updatedPlan.description, updatedPlan.result, updatedPlan.status, 'user');
 	}
 
 	// Log activity
@@ -586,7 +608,9 @@ export function reorderPlans(ids: number[]): void {
 
 export function listPlanVersions(planId: number): PlanVersion[] {
 	const db = getDb();
-	return db.prepare('SELECT * FROM plan_versions WHERE plan_id = ? ORDER BY version DESC').all(planId) as PlanVersion[];
+	return db
+		.prepare('SELECT * FROM plan_versions WHERE plan_id = ? ORDER BY version DESC')
+		.all(planId) as PlanVersion[];
 }
 
 export function createPlanVersion(

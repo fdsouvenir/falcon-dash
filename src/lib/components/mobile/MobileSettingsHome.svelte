@@ -33,7 +33,9 @@
 							onclick={() => handleTap(item)}
 							class="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
 						>
-							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+							<div
+								class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2"
+							>
 								<svg
 									class="h-4 w-4 text-white/80"
 									fill="none"

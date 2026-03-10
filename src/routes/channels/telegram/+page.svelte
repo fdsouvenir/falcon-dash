@@ -236,7 +236,9 @@
 					</div>
 				</div>
 			</div>
-			<p class="text-xs text-status-muted">These are optional — you can always change them later.</p>
+			<p class="text-xs text-status-muted">
+				These are optional — you can always change them later.
+			</p>
 		</div>
 	{:else if currentStep === 4}
 		<div class="space-y-4">

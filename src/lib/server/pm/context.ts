@@ -61,7 +61,13 @@ export function generateDashboardContext(): DashboardContextResponse {
 		ORDER BY pl.project_id ASC, pl.sort_order ASC
 	`
 		)
-		.all() as { id: number; title: string; status: string; project_id: number; project_title: string }[];
+		.all() as {
+		id: number;
+		title: string;
+		status: string;
+		project_id: number;
+		project_title: string;
+	}[];
 
 	// Recent activity
 	const recentActivity = db
@@ -82,8 +88,8 @@ export function generateDashboardContext(): DashboardContextResponse {
 
 	md += `## Active Projects (${activeProjects.length})\n`;
 	for (const p of activeProjects) {
-		const categoryPath = p.subcategory_name 
-			? `${p.category_name}/${p.subcategory_name}` 
+		const categoryPath = p.subcategory_name
+			? `${p.category_name}/${p.subcategory_name}`
 			: p.category_name;
 		md += `- **${p.title}** [${p.status}] — ${categoryPath}\n`;
 	}
@@ -214,7 +220,9 @@ export function generateProjectContext(projectId: number): ContextResponse {
 		WHERE p.id = ?
 	`
 		)
-		.get(projectId) as (Project & { category_name: string; subcategory_name: string | null }) | undefined;
+		.get(projectId) as
+		| (Project & { category_name: string; subcategory_name: string | null })
+		| undefined;
 
 	if (!project) throw new Error('Project not found');
 
@@ -234,10 +242,10 @@ export function generateProjectContext(projectId: number): ContextResponse {
 	}>;
 
 	// Build markdown
-	const categoryPath = project.subcategory_name 
-		? `${project.category_name}/${project.subcategory_name}` 
+	const categoryPath = project.subcategory_name
+		? `${project.category_name}/${project.subcategory_name}`
 		: project.category_name;
-	
+
 	let md = `# P-${project.id}: ${project.title}\n`;
 	md += `**Status:** ${project.status} | **Priority:** ${project.priority ?? 'normal'} | **Category:** ${categoryPath}\n`;
 	if (project.description) md += `\n${project.description}\n`;

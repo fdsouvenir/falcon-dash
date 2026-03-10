@@ -9,7 +9,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	try {
 		const body = await request.json();
 		const subcategory = moveSubcategory(params.id, body.category_id);
-		if (!subcategory) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
+		if (!subcategory)
+			throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Subcategory "${params.id}" not found`);
 		emitPMEvent({
 			action: 'moved',
 			entityType: 'subcategory',

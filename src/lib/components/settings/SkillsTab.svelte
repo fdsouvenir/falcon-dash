@@ -285,8 +285,15 @@
 			{/each}
 		</div>
 	{:else if skills.length === 0}
-		<div class="flex flex-col items-center gap-3 rounded border border-dashed border-surface-border py-8">
-			<svg class="h-8 w-8 text-status-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<div
+			class="flex flex-col items-center gap-3 rounded border border-dashed border-surface-border py-8"
+		>
+			<svg
+				class="h-8 w-8 text-status-muted/60"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -481,7 +488,8 @@
 				Skills are npm packages. Enter the full package name to install.
 			</p>
 			<div class="mb-3">
-				<label for="install-name-input" class="mb-1 block text-xs text-status-muted">Skill Name *</label
+				<label for="install-name-input" class="mb-1 block text-xs text-status-muted"
+					>Skill Name *</label
 				>
 				<input
 					id="install-name-input"
@@ -490,7 +498,9 @@
 					placeholder="e.g., @modelcontextprotocol/server-brave-search"
 					class="w-full rounded border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white/80"
 				/>
-				<div class="mt-1 text-xs text-status-muted/60">Scoped packages use @scope/package-name format</div>
+				<div class="mt-1 text-xs text-status-muted/60">
+					Scoped packages use @scope/package-name format
+				</div>
 			</div>
 			<div class="mb-3">
 				<label for="install-id-input" class="mb-1 block text-xs text-status-muted"

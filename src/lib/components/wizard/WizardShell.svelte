@@ -90,7 +90,9 @@
 					{/if}
 				</div>
 				<span
-					class="hidden text-xs sm:inline {i === currentStep ? 'text-white/90' : 'text-status-muted'}"
+					class="hidden text-xs sm:inline {i === currentStep
+						? 'text-white/90'
+						: 'text-status-muted'}"
 				>
 					{step.label}
 				</span>

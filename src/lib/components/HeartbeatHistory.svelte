@@ -34,7 +34,9 @@
 </script>
 
 <div class="rounded-lg border border-surface-border bg-surface-1 p-4">
-	<h3 class="mb-3 text-xs font-medium uppercase tracking-wide text-status-muted">Recent Heartbeats</h3>
+	<h3 class="mb-3 text-xs font-medium uppercase tracking-wide text-status-muted">
+		Recent Heartbeats
+	</h3>
 
 	{#if loading}
 		<p class="text-xs text-status-muted">Loading history...</p>

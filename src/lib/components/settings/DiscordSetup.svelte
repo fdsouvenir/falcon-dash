@@ -252,7 +252,9 @@
 								placeholder="••••••••••••••••••••••••"
 								class="w-full rounded-lg border border-surface-border bg-surface-2 px-3 py-2 text-white placeholder-status-muted focus:border-status-info focus:outline-none"
 							/>
-							<p class="mt-2 text-xs text-status-muted">Found in the "Bot" tab. Keep this secret!</p>
+							<p class="mt-2 text-xs text-status-muted">
+								Found in the "Bot" tab. Keep this secret!
+							</p>
 						</div>
 					{/if}
 

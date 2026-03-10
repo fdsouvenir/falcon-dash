@@ -48,7 +48,7 @@
 		'#3b82f6', // blue
 		'#8b5cf6', // violet
 		'#ef4444', // red
-		'#14b8a6'  // teal
+		'#14b8a6' // teal
 	];
 
 	$effect(() => {
@@ -242,7 +242,8 @@
 					class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
+						></path>
 					</svg>
 				</button>
 			</div>
@@ -253,17 +254,32 @@
 					{#each categoryList as category, idx (category.id)}
 						{@const projectCount = getProjectCount(category.id)}
 						<div class="flex items-center gap-2 p-2 bg-surface-3 rounded-lg group">
-							<div class="w-3 h-3 rounded-full flex-shrink-0" style="background: {category.color}"></div>
+							<div
+								class="w-3 h-3 rounded-full flex-shrink-0"
+								style="background: {category.color}"
+							></div>
 							<span class="flex-1 truncate">{category.name}</span>
 							<span class="{TEXT.badge} text-status-muted">{projectCount}</span>
-							<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+							<div
+								class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+							>
 								{#if idx > 0}
 									<button
 										onclick={() => moveCategoryUp(category.id)}
 										class="p-1 hover:bg-surface-2 rounded"
 									>
-										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+										<svg
+											class="w-4 h-4 text-status-muted"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 15l7-7 7 7"
+											></path>
 										</svg>
 									</button>
 								{/if}
@@ -272,8 +288,18 @@
 										onclick={() => moveCategoryDown(category.id)}
 										class="p-1 hover:bg-surface-2 rounded"
 									>
-										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										<svg
+											class="w-4 h-4 text-status-muted"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											></path>
 										</svg>
 									</button>
 								{/if}
@@ -281,16 +307,36 @@
 									onclick={() => openCategoryModal(category.id)}
 									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+									<svg
+										class="w-4 h-4 text-status-muted"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+										></path>
 									</svg>
 								</button>
 								<button
 									onclick={() => confirmDelete('category', category.id)}
 									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+									<svg
+										class="w-4 h-4 text-status-muted"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										></path>
 									</svg>
 								</button>
 							</div>
@@ -310,7 +356,8 @@
 					class="p-2 hover:bg-surface-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
+						></path>
 					</svg>
 				</button>
 			</div>
@@ -327,7 +374,9 @@
 			</div>
 			<div class="space-y-2">
 				{#if !selectedCategoryId}
-					<p class="text-status-muted {TEXT.body}">Select a category to manage its subcategories.</p>
+					<p class="text-status-muted {TEXT.body}">
+						Select a category to manage its subcategories.
+					</p>
 				{:else if filteredSubcategories.length === 0}
 					<p class="text-status-muted {TEXT.body}">No subcategories yet.</p>
 				{:else}
@@ -336,14 +385,26 @@
 						<div class="flex items-center gap-2 p-2 bg-surface-3 rounded-lg group">
 							<span class="flex-1 truncate">{subcategory.name}</span>
 							<span class="{TEXT.badge} text-status-muted">{projectCount}</span>
-							<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+							<div
+								class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+							>
 								{#if idx > 0}
 									<button
 										onclick={() => moveSubcategoryUp(subcategory.id)}
 										class="p-1 hover:bg-surface-2 rounded"
 									>
-										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+										<svg
+											class="w-4 h-4 text-status-muted"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 15l7-7 7 7"
+											></path>
 										</svg>
 									</button>
 								{/if}
@@ -352,8 +413,18 @@
 										onclick={() => moveSubcategoryDown(subcategory.id)}
 										class="p-1 hover:bg-surface-2 rounded"
 									>
-										<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										<svg
+											class="w-4 h-4 text-status-muted"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											></path>
 										</svg>
 									</button>
 								{/if}
@@ -361,16 +432,36 @@
 									onclick={() => openSubcategoryModal(subcategory.id)}
 									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+									<svg
+										class="w-4 h-4 text-status-muted"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+										></path>
 									</svg>
 								</button>
 								<button
 									onclick={() => confirmDelete('subcategory', subcategory.id)}
 									class="p-1 hover:bg-surface-2 rounded"
 								>
-									<svg class="w-4 h-4 text-status-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+									<svg
+										class="w-4 h-4 text-status-muted"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										></path>
 									</svg>
 								</button>
 							</div>
@@ -388,8 +479,16 @@
 	<div class="fixed inset-0 flex items-center justify-center z-50 p-4">
 		<div class="bg-surface-2 rounded-xl w-full max-w-md">
 			<div class="p-6">
-				<h3 class="{TEXT.pageTitle} mb-6">{editingCategoryId ? 'Edit Category' : 'New Category'}</h3>
-				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveCategory(); }}>
+				<h3 class="{TEXT.pageTitle} mb-6">
+					{editingCategoryId ? 'Edit Category' : 'New Category'}
+				</h3>
+				<form
+					class="space-y-4"
+					onsubmit={(e) => {
+						e.preventDefault();
+						saveCategory();
+					}}
+				>
 					<div>
 						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Name *</label>
 						<input
@@ -441,8 +540,16 @@
 	<div class="fixed inset-0 flex items-center justify-center z-50 p-4">
 		<div class="bg-surface-2 rounded-xl w-full max-w-md">
 			<div class="p-6">
-				<h3 class="{TEXT.pageTitle} mb-6">{editingSubcategoryId ? 'Edit Subcategory' : 'New Subcategory'}</h3>
-				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveSubcategory(); }}>
+				<h3 class="{TEXT.pageTitle} mb-6">
+					{editingSubcategoryId ? 'Edit Subcategory' : 'New Subcategory'}
+				</h3>
+				<form
+					class="space-y-4"
+					onsubmit={(e) => {
+						e.preventDefault();
+						saveSubcategory();
+					}}
+				>
 					<div>
 						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Name *</label>
 						<input
@@ -482,9 +589,11 @@
 				<h3 class="{TEXT.pageTitle} mb-4">Confirm Delete</h3>
 				<p class="{TEXT.body} text-status-muted mb-6">
 					{#if deleteType === 'category'}
-						Are you sure you want to delete this category? Projects using this category will lose their category assignment.
+						Are you sure you want to delete this category? Projects using this category will lose
+						their category assignment.
 					{:else}
-						Are you sure you want to delete this subcategory? Projects using this subcategory will lose their subcategory assignment.
+						Are you sure you want to delete this subcategory? Projects using this subcategory will
+						lose their subcategory assignment.
 					{/if}
 				</p>
 				<div class="flex justify-end gap-3">

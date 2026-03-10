@@ -271,7 +271,9 @@
 		{:else}
 			<div class="space-y-2">
 				{#each pins as pin (pin.id)}
-					<div class="flex items-center gap-3 rounded border border-surface-border bg-surface-1 p-3">
+					<div
+						class="flex items-center gap-3 rounded border border-surface-border bg-surface-1 p-3"
+					>
 						<div class="min-w-0 flex-1">
 							<div class="text-sm font-medium text-white">{pin.name}</div>
 							<div class="mt-0.5 font-mono text-xs text-status-muted">{pin.surfaceId}</div>

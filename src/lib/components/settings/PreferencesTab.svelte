@@ -156,7 +156,9 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<div class="text-sm font-medium text-white/70">Browser Notifications</div>
-					<div class="text-xs text-status-muted">Show desktop notifications for important events</div>
+					<div class="text-xs text-status-muted">
+						Show desktop notifications for important events
+					</div>
 				</div>
 				<button
 					onclick={toggleNotifications}

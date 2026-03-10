@@ -364,8 +364,8 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 		projectsMd += '| ID | Title | Status | Category/Subcategory | Due |\n';
 		projectsMd += '|---|---|---|---|---|\n';
 		for (const p of activeProjects) {
-			const categoryPath = p.subcategory_name 
-				? `${p.category_name}/${p.subcategory_name}` 
+			const categoryPath = p.subcategory_name
+				? `${p.category_name}/${p.subcategory_name}`
 				: p.category_name;
 			projectsMd += `| P-${p.id} | ${p.title} | ${p.status} | ${categoryPath} | ${p.due_date ?? '-'} |\n`;
 		}
@@ -384,7 +384,13 @@ export function generateAndWriteContext(): { filesWritten: number; timestamp: nu
 			ORDER BY pl.project_id ASC, pl.sort_order ASC
 		`
 		)
-		.all() as { id: number; title: string; status: string; project_id: number; project_title: string }[];
+		.all() as {
+		id: number;
+		title: string;
+		status: string;
+		project_id: number;
+		project_title: string;
+	}[];
 
 	if (activePlans.length > 0) {
 		projectsMd += '\n## Active Plans\n\n';

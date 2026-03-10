@@ -9,13 +9,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const { ids } = body;
-		
+
 		if (!Array.isArray(ids)) {
 			throw new Error('ids must be an array');
 		}
-		
+
 		reorderPlans(ids);
-		
+
 		emitPMEvent({
 			action: 'reordered',
 			entityType: 'plan',

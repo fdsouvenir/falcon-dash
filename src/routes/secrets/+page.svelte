@@ -213,7 +213,9 @@
 					</svg>
 				</div>
 				<p class="text-sm text-status-muted">No secret providers configured</p>
-				<p class="mt-1 text-xs text-status-muted">Add a provider to manage API keys and credentials</p>
+				<p class="mt-1 text-xs text-status-muted">
+					Add a provider to manage API keys and credentials
+				</p>
 			</div>
 		{:else}
 			<div class="space-y-3">
@@ -263,7 +265,8 @@
 					file
 				</p>
 				<p>
-					<span class="font-semibold text-status-muted">exec</span> — Runs a command to fetch secrets on demand
+					<span class="font-semibold text-status-muted">exec</span> — Runs a command to fetch secrets
+					on demand
 				</p>
 				<p class="mt-2">
 					Providers are resolved eagerly at gateway startup. Run

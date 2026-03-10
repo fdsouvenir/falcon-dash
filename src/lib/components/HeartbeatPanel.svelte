@@ -163,7 +163,9 @@
 			<!-- Configuration Section -->
 			<div class="mb-6 rounded-lg border border-surface-border bg-surface-1 p-4">
 				<div class="mb-3 flex items-center justify-between">
-					<h3 class="text-xs font-medium uppercase tracking-wide text-status-muted">Configuration</h3>
+					<h3 class="text-xs font-medium uppercase tracking-wide text-status-muted">
+						Configuration
+					</h3>
 					<button onclick={openConfigEdit} class="text-xs text-blue-400 hover:text-blue-300">
 						Edit
 					</button>
@@ -225,7 +227,8 @@
 					</div>
 					{#if templateDraft}
 						<div class="mt-3 border-t border-surface-border pt-3">
-							<span class="mb-2 block text-[10px] font-medium uppercase tracking-wide text-status-muted"
+							<span
+								class="mb-2 block text-[10px] font-medium uppercase tracking-wide text-status-muted"
 								>Preview</span
 							>
 							<MarkdownRenderer content={templateDraft} />

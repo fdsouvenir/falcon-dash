@@ -526,7 +526,7 @@
 	.spawn-confirm__text {
 		font-size: 0.8125rem;
 		font-weight: 500;
-		color: rgba(255,255,255,0.8);
+		color: rgba(255, 255, 255, 0.8);
 		line-height: 1;
 	}
 	.spawn-confirm__actions {
@@ -550,7 +550,7 @@
 		color: var(--status-muted);
 	}
 	.spawn-confirm__btn--cancel:hover {
-		color: rgba(255,255,255,0.8);
+		color: rgba(255, 255, 255, 0.8);
 	}
 	.spawn-confirm__btn--go {
 		background: var(--color-emerald-600);

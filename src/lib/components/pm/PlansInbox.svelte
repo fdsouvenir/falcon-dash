@@ -39,9 +39,7 @@
 		loading = true;
 		try {
 			// Fetch all active plans cross-project; group client-side
-			const results = await Promise.all(
-				INBOX_SECTIONS.map((s) => loadCrossProjectPlans(s.status))
-			);
+			const results = await Promise.all(INBOX_SECTIONS.map((s) => loadCrossProjectPlans(s.status)));
 			allPlans = results.flat();
 		} finally {
 			loading = false;
@@ -109,7 +107,12 @@
 				class="p-1.5 text-status-muted hover:text-white transition-colors rounded-lg hover:bg-surface-3"
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+					></path>
 				</svg>
 			</button>
 		</div>
@@ -136,28 +139,47 @@
 									<!-- Status pill (clickable) -->
 									<div class="relative flex-shrink-0">
 										<button
-											onclick={() => openStatusDropdownId = openStatusDropdownId === plan.id ? null : plan.id}
+											onclick={() =>
+												(openStatusDropdownId = openStatusDropdownId === plan.id ? null : plan.id)}
 											class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes} hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1"
 											title="Click to change status"
 										>
 											{statusPill.label}
-											<svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+											<svg
+												class="w-3 h-3 opacity-60"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 9l-7 7-7-7"
+												></path>
 											</svg>
 										</button>
 										{#if openStatusDropdownId === plan.id}
 											<div
 												class="fixed inset-0 z-10"
-												onclick={() => openStatusDropdownId = null}
+												onclick={() => (openStatusDropdownId = null)}
 											></div>
-											<div class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36">
+											<div
+												class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36"
+											>
 												{#each planStatusOptions as opt}
 													{@const optPill = getPlanStatusPill(opt.value)}
 													<button
 														onclick={() => changePlanStatus(plan.id, opt.value)}
-														class="w-full text-left px-3 py-1.5 {TEXT.body} hover:bg-surface-2 transition-colors flex items-center gap-2 {plan.status === opt.value ? 'bg-surface-2' : ''}"
+														class="w-full text-left px-3 py-1.5 {TEXT.body} hover:bg-surface-2 transition-colors flex items-center gap-2 {plan.status ===
+														opt.value
+															? 'bg-surface-2'
+															: ''}"
 													>
-														<span class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {optPill.classes}">{optPill.label}</span>
+														<span
+															class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {optPill.classes}"
+															>{optPill.label}</span
+														>
 													</button>
 												{/each}
 											</div>

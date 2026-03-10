@@ -27,12 +27,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const plan = createPlan(body);
-		emitPMEvent({ 
-			action: 'created', 
-			entityType: 'plan', 
+		emitPMEvent({
+			action: 'created',
+			entityType: 'plan',
 			entityId: plan.id,
 			projectId: plan.project_id,
-			data: body 
+			data: body
 		});
 		triggerContextGeneration();
 		return json(plan, { status: 201 });

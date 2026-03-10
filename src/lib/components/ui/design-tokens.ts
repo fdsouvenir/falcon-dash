@@ -99,7 +99,13 @@ export function getPriority(level: string | null) {
 }
 
 /* ── Plan Status Colors ── */
-export type PlanStatus = 'planning' | 'assigned' | 'in_progress' | 'needs_review' | 'complete' | 'cancelled';
+export type PlanStatus =
+	| 'planning'
+	| 'assigned'
+	| 'in_progress'
+	| 'needs_review'
+	| 'complete'
+	| 'cancelled';
 
 export const PLAN_STATUS_MAP: Record<PlanStatus, StatusKey> = {
 	planning: 'info',

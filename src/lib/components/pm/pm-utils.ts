@@ -61,13 +61,13 @@ export function formatStatusLabel(status: string): string {
 	// Map DB statuses to mockup display labels
 	const statusMap: Record<string, string> = {
 		todo: 'active',
-		in_progress: 'active', 
+		in_progress: 'active',
 		review: 'on hold',
 		done: 'done',
 		cancelled: 'archived',
 		archived: 'archived'
 	};
-	
+
 	const mapped = statusMap[status] || status;
 	return mapped.replaceAll('_', ' ');
 }

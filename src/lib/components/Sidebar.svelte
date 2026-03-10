@@ -149,7 +149,9 @@
 
 		<!-- Apps section -->
 		<div class="px-3 py-3">
-			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-status-muted">Apps</h2>
+			<h2 class="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-status-muted">
+				Apps
+			</h2>
 			<a
 				href="/projects"
 				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-white/80 hover:bg-surface-2 hover:text-white"

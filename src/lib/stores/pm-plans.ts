@@ -55,7 +55,9 @@ export async function loadPlans(projectId: number): Promise<void> {
 	clearPlans();
 	_plansLoading.set(true);
 	try {
-		const res = await pmGet<PaginatedResponse<Plan>>('/api/pm/plans', { project_id: projectId.toString() });
+		const res = await pmGet<PaginatedResponse<Plan>>('/api/pm/plans', {
+			project_id: projectId.toString()
+		});
 		_plans.set(res.items);
 	} finally {
 		_plansLoading.set(false);
@@ -166,7 +168,7 @@ export const PLAN_STATUSES = [
 	'cancelled'
 ] as const;
 
-export type PlanStatus = typeof PLAN_STATUSES[number];
+export type PlanStatus = (typeof PLAN_STATUSES)[number];
 
 export function getPlansByProject(projectId: number): Plan[] {
 	const currentPlans = get(plans);

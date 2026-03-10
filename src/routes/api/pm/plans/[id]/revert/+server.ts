@@ -11,10 +11,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		const planId = parseId(params.id);
 		const body = await request.json();
 		const version = requireNumber(body.version, 'version');
-		
+
 		const plan = revertPlanVersion(planId, version);
-		if (!plan) throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Plan ${planId} or version ${version} not found`);
-		
+		if (!plan)
+			throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Plan ${planId} or version ${version} not found`);
+
 		emitPMEvent({
 			action: 'reverted',
 			entityType: 'plan',

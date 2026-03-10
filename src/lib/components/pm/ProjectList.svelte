@@ -17,7 +17,14 @@
 	} from '$lib/stores/pm-categories.js';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { formatStatusLabel, formatDueDate, getStatusPill, getPriorityTag } from './pm-utils.js';
-	import { SURFACE, TEXT, SPACE, STATUS_COLORS, type StatusKey, getStatusColor } from '$lib/components/ui/design-tokens.js';
+	import {
+		SURFACE,
+		TEXT,
+		SPACE,
+		STATUS_COLORS,
+		type StatusKey,
+		getStatusColor
+	} from '$lib/components/ui/design-tokens.js';
 
 	interface Props {
 		onselect?: (projectId: number) => void;
@@ -132,9 +139,8 @@
 
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase().trim();
-			result = result.filter((p) =>
-				p.title.toLowerCase().includes(q) ||
-				p.description?.toLowerCase().includes(q)
+			result = result.filter(
+				(p) => p.title.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)
 			);
 		}
 
@@ -261,7 +267,8 @@
 				<div class="flex gap-2">
 					{#each filters as f (f.key)}
 						<button
-							class="px-3 py-1.5 rounded-lg {TEXT.badge} font-medium transition-colors {filterMode === f.key
+							class="px-3 py-1.5 rounded-lg {TEXT.badge} font-medium transition-colors {filterMode ===
+							f.key
 								? 'bg-status-info text-white'
 								: 'text-status-muted hover:bg-surface-3'}"
 							onclick={() => {
@@ -297,7 +304,12 @@
 						class="px-4 py-2 bg-status-info hover:bg-status-info/80 rounded-lg {TEXT.body} font-medium flex items-center gap-2 transition-colors"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 4v16m8-8H4"
+							></path>
 						</svg>
 						New Project
 					</button>
@@ -336,7 +348,12 @@
 								stroke="currentColor"
 								viewBox="0 0 24 24"
 							>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 9l-7 7-7-7"
+								></path>
 							</svg>
 						</button>
 
@@ -360,11 +377,15 @@
 												{/if}
 											</div>
 											<div class="flex items-center gap-2 flex-shrink-0">
-												<span class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes}">
+												<span
+													class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes}"
+												>
 													{statusPill.label}
 												</span>
 												{#if priorityTag}
-													<span class="px-2 py-0.5 rounded {TEXT.badge} font-medium {priorityTag.classes}">
+													<span
+														class="px-2 py-0.5 rounded {TEXT.badge} font-medium {priorityTag.classes}"
+													>
 														{priorityTag.label}
 													</span>
 												{/if}
@@ -391,7 +412,13 @@
 		<div class="bg-surface-2 rounded-xl w-full max-w-lg max-h-[90%] overflow-auto">
 			<div class="p-6">
 				<h3 class="{TEXT.pageTitle} mb-6">New Project</h3>
-				<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); handleCreateProject(); }}>
+				<form
+					class="space-y-4"
+					onsubmit={(e) => {
+						e.preventDefault();
+						handleCreateProject();
+					}}
+				>
 					<div>
 						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Category *</label>
 						<select

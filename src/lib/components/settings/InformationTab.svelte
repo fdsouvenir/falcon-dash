@@ -342,23 +342,39 @@
 	{#if isConnected}
 		<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
 			<div class="rounded-lg border border-surface-border bg-surface-2/60 px-3 py-2.5">
-				<div class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted">Model</div>
+				<div
+					class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted"
+				>
+					Model
+				</div>
 				<div class="mt-0.5 truncate font-mono text-sm text-white">
 					{gatewayStatus?.currentModel || sessionDefaults.model || '--'}
 				</div>
 			</div>
 			<div class="rounded-lg border border-surface-border bg-surface-2/60 px-3 py-2.5">
-				<div class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted">Thinking</div>
+				<div
+					class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted"
+				>
+					Thinking
+				</div>
 				<div class="mt-0.5 font-mono text-sm text-white">
 					{sessionDefaults.thinkingLevel || '--'}
 				</div>
 			</div>
 			<div class="rounded-lg border border-surface-border bg-surface-2/60 px-3 py-2.5">
-				<div class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted">Devices</div>
+				<div
+					class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted"
+				>
+					Devices
+				</div>
 				<div class="mt-0.5 font-mono text-sm text-white">{deviceCount}</div>
 			</div>
 			<div class="rounded-lg border border-surface-border bg-surface-2/60 px-3 py-2.5">
-				<div class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted">Session</div>
+				<div
+					class="text-[length:var(--text-section-header)] font-medium uppercase tracking-widest text-status-muted"
+				>
+					Session
+				</div>
 				<div class="mt-0.5 font-mono text-sm text-white">{sessionUptime || '--'}</div>
 			</div>
 		</div>
@@ -369,7 +385,9 @@
 		<div class="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
 			<!-- Auth & Scopes -->
 			<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-				<h3 class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+				<h3
+					class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+				>
 					Auth & Scopes
 				</h3>
 				{#if authRole}
@@ -397,7 +415,9 @@
 
 			<!-- Session Defaults -->
 			<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-				<h3 class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+				<h3
+					class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+				>
 					Session Defaults
 				</h3>
 				<div class="space-y-1.5 text-xs">
@@ -431,7 +451,9 @@
 		<div class="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
 			<!-- Policy -->
 			<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-				<h3 class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+				<h3
+					class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+				>
 					Policy
 				</h3>
 				<div class="space-y-1.5 text-xs">
@@ -456,7 +478,9 @@
 
 			<!-- Server Paths -->
 			<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-				<h3 class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+				<h3
+					class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+				>
 					Server Paths
 				</h3>
 				<div class="space-y-1.5 text-xs">
@@ -493,7 +517,9 @@
 	<!-- Connected Devices -->
 	{#if isConnected && presence.length > 0}
 		<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-			<h3 class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+			<h3
+				class="mb-2.5 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+			>
 				Connected Devices
 				<span class="ml-1.5 font-mono text-status-muted">{presence.length}</span>
 			</h3>
@@ -508,7 +534,9 @@
 							{device.displayName || device.instanceId}
 						</span>
 						{#if device.deviceType}
-							<span class="text-[length:var(--text-badge)] text-status-muted">{device.deviceType}</span>
+							<span class="text-[length:var(--text-badge)] text-status-muted"
+								>{device.deviceType}</span
+							>
 						{/if}
 					</div>
 				{/each}
@@ -552,7 +580,9 @@
 	{#if isConnected}
 		<div class="border-t border-surface-border pt-4">
 			<div class="mb-3 flex items-center gap-2">
-				<h3 class="text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+				<h3
+					class="text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+				>
 					Extended Data
 				</h3>
 				{#if loadingRpc}
@@ -581,7 +611,10 @@
 					</button>
 				{/if}
 				{#if rpcErrors.length > 0}
-					<span class="text-[length:var(--text-badge)] text-status-muted" title={rpcErrors.join(', ')}>
+					<span
+						class="text-[length:var(--text-badge)] text-status-muted"
+						title={rpcErrors.join(', ')}
+					>
 						{rpcErrors.length} method{rpcErrors.length === 1 ? '' : 's'} unavailable
 					</span>
 				{/if}
@@ -591,7 +624,9 @@
 				<!-- Usage Table -->
 				{#if usageData?.providers && usageData.providers.length > 0}
 					<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-						<h4 class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+						<h4
+							class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+						>
 							Usage & Costs
 						</h4>
 						<div class="overflow-x-auto">
@@ -637,7 +672,9 @@
 				<!-- Nodes -->
 				{#if nodesData.length > 0}
 					<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-						<h4 class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+						<h4
+							class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+						>
 							Paired Nodes
 							<span class="ml-1 font-mono text-status-muted">{nodesData.length}</span>
 						</h4>
@@ -655,10 +692,14 @@
 										{node.name}
 									</span>
 									{#if node.deviceType}
-										<span class="text-[length:var(--text-badge)] text-status-muted">{node.deviceType}</span>
+										<span class="text-[length:var(--text-badge)] text-status-muted"
+											>{node.deviceType}</span
+										>
 									{/if}
 									{#if node.capabilities && node.capabilities.length > 0}
-										<span class="hidden text-[length:var(--text-badge)] text-status-muted sm:inline">
+										<span
+											class="hidden text-[length:var(--text-badge)] text-status-muted sm:inline"
+										>
 											{node.capabilities.join(', ')}
 										</span>
 									{/if}
@@ -671,7 +712,9 @@
 				<!-- Agents -->
 				{#if agentsData?.active && agentsData.active.length > 0}
 					<div class="rounded-lg border border-surface-border bg-surface-2 p-3.5">
-						<h4 class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+						<h4
+							class="mb-2 text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+						>
 							Active Agents
 							<span class="ml-1 font-mono text-status-muted">{agentsData.active.length}</span>
 						</h4>
@@ -682,7 +725,9 @@
 								>
 									<div class="min-w-0 flex-1">
 										<div class="truncate text-xs text-white/80">{agent.task}</div>
-										<div class="mt-0.5 flex flex-wrap gap-2 text-[length:var(--text-badge)] text-status-muted">
+										<div
+											class="mt-0.5 flex flex-wrap gap-2 text-[length:var(--text-badge)] text-status-muted"
+										>
 											<span class="font-mono">{agent.model}</span>
 											{#if agent.tokens !== undefined}
 												<span class="font-mono">{formatTokens(agent.tokens)} tok</span>
@@ -731,7 +776,9 @@
 									<div class="min-w-0 flex-1 truncate text-xs text-status-muted">
 										{agent.task}
 									</div>
-									<span class="whitespace-nowrap font-mono text-[length:var(--text-badge)] text-status-muted">
+									<span
+										class="whitespace-nowrap font-mono text-[length:var(--text-badge)] text-status-muted"
+									>
 										{agent.model}
 									</span>
 								</div>
@@ -745,7 +792,9 @@
 					<div
 						class="flex items-center justify-between rounded-lg border border-surface-border bg-surface-2 px-3.5 py-2.5"
 					>
-						<span class="text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted">
+						<span
+							class="text-[length:var(--text-section-header)] font-semibold uppercase tracking-widest text-status-muted"
+						>
 							Active Sessions
 						</span>
 						<span class="font-mono text-sm text-white/80">

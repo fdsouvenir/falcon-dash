@@ -56,8 +56,6 @@
 	--color-status-muted-bg: var(--status-muted-bg);
 	--color-status-purple: var(--status-purple);
 	--color-status-purple-bg: var(--status-purple-bg);
-
-
 }
 
 :root {
@@ -111,8 +109,6 @@
 	--status-muted-bg: rgba(107, 114, 128, 0.12);
 	--status-purple: #a78bfa;
 	--status-purple-bg: rgba(167, 139, 250, 0.12);
-
-
 
 	/* ── Typography scale ── */
 	--text-page-title: 1.25rem;

@@ -100,10 +100,13 @@
 					</svg>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline justify-between gap-2">
-							<span class="truncate text-sm font-medium {n.read ? 'text-status-muted' : 'text-white'}"
+							<span
+								class="truncate text-sm font-medium {n.read ? 'text-status-muted' : 'text-white'}"
 								>{n.title}</span
 							>
-							<span class="shrink-0 text-xs text-status-muted">{formatRelativeTime(n.timestamp)}</span>
+							<span class="shrink-0 text-xs text-status-muted"
+								>{formatRelativeTime(n.timestamp)}</span
+							>
 						</div>
 						<p class="mt-0.5 text-xs text-status-muted">{n.body}</p>
 					</div>

@@ -80,9 +80,7 @@ export async function updateCategory(
 	_error.set(null);
 	try {
 		const category = await pmPatch<Category>(`/api/pm/categories/${id}`, data);
-		_categories.update((categories) =>
-			categories.map((c) => (c.id === id ? category : c))
-		);
+		_categories.update((categories) => categories.map((c) => (c.id === id ? category : c)));
 		return category;
 	} catch (err) {
 		_error.set((err as Error).message);
@@ -113,7 +111,9 @@ export async function reorderCategories(ids: string[]): Promise<void> {
 		await pmPost('/api/pm/categories/reorder', { ids });
 		// Optimistically update the order
 		_categories.update((categories) => {
-			const ordered = ids.map((id) => categories.find((c) => c.id === id)).filter(Boolean) as Category[];
+			const ordered = ids
+				.map((id) => categories.find((c) => c.id === id))
+				.filter(Boolean) as Category[];
 			return ordered;
 		});
 	} catch (err) {
@@ -202,8 +202,10 @@ export async function reorderSubcategories(ids: string[]): Promise<void> {
 		// Optimistically update the order
 		_subcategories.update((all) => {
 			const reorderedSet = new Set(ids);
-			const others = all.filter(s => !reorderedSet.has(s.id));
-			const reordered = ids.map(id => all.find(s => s.id === id)).filter(Boolean) as Subcategory[];
+			const others = all.filter((s) => !reorderedSet.has(s.id));
+			const reordered = ids
+				.map((id) => all.find((s) => s.id === id))
+				.filter(Boolean) as Subcategory[];
 			return [...reordered, ...others];
 		});
 	} catch (err) {
@@ -236,12 +238,12 @@ export async function moveSubcategory(id: string, newCategoryId: string): Promis
 export function getCategoriesBySubcategory(subcategoryId: string): Category | undefined {
 	const cats = get(categories);
 	const subs = get(subcategories);
-	
+
 	const subcategory = subs.find((s) => s.id === subcategoryId);
 	if (subcategory) {
 		return cats.find((c) => c.id === subcategory.category_id);
 	}
-	
+
 	return undefined;
 }
 

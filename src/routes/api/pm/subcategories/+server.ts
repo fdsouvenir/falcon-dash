@@ -24,7 +24,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
 		const subcategory = createSubcategory(body);
-		emitPMEvent({ action: 'created', entityType: 'subcategory', entityId: subcategory.id, data: body });
+		emitPMEvent({
+			action: 'created',
+			entityType: 'subcategory',
+			entityId: subcategory.id,
+			data: body
+		});
 		triggerContextGeneration();
 		return json(subcategory, { status: 201 });
 	} catch (err) {
