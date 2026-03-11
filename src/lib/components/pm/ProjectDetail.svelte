@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from 'svelte/reactivity';
 	import {
 		getProject,
 		updateProject,
@@ -43,7 +44,7 @@
 	let subcategory = $state<Subcategory | null>(null);
 	let activities = $state<Activity[]>([]);
 	let projectPlans = $state<Plan[]>([]);
-	let activeTab = $state<'overview' | 'plans' | 'activity'>('overview');
+	let activeTab = $state<'overview' | 'plans' | 'completed' | 'activity'>('overview');
 	let loading = $state(false);
 
 	// Body editing state
@@ -73,7 +74,9 @@
 
 	// Activity feed: navigate to a plan from an activity entry
 	function handleActivityPlanClick(planId: number) {
-		activeTab = 'plans';
+		// Navigate to the correct tab depending on the plan's status
+		const plan = projectPlans.find((p) => p.id === planId);
+		activeTab = plan && DONE_STATUSES.has(plan.status) ? 'completed' : 'plans';
 		// Scroll the plan into view after Svelte renders the plans tab
 		setTimeout(() => {
 			document
@@ -320,6 +323,38 @@
 		{ value: 'cancelled', label: 'Cancelled' }
 	];
 
+	const ACTIVE_STATUSES = new Set(['planning', 'assigned', 'in_progress', 'needs_review']);
+	const DONE_STATUSES = new Set(['complete', 'cancelled']);
+
+	let activePlans = $derived(projectPlans.filter((p) => ACTIVE_STATUSES.has(p.status)));
+	let completedPlans = $derived(projectPlans.filter((p) => DONE_STATUSES.has(p.status)));
+
+	/**
+	 * Compute effective indent depth for a plan within a given tab's plan set.
+	 * A plan is indented only when all of its direct depends_on are also in the
+	 * same tab. Transitive parents that end up flat are also treated as flat,
+	 * so children of a flat plan inherit depth 0 (via the recursive call).
+	 */
+	function tabDepth(
+		plan: Plan,
+		tabMap: SvelteMap<number, Plan>,
+		cache: SvelteMap<number, number> = new SvelteMap()
+	): number {
+		if (cache.has(plan.id)) return cache.get(plan.id)!;
+		const depsInTab = (plan.depends_on ?? []).filter((id) => tabMap.has(id));
+		if (depsInTab.length === 0) {
+			cache.set(plan.id, 0);
+			return 0;
+		}
+		const d = 1 + Math.max(...depsInTab.map((id) => tabDepth(tabMap.get(id)!, tabMap, cache)));
+		cache.set(plan.id, d);
+		return d;
+	}
+
+	function buildTabMap(planList: Plan[]): SvelteMap<number, Plan> {
+		return new SvelteMap(planList.map((p) => [p.id, p]));
+	}
+
 	function formatDateTime(unixSeconds: number): string {
 		const date = new Date(unixSeconds * 1000);
 		return date.toLocaleDateString('en-US', {
@@ -489,7 +524,15 @@
 						? 'border-status-info text-white'
 						: 'border-transparent text-status-muted hover:text-white'}"
 				>
-					Plans ({projectPlans.length})
+					Plans ({activePlans.length})
+				</button>
+				<button
+					onclick={() => (activeTab = 'completed')}
+					class="detail-tab px-4 py-2 {TEXT.body} font-medium border-b-2 {activeTab === 'completed'
+						? 'border-status-info text-white'
+						: 'border-transparent text-status-muted hover:text-white'}"
+				>
+					Completed
 				</button>
 				<button
 					onclick={() => (activeTab = 'activity')}
@@ -558,17 +601,18 @@
 					{/if}
 				</div>
 			{:else if activeTab === 'plans'}
-				{#if projectPlans.length === 0}
+				{#if activePlans.length === 0}
 					<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
-						No plans yet. Create your first plan to organize your work.
+						No active plans. Create your first plan to organize your work.
 					</div>
 				{:else}
+					{@const tabMap = buildTabMap(activePlans)}
 					<div class="space-y-3">
-						{#each projectPlans as plan (plan.id)}
+						{#each activePlans as plan (plan.id)}
 							{@const statusPill = getPlanStatusPill(plan.status)}
 							{@const versionCount = versions.filter((v) => v.plan_id === plan.id).length}
 							{@const isBlocked = (plan.blocked_by?.length ?? 0) > 0}
-							{@const depth = plan.depth ?? 0}
+							{@const depth = tabDepth(plan, tabMap)}
 
 							<div
 								id="plan-{plan.id}"
@@ -650,6 +694,152 @@
 													{/if}
 												</div>
 
+												{#if versionCount > 0}
+													<button
+														onclick={() => openVersionHistory(plan.id)}
+														class="{TEXT.badge} text-status-muted hover:text-status-info"
+													>
+														{versionCount} version{versionCount > 1 ? 's' : ''}
+													</button>
+												{/if}
+											</div>
+											{#if plan.description}
+												<div
+													class="mt-3 {TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none"
+												>
+													<MarkdownRenderer content={plan.description} />
+												</div>
+											{/if}
+											{#if plan.result}
+												<div class="mt-3 p-3 bg-surface-3 rounded-lg">
+													<p class="{TEXT.label} text-status-muted mb-1">Result</p>
+													<div
+														class="{TEXT.body} text-status-muted prose prose-invert prose-sm max-w-none"
+													>
+														<MarkdownRenderer content={plan.result} />
+													</div>
+												</div>
+											{/if}
+										</div>
+									</div>
+									<div class="flex items-center gap-1">
+										<button
+											onclick={() => openPlanModal(plan.id)}
+											class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
+											title="Edit"
+										>
+											<svg
+												class="w-4 h-4 text-status-muted"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+												></path>
+											</svg>
+										</button>
+										<button
+											onclick={() => confirmDelete('plan', plan.id)}
+											class="p-2 hover:bg-surface-3 rounded-lg transition-colors"
+											title="Delete"
+										>
+											<svg
+												class="w-4 h-4 text-status-muted"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												></path>
+											</svg>
+										</button>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{:else if activeTab === 'completed'}
+				{#if completedPlans.length === 0}
+					<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
+						No completed or cancelled plans yet.
+					</div>
+				{:else}
+					{@const tabMap = buildTabMap(completedPlans)}
+					<div class="space-y-3">
+						{#each completedPlans as plan (plan.id)}
+							{@const statusPill = getPlanStatusPill(plan.status)}
+							{@const versionCount = versions.filter((v) => v.plan_id === plan.id).length}
+							{@const depth = tabDepth(plan, tabMap)}
+
+							<div
+								id="plan-{plan.id}"
+								class="bg-surface-2 rounded-xl p-4 opacity-75"
+								style="margin-left: {depth * 16}px"
+							>
+								<div class="flex items-start justify-between gap-4">
+									<div class="flex items-start gap-3 flex-1 min-w-0">
+										<span class="text-status-muted font-mono {TEXT.body} mt-0.5">{plan.id}.</span>
+										<div class="flex-1 min-w-0">
+											<h4 class="font-medium text-white">{plan.title}</h4>
+											<div class="flex items-center gap-2 mt-1">
+												<div class="relative">
+													<button
+														onclick={() =>
+															(openStatusDropdownId =
+																openStatusDropdownId === plan.id ? null : plan.id)}
+														class="px-2 py-0.5 rounded {TEXT.badge} font-medium {statusPill.classes} hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1"
+														title="Click to change status"
+													>
+														{statusPill.label}
+														<svg
+															class="w-3 h-3 opacity-60"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M19 9l-7 7-7-7"
+															></path>
+														</svg>
+													</button>
+													{#if openStatusDropdownId === plan.id}
+														<div
+															class="fixed inset-0 z-10"
+															onclick={() => (openStatusDropdownId = null)}
+														></div>
+														<div
+															class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36"
+														>
+															{#each planStatusOptions as opt (opt.value)}
+																{@const optPill = getPlanStatusPill(opt.value)}
+																<button
+																	onclick={() => changePlanStatus(plan.id, opt.value)}
+																	class="w-full text-left px-3 py-1.5 {TEXT.body} hover:bg-surface-2 transition-colors flex items-center gap-2 {plan.status ===
+																	opt.value
+																		? 'bg-surface-2'
+																		: ''}"
+																>
+																	<span
+																		class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {optPill.classes}"
+																		>{optPill.label}</span
+																	>
+																</button>
+															{/each}
+														</div>
+													{/if}
+												</div>
 												{#if versionCount > 0}
 													<button
 														onclick={() => openVersionHistory(plan.id)}
