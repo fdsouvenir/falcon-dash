@@ -337,18 +337,52 @@ export function updateProject(
 
 	if (updates.length === 2) return getProject(id);
 
+	// Capture old state for rich activity details
+	const oldProject = getProject(id);
+
 	values.push(id);
 	db.prepare(`UPDATE projects SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
 	const project = getProject(id);
-	if (project) {
+	if (project && oldProject) {
+		const changedParts: string[] = [];
+		if (data.status !== undefined && data.status !== oldProject.status) {
+			changedParts.push(`Status: ${oldProject.status} → ${data.status}`);
+		}
+		if (data.priority !== undefined && data.priority !== oldProject.priority) {
+			changedParts.push(`Priority: ${oldProject.priority ?? 'none'} → ${data.priority}`);
+		}
+		if (data.title !== undefined && data.title !== oldProject.title) {
+			changedParts.push(`Title updated`);
+		}
+		if (data.description !== undefined && data.description !== oldProject.description) {
+			changedParts.push(`Description updated`);
+		}
+		if (data.body !== undefined && data.body !== oldProject.body) {
+			changedParts.push(`Body updated`);
+		}
+		if (data.due_date !== undefined && data.due_date !== oldProject.due_date) {
+			changedParts.push(data.due_date ? `Due date set to ${data.due_date}` : `Due date cleared`);
+		}
+		if (data.category_id !== undefined && data.category_id !== oldProject.category_id) {
+			changedParts.push(`Category changed`);
+		}
+		if (data.subcategory_id !== undefined && data.subcategory_id !== oldProject.subcategory_id) {
+			changedParts.push(`Subcategory changed`);
+		}
+
+		const isStatusOnly =
+			data.status !== undefined &&
+			changedParts.length === 1 &&
+			changedParts[0].startsWith('Status:');
 		logActivity({
 			project_id: id,
 			actor: 'system',
-			action: 'updated',
+			action: isStatusOnly ? 'status_changed' : 'updated',
 			target_type: 'project',
 			target_id: id,
-			target_title: project.title
+			target_title: project.title,
+			details: changedParts.length > 0 ? changedParts.join('; ') : undefined
 		});
 	}
 
@@ -421,7 +455,9 @@ export type EnrichedPlan = Plan & {
 	blocked_by: Array<{ id: number; title: string; status: string }>;
 };
 
-function enrichPlansWithDependencies(rawPlans: (Plan & { project_title?: string })[]): EnrichedPlan[] {
+function enrichPlansWithDependencies(
+	rawPlans: (Plan & { project_title?: string })[]
+): EnrichedPlan[] {
 	if (rawPlans.length === 0) return [];
 
 	const db = getDb();
@@ -431,7 +467,9 @@ function enrichPlansWithDependencies(rawPlans: (Plan & { project_title?: string 
 	// Fetch all dependencies for these plans
 	const placeholders = planIds.map(() => '?').join(',');
 	const deps = db
-		.prepare(`SELECT plan_id, depends_on_plan_id FROM plan_dependencies WHERE plan_id IN (${placeholders})`)
+		.prepare(
+			`SELECT plan_id, depends_on_plan_id FROM plan_dependencies WHERE plan_id IN (${placeholders})`
+		)
 		.all(...planIds) as Array<{ plan_id: number; depends_on_plan_id: number }>;
 
 	// Build dependency map
@@ -494,7 +532,9 @@ function enrichPlansWithDependencies(rawPlans: (Plan & { project_title?: string 
 		const allDepIds = [...new Set(deps.map((d) => d.depends_on_plan_id))];
 		const depPlaceholders = allDepIds.map(() => '?').join(',');
 		const depPlans = db
-			.prepare(`SELECT id, title, status FROM plans WHERE id IN (${depPlaceholders}) AND status NOT IN ('complete', 'cancelled')`)
+			.prepare(
+				`SELECT id, title, status FROM plans WHERE id IN (${depPlaceholders}) AND status NOT IN ('complete', 'cancelled')`
+			)
 			.all(...allDepIds) as Array<{ id: number; title: string; status: string }>;
 		const depPlanMap = new Map(depPlans.map((p) => [p.id, p]));
 
@@ -572,7 +612,14 @@ export function listPlans(
 	return enrichPlansWithDependencies(rawPlans);
 }
 
-export function getPlan(id: number): (Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> }) | undefined {
+export function getPlan(
+	id: number
+):
+	| (Plan & {
+			depends_on: number[];
+			blocked_by: Array<{ id: number; title: string; status: string }>;
+	  })
+	| undefined {
 	const db = getDb();
 	const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(id) as Plan | undefined;
 	if (!plan) return undefined;
@@ -596,7 +643,10 @@ export function createPlan(data: {
 	result?: string;
 	status?: string;
 	depends_on?: number[];
-}): Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> } {
+}): Plan & {
+	depends_on: number[];
+	blocked_by: Array<{ id: number; title: string; status: string }>;
+} {
 	const db = getDb();
 	const now = Math.floor(Date.now() / 1000);
 	const maxOrder = db
@@ -652,8 +702,19 @@ export function createPlan(data: {
 
 export function updatePlan(
 	id: number,
-	data: { title?: string; description?: string; result?: string; status?: string; depends_on?: number[] }
-): (Plan & { depends_on: number[]; blocked_by: Array<{ id: number; title: string; status: string }> }) | undefined {
+	data: {
+		title?: string;
+		description?: string;
+		result?: string;
+		status?: string;
+		depends_on?: number[];
+	}
+):
+	| (Plan & {
+			depends_on: number[];
+			blocked_by: Array<{ id: number; title: string; status: string }>;
+	  })
+	| undefined {
 	const db = getDb();
 	const currentPlan = getPlanRaw(id);
 	if (!currentPlan) return undefined;
@@ -696,7 +757,12 @@ export function updatePlan(
 		updates.push('version = version + 1');
 	}
 
-	if (updates.length === 1 && !data.depends_on) return { ...currentPlan, depends_on: getDependencies(id), blocked_by: getDependenciesEnriched(id) };
+	if (updates.length === 1 && !data.depends_on)
+		return {
+			...currentPlan,
+			depends_on: getDependencies(id),
+			blocked_by: getDependenciesEnriched(id)
+		};
 
 	// Status constraint: can't assign/start plans with incomplete deps
 	if (data.status && (data.status === 'assigned' || data.status === 'in_progress')) {
@@ -724,11 +790,26 @@ export function updatePlan(
 
 	// Create version if content changed
 	if (descriptionChanged || resultChanged || statusChanged) {
-		createPlanVersion(id, updatedPlanRaw.description, updatedPlanRaw.result, updatedPlanRaw.status, 'user');
+		createPlanVersion(
+			id,
+			updatedPlanRaw.description,
+			updatedPlanRaw.result,
+			updatedPlanRaw.status,
+			'user'
+		);
 	}
 
 	// Log activity
 	const action = statusChanged ? 'plan_status_changed' : 'plan_updated';
+	const planActivityParts: string[] = [];
+	if (statusChanged) {
+		planActivityParts.push(`${currentPlan.status} → ${updatedPlanRaw.status}`);
+	} else {
+		if (descriptionChanged) planActivityParts.push('Description updated');
+		if (resultChanged) planActivityParts.push('Result updated');
+		if (data.title !== undefined && data.title !== currentPlan.title)
+			planActivityParts.push('Title updated');
+	}
 	logActivity({
 		project_id: updatedPlanRaw.project_id,
 		actor: 'system',
@@ -736,7 +817,7 @@ export function updatePlan(
 		target_type: 'plan',
 		target_id: id,
 		target_title: updatedPlanRaw.title,
-		details: statusChanged ? `Status changed to ${updatedPlanRaw.status}` : undefined
+		details: planActivityParts.length > 0 ? planActivityParts.join('; ') : undefined
 	});
 
 	return {
@@ -770,7 +851,9 @@ export function reorderPlans(ids: number[]): void {
 export function getDependencies(planId: number): number[] {
 	const db = getDb();
 	const rows = db
-		.prepare('SELECT depends_on_plan_id FROM plan_dependencies WHERE plan_id = ? ORDER BY depends_on_plan_id')
+		.prepare(
+			'SELECT depends_on_plan_id FROM plan_dependencies WHERE plan_id = ? ORDER BY depends_on_plan_id'
+		)
 		.all(planId) as Array<{ depends_on_plan_id: number }>;
 	return rows.map((r) => r.depends_on_plan_id);
 }
@@ -822,9 +905,7 @@ export function setDependencies(planId: number, dependsOn: number[]): void {
 		// Validate all IDs exist and belong to same project
 		const placeholders = uniqueDeps.map(() => '?').join(',');
 		const existing = db
-			.prepare(
-				`SELECT id, project_id FROM plans WHERE id IN (${placeholders})`
-			)
+			.prepare(`SELECT id, project_id FROM plans WHERE id IN (${placeholders})`)
 			.all(...uniqueDeps) as Array<{ id: number; project_id: number }>;
 
 		if (existing.length !== uniqueDeps.length) {
@@ -884,10 +965,7 @@ export function setDependencies(planId: number, dependsOn: number[]): void {
 		visited.clear();
 		recursionStack.clear();
 		if (hasCycle(planId)) {
-			throw new PMError(
-				PM_ERRORS.PM_CONSTRAINT,
-				'Circular dependency detected'
-			);
+			throw new PMError(PM_ERRORS.PM_CONSTRAINT, 'Circular dependency detected');
 		}
 	}
 

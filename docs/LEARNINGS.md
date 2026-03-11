@@ -66,6 +66,15 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 
 _(Add architectural and design decisions here as they are made.)_
 
+## PM Activity Feed
+
+- **2026-03-11 (Claude):** The PM activity feed was inline in `ProjectDetail.svelte` (lines 722-744) — not a separate component. Extracted to `src/lib/components/pm/ActivityFeed.svelte` to enable independent testing and reuse.
+- **2026-03-11 (Claude):** `updateProject()` in `crud.ts` logged a generic `action: 'updated'` with no details. Fixed to capture old values before the DB write and build a change summary (`"Status: todo → in_progress; Priority: normal → high"`). Pure status-only changes now use `action: 'status_changed'` (already in the schema's CHECK constraint).
+- **2026-03-11 (Claude):** `updatePlan()` logged `"Status changed to X"` without the old value. Fixed to log `"old → new"` using `currentPlan.status` (already fetched at function start).
+- **2026-03-11 (Claude):** Batch collapsing in the activity feed groups consecutive entries with the same `action:target_id` key within a 60-second window. Implemented in the frontend only — no backend grouping needed since we sort by `created_at DESC` and group in `$derived.by()`.
+- **2026-03-11 (Claude):** Plan links in the activity feed use a callback prop (`onPlanClick`) rather than URL navigation — project detail is a state-driven component with no URL route per project. The handler switches to the Plans tab and calls `scrollIntoView` on `#plan-{id}` after a 50ms tick.
+- **2026-03-11 (Claude):** There is no `src/routes/projects/[id]/+page.svelte` — project detail is rendered inline within `/projects` via a state variable `selectedProjectId`. No URL-based plan routes exist.
+
 ## KeePassXC Vault
 
 - **2026-03-05 (Claude):** `keepassxc-cli ls` with an empty vault returns empty output with exit 0 — parse defensively, filter blank lines.

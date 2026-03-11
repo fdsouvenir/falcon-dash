@@ -24,23 +24,12 @@
 		planVersions,
 		revertPlanVersion,
 		type Plan,
-		type PlanVersion,
-		PLAN_STATUSES
+		type PlanVersion
 	} from '$lib/stores/pm-plans.js';
-	import {
-		formatStatusLabel,
-		formatRelativeTime,
-		getStatusPill,
-		getPlanStatusPill
-	} from './pm-utils.js';
-	import {
-		SURFACE,
-		TEXT,
-		SPACE,
-		STATUS_COLORS,
-		type StatusKey
-	} from '$lib/components/ui/design-tokens.js';
+	import { getPlanStatusPill } from './pm-utils.js';
+	import { SURFACE, TEXT } from '$lib/components/ui/design-tokens.js';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import ActivityFeed from '$lib/components/pm/ActivityFeed.svelte';
 
 	interface Props {
 		projectId: number;
@@ -72,7 +61,6 @@
 
 	// Version modal state
 	let showVersionModal = $state(false);
-	let versionPlanId = $state<number | null>(null);
 	let versions = $state<PlanVersion[]>([]);
 
 	// Delete confirmation state
@@ -82,6 +70,17 @@
 
 	// Inline status dropdown state (Plan 8)
 	let openStatusDropdownId = $state<number | null>(null);
+
+	// Activity feed: navigate to a plan from an activity entry
+	function handleActivityPlanClick(planId: number) {
+		activeTab = 'plans';
+		// Scroll the plan into view after Svelte renders the plans tab
+		setTimeout(() => {
+			document
+				.getElementById(`plan-${planId}`)
+				?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 50);
+	}
 
 	// SSE live refresh (Plan 11)
 	let sseSource: EventSource | null = null;
@@ -172,7 +171,7 @@
 		};
 	});
 
-	async function updateField(field: string, value: any) {
+	async function updateField(field: string, value: unknown) {
 		if (!project) return;
 		try {
 			await updateProject(project.id, { [field]: value });
@@ -262,7 +261,6 @@
 	async function openVersionHistory(planId: number) {
 		try {
 			await loadPlanVersions(planId);
-			versionPlanId = planId;
 			showVersionModal = true;
 		} catch (err) {
 			console.error('Failed to load plan versions:', err);
@@ -419,7 +417,7 @@
 							onchange={(e) => updateField('status', e.currentTarget.value)}
 							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
 						>
-							{#each statusOptions as option}
+							{#each statusOptions as option (option.value)}
 								<option value={option.value}>{option.label}</option>
 							{/each}
 						</select>
@@ -431,7 +429,7 @@
 							onchange={(e) => updateField('priority', e.currentTarget.value)}
 							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
 						>
-							{#each priorityOptions as option}
+							{#each priorityOptions as option (option.value)}
 								<option value={option.value}>{option.label}</option>
 							{/each}
 						</select>
@@ -452,7 +450,7 @@
 							onchange={(e) => updateField('category_id', e.currentTarget.value)}
 							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
 						>
-							{#each categoryList as cat}
+							{#each categoryList as cat (cat.id)}
 								<option value={cat.id}>{cat.name}</option>
 							{/each}
 						</select>
@@ -572,7 +570,11 @@
 							{@const isBlocked = (plan.blocked_by?.length ?? 0) > 0}
 							{@const depth = plan.depth ?? 0}
 
-							<div class="bg-surface-2 rounded-xl p-4 {isBlocked ? 'opacity-60' : ''}" style="margin-left: {depth * 16}px">
+							<div
+								id="plan-{plan.id}"
+								class="bg-surface-2 rounded-xl p-4 {isBlocked ? 'opacity-60' : ''}"
+								style="margin-left: {depth * 16}px"
+							>
 								<div class="flex items-start justify-between gap-4">
 									<div class="flex items-start gap-3 flex-1 min-w-0">
 										<!-- Plan 9: use plan.id instead of loop index -->
@@ -586,8 +588,10 @@
 											</div>
 											{#if plan.blocked_by && plan.blocked_by.length > 0}
 												<div class="flex flex-wrap gap-1 mt-1">
-													{#each plan.blocked_by as dep}
-														<span class="inline-flex items-center px-1.5 py-0.5 rounded {TEXT.badge} bg-surface-3 text-status-muted">
+													{#each plan.blocked_by as dep (dep.id)}
+														<span
+															class="inline-flex items-center px-1.5 py-0.5 rounded {TEXT.badge} bg-surface-3 text-status-muted"
+														>
 															Depends on: {dep.title}
 														</span>
 													{/each}
@@ -627,7 +631,7 @@
 														<div
 															class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36"
 														>
-															{#each planStatusOptions as opt}
+															{#each planStatusOptions as opt (opt.value)}
 																{@const optPill = getPlanStatusPill(opt.value)}
 																<button
 																	onclick={() => changePlanStatus(plan.id, opt.value)}
@@ -720,28 +724,7 @@
 					</div>
 				{/if}
 			{:else if activeTab === 'activity'}
-				{#if activities.length === 0}
-					<div class="bg-surface-2 rounded-xl p-6 text-center text-status-muted">
-						No activity recorded yet.
-					</div>
-				{:else}
-					<div class="bg-surface-2 rounded-xl divide-y divide-surface-border">
-						{#each activities as activity}
-							<div class="p-4 flex items-start gap-3">
-								<div class="w-2 h-2 rounded-full bg-status-info mt-2 flex-shrink-0"></div>
-								<div class="flex-1 min-w-0">
-									<p class="{TEXT.body} text-white">{activity.action}</p>
-									{#if activity.details}
-										<p class="{TEXT.label} text-status-muted mt-0.5">{activity.details}</p>
-									{/if}
-									<p class="{TEXT.label} text-status-muted mt-1">
-										{formatDateTime(activity.created_at)}
-									</p>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
+				<ActivityFeed {activities} onPlanClick={handleActivityPlanClick} />
 			{/if}
 		</div>
 	</div>
@@ -776,7 +759,7 @@
 							bind:value={planStatus}
 							class="w-full px-3 py-2 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
 						>
-							{#each planStatusOptions as option}
+							{#each planStatusOptions as option (option.value)}
 								<option value={option.value}>{option.label}</option>
 							{/each}
 						</select>
@@ -784,11 +767,17 @@
 					<!-- Dependencies multi-select -->
 					{#if projectPlans.length > (editingPlanId ? 1 : 0)}
 						<div>
-							<label class="block {TEXT.label} font-medium text-status-muted mb-1">Dependencies</label>
-							<div class="max-h-40 overflow-auto bg-surface-3 border {SURFACE.border} rounded-lg p-2 space-y-1">
+							<label class="block {TEXT.label} font-medium text-status-muted mb-1"
+								>Dependencies</label
+							>
+							<div
+								class="max-h-40 overflow-auto bg-surface-3 border {SURFACE.border} rounded-lg p-2 space-y-1"
+							>
 								{#each projectPlans.filter((p) => p.id !== editingPlanId) as dep (dep.id)}
 									{@const depStatusPill = getPlanStatusPill(dep.status)}
-									<label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-2 cursor-pointer">
+									<label
+										class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-2 cursor-pointer"
+									>
 										<input
 											type="checkbox"
 											checked={planDependsOn.includes(dep.id)}
@@ -796,7 +785,10 @@
 											class="rounded border-surface-border"
 										/>
 										<span class="{TEXT.body} text-white truncate flex-1">{dep.title}</span>
-										<span class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {depStatusPill.classes} flex-shrink-0">{depStatusPill.label}</span>
+										<span
+											class="px-1.5 py-0.5 rounded {TEXT.badge} font-medium {depStatusPill.classes} flex-shrink-0"
+											>{depStatusPill.label}</span
+										>
 									</label>
 								{/each}
 							</div>
@@ -869,7 +861,7 @@
 					<p class="text-status-muted">No previous versions.</p>
 				{:else}
 					<div class="space-y-3">
-						{#each versions as version}
+						{#each versions as version (version.id)}
 							{@const statusPill = getPlanStatusPill(version.status)}
 							<div class="bg-surface-3 rounded-lg p-4">
 								<div class="flex items-start justify-between mb-2">
