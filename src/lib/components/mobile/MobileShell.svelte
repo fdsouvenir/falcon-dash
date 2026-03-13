@@ -45,7 +45,7 @@
 	<BottomTabBar onmore={() => (moreOpen = true)} />
 
 	<BottomSheet open={moreOpen} onclose={() => (moreOpen = false)}>
-		<MoreSheet />
+		<MoreSheet onclose={() => (moreOpen = false)} />
 	</BottomSheet>
 
 	<MobileNotificationSheet open={notificationsOpen} onclose={() => (notificationsOpen = false)} />

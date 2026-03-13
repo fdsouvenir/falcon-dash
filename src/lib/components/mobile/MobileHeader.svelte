@@ -47,11 +47,13 @@
 		'/channels': 'Channels',
 		'/secrets': 'Secrets',
 		'/skills': 'Skills',
-		'/passwords': 'Passwords'
+		'/passwords': 'Passwords',
+		'/ops': 'Ops'
 	};
 
 	let title = $derived(() => {
 		if (pathname === '/jobs') return `${agentName}'s Jobs`;
+		if (pathname.startsWith('/agents')) return agentName;
 		return routeTitles[pathname] ?? 'Falcon Dashboard';
 	});
 
@@ -65,7 +67,9 @@
 	});
 
 	let isSecondaryRoute = $derived(
-		['/documents', '/projects', '/channels', '/secrets', '/passwords'].includes(pathname)
+		['/documents', '/projects', '/channels', '/secrets', '/passwords', '/ops', '/skills'].includes(
+			pathname
+		) || pathname.startsWith('/agents')
 	);
 </script>
 
