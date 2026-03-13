@@ -62,6 +62,12 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 
 - **2026-02-25 (Claude):** `Math.random()` as an `{#each}` key causes `each_key_volatile` runtime errors in Svelte 5. Use index-based fallback keys like `` `prefix-${i}` `` instead.
 
+## Mobile UX
+
+- **2026-03-13 (Claude):** The `MobileShell` BottomTabBar had 5 tabs (Home, Projects, Jobs, Docs, Channels) but 7 pages were completely inaccessible — Ops, Skills, Passwords, Secrets had no mobile nav entry. The "More" tab was conditionally rendered only when pinned apps existed. Fix: always show "More" tab, add Navigate section to MoreSheet.
+- **2026-03-13 (Claude):** The Ops page uses a side-by-side `ProcessList` + `ProcessDetail` layout that breaks at 375px. On mobile, use the `isMobile` store from `$lib/stores/viewport.js` to switch to list-OR-detail mode with a back button. The store uses `matchMedia('(max-width: 767px)')` so it only fires on threshold crossings.
+- **2026-03-13 (Claude):** `EntryList.svelte` had a pre-existing `svelte/require-each-key` lint error on the breadcrumbs `{#each}` (line 80) that blocks commits via the pre-commit hook. Added `(crumb.path)` key expression to fix.
+
 ## Decisions
 
 _(Add architectural and design decisions here as they are made.)_
