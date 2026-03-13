@@ -1,16 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { readGatewayUrlSync } from '$lib/server/gateway-config.js';
 
 /**
- * Returns the gateway's HTTP control UI URL.
- * Uses env vars or ~/.openclaw/openclaw.json — does NOT depend on
- * an active gateway connection.
+ * Returns the gateway's Control UI URL.
+ * Now points to the same-origin proxy so the iframe works behind
+ * Cloudflare Access (no CSP / loopback issues).
  */
 export function GET() {
-	try {
-		const httpUrl = readGatewayUrlSync();
-		return json({ url: new URL(httpUrl).origin });
-	} catch {
-		return json({ error: 'Could not read gateway configuration.' }, { status: 500 });
-	}
+	return json({ url: '/api/gateway/proxy/' });
 }

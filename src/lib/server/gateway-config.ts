@@ -14,6 +14,10 @@ export interface GatewayConfig {
  * Resolve the gateway token.
  * Priority: GATEWAY_TOKEN env → OPENCLAW_GATEWAY_TOKEN env → file read.
  */
+export function resolveTokenSync(): string {
+	return resolveToken().token;
+}
+
 function resolveToken(): { token: string; source: string } {
 	if (env.GATEWAY_TOKEN) {
 		return { token: env.GATEWAY_TOKEN, source: 'env:GATEWAY_TOKEN' };

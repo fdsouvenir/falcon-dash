@@ -26,11 +26,7 @@
 			<p class="text-sm text-status-muted">{error}</p>
 		</div>
 	{:else if controlUrl}
-		<iframe
-			src={controlUrl}
-			title="Gateway Control UI"
-			class="h-full w-full flex-1 border-0"
-			sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+		<iframe src={controlUrl} title="Gateway Control UI" class="h-full w-full flex-1 border-0"
 		></iframe>
 	{:else}
 		<div class="flex flex-1 items-center justify-center">
