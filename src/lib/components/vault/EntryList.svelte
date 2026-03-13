@@ -77,7 +77,7 @@
 			>
 				Vault
 			</button>
-			{#each breadcrumbs as crumb, i}
+			{#each breadcrumbs as crumb, i (crumb.path)}
 				<span>/</span>
 				<button
 					onclick={() => navigateToGroup(crumb.path)}
@@ -89,7 +89,7 @@
 		</div>
 
 		<!-- Actions row -->
-		<div class="flex items-center justify-between">
+		<div class="flex flex-wrap items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
 				{#if group}
 					<button
@@ -115,7 +115,7 @@
 						{subGroups.length === 1 ? 'group' : 'groups'}{/if}
 				</span>
 			</div>
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				<button
 					onclick={onaddgroup}
 					class="rounded-lg bg-surface-3 px-3 py-1.5 text-[length:var(--text-badge)] font-medium text-white hover:opacity-80"

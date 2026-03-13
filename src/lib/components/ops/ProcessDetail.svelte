@@ -2,7 +2,7 @@
 	import type { OpsEntry } from '$lib/stores/ops.js';
 	import { shortSessionId } from '$lib/stores/ops.js';
 
-	let { entry }: { entry: OpsEntry | null } = $props();
+	let { entry, onback }: { entry: OpsEntry | null; onback?: () => void } = $props();
 
 	function formatDuration(ms?: number): string {
 		if (ms === undefined) return '—';
@@ -20,7 +20,9 @@
 </script>
 
 <div
-	class="flex h-full flex-col overflow-hidden border-l border-surface-border bg-surface-1 flex-[2]"
+	class="flex h-full flex-col overflow-hidden bg-surface-1 {onback
+		? 'flex-1'
+		: 'flex-[2] border-l border-surface-border'}"
 >
 	{#if !entry}
 		<div
@@ -31,6 +33,23 @@
 	{:else}
 		<!-- Header -->
 		<div class="border-b border-surface-border bg-surface-2 px-[var(--space-card-padding)] py-3">
+			{#if onback}
+				<button
+					onclick={onback}
+					class="mb-2 flex items-center gap-1 text-[length:var(--text-label)] text-status-muted hover:text-white"
+				>
+					<svg
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+					</svg>
+					Back to list
+				</button>
+			{/if}
 			<div class="mb-1.5 font-mono text-[length:var(--text-mono)] text-white/90 break-all">
 				{getCommand(entry)}
 			</div>

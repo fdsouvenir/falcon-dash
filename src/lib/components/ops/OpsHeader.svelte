@@ -46,7 +46,7 @@
 	<div class="flex items-center gap-5">
 		<h1 class="text-[length:var(--text-card-title)] font-semibold text-white">Ops Observer</h1>
 
-		<div class="flex items-center gap-4 text-[length:var(--text-label)]">
+		<div class="hidden items-center gap-4 text-[length:var(--text-label)] sm:flex">
 			<span class="text-status-muted">
 				Calls <span class="font-medium text-white">{stats.totalCalls}</span>
 			</span>

@@ -10,10 +10,19 @@
 		startAutoRefresh,
 		stopAutoRefresh
 	} from '$lib/stores/ops.js';
+	import { isMobile } from '$lib/stores/viewport.js';
 
 	type Tab = 'processes' | 'activity';
 	let activeTab = $state<Tab>('processes');
 	let selectedProcessId = $state<string | null>(null);
+	let mobile = $state(false);
+
+	$effect(() => {
+		const unsub = isMobile.subscribe((v) => {
+			mobile = v;
+		});
+		return unsub;
+	});
 
 	const allEntries = $derived($entries);
 	const selectedEntry = $derived(
@@ -80,14 +89,28 @@
 	<!-- Content -->
 	<div class="flex min-h-0 flex-1">
 		{#if activeTab === 'processes'}
-			<div class="min-w-0 flex-[3] overflow-hidden">
-				<ProcessList
-					entries={allEntries}
-					selectedId={selectedProcessId}
-					onselect={(id) => (selectedProcessId = id)}
-				/>
-			</div>
-			<ProcessDetail entry={selectedEntry} />
+			{#if mobile}
+				{#if selectedProcessId && selectedEntry}
+					<ProcessDetail entry={selectedEntry} onback={() => (selectedProcessId = null)} />
+				{:else}
+					<div class="min-w-0 flex-1 overflow-hidden">
+						<ProcessList
+							entries={allEntries}
+							selectedId={selectedProcessId}
+							onselect={(id) => (selectedProcessId = id)}
+						/>
+					</div>
+				{/if}
+			{:else}
+				<div class="min-w-0 flex-[3] overflow-hidden">
+					<ProcessList
+						entries={allEntries}
+						selectedId={selectedProcessId}
+						onselect={(id) => (selectedProcessId = id)}
+					/>
+				</div>
+				<ProcessDetail entry={selectedEntry} />
+			{/if}
 		{:else}
 			<div class="flex-1 overflow-hidden">
 				<ActivityFeed entries={allEntries} />

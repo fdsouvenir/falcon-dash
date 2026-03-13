@@ -317,9 +317,9 @@
 		<div class="flex flex-col gap-2">
 			{#each filteredSkills as skill (skill.name)}
 				<div class="rounded border border-surface-border bg-surface-2/50 p-3">
-					<div class="flex items-start justify-between gap-2">
-						<div class="flex-1">
-							<div class="flex items-center gap-2">
+					<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+						<div class="min-w-0 flex-1">
+							<div class="flex flex-wrap items-center gap-2">
 								<span
 									class="h-2 w-2 flex-shrink-0 rounded-full {skill.enabled
 										? skill.hasApiKey || !skill.description.toLowerCase().includes('api')
@@ -342,7 +342,7 @@
 							</div>
 							<div class="mt-1 text-xs text-status-muted">{skill.description}</div>
 						</div>
-						<div class="flex items-center gap-2">
+						<div class="flex flex-wrap items-center gap-2">
 							<button
 								onclick={() => openApiKeyModal(skill.name)}
 								class="rounded bg-surface-3 px-2 py-1 text-xs text-white/70 hover:bg-surface-3"
