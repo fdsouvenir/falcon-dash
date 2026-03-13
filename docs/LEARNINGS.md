@@ -68,6 +68,10 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-03-13 (Claude):** The Ops page uses a side-by-side `ProcessList` + `ProcessDetail` layout that breaks at 375px. On mobile, use the `isMobile` store from `$lib/stores/viewport.js` to switch to list-OR-detail mode with a back button. The store uses `matchMedia('(max-width: 767px)')` so it only fires on threshold crossings.
 - **2026-03-13 (Claude):** `EntryList.svelte` had a pre-existing `svelte/require-each-key` lint error on the breadcrumbs `{#each}` (line 80) that blocks commits via the pre-commit hook. Added `(crumb.path)` key expression to fix.
 
+## Cloudflare Access / Remote Access
+
+- **2026-03-13 (Claude):** The Gateway Control tab iframed `http://127.0.0.1:28789` directly. This breaks behind Cloudflare Access because: (1) Cloudflare's CSP (`default-src 'self'`) blocks cross-origin iframes, and (2) the browser can't reach loopback from a remote session. Fix: server-side reverse proxy at `/api/gateway/proxy/[...path]` makes the Control UI same-origin. WebSocket proxying is not yet implemented — the Control UI's WS connections may need a follow-up if the UI relies on them for real-time updates.
+
 ## Decisions
 
 _(Add architectural and design decisions here as they are made.)_
