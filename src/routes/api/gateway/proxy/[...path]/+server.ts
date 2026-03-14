@@ -46,6 +46,24 @@ const handler: RequestHandler = async ({ params, request, url }) => {
 			resHeaders.delete(h);
 		}
 
+		// Rewrite relative asset paths in HTML so they resolve through the proxy.
+		// The gateway HTML uses "./assets/..." but SvelteKit strips the trailing
+		// slash from the iframe URL, so relative paths miss the /proxy/ segment.
+		// Rewrite relative asset paths in HTML so they resolve through the proxy.
+		// The gateway HTML uses "./assets/..." but SvelteKit strips the trailing
+		// slash from the iframe URL, so relative paths miss the /proxy/ segment.
+		const contentType = resHeaders.get('content-type') ?? '';
+		if (contentType.includes('text/html')) {
+			const html = await proxyRes.text();
+			const rewritten = html.replaceAll('./', '/api/gateway/proxy/');
+			resHeaders.delete('content-length');
+			return new Response(rewritten, {
+				status: proxyRes.status,
+				statusText: proxyRes.statusText,
+				headers: resHeaders
+			});
+		}
+
 		return new Response(proxyRes.body, {
 			status: proxyRes.status,
 			statusText: proxyRes.statusText,
