@@ -612,9 +612,7 @@ export function listPlans(
 	return enrichPlansWithDependencies(rawPlans);
 }
 
-export function getPlan(
-	id: number
-):
+export function getPlan(id: number):
 	| (Plan & {
 			depends_on: number[];
 			blocked_by: Array<{ id: number; title: string; status: string }>;
