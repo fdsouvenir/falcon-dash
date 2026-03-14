@@ -34,9 +34,15 @@ const handler: RequestHandler = async ({ params, request, url }) => {
 			redirect: 'manual'
 		});
 
-		// Build response headers, stripping hop-by-hop headers
+		// Build response headers, stripping hop-by-hop and frame-blocking headers
 		const resHeaders = new Headers(proxyRes.headers);
-		for (const h of ['transfer-encoding', 'connection', 'keep-alive']) {
+		for (const h of [
+			'transfer-encoding',
+			'connection',
+			'keep-alive',
+			'x-frame-options',
+			'content-security-policy'
+		]) {
 			resHeaders.delete(h);
 		}
 
