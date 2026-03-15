@@ -71,7 +71,7 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 ## Cloudflare Access / Remote Access
 
 - **2026-03-13 (Claude):** The Gateway Control tab iframed `http://127.0.0.1:28789` directly. This breaks behind Cloudflare Access because: (1) Cloudflare's CSP (`default-src 'self'`) blocks cross-origin iframes, and (2) the browser can't reach loopback from a remote session. Fix: server-side reverse proxy at `/api/gateway/proxy/[...path]` makes the Control UI same-origin. WebSocket proxying is not yet implemented — the Control UI's WS connections may need a follow-up if the UI relies on them for real-time updates.
-- **2026-03-14 (Claude):** SvelteKit server routes cannot proxy WebSocket upgrade requests — the Control UI iframe shows disconnected (1006). Fix: route `/setup` through Cloudflare Tunnel directly to the gateway at port 28789, bypassing SvelteKit entirely. In dev, fall back to the HTTP-only proxy at `/api/gateway/proxy/`. Controlled by `GATEWAY_CONTROL_PATH` env var. **Gotcha:** The gateway sends `X-Frame-Options: DENY` and `frame-ancestors 'none'` — a Cloudflare Transform Rule is needed to strip/rewrite these headers on the `/setup` path so the iframe isn't blocked.
+- **2026-03-15 (Claude):** SvelteKit server routes cannot proxy WebSocket upgrade requests. Fix: `entry.js` hooks into the Node HTTP server's `upgrade` event and proxies WS connections on `/api/gateway/proxy` to the gateway using the `ws` library (same pattern as `/terminal-ws`). In dev, Vite's built-in proxy handles it with `ws: true`. No Cloudflare Tunnel or extra env vars needed.
 
 ## Decisions
 
