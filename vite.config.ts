@@ -9,17 +9,77 @@ import { loadEnv } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import pkg from './package.json' with { type: 'json' };
 
-// Read gateway target for dev WS proxy (runs once at startup)
-let gatewayTarget = 'http://localhost:28789'; // fallback only if config unreadable
-try {
-	const raw = readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf-8');
-	const config = JSON.parse(raw);
-	const port = config?.gateway?.port;
-	const bind = config?.gateway?.bind ?? 'loopback';
-	const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
-	if (port) gatewayTarget = `http://${host}:${port}`;
-} catch {
-	/* use fallback */
+/**
+ * Resolve gateway WebSocket URL and auth token from env vars or config file.
+ * Runs once at Vite startup for the dev WS proxy.
+ */
+function resolveGatewayForDev() {
+	let token = process.env.GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN;
+	let wsUrl = process.env.GATEWAY_URL;
+
+	if (!token || !wsUrl) {
+		try {
+			const raw = readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf-8');
+			const config = JSON.parse(raw);
+			if (!token) token = config?.gateway?.auth?.token;
+			if (!wsUrl) {
+				const port = config?.gateway?.port;
+				const bind = config?.gateway?.bind ?? 'loopback';
+				const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
+				wsUrl = `ws://${host}:${port}`;
+			}
+		} catch {
+			/* config unreadable — fall through */
+		}
+	}
+	return { wsUrl: wsUrl || 'ws://127.0.0.1:28789', token };
+}
+
+/**
+ * Vite plugin: proxy WebSocket upgrades on /api/gateway/proxy to the gateway.
+ *
+ * Uses a custom `configureServer` hook instead of Vite's built-in `proxy` config
+ * so that only WS upgrade requests are intercepted — HTTP requests on the same
+ * path continue through to the SvelteKit route (which strips X-Frame-Options
+ * and rewrites asset paths for the iframe).
+ */
+function gatewayWsProxy() {
+	return {
+		name: 'gateway-ws-proxy',
+		async configureServer(server) {
+			const ws = await import('ws');
+			const WebSocketServer = ws.WebSocketServer;
+			const WebSocket = ws.WebSocket;
+			const wss = new WebSocketServer({ noServer: true });
+			const { wsUrl, token } = resolveGatewayForDev();
+
+			server.httpServer?.on('upgrade', (req, socket, head) => {
+				if (!req.url?.startsWith('/api/gateway/proxy')) return;
+
+				wss.handleUpgrade(req, socket, head, (clientWs) => {
+					const targetPath = req.url.replace('/api/gateway/proxy', '') || '/';
+					const headers = token ? { Authorization: `Bearer ${token}` } : {};
+					const upstream = new WebSocket(`${wsUrl}${targetPath}`, { headers });
+
+					upstream.on('open', () => {
+						clientWs.on('message', (data) => {
+							if (upstream.readyState === WebSocket.OPEN) upstream.send(data);
+						});
+						upstream.on('message', (data) => {
+							if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data);
+						});
+					});
+
+					upstream.on('close', (code, reason) => clientWs.close(code, reason));
+					clientWs.on('close', () => upstream.close());
+					upstream.on('error', () => clientWs.close());
+					clientWs.on('error', () => upstream.close());
+				});
+			});
+
+			console.log(`[gateway-ws-proxy] Dev WS proxy → ${wsUrl}`);
+		}
+	};
 }
 
 export default defineConfig(({ mode }) => {
@@ -32,6 +92,7 @@ export default defineConfig(({ mode }) => {
 			__SENTRY_ENVIRONMENT__: JSON.stringify(envVars.SENTRY_ENVIRONMENT || 'production')
 		},
 		plugins: [
+			gatewayWsProxy(),
 			tailwindcss(),
 			sveltekit(),
 			...(process.env.ANALYZE === 'true'
@@ -65,11 +126,6 @@ export default defineConfig(({ mode }) => {
 				'/terminal-ws': {
 					target: 'ws://localhost:3001',
 					ws: true
-				},
-				'/api/gateway/proxy': {
-					target: gatewayTarget,
-					ws: true,
-					rewrite: (path) => path.replace(/^\/api\/gateway\/proxy/, '')
 				}
 			}
 		},
