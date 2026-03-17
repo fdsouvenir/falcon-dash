@@ -44,7 +44,14 @@
 	let subcategory = $state<Subcategory | null>(null);
 	let activities = $state<Activity[]>([]);
 	let projectPlans = $state<Plan[]>([]);
-	let activeTab = $state<'overview' | 'plans' | 'completed' | 'activity'>('overview');
+	// Default to 'plans' on mobile, 'overview' on desktop
+	const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+	let activeTab = $state<'overview' | 'plans' | 'completed' | 'activity'>(
+		isMobile ? 'plans' : 'overview'
+	);
+
+	// Mobile header collapse state
+	let headerExpanded = $state(false);
 	let loading = $state(false);
 
 	// Body editing state
@@ -420,7 +427,7 @@
 			</div>
 		</div>
 
-		<!-- Header card (compact, sticky) -->
+		<!-- Header card -->
 		<div class="flex-shrink-0 px-4 pt-3 pb-0 bg-surface-1">
 			<div class="bg-surface-2 rounded-xl px-4 py-3">
 				<div class="flex items-center gap-3">
@@ -435,72 +442,98 @@
 						oninput={(e) => updateField('title', e.currentTarget.value)}
 						class="text-lg font-bold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-status-info rounded flex-1 min-w-0"
 					/>
-					<div class="flex items-center gap-2 {TEXT.body} text-status-muted flex-shrink-0">
+					<!-- Desktop: category labels -->
+					<div
+						class="hidden sm:flex items-center gap-2 {TEXT.body} text-status-muted flex-shrink-0"
+					>
 						<span>{category?.name || 'No category'}</span>
 						{#if subcategory}
 							<span>• {subcategory.name}</span>
 						{/if}
 					</div>
+					<!-- Mobile: expand/collapse chevron -->
+					<button
+						onclick={() => (headerExpanded = !headerExpanded)}
+						class="sm:hidden p-1 text-status-muted hover:text-white transition-colors"
+						title={headerExpanded ? 'Collapse details' : 'Expand details'}
+					>
+						<svg
+							class="w-5 h-5 transition-transform {headerExpanded ? 'rotate-180' : ''}"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							></path>
+						</svg>
+					</button>
 				</div>
 
-				<!-- Grid of dropdowns -->
-				<div class="grid sm:grid-cols-4 gap-3 mt-3">
-					<div>
-						<label class="block {TEXT.label} text-status-muted mb-0.5">Status</label>
-						<select
-							value={project.status}
-							onchange={(e) => updateField('status', e.currentTarget.value)}
-							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-						>
-							{#each statusOptions as option (option.value)}
-								<option value={option.value}>{option.label}</option>
-							{/each}
-						</select>
+				<!-- Metadata fields: always visible on desktop, collapsible on mobile -->
+				<div class="{headerExpanded ? '' : 'hidden'} sm:block">
+					<!-- Grid of dropdowns -->
+					<div class="grid sm:grid-cols-4 gap-3 mt-3">
+						<div>
+							<label class="block {TEXT.label} text-status-muted mb-0.5">Status</label>
+							<select
+								value={project.status}
+								onchange={(e) => updateField('status', e.currentTarget.value)}
+								class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+							>
+								{#each statusOptions as option (option.value)}
+									<option value={option.value}>{option.label}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label class="block {TEXT.label} text-status-muted mb-0.5">Priority</label>
+							<select
+								value={project.priority || 'medium'}
+								onchange={(e) => updateField('priority', e.currentTarget.value)}
+								class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+							>
+								{#each priorityOptions as option (option.value)}
+									<option value={option.value}>{option.label}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label class="block {TEXT.label} text-status-muted mb-0.5">Due Date</label>
+							<input
+								type="date"
+								value={project.due_date || ''}
+								onchange={(e) => updateField('due_date', e.currentTarget.value || null)}
+								class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+							/>
+						</div>
+						<div>
+							<label class="block {TEXT.label} text-status-muted mb-0.5">Category</label>
+							<select
+								value={project.category_id}
+								onchange={(e) => updateField('category_id', e.currentTarget.value)}
+								class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
+							>
+								{#each categoryList as cat (cat.id)}
+									<option value={cat.id}>{cat.name}</option>
+								{/each}
+							</select>
+						</div>
 					</div>
-					<div>
-						<label class="block {TEXT.label} text-status-muted mb-0.5">Priority</label>
-						<select
-							value={project.priority || 'medium'}
-							onchange={(e) => updateField('priority', e.currentTarget.value)}
-							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-						>
-							{#each priorityOptions as option (option.value)}
-								<option value={option.value}>{option.label}</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<label class="block {TEXT.label} text-status-muted mb-0.5">Due Date</label>
-						<input
-							type="date"
-							value={project.due_date || ''}
-							onchange={(e) => updateField('due_date', e.currentTarget.value || null)}
-							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-						/>
-					</div>
-					<div>
-						<label class="block {TEXT.label} text-status-muted mb-0.5">Category</label>
-						<select
-							value={project.category_id}
-							onchange={(e) => updateField('category_id', e.currentTarget.value)}
-							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info"
-						>
-							{#each categoryList as cat (cat.id)}
-								<option value={cat.id}>{cat.name}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
 
-				<!-- Description -->
-				<div class="mt-3">
-					<label class="block {TEXT.label} text-status-muted mb-0.5">Description</label>
-					<textarea
-						value={project.description || ''}
-						oninput={(e) => updateField('description', e.currentTarget.value || null)}
-						rows="2"
-						class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none"
-					></textarea>
+					<!-- Description -->
+					<div class="mt-3">
+						<label class="block {TEXT.label} text-status-muted mb-0.5">Description</label>
+						<textarea
+							value={project.description || ''}
+							oninput={(e) => updateField('description', e.currentTarget.value || null)}
+							rows="2"
+							class="w-full px-2 py-1.5 bg-surface-3 border {SURFACE.border} rounded-lg {TEXT.body} focus:outline-none focus:border-status-info resize-none"
+						></textarea>
+					</div>
 				</div>
 			</div>
 		</div>
