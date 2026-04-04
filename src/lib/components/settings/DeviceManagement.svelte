@@ -28,10 +28,8 @@
 
 	async function loadPendingRequests() {
 		try {
-			const result = await rpc<{ requests: PairingRequest[] }>('device-pair.list', {
-				status: 'pending'
-			});
-			pendingRequests = result.requests || [];
+			const result = await rpc<{ pending?: PairingRequest[] }>('device.pair.list', {});
+			pendingRequests = result.pending || [];
 		} catch (err) {
 			console.error('Failed to load pending requests:', err);
 		}
@@ -39,10 +37,8 @@
 
 	async function loadPairedDevices() {
 		try {
-			const result = await rpc<{ devices: PairedDevice[] }>('device-pair.list', {
-				status: 'approved'
-			});
-			pairedDevices = result.devices || [];
+			const result = await rpc<{ paired?: PairedDevice[] }>('device.pair.list', {});
+			pairedDevices = result.paired || [];
 		} catch (err) {
 			console.error('Failed to load paired devices:', err);
 		}
@@ -64,7 +60,7 @@
 	async function approveRequest(requestId: string) {
 		loading = true;
 		try {
-			await rpc('device-pair.approve', { requestId });
+			await rpc('device.pair.approve', { requestId });
 			await loadAll();
 		} catch (err) {
 			alert(`Failed to approve device: ${err}`);
@@ -76,7 +72,7 @@
 	async function rejectRequest(requestId: string) {
 		loading = true;
 		try {
-			await rpc('device-pair.reject', { requestId });
+			await rpc('device.pair.reject', { requestId });
 			await loadAll();
 		} catch (err) {
 			alert(`Failed to reject device: ${err}`);
@@ -88,7 +84,7 @@
 	async function rotateToken(deviceId: string) {
 		loading = true;
 		try {
-			await rpc('device-token.rotate', { deviceId });
+			await rpc('device.token.rotate', { deviceId });
 			confirmAction = null;
 			await loadPairedDevices();
 		} catch (err) {
@@ -101,7 +97,7 @@
 	async function revokeToken(deviceId: string) {
 		loading = true;
 		try {
-			await rpc('device-token.revoke', { deviceId });
+			await rpc('device.token.revoke', { deviceId });
 			confirmAction = null;
 			await loadAll();
 		} catch (err) {
@@ -139,10 +135,10 @@
 	});
 
 	$effect(() => {
-		const unsubRequested = gatewayEvents.on('device-pair.requested', () => {
+		const unsubRequested = gatewayEvents.on('device.pair.requested', () => {
 			loadPendingRequests();
 		});
-		const unsubResolved = gatewayEvents.on('device-pair.resolved', () => {
+		const unsubResolved = gatewayEvents.on('device.pair.resolved', () => {
 			loadAll();
 		});
 		return () => {
