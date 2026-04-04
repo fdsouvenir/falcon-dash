@@ -18,8 +18,8 @@
 	$effect(() => {
 		const unsub = gatewayEvents.snapshot.subscribe((snap) => {
 			uptimeMs = snap?.snapshot?.uptimeMs ?? null;
-			snapshotReceivedAt =
-				((snap as Record<string, unknown>)?._snapshotReceivedAt as number) ?? null;
+			const rawSnap = snap as unknown as Record<string, unknown> | null;
+			snapshotReceivedAt = (rawSnap?._snapshotReceivedAt as number | undefined) ?? null;
 			serverInfo = snap?.server ?? null;
 			deviceCount = (snap?.snapshot?.presence as unknown[] | undefined)?.length ?? 0;
 		});

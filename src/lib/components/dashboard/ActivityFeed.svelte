@@ -15,15 +15,6 @@
 	let items = $state<ActivityItem[]>([]);
 	let connectionState = $state<string>('disconnected');
 
-	const TYPE_COLOR: Record<string, string> = {
-		lifecycle: 'text-status-info',
-		discord: 'text-status-purple',
-		health: 'text-status-active',
-		approval: 'text-status-warning',
-		session: 'text-status-purple',
-		system: 'text-status-muted'
-	};
-
 	const TYPE_TAG_BG: Record<string, string> = {
 		lifecycle: 'bg-status-info-bg text-status-info',
 		discord: 'bg-status-purple-bg text-status-purple',
