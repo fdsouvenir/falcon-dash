@@ -498,14 +498,13 @@
 								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
 									URL
 								</div>
-								<a
-									href={entry.url}
-									target="_blank"
-									rel="noopener noreferrer"
-									class="truncate text-[length:var(--text-body)] text-status-info hover:underline"
+								<button
+									type="button"
+									onclick={() => window.open(entry?.url ?? '', '_blank', 'noopener,noreferrer')}
+									class="truncate text-left text-[length:var(--text-body)] text-status-info hover:underline"
 								>
 									{entry.url}
-								</a>
+								</button>
 							</div>
 							<button
 								onclick={() => copyToClipboard(entry!.url, 'URL')}

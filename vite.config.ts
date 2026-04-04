@@ -5,7 +5,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { defineConfig } from 'vitest/config';
-import { loadEnv } from 'vite';
+import { loadEnv, type ViteDevServer } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import pkg from './package.json' with { type: 'json' };
 
@@ -46,36 +46,44 @@ function resolveGatewayForDev() {
 function gatewayWsProxy() {
 	return {
 		name: 'gateway-ws-proxy',
-		async configureServer(server) {
+		async configureServer(server: ViteDevServer) {
 			const ws = await import('ws');
 			const WebSocketServer = ws.WebSocketServer;
 			const WebSocket = ws.WebSocket;
 			const wss = new WebSocketServer({ noServer: true });
 			const { wsUrl, token } = resolveGatewayForDev();
 
-			server.httpServer?.on('upgrade', (req, socket, head) => {
-				if (!req.url?.startsWith('/api/gateway/proxy')) return;
+			server.httpServer?.on(
+				'upgrade',
+				(
+					req: import('node:http').IncomingMessage,
+					socket: import('node:stream').Duplex,
+					head: Buffer
+				) => {
+					if (!req.url?.startsWith('/api/gateway/proxy')) return;
 
-				wss.handleUpgrade(req, socket, head, (clientWs) => {
-					const targetPath = req.url.replace('/api/gateway/proxy', '') || '/';
-					const headers = token ? { Authorization: `Bearer ${token}` } : {};
-					const upstream = new WebSocket(`${wsUrl}${targetPath}`, { headers });
+					wss.handleUpgrade(req, socket, head, (clientWs) => {
+						const targetPath =
+							(req.url ?? '/api/gateway/proxy').replace('/api/gateway/proxy', '') || '/';
+						const headers = token ? { Authorization: `Bearer ${token}` } : {};
+						const upstream = new WebSocket(`${wsUrl}${targetPath}`, { headers });
 
-					upstream.on('open', () => {
-						clientWs.on('message', (data) => {
-							if (upstream.readyState === WebSocket.OPEN) upstream.send(data);
+						upstream.on('open', () => {
+							clientWs.on('message', (data) => {
+								if (upstream.readyState === WebSocket.OPEN) upstream.send(data);
+							});
+							upstream.on('message', (data) => {
+								if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data);
+							});
 						});
-						upstream.on('message', (data) => {
-							if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data);
-						});
+
+						upstream.on('close', (code, reason) => clientWs.close(code, reason));
+						clientWs.on('close', () => upstream.close());
+						upstream.on('error', () => clientWs.close());
+						clientWs.on('error', () => upstream.close());
 					});
-
-					upstream.on('close', (code, reason) => clientWs.close(code, reason));
-					clientWs.on('close', () => upstream.close());
-					upstream.on('error', () => clientWs.close());
-					clientWs.on('error', () => upstream.close());
-				});
-			});
+				}
+			);
 
 			console.log(`[gateway-ws-proxy] Dev WS proxy → ${wsUrl}`);
 		}
