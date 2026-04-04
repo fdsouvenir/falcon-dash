@@ -131,6 +131,21 @@
 				Dashboard
 			</a>
 			<a
+				href="/approvals"
+				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/approvals')
+					? 'bg-surface-2 text-white'
+					: 'text-white/80 hover:bg-surface-2 hover:text-white'}"
+			>
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v6A2.25 2.25 0 0117.25 21h-10.5A2.25 2.25 0 014.5 18.75v-6A2.25 2.25 0 016.75 10.5z"
+					/>
+				</svg>
+				Approvals
+			</a>
+			<a
 				href="/channels"
 				class="flex items-center gap-2 rounded px-2 py-1.5 text-sm {isActive('/channels')
 					? 'bg-surface-2 text-white'

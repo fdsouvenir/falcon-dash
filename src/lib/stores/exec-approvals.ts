@@ -12,6 +12,7 @@ export interface PendingApproval {
 	requestId: string;
 	command: string;
 	agentId: string;
+	sessionKey: string;
 	timestamp: number;
 }
 
@@ -52,15 +53,39 @@ function persistDenylist(list: string[]): void {
 // ---------------------------------------------------------------------------
 
 /** Send a follow-up chat message so the agent knows the approval result. */
-function notifyAgent(command: string, label: string): void {
-	const sessionKey = get(activeSessionKey);
-	if (!sessionKey) return;
+function notifyAgent(command: string, label: string, sessionKey?: string): void {
+	const targetSessionKey = sessionKey ?? get(activeSessionKey);
+	if (!targetSessionKey) return;
 	rpc('chat.send', {
-		sessionKey,
+		sessionKey: targetSessionKey,
 		message: `[${label}] ${command}`,
 		idempotencyKey: crypto.randomUUID(),
 		deliver: false
 	}).catch(() => {});
+}
+
+function extractApproval(data: Record<string, unknown>): PendingApproval {
+	const request = data.request as Record<string, unknown> | undefined;
+	const fallbackSessionKey = get(activeSessionKey) ?? '';
+	const requestTimestamp =
+		typeof request?.timestamp === 'number' &&
+		Number.isFinite(request.timestamp) &&
+		request.timestamp > 0
+			? request.timestamp
+			: null;
+	const eventTimestamp =
+		typeof data.timestamp === 'number' && Number.isFinite(data.timestamp) && data.timestamp > 0
+			? data.timestamp
+			: null;
+
+	return {
+		requestId: (data.id as string) ?? '',
+		command: (request?.command as string) ?? '',
+		agentId: (request?.agentId as string) ?? '',
+		sessionKey:
+			(request?.sessionKey as string) ?? (data.sessionKey as string) ?? fallbackSessionKey,
+		timestamp: requestTimestamp ?? eventTimestamp ?? Date.now()
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -72,29 +97,23 @@ function notifyAgent(command: string, label: string): void {
  * Returns true if auto-denied by denylist (no prompt shown).
  */
 export function addPendingApproval(data: Record<string, unknown>): boolean {
-	const requestId = data.id as string;
-	const request = data.request as Record<string, unknown> | undefined;
-	const command = (request?.command as string) ?? '';
-	const agentId = (request?.agentId as string) ?? '';
+	const approval = extractApproval(data);
 
 	// Check denylist — auto-deny silently
 	let denied = false;
 	const unsub = _denylist.subscribe((list) => {
-		denied = list.includes(command);
+		denied = list.includes(approval.command);
 	});
 	unsub();
 
 	if (denied) {
-		rpc('exec.approval.resolve', { id: requestId, decision: 'deny' })
-			.then(() => notifyAgent(command, 'Exec denied (denylist)'))
+		rpc('exec.approval.resolve', { id: approval.requestId, decision: 'deny' })
+			.then(() => notifyAgent(approval.command, 'Exec denied (denylist)', approval.sessionKey))
 			.catch(() => {});
 		return true;
 	}
 
-	_pendingApprovals.update((list) => [
-		...list,
-		{ requestId, command, agentId, timestamp: Date.now() }
-	]);
+	_pendingApprovals.update((list) => [...list, approval]);
 	return false;
 }
 
@@ -107,12 +126,13 @@ export async function resolveApproval(
 	const pending = get(_pendingApprovals);
 	const approval = pending.find((a) => a.requestId === requestId);
 	const command = approval?.command ?? 'unknown';
+	const sessionKey = approval?.sessionKey;
 
 	await rpc('exec.approval.resolve', { id: requestId, decision });
 	_pendingApprovals.update((list) => list.filter((a) => a.requestId !== requestId));
 
 	const label = decision === 'deny' ? 'Exec denied' : 'Exec approved';
-	notifyAgent(command, label);
+	notifyAgent(command, label, sessionKey);
 }
 
 /** Add a command to the denylist. */
@@ -167,4 +187,9 @@ export function unsubscribeFromApprovalEvents(): void {
 		_eventUnsub();
 		_eventUnsub = null;
 	}
+}
+
+export function resetExecApprovalsForTests(): void {
+	_pendingApprovals.set([]);
+	_denylist.set([]);
 }
