@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { listPlanVersions } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
-import { PMError, PM_ERRORS, parseId } from '$lib/server/pm/validation.js';
+import { parseId } from '$lib/server/pm/validation.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {

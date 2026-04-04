@@ -2,7 +2,6 @@ import { writable, derived, readonly, type Readable, type Writable } from 'svelt
 import { pmGet } from './pm-api.js';
 import type { Project } from './pm-projects.js';
 import type { Category, Subcategory } from './pm-categories.js';
-import type { Plan } from './pm-plans.js';
 
 // Feature detection via HTTP
 const _pmAvailable: Writable<boolean> = writable(false);
@@ -22,7 +21,6 @@ export async function checkPMAvailability(): Promise<void> {
 const _categoryCache: Writable<Map<string, Category>> = writable(new Map());
 const _subcategoryCache: Writable<Map<string, Subcategory>> = writable(new Map());
 const _projectCache: Writable<Map<number, Project>> = writable(new Map());
-const _planCache: Writable<Map<number, Plan>> = writable(new Map());
 
 interface PaginatedResponse<T> {
 	items: T[];

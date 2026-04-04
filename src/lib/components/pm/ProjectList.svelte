@@ -16,15 +16,8 @@
 		getSubcategoriesByCategory
 	} from '$lib/stores/pm-categories.js';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { formatStatusLabel, formatDueDate, getStatusPill, getPriorityTag } from './pm-utils.js';
-	import {
-		SURFACE,
-		TEXT,
-		SPACE,
-		STATUS_COLORS,
-		type StatusKey,
-		getStatusColor
-	} from '$lib/components/ui/design-tokens.js';
+	import { formatDueDate, getStatusPill, getPriorityTag } from './pm-utils.js';
+	import { SURFACE, TEXT } from '$lib/components/ui/design-tokens.js';
 
 	interface Props {
 		onselect?: (projectId: number) => void;

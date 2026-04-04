@@ -1,12 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import {
-	getPlan,
-	updatePlan,
-	deletePlan,
-	listPlanVersions,
-	revertPlanVersion
-} from '$lib/server/pm/crud.js';
+import { getPlan, updatePlan, deletePlan } from '$lib/server/pm/crud.js';
 import { handlePMError } from '$lib/server/pm/errors.js';
 import { PMError, PM_ERRORS, parseId } from '$lib/server/pm/validation.js';
 import { emitPMEvent } from '$lib/server/pm/events.js';

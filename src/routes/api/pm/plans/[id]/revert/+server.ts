@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			throw new PMError(PM_ERRORS.PM_NOT_FOUND, `Plan ${planId} or version ${version} not found`);
 
 		emitPMEvent({
-			action: 'reverted',
+			action: 'updated',
 			entityType: 'plan',
 			entityId: planId,
 			projectId: plan.project_id,

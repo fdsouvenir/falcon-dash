@@ -2,8 +2,7 @@
 	import {
 		loadCrossProjectPlans,
 		updatePlan,
-		type CrossProjectPlan,
-		PLAN_STATUSES
+		type CrossProjectPlan
 	} from '$lib/stores/pm-plans.js';
 	import { getPlanStatusPill, formatRelativeTime } from './pm-utils.js';
 	import { TEXT, SURFACE } from '$lib/components/ui/design-tokens.js';
@@ -125,7 +124,7 @@
 				Loading...
 			</div>
 		{:else}
-			{#each INBOX_SECTIONS as section}
+			{#each INBOX_SECTIONS as section (section.status)}
 				{@const sectionPlans = plansByStatus(section.status)}
 				{#if sectionPlans.length > 0}
 					<div>
@@ -168,7 +167,7 @@
 											<div
 												class="absolute top-full left-0 mt-1 z-20 bg-surface-3 border {SURFACE.border} rounded-lg shadow-lg overflow-hidden min-w-36"
 											>
-												{#each planStatusOptions as opt}
+												{#each planStatusOptions as opt (opt.value)}
 													{@const optPill = getPlanStatusPill(opt.value)}
 													<button
 														onclick={() => changePlanStatus(plan.id, opt.value)}

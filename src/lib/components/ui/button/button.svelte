@@ -1,12 +1,3 @@
-<script lang="ts" module>
-	export {
-		buttonVariants,
-		type ButtonVariant,
-		type ButtonSize,
-		type ButtonProps
-	} from './button-variants.js';
-</script>
-
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
 	import { buttonVariants, type ButtonProps } from './button-variants.js';
