@@ -58,7 +58,12 @@
 		"postbuild": "cp src/entry.js build/start.js",
 		"prepublishOnly": "npm run build",
 		"release": "npm version",
-		"postinstall": "node bin/install-skills.cjs"
+		"postinstall": "node bin/install-skills.cjs",
+		"test:e2e": "playwright test",
+		"test:e2e:headed": "playwright test --headed",
+		"test:e2e:install": "playwright install chromium",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:report": "playwright show-report"
 	},
 	"lint-staged": {
 		"*.{js,ts,svelte}": [
@@ -88,7 +93,8 @@
 		"prettier-plugin-svelte": "^3.5.1",
 		"rollup-plugin-visualizer": "^7.0.1",
 		"typescript-eslint": "^8.0.0",
-		"vitest": "^4.0.18"
+		"vitest": "^4.0.18",
+		"@playwright/test": "^1.56.1"
 	},
 	"dependencies": {
 		"@internationalized/date": "^3.11.0",
