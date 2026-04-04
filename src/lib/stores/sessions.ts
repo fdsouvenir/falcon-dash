@@ -78,8 +78,57 @@ export const searchQuery = _searchQuery;
 export const pinnedSessions: Readable<string[]> = readonly(_pinnedSessions);
 export const selectedAgentId: Readable<string | null> = readonly(_selectedAgentId);
 
+const LEGACY_FALCON_CHANNEL_PREFIX = ':falcon-dash:dm:fd-chan-';
+const CANONICAL_FALCON_CHANNEL_PREFIX = ':falcon:dm:fd-chan-';
+
 export function setSelectedAgent(agentId: string | null): void {
 	_selectedAgentId.set(agentId);
+}
+
+export function equivalentSessionGroupKey(sessionKey: string): string {
+	if (sessionKey.includes(LEGACY_FALCON_CHANNEL_PREFIX)) {
+		return sessionKey.replace(LEGACY_FALCON_CHANNEL_PREFIX, CANONICAL_FALCON_CHANNEL_PREFIX);
+	}
+	return sessionKey;
+}
+
+function prefersCanonicalChannelKey(sessionKey: string): boolean {
+	return sessionKey.includes(CANONICAL_FALCON_CHANNEL_PREFIX);
+}
+
+function pickPreferredEquivalentSession(
+	current: ChatSessionInfo,
+	candidate: ChatSessionInfo
+): ChatSessionInfo {
+	const currentCanonical = prefersCanonicalChannelKey(current.sessionKey);
+	const candidateCanonical = prefersCanonicalChannelKey(candidate.sessionKey);
+	if (currentCanonical !== candidateCanonical) {
+		return candidateCanonical ? candidate : current;
+	}
+	if (candidate.updatedAt !== current.updatedAt) {
+		return candidate.updatedAt > current.updatedAt ? candidate : current;
+	}
+	return candidate.createdAt >= current.createdAt ? candidate : current;
+}
+
+export function dedupeEquivalentSessions(sessionList: ChatSessionInfo[]): ChatSessionInfo[] {
+	const deduped = new Map<string, ChatSessionInfo>();
+	for (const session of sessionList) {
+		const groupKey = equivalentSessionGroupKey(session.sessionKey);
+		const existing = deduped.get(groupKey);
+		deduped.set(groupKey, existing ? pickPreferredEquivalentSession(existing, session) : session);
+	}
+	return [...deduped.values()];
+}
+
+function findSessionKeyInStore(sessionKey: string, sessionList: ChatSessionInfo[]): string | null {
+	const exact = sessionList.find((session) => session.sessionKey === sessionKey);
+	if (exact) return exact.sessionKey;
+	const groupKey = equivalentSessionGroupKey(sessionKey);
+	const equivalent = sessionList.find(
+		(session) => equivalentSessionGroupKey(session.sessionKey) === groupKey
+	);
+	return equivalent?.sessionKey ?? null;
 }
 
 function sessionMatchesAgent(sessionKey: string, agentId: string | null): boolean {
@@ -256,7 +305,7 @@ export async function loadSessions(): Promise<void> {
 			}
 		}
 
-		_sessions.set(parsed);
+		_sessions.set(dedupeEquivalentSessions(parsed));
 	} catch (err) {
 		console.warn('[sessions] loadSessions failed:', err);
 	}
@@ -369,26 +418,29 @@ export function subscribeToEvents(): void {
 			if (action === 'created' || action === 'updated') {
 				debouncedLoadSessions();
 			} else if (action === 'deleted') {
-				_sessions.update((list) => list.filter((s) => s.sessionKey !== sessionKey));
+				_sessions.update((list) =>
+					list.filter((s) => findSessionKeyInStore(sessionKey, [s]) !== s.sessionKey)
+				);
 			}
 		})
 	);
 
 	unsubscribers.push(
 		gatewayEvents.on('chat.message', (payload) => {
+			const sessionList = get(_sessions);
 			const msgSessionKey = payload.sessionKey as string;
-			if (!msgSessionKey || msgSessionKey === get(_activeSessionKey)) return;
+			const targetSessionKey = findSessionKeyInStore(msgSessionKey, sessionList);
+			if (!targetSessionKey || targetSessionKey === get(_activeSessionKey)) return;
 			_sessions.update((list) =>
 				list.map((s) =>
-					s.sessionKey === msgSessionKey ? { ...s, unreadCount: s.unreadCount + 1 } : s
+					s.sessionKey === targetSessionKey ? { ...s, unreadCount: s.unreadCount + 1 } : s
 				)
 			);
 			// Trigger notification (sound, browser notification, notification center)
-			const sessionList = get(_sessions);
-			const session = sessionList.find((s) => s.sessionKey === msgSessionKey);
+			const session = sessionList.find((s) => s.sessionKey === targetSessionKey);
 			const sessionName = session?.displayName ?? 'New message';
 			const content = (payload.content as string) ?? '';
-			notifyNewMessage(sessionName, content, msgSessionKey);
+			notifyNewMessage(sessionName, content, targetSessionKey);
 		})
 	);
 }
@@ -402,7 +454,8 @@ export async function restoreActiveSession(): Promise<void> {
 	await loadSessions();
 	const list = get(_sessions);
 	const persisted = loadPersistedSessionKey();
-	if (persisted && list.some((s) => s.sessionKey === persisted)) {
-		_activeSessionKey.set(persisted);
+	const resolvedPersisted = persisted ? findSessionKeyInStore(persisted, list) : null;
+	if (resolvedPersisted) {
+		_activeSessionKey.set(resolvedPersisted);
 	}
 }
