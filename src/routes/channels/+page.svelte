@@ -1,119 +1,163 @@
 <script lang="ts">
-	import { gatewayEvents } from '$lib/gateway-api.js';
 	import {
-		discordStatus,
-		initDiscordStatus,
-		subscribeToDiscordEvents
-	} from '$lib/stores/discord.js';
-	import { resolve } from '$app/paths';
-	import { derived } from 'svelte/store';
+		aggregateChatReadiness,
+		aggregateChatSummary,
+		channelReadinessList,
+		channelReadinessLoading,
+		startChannelReadiness,
+		type ChannelReadiness
+	} from '$lib/stores/channel-readiness.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 
 	let connectionState = $state('disconnected');
-	let discord = $state<{ connected: boolean; guildName?: string }>({ connected: false });
-	let hasDiscordRpc = $state(false);
+	let channels = $state<ChannelReadiness[]>([]);
+	let aggregateState = $state('not_configured');
+	let aggregateSummary = $state('No chat channels configured');
+	let loading = $state(false);
 
 	$effect(() => {
-		const unsub = gatewayEvents.state.subscribe((s) => {
-			connectionState = s;
-			if (s === 'ready') {
-				initDiscordStatus();
-				subscribeToDiscordEvents();
-			}
+		const unsub = gatewayEvents.state.subscribe((state) => {
+			connectionState = state;
+			if (state === 'ready') startChannelReadiness();
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		const unsub = discordStatus.subscribe((s) => {
-			discord = s;
+		const unsub = channelReadinessList.subscribe((value) => {
+			channels = value;
 		});
 		return unsub;
 	});
 
 	$effect(() => {
-		const hasMethodStore = derived(
-			gatewayEvents.snapshot,
-			($snap) => $snap?.features?.methods?.includes('discord.status') ?? false
-		);
-		const unsub = hasMethodStore.subscribe((v) => {
-			hasDiscordRpc = v;
+		const unsub = aggregateChatReadiness.subscribe((value) => {
+			aggregateState = value;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = aggregateChatSummary.subscribe((value) => {
+			aggregateSummary = value;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = channelReadinessLoading.subscribe((value) => {
+			loading = value;
 		});
 		return unsub;
 	});
 
 	let isConnected = $derived(connectionState === 'ready');
 
-	const channelTypes = [
-		{
-			id: 'discord',
-			name: 'Discord',
-			description: 'Connect your Discord server',
-			icon: 'M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z',
-			available: hasDiscordRpc,
-			connected: discord.connected,
-			statusText: discord.connected
-				? `Connected${discord.guildName ? ` to ${discord.guildName}` : ''}`
-				: 'Not connected',
-			href: '/channels/discord'
-		},
-		{
-			id: 'telegram',
-			name: 'Telegram',
-			description: 'Connect your Telegram bot',
-			icon: 'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z',
-			available: true,
-			connected: false,
-			statusText: 'Not configured',
-			href: '/channels/telegram'
-		}
-	] as const;
+	function stateTone(state: string): string {
+		if (state === 'ready') return 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10';
+		if (state === 'degraded') return 'text-amber-200 border-amber-500/30 bg-amber-500/10';
+		if (state === 'misconfigured') return 'text-rose-200 border-rose-500/30 bg-rose-500/10';
+		if (state === 'needs_input') return 'text-sky-200 border-sky-500/30 bg-sky-500/10';
+		return 'text-white/70 border-surface-border bg-surface-2/70';
+	}
+
+	function stateBadge(state: string): string {
+		if (state === 'ready') return 'Ready';
+		if (state === 'degraded') return 'Degraded';
+		if (state === 'misconfigured') return 'Repair';
+		if (state === 'needs_input') return 'Needs Input';
+		return 'Not Configured';
+	}
 </script>
 
-<div class="flex flex-col gap-5 p-4 sm:p-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-lg font-semibold text-white">Channels</h1>
-			<p class="text-sm text-status-muted">Connect your agent to messaging platforms</p>
+<div class="flex flex-col gap-6 p-4 sm:p-6">
+	<section
+		class="overflow-hidden rounded-3xl border border-surface-border bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_45%),linear-gradient(180deg,_rgba(255,255,255,0.04),_rgba(255,255,255,0.01))] p-5 sm:p-6"
+	>
+		<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+			<div class="max-w-2xl space-y-3">
+				<p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/80">
+					Chat Readiness
+				</p>
+				<h1 class="text-2xl font-semibold text-white sm:text-3xl">
+					Channel setup, repair, and live status in one place
+				</h1>
+				<p class="max-w-xl text-sm leading-6 text-white/70 sm:text-base">
+					Falcon Dash treats chat as operator infrastructure. At least one supported channel must be
+					healthy for chat to be ready.
+				</p>
+			</div>
+			<div
+				class="rounded-2xl border px-4 py-3 backdrop-blur-sm {stateTone(
+					aggregateState
+				)} lg:min-w-72"
+			>
+				<p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">Overall</p>
+				<div class="mt-1 flex items-center gap-2">
+					<span class="text-lg font-semibold">{stateBadge(aggregateState)}</span>
+					{#if loading}
+						<span class="text-xs opacity-75">Refreshing…</span>
+					{/if}
+				</div>
+				<p class="mt-1 text-sm opacity-90">{aggregateSummary}</p>
+			</div>
 		</div>
-	</div>
+	</section>
 
 	{#if !isConnected}
-		<div class="rounded-lg border border-surface-border bg-surface-1 px-4 py-8 text-center">
-			<p class="text-sm text-status-muted">Connect to gateway to manage channels</p>
+		<div class="rounded-2xl border border-surface-border bg-surface-1 px-4 py-10 text-center">
+			<p class="text-sm text-status-muted">
+				Connect to the gateway to inspect or repair chat channels.
+			</p>
 		</div>
 	{:else}
-		<div class="grid gap-3 sm:grid-cols-2">
-			{#each channelTypes as channel (channel.id)}
-				<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
-					<div class="mb-3 flex items-center gap-3">
-						<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-3">
-							<svg class="h-5 w-5 text-white/70" viewBox="0 0 24 24" fill="currentColor">
-								<path d={channel.icon} />
-							</svg>
-						</div>
-						<div class="min-w-0 flex-1">
-							<h3 class="text-sm font-semibold text-white">{channel.name}</h3>
-							<p class="text-xs text-status-muted">{channel.description}</p>
-						</div>
-						{#if channel.connected}
-							<span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-						{/if}
-					</div>
-
-					<p class="mb-3 text-xs {channel.connected ? 'text-emerald-400/80' : 'text-status-muted'}">
-						{channel.statusText}
-					</p>
-
-					<a
-						href={resolve(channel.href)}
-						class="inline-flex items-center rounded-md {channel.connected
-							? 'bg-surface-3 text-white/70 hover:bg-surface-3'
-							: 'bg-blue-600/80 text-white hover:bg-blue-600'} px-3 py-1.5 text-xs font-medium transition-colors"
+		<!-- eslint-disable svelte/no-navigation-without-resolve -- shared readiness cards link to known local wizard routes -->
+		<section class="grid gap-4 lg:grid-cols-2">
+			{#each channels as channel (channel.id)}
+				<article class="overflow-hidden rounded-3xl border border-surface-border bg-surface-2/80">
+					<div
+						class="flex items-start justify-between gap-4 border-b border-surface-border/70 px-5 py-4"
 					>
-						{channel.connected ? 'Configure' : 'Set Up'}
-					</a>
-				</div>
+						<div>
+							<p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+								{channel.id}
+							</p>
+							<h2 class="mt-1 text-xl font-semibold text-white">{channel.label}</h2>
+						</div>
+						<span
+							class="rounded-full border px-3 py-1 text-xs font-semibold {stateTone(channel.state)}"
+							>{stateBadge(channel.state)}</span
+						>
+					</div>
+					<div class="space-y-5 px-5 py-5">
+						<div>
+							<p class="text-base font-medium text-white">{channel.summary}</p>
+							<p class="mt-1 text-sm leading-6 text-white/65">{channel.detail}</p>
+						</div>
+						<dl class="grid grid-cols-2 gap-3 text-sm text-white/70">
+							<div class="rounded-2xl bg-surface-1/70 px-3 py-3">
+								<dt class="text-xs uppercase tracking-[0.18em] text-white/40">Configured</dt>
+								<dd class="mt-1 font-medium text-white">{channel.configured ? 'Yes' : 'No'}</dd>
+							</div>
+							<div class="rounded-2xl bg-surface-1/70 px-3 py-3">
+								<dt class="text-xs uppercase tracking-[0.18em] text-white/40">Running</dt>
+								<dd class="mt-1 font-medium text-white">{channel.running ? 'Yes' : 'No'}</dd>
+							</div>
+						</dl>
+						<div class="flex items-center justify-between gap-3">
+							<a
+								href={channel.href}
+								class="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
+							>
+								{channel.ctaLabel}
+							</a>
+							<p class="text-xs uppercase tracking-[0.18em] text-white/40">
+								Shared readiness model
+							</p>
+						</div>
+					</div>
+				</article>
 			{/each}
-		</div>
+		</section>
 	{/if}
 </div>

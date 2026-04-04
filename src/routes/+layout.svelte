@@ -22,6 +22,7 @@
 	import { browser } from '$app/environment';
 	import { measureWebVitals } from '$lib/performance/web-vitals.js';
 	import { preloadHighlighter } from '$lib/utils/highlighter.js';
+	import { startChannelReadiness } from '$lib/stores/channel-readiness.js';
 
 	let { children } = $props();
 
@@ -67,6 +68,7 @@
 	$effect(() => {
 		const unsub = gatewayEvents.connected.subscribe((connected) => {
 			if (connected) {
+				startChannelReadiness();
 				subscribeToNotificationEvents();
 				subscribeToApprovalEvents();
 			}
