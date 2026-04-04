@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { rpc, gatewayEvents, type HelloOkPayload } from '$lib/gateway-api.js';
+	import { rpc, gatewayEvents } from '$lib/gateway-api.js';
 	import { addToast } from '$lib/stores/toast.js';
 
 	let connectionState = $state<string>('disconnected');
@@ -524,7 +524,7 @@
 				<span class="ml-1.5 font-mono text-status-muted">{presence.length}</span>
 			</h3>
 			<div class="space-y-1">
-				{#each presence as _device}
+				{#each presence as _device, index (index)}
 					{@const device = _device as Record<string, unknown>}
 					<div
 						class="flex items-center gap-2.5 rounded border border-surface-border/30 bg-surface-1/40 px-2.5 py-1.5"

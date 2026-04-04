@@ -29,9 +29,13 @@ function resolveToken(): { token: string; source: string } {
 	const configPath = join(homedir(), '.openclaw', 'openclaw.json');
 	const raw = readFileSync(configPath, 'utf-8');
 	const config = JSON.parse(raw);
-	const token = config?.gateway?.auth?.token;
+	const gateway = config?.gateway;
+	const isRemoteMode = gateway?.mode === 'remote';
+	const token = isRemoteMode
+		? (gateway?.remote?.token ?? gateway?.auth?.token)
+		: gateway?.auth?.token;
 	if (!token) throw new Error('No gateway token found in env vars or ~/.openclaw/openclaw.json');
-	return { token, source: 'file' };
+	return { token, source: isRemoteMode ? 'file:gateway.remote.token' : 'file:gateway.auth.token' };
 }
 
 /**

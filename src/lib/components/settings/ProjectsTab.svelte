@@ -13,11 +13,10 @@
 		deleteSubcategory,
 		reorderSubcategories,
 		type Category,
-		type Subcategory,
-		getSubcategoriesByCategory
+		type Subcategory
 	} from '$lib/stores/pm-categories.js';
 	import { projects, loadProjects, type Project } from '$lib/stores/pm-projects.js';
-	import { SURFACE, TEXT, SPACE, STATUS_COLORS } from '$lib/components/ui/design-tokens.js';
+	import { SURFACE, TEXT } from '$lib/components/ui/design-tokens.js';
 
 	let categoryList = $state<Category[]>([]);
 	let subcategoryList = $state<Subcategory[]>([]);
@@ -501,7 +500,7 @@
 					<div>
 						<label class="block {TEXT.label} font-medium text-status-muted mb-1">Color</label>
 						<div class="flex gap-2 flex-wrap">
-							{#each colorPresets as color}
+							{#each colorPresets as color (color)}
 								<button
 									type="button"
 									onclick={() => (categoryColor = color)}
