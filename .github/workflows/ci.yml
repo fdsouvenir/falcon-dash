@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,6 +35,18 @@ jobs:
 
       - name: Format check
         run: npm run format:check
+
+      - name: Harness check
+        run: npm run check:harness
+
+      - name: Doc freshness check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: npm run check:docs -- --base "$BASE_SHA" --head "$HEAD_SHA"
+
+      - name: Skills check
+        run: npm run check:skills
 
       - name: Lint
         run: npm run lint

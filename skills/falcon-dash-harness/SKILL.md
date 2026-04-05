@@ -11,6 +11,9 @@ description: >-
 
 Use this skill to turn a Falcon Dash change into a reproducible verification loop instead of a one-off manual check.
 
+This skill is a router, not the full source of truth. Read the relevant docs first and keep durable
+knowledge in `docs/`.
+
 ## Goals
 
 - Reproduce the issue with the smallest possible setup.
@@ -18,9 +21,22 @@ Use this skill to turn a Falcon Dash change into a reproducible verification loo
 - Prefer repo-local harnesses over chat-only instructions.
 - Leave behind a clear rerun path for the next agent.
 
+## Read Order
+
+Start with the smallest matching docs:
+
+1. `docs/HARNESS.md`
+2. One or more of:
+   - `docs/FRONTEND.md`
+   - `docs/QUALITY.md`
+   - `docs/RELIABILITY.md`
+   - `docs/PLANS.md`
+3. Technical docs under `docs/Technical/` for the affected architecture slice
+4. Product or user docs under `docs/PURPOSE.md` and `docs/End User/` if behavior or UX is involved
+
 ## Default Workflow
 
-1. Read `FALCONDASH.md` and the relevant issue.
+1. Read `docs/HARNESS.md` and the relevant issue or request.
 2. Read the smallest technical doc that explains the affected surface.
 3. Identify whether the work is store-driven, route-driven, gateway-driven, or server-route-driven.
 4. Pick the cheapest trustworthy validation layer:
@@ -35,6 +51,7 @@ Use this skill to turn a Falcon Dash change into a reproducible verification loo
 Use the smallest command set that matches the change:
 
 ```bash
+npm run check:harness
 npm run check
 npm run lint
 npm run test
@@ -63,6 +80,7 @@ Playwright lives in `playwright.config.ts` and `e2e/`.
 - For readiness or approval logic, put shared semantics in stores or utilities first, then test the UI surface.
 - For pairing and gateway bugs, verify whether the problem is missing RPC data, swallowed errors, or stale event wiring before touching UI copy.
 - For dashboard changes, keep quick actions, alerts, and remediation links operator-visible.
+- For documentation-heavy or cross-cutting work, update the relevant file in `docs/` rather than expanding this skill.
 
 ## Manual Check Format
 
