@@ -23,6 +23,7 @@ const modeSteps = {
 		{ id: 'lint', command: 'npm', args: ['run', 'lint'] }
 	],
 	unit: [{ id: 'unit', command: 'npm', args: ['run', 'test'] }],
+	console: [{ id: 'console', command: 'npm', args: ['run', 'console:sweep'] }],
 	smoke: [{ id: 'smoke', command: 'npx', args: ['playwright', 'test', 'e2e/smoke.spec.ts'] }],
 	settings: [
 		{
@@ -38,6 +39,7 @@ const modeSteps = {
 		{ id: 'typecheck', command: 'npm', args: ['run', 'check'] },
 		{ id: 'lint', command: 'npm', args: ['run', 'lint'] },
 		{ id: 'unit', command: 'npm', args: ['run', 'test'] },
+		{ id: 'console', command: 'npm', args: ['run', 'console:sweep'] },
 		{ id: 'smoke', command: 'npx', args: ['playwright', 'test', 'e2e/smoke.spec.ts'] }
 	]
 };
@@ -118,7 +120,11 @@ async function runStep(step) {
 
 	const child = spawn(step.command, step.args, {
 		cwd: root,
-		env: process.env
+		env: {
+			...process.env,
+			AGENT_LOOP_LATEST_DIR: path.relative(root, latestDir),
+			AGENT_LOOP_HISTORY_DIR: path.relative(root, historyDir)
+		}
 	});
 
 	child.stdout.on('data', (chunk) => {

@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Terminal } from '@xterm/xterm';
-	import { FitAddon } from '@xterm/addon-fit';
-	import { WebLinksAddon } from '@xterm/addon-web-links';
 
 	let terminalEl: HTMLDivElement;
-	let terminal: Terminal | null = null;
-	let fitAddon: FitAddon | null = null;
+	let terminal: import('@xterm/xterm').Terminal | null = null;
+	let fitAddon: import('@xterm/addon-fit').FitAddon | null = null;
 	let ws: WebSocket | null = null;
 	let resizeObserver: ResizeObserver | null = null;
 	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -58,65 +55,82 @@
 	}
 
 	onMount(() => {
-		terminal = new Terminal({
-			cursorBlink: true,
-			fontSize: 14,
-			fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
-			theme: {
-				background: '#030712',
-				foreground: '#e5e7eb',
-				cursor: '#60a5fa',
-				selectionBackground: '#374151',
-				black: '#1f2937',
-				red: '#ef4444',
-				green: '#22c55e',
-				yellow: '#eab308',
-				blue: '#3b82f6',
-				magenta: '#a855f7',
-				cyan: '#06b6d4',
-				white: '#e5e7eb',
-				brightBlack: '#6b7280',
-				brightRed: '#f87171',
-				brightGreen: '#4ade80',
-				brightYellow: '#facc15',
-				brightBlue: '#60a5fa',
-				brightMagenta: '#c084fc',
-				brightCyan: '#22d3ee',
-				brightWhite: '#f9fafb'
+		let disposed = false;
+
+		async function initTerminal() {
+			const [{ Terminal }, { FitAddon }, { WebLinksAddon }] = await Promise.all([
+				import('@xterm/xterm'),
+				import('@xterm/addon-fit'),
+				import('@xterm/addon-web-links')
+			]);
+
+			if (disposed) {
+				return;
 			}
-		});
 
-		fitAddon = new FitAddon();
-		terminal.loadAddon(fitAddon);
-		terminal.loadAddon(new WebLinksAddon());
+			terminal = new Terminal({
+				cursorBlink: true,
+				fontSize: 14,
+				fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
+				theme: {
+					background: '#030712',
+					foreground: '#e5e7eb',
+					cursor: '#60a5fa',
+					selectionBackground: '#374151',
+					black: '#1f2937',
+					red: '#ef4444',
+					green: '#22c55e',
+					yellow: '#eab308',
+					blue: '#3b82f6',
+					magenta: '#a855f7',
+					cyan: '#06b6d4',
+					white: '#e5e7eb',
+					brightBlack: '#6b7280',
+					brightRed: '#f87171',
+					brightGreen: '#4ade80',
+					brightYellow: '#facc15',
+					brightBlue: '#60a5fa',
+					brightMagenta: '#c084fc',
+					brightCyan: '#22d3ee',
+					brightWhite: '#f9fafb'
+				}
+			});
 
-		terminal.open(terminalEl);
-		fitAddon.fit();
+			fitAddon = new FitAddon();
+			terminal.loadAddon(fitAddon);
+			terminal.loadAddon(new WebLinksAddon());
 
-		// Forward keystrokes to PTY
-		terminal.onData((data) => {
-			if (ws && ws.readyState === WebSocket.OPEN) {
-				ws.send(JSON.stringify({ type: 'input', data }));
-			}
-		});
+			terminal.open(terminalEl);
+			fitAddon.fit();
 
-		// Auto-resize on container size change
-		resizeObserver = new ResizeObserver(() => {
-			if (fitAddon) {
-				fitAddon.fit();
-				if (ws && ws.readyState === WebSocket.OPEN && terminal) {
-					const dims = fitAddon.proposeDimensions();
-					if (dims) {
-						ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+			// Forward keystrokes to PTY
+			terminal.onData((data) => {
+				if (ws && ws.readyState === WebSocket.OPEN) {
+					ws.send(JSON.stringify({ type: 'input', data }));
+				}
+			});
+
+			// Auto-resize on container size change
+			resizeObserver = new ResizeObserver(() => {
+				if (fitAddon) {
+					fitAddon.fit();
+					if (ws && ws.readyState === WebSocket.OPEN && terminal) {
+						const dims = fitAddon.proposeDimensions();
+						if (dims) {
+							ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+						}
 					}
 				}
-			}
-		});
-		resizeObserver.observe(terminalEl);
+			});
+			resizeObserver.observe(terminalEl);
 
-		connect();
+			connect();
+		}
+
+		void initTerminal();
 
 		return () => {
+			disposed = true;
 			if (reconnectTimer) clearTimeout(reconnectTimer);
 			resizeObserver?.disconnect();
 			ws?.close();

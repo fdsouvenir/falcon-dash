@@ -30,6 +30,7 @@ verification in tests and scripts.
 
 - [docs/CONTRIBUTING-HARNESS.md](docs/CONTRIBUTING-HARNESS.md) — how to satisfy harness, docs, and skill checks
 - [docs/HARNESS-LOOP.md](docs/HARNESS-LOOP.md) — recursive local work loop and artifacts
+- [docs/CONSOLE-SWEEP.md](docs/CONSOLE-SWEEP.md) — route-based browser console sweep
 - [docs/FRONTEND.md](docs/FRONTEND.md) — Falcon Dash frontend constraints and design patterns
 - [docs/QUALITY.md](docs/QUALITY.md) — required validation levels and rerun paths
 - [docs/RELIABILITY.md](docs/RELIABILITY.md) — state, realtime, and failure-mode expectations
@@ -76,6 +77,7 @@ Use Node 20+.
 - `npm run check:docs` — verify high-signal code changes touched matching docs
 - `npm run check:skills` — verify repo-local skills are structurally valid
 - `npm run agent:loop -- <mode>` — run recursive local checks and write artifacts
+- `npm run console:sweep` — scan offline-safe routes for browser console issues
 
 ## Coding Rules
 

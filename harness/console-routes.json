@@ -1,0 +1,74 @@
+{
+	"routes": [
+		{
+			"id": "dashboard",
+			"path": "/",
+			"label": "Dashboard",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "approvals",
+			"path": "/approvals",
+			"label": "Approvals",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "channels",
+			"path": "/channels",
+			"label": "Channels",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "skills",
+			"path": "/skills",
+			"label": "Skills",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "ops",
+			"path": "/ops",
+			"label": "Ops",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "settings",
+			"path": "/settings",
+			"label": "Settings",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "documents",
+			"path": "/documents",
+			"label": "Documents",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "projects",
+			"path": "/projects",
+			"label": "Projects",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "passwords",
+			"path": "/passwords",
+			"label": "Passwords",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		},
+		{
+			"id": "secrets",
+			"path": "/secrets",
+			"label": "Secrets",
+			"offlineSafe": true,
+			"projects": ["desktop", "mobile"]
+		}
+	]
+}

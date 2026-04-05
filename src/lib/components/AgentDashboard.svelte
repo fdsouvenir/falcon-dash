@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 	import ActivityFeed from './dashboard/ActivityFeed.svelte';
 	import GatewayStatus from './dashboard/GatewayStatus.svelte';
 	import QuickActions from './dashboard/QuickActions.svelte';
@@ -12,7 +13,7 @@
 	} from '$lib/stores/channel-readiness.js';
 	import { pendingApprovals } from '$lib/stores/exec-approvals.js';
 	import { gatewayEvents } from '$lib/gateway-api.js';
-	import { getAgentIdentity } from '$lib/stores/agent-identity.js';
+	import { getAgentIdentity, type AgentIdentity } from '$lib/stores/agent-identity.js';
 
 	interface ConfigAgent {
 		id: string;
@@ -60,51 +61,47 @@
 	let configAgents = $state<ConfigAgent[]>([]);
 	let healthAgents = $state<HealthAgent[]>([]);
 	let primaryChannelAction = $state<ChannelReadiness | null>(null);
+	let loadedForReadyState = false;
+	let rebuildToken = 0;
+	let identityCache = $state<Record<string, AgentIdentity>>({});
 
-	$effect(() => {
-		const unsub = gatewayEvents.state.subscribe((state) => {
-			if (state === 'ready') {
-				startChannelReadiness();
-				void loadAgents();
+	onMount(() => {
+		const unsubs = [
+			gatewayEvents.state.subscribe((state) => {
+				if (state === 'ready') {
+					startChannelReadiness();
+					if (!loadedForReadyState) {
+						loadedForReadyState = true;
+						void loadAgents();
+					}
+					return;
+				}
+
+				loadedForReadyState = false;
+			}),
+			gatewayEvents.snapshot.subscribe((snapshot) => {
+				healthAgents = (snapshot?.snapshot?.health?.agents ?? []) as HealthAgent[];
+				void rebuildAgentSummaries();
+			}),
+			aggregateChatReadiness.subscribe((value) => {
+				aggregateState = value;
+			}),
+			aggregateChatSummary.subscribe((value) => {
+				aggregateSummary = value;
+			}),
+			channelReadinessList.subscribe((value) => {
+				primaryChannelAction = value.find((channel) => channel.state !== 'ready') ?? null;
+			}),
+			pendingApprovals.subscribe((value) => {
+				approvalsCount = value.length;
+			})
+		];
+
+		return () => {
+			for (const unsub of unsubs) {
+				unsub();
 			}
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = gatewayEvents.snapshot.subscribe((snapshot) => {
-			healthAgents = (snapshot?.snapshot?.health?.agents ?? []) as HealthAgent[];
-			void rebuildAgentSummaries();
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = aggregateChatReadiness.subscribe((value) => {
-			aggregateState = value;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = aggregateChatSummary.subscribe((value) => {
-			aggregateSummary = value;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = channelReadinessList.subscribe((value) => {
-			primaryChannelAction = value.find((channel) => channel.state !== 'ready') ?? null;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = pendingApprovals.subscribe((value) => {
-			approvalsCount = value.length;
-		});
-		return unsub;
+		};
 	});
 
 	async function loadAgents(): Promise<void> {
@@ -123,8 +120,11 @@
 	}
 
 	async function rebuildAgentSummaries(): Promise<void> {
-		const configById = new Map(configAgents.map((agent) => [agent.id, agent]));
-		const healthById = new Map(healthAgents.map((agent) => [agent.agentId, agent]));
+		const requestToken = ++rebuildToken;
+		const currentConfigAgents = configAgents;
+		const currentHealthAgents = healthAgents;
+		const configById = new Map(currentConfigAgents.map((agent) => [agent.id, agent]));
+		const healthById = new Map(currentHealthAgents.map((agent) => [agent.agentId, agent]));
 		const agentIds = Array.from(new Set([...configById.keys(), ...healthById.keys()]));
 
 		const nextAgents = await Promise.all(
@@ -135,7 +135,11 @@
 				let emoji = config?.identity?.emoji;
 
 				if (!config?.identity?.name || !emoji) {
-					const identity = await getAgentIdentity(id);
+					const cachedIdentity = identityCache[id];
+					const identity = cachedIdentity ?? (await getAgentIdentity(id));
+					if (!cachedIdentity) {
+						identityCache[id] = identity;
+					}
 					if (!config?.identity?.name && identity.name) name = identity.name;
 					if (!emoji) emoji = identity.emoji;
 				}
@@ -158,6 +162,10 @@
 				} satisfies AgentSummary;
 			})
 		);
+
+		if (requestToken !== rebuildToken) {
+			return;
+		}
 
 		agents = nextAgents.sort((a, b) => {
 			if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;

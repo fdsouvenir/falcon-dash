@@ -8,6 +8,7 @@ rules.
 - [PURPOSE.md](PURPOSE.md) — product purpose, audience, and design philosophy
 - [HARNESS.md](HARNESS.md) — execution model for making and verifying changes
 - [HARNESS-LOOP.md](HARNESS-LOOP.md) — recursive local work loop and artifact layout
+- [CONSOLE-SWEEP.md](CONSOLE-SWEEP.md) — manifest-driven browser console sweep
 - [CONTRIBUTING-HARNESS.md](CONTRIBUTING-HARNESS.md) — how to satisfy the harness checks
 - [FRONTEND.md](FRONTEND.md) — frontend constraints and preferred UI patterns
 - [QUALITY.md](QUALITY.md) — validation expectations and manual verification format

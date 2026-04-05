@@ -25,6 +25,7 @@ execution model for agents and maintainers.
 - `docs/PURPOSE.md` — why the product exists
 - `docs/CONTRIBUTING-HARNESS.md` — how to satisfy harness checks and policies
 - `docs/HARNESS-LOOP.md` — local recursive work loop and artifact storage
+- `docs/CONSOLE-SWEEP.md` — route inventory, baselines, and browser console sweep behavior
 - `docs/Technical/*.md` — architecture, stores, components, gateway, deployment
 - `docs/FRONTEND.md` — frontend constraints and UI patterns
 - `docs/QUALITY.md` — validation policy

@@ -22,9 +22,10 @@ npm run agent:loop -- <mode>
 
 - `check` — harness, docs, skills, typecheck, lint
 - `unit` — Vitest unit tests
+- `console` — browser console sweep across offline-safe routes
 - `smoke` — Playwright smoke suite if Playwright is installed
 - `settings` — settings-only smoke check if Playwright is installed
-- `app` — `check`, `unit`, then `smoke`
+- `app` — `check`, `unit`, `console`, then `smoke`
 
 Default mode: `check`
 
@@ -35,6 +36,7 @@ Every run writes:
 - `artifacts/run-latest/status.json`
 - `artifacts/run-latest/summary.md`
 - per-step logs such as `check.txt`, `lint.txt`, `unit.txt`, or `smoke.txt`
+- console findings under `artifacts/run-latest/console/`
 
 The same files are copied into:
 
