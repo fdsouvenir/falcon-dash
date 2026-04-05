@@ -1,0 +1,7 @@
+interface:
+  display_name: 'Frontend Skill'
+  short_description: 'Deliberate, polished frontend direction'
+  default_prompt: 'Use $frontend-skill to design or refine this frontend with stronger hierarchy, composition, and motion.'
+
+policy:
+  allow_implicit_invocation: true
