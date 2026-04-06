@@ -4,49 +4,49 @@
 	const actions = [
 		{
 			label: 'Approvals',
-			description: 'Respond to pending operator requests',
+			description: 'Review pending operator requests',
 			href: '/approvals',
 			icon: 'approvals',
 			color: 'text-status-warning'
 		},
 		{
 			label: 'Channels',
-			description: 'Setup and repair chat surfaces',
+			description: 'Configure and repair chat',
 			href: '/channels',
 			icon: 'channels',
 			color: 'text-status-purple'
 		},
 		{
 			label: 'Projects',
-			description: 'Track work across domains',
+			description: 'Track active work',
 			href: '/projects',
 			icon: 'projects',
 			color: 'text-status-info'
 		},
 		{
 			label: 'Jobs',
-			description: 'Cron jobs & scheduled tasks',
+			description: 'Run and monitor schedules',
 			href: '/jobs',
 			icon: 'jobs',
 			color: 'text-status-warning'
 		},
 		{
 			label: 'Passwords',
-			description: 'KeePassXC vault manager',
+			description: 'Open the vault manager',
 			href: '/passwords',
 			icon: 'passwords',
 			color: 'text-status-active'
 		},
 		{
 			label: 'Documents',
-			description: 'Workspace knowledge base',
+			description: 'Browse workspace docs',
 			href: '/documents',
 			icon: 'documents',
 			color: 'text-status-info'
 		},
 		{
 			label: 'Settings',
-			description: 'Gateway & agent config',
+			description: 'Gateway and agent setup',
 			href: '/settings',
 			icon: 'settings',
 			color: 'text-status-muted'
@@ -60,7 +60,7 @@
 	{#each actions as action (action.href)}
 		<a
 			href={resolve(action.href)}
-			class="group rounded-lg border border-surface-border bg-surface-2 px-3 py-3 transition-colors hover:bg-surface-3 hover:border-surface-border"
+			class="group rounded-2xl border border-surface-border bg-surface-1/60 px-3.5 py-3.5 transition-colors hover:border-white/15 hover:bg-surface-1"
 		>
 			<div class="mb-1.5 {action.color}">
 				<svg
@@ -121,7 +121,9 @@
 				</svg>
 			</div>
 			<p class="text-[length:var(--text-body)] font-medium text-white">{action.label}</p>
-			<p class="mt-0.5 text-[length:var(--text-badge)] text-status-muted">{action.description}</p>
+			<p class="mt-1 text-[length:var(--text-badge)] leading-5 text-status-muted">
+				{action.description}
+			</p>
 		</a>
 	{/each}
 </div>
