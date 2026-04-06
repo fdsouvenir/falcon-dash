@@ -103,7 +103,7 @@
 	},
 	"dependencies": {
 		"@internationalized/date": "^3.11.0",
-		"@lucide/svelte": "^0.575.0",
+		"@lucide/svelte": "^0.577.0",
 		"@sentry/sveltekit": "^10.39.0",
 		"@sveltejs/adapter-node": "^5.5.3",
 		"@sveltejs/kit": "^2.15.0",
