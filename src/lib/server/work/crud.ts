@@ -275,7 +275,7 @@ export function listWorkQueue(): WorkQueue {
 		),
 		waitingOnFred: active.filter((i) => i.waiting_on === 'fred' || i.status === 'needs_review'),
 		waitingOnAgent: active.filter((i) => isAgent(i) && i.status !== 'needs_review'),
-		needsReview: active.filter((i) => i.status === 'needs_review' || i.type === 'decision'),
+		needsReview: active.filter((i) => i.status === 'needs_review'),
 		scheduledRoutines: active.filter((i) => i.type === 'routine' || i.status === 'scheduled'),
 		staleCleanup: active.filter((i) => Boolean(i.stale_after)),
 		blockedRisky: active.filter((i) => i.status === 'blocked' || i.priority === 'urgent')

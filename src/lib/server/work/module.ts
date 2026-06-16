@@ -3,7 +3,10 @@ export interface FalconDashModule {
 	label: string;
 	description: string;
 	primary: boolean;
+	status: 'active' | 'planned' | 'advanced';
 	routes: string[];
+	apiRoutes: string[];
+	capabilities: string[];
 }
 
 export const FALCON_DASH_MODULES: FalconDashModule[] = [
@@ -12,35 +15,58 @@ export const FALCON_DASH_MODULES: FalconDashModule[] = [
 		label: 'Shell',
 		description: 'Falcon Dash app shell, readiness, and module mounting.',
 		primary: true,
-		routes: ['/']
+		status: 'active',
+		routes: ['/'],
+		apiRoutes: ['/api/falcon-dash/modules', '/api/health'],
+		capabilities: ['navigation', 'operator dashboard shell', 'module registry']
 	},
 	{
 		id: 'work',
 		label: 'Work',
 		description: 'Work Management: queue, schema, migration, context, and agent operations.',
 		primary: true,
-		routes: ['/work', '/api/work']
+		status: 'active',
+		routes: ['/work'],
+		apiRoutes: ['/api/work', '/api/work/queue', '/api/work/items', '/api/work/context'],
+		capabilities: [
+			'work queue',
+			'work items',
+			'changes',
+			'decisions',
+			'routines',
+			'observations',
+			'generated context'
+		]
 	},
 	{
 		id: 'vault',
 		label: 'Vault',
 		description: 'KeePassXC-backed password vault and SecretRef operations.',
 		primary: true,
-		routes: ['/passwords', '/api/vault']
+		status: 'active',
+		routes: ['/passwords', '/secrets'],
+		apiRoutes: ['/api/vault/status', '/api/vault/entries', '/api/vault/groups'],
+		capabilities: ['password vault', 'SecretRef resolution', 'credential inventory']
 	},
 	{
 		id: 'channels',
 		label: 'Channels',
 		description: 'Channel onboarding, readiness, validation, and recovery.',
 		primary: true,
-		routes: ['/channels']
+		status: 'active',
+		routes: ['/channels', '/channels/discord', '/channels/telegram'],
+		apiRoutes: ['/api/gateway/rpc'],
+		capabilities: ['channel onboarding', 'readiness checks', 'provider recovery']
 	},
 	{
 		id: 'labs',
 		label: 'Labs / Advanced',
 		description: 'Legacy and advanced surfaces not promoted to the default operator workflow.',
 		primary: false,
-		routes: ['/documents', '/jobs', '/ops', '/skills']
+		status: 'advanced',
+		routes: ['/documents', '/jobs', '/ops', '/skills', '/settings', '/approvals', '/heartbeat'],
+		apiRoutes: ['/api/files-bulk', '/api/files/[...path]', '/api/ops/entries', '/api/ops/sessions'],
+		capabilities: ['documents', 'agent jobs', 'settings', 'skills', 'advanced diagnostics']
 	}
 ];
 
