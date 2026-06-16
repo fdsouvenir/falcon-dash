@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/sveltekit';
 import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { startContextScheduler } from '$lib/server/pm/context-scheduler.js';
+import { startContextScheduler } from '$lib/server/work/context-scheduler.js';
 import { startTerminalServer } from '$lib/server/terminal-server.js';
 import { startGatewayClient } from '$lib/server/gateway-client.js';
 

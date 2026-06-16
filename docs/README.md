@@ -24,7 +24,7 @@ rules.
 - [Technical/stores.md](Technical/stores.md) — store architecture and event wiring
 - [Technical/gateway-protocol.md](Technical/gateway-protocol.md) — gateway protocol integration
 - [Technical/gateway-plugin.md](Technical/gateway-plugin.md) — Falcon Dash gateway plugin behavior
-- [Technical/pm-pipeline.md](Technical/pm-pipeline.md) — PM data model and context pipeline
+- [Technical/work-management.md](Technical/work-management.md) — Work data model and context pipeline
 - [Technical/deployment.md](Technical/deployment.md) — build, runtime, and deployment
 - [Technical/fredbot-integration.md](Technical/fredbot-integration.md) — hosting and infrastructure integration
 
@@ -33,7 +33,7 @@ rules.
 - [End User/quick-start.md](End%20User/quick-start.md)
 - [End User/mobile.md](End%20User/mobile.md)
 - [End User/chat.md](End%20User/chat.md)
-- [End User/projects.md](End%20User/projects.md)
+- [End User/work.md](End%20User/work.md)
 - [End User/documents.md](End%20User/documents.md)
 - [End User/jobs.md](End%20User/jobs.md)
 - [End User/passwords.md](End%20User/passwords.md)

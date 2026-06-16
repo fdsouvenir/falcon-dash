@@ -6,7 +6,7 @@ See also:
 
 - [Stores](stores.md) -- the reactive state that components consume
 - [Architecture overview](architecture.md) -- where components sit in the system
-- [PM pipeline](pm-pipeline.md) -- PM data model behind the project components
+- [Work management](work-management.md) -- Work data model behind the Work surface
 
 ## Svelte 5 conventions
 
@@ -144,39 +144,17 @@ Text input with:
 
 Session info bar with session name, model indicator, chat settings access, and search toggle.
 
-## PM components
+## Work surface
 
-### ProjectList (`src/lib/components/pm/ProjectList.svelte`)
+### Work route (`src/routes/work/+page.svelte`)
 
-Dashboard view for the `/projects` page:
+Dashboard view for the `/work` page:
 
-- **Stat cards** -- Total, Active, Due Soon, Overdue (from `getPMStats`/`getDashboardContext`)
-- **Filter pills** -- Active, All, Done, Archived
-- **Grouped list** -- Projects grouped by Category (domain) then Sub-Category (focus)
-- **Collapsible headers** -- domain and focus groups collapse independently
-- **Orphan section** -- projects without a known domain render in a flat "Other" section
+- **Queue buckets** -- next actions, review, waiting states, scheduled routines, and blocked/risky work
+- **Recent items** -- active Work records with type, status, next action, and last update
+- **Refresh path** -- reloads `/api/work/items` and `/api/work/queue`
 
-### ProjectDetail (`src/lib/components/pm/ProjectDetail.svelte`)
-
-Modal overlay for viewing a single project:
-
-- **Toolbar** -- back arrow, breadcrumb (domain/focus), title, status badge, priority indicator
-- **Status tab** -- renders the project `body` field as rich markdown via `MarkdownRenderer` (full Shiki/KaTeX/Mermaid pipeline)
-- **Activity tab** -- chronological activity feed for the project
-
-### pm-utils (`src/lib/components/pm/pm-utils.ts`)
-
-Shared formatting utilities:
-
-- `STATUS_BORDER` / `STATUS_DOT` / `STATUS_BADGE` -- maps status strings to Tailwind classes
-- `getPriorityIndicator()` -- returns colored dot indicators
-- `getPriorityBadge()` -- returns labeled badge elements
-- `formatRelativeTime()` -- wraps chat `time-utils` for unix-second timestamps
-- `formatStatusLabel()` -- human-readable status labels
-
-### Navigation flow
-
-The `/projects` page (`src/routes/projects/+page.svelte`) manages `selectedProjectId` with `history.pushState`/`popstate` integration. Browser back navigates: project detail -> list -> exit page.
+Work-specific context, migration, and API behavior live in [Work management](work-management.md).
 
 ## Settings components
 

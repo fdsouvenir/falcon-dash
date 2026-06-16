@@ -17,9 +17,9 @@
 			color: 'text-status-purple'
 		},
 		{
-			label: 'Projects',
-			description: 'Track work across domains',
-			href: '/projects',
+			label: 'Work',
+			description: 'Track operator work and decisions',
+			href: '/work',
 			icon: 'projects',
 			color: 'text-status-info'
 		},

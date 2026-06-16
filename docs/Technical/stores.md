@@ -234,36 +234,6 @@ In-session message search with `searchQuery` and `searchResults` stores.
 
 Discord-like channel system. `ensureDefaultChannel()` creates a `#general` channel per agent. `activeChannelId` persists to localStorage.
 
-## PM stores
-
-### pm-store (`src/lib/stores/pm-store.ts`)
-
-Root PM store with availability detection and cache hydration:
-
-```typescript
-export const pmAvailable: Readable<boolean>;
-export async function checkPMAvailability(): Promise<void>;
-export async function hydratePMStores(): Promise<void>;
-```
-
-Caches domains, focuses, and projects in `Map` stores for fast lookup.
-
-### pm-domains (`src/lib/stores/pm-domains.ts`)
-
-Domain and focus CRUD operations against `/api/pm/domains` and `/api/pm/focuses`.
-
-### pm-projects (`src/lib/stores/pm-projects.ts`)
-
-Project CRUD, filtering, and activity loading against `/api/pm/projects` and `/api/pm/activities`.
-
-### pm-operations (`src/lib/stores/pm-operations.ts`)
-
-Higher-level PM operations (bulk updates, status transitions, search).
-
-### pm-api (`src/lib/stores/pm-api.ts`)
-
-HTTP helper (`pmGet`, `pmPost`, `pmPatch`, `pmDelete`) for PM REST API calls.
-
 ## Utility stores
 
 | Store            | File                | Purpose                                            |

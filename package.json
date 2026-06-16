@@ -28,6 +28,7 @@
 		"build/",
 		"src/",
 		"static/",
+		"openclaw.plugin.json",
 		"svelte.config.js",
 		"vite.config.ts",
 		"tsconfig.json",

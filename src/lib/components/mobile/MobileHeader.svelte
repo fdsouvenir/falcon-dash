@@ -43,7 +43,7 @@
 		'/': 'Dashboard',
 		'/settings': 'Settings',
 		'/documents': 'Documents',
-		'/projects': 'Projects',
+		'/work': 'Work',
 		'/channels': 'Channels',
 		'/secrets': 'Secrets',
 		'/skills': 'Skills',
@@ -67,7 +67,7 @@
 	});
 
 	let isSecondaryRoute = $derived(
-		['/documents', '/projects', '/channels', '/secrets', '/passwords', '/ops', '/skills'].includes(
+		['/documents', '/work', '/channels', '/secrets', '/passwords', '/ops', '/skills'].includes(
 			pathname
 		) || pathname.startsWith('/agents')
 	);

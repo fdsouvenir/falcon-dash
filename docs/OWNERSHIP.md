@@ -8,7 +8,7 @@ This file maps common change areas to the docs that should usually move with the
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Shell, layout, route UX, operator surfaces                 | `docs/FRONTEND.md`, `docs/Technical/components.md`, relevant `docs/End User/*`                       |
 | Store semantics, hydration, realtime state, event wiring   | `docs/RELIABILITY.md`, `docs/Technical/stores.md`, `docs/Technical/architecture.md`                  |
-| Project management behavior and generated PM context       | `docs/Technical/pm-pipeline.md`, `docs/End User/projects.md`                                         |
+| Work behavior and generated Work context                   | `docs/Technical/work-management.md`, `docs/End User/work.md`                                         |
 | Gateway, channels, agents, canvas, approvals               | `docs/Technical/gateway-protocol.md`, `docs/Technical/gateway-plugin.md`, relevant `docs/End User/*` |
 | Validation rules, rerun paths, smoke coverage expectations | `docs/QUALITY.md`, `docs/HARNESS.md`                                                                 |
 | Plan-writing and execution discipline                      | `docs/PLANS.md`                                                                                      |

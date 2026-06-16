@@ -29,16 +29,15 @@ function getChangedPaths(base, head) {
 		return output ? output.split('\n').filter(Boolean) : [];
 	}
 
-	const output = runGit(['status', '--porcelain']);
+	const output = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trimEnd();
 	if (!output) return [];
 
 	return output
 		.split('\n')
 		.filter(Boolean)
 		.map((line) => {
-			const trimmed = line.trim();
-			if (trimmed.includes(' -> ')) return trimmed.split(' -> ').at(-1) ?? trimmed;
-			return trimmed.slice(3);
+			if (line.includes(' -> ')) return line.split(' -> ').at(-1)?.trim() ?? line.trim();
+			return line.slice(3);
 		});
 }
 
@@ -104,19 +103,18 @@ const rules = [
 		]
 	},
 	{
-		name: 'project management flows',
+		name: 'work management flows',
 		matchers: [
-			'src/lib/server/pm/',
-			'src/routes/api/pm/',
-			'src/lib/components/pm/',
-			'src/lib/stores/pm-',
-			'src/routes/projects/'
+			'src/lib/server/work/',
+			'src/routes/api/work/',
+			'src/routes/work/',
+			'skills/falcon-dash-work/'
 		],
 		requiredDocs: [
-			'docs/Technical/pm-pipeline.md',
+			'docs/Technical/work-management.md',
 			'docs/QUALITY.md',
 			'docs/RELIABILITY.md',
-			'docs/End User/projects.md'
+			'docs/End User/work.md'
 		]
 	},
 	{
