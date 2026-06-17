@@ -117,16 +117,37 @@
 		return `${minutes}m`;
 	}
 
-	function toneFor(value: 'ready' | 'warn' | 'muted' | 'danger'): string {
-		if (value === 'ready') return 'border-status-active/40 bg-status-active-bg text-status-active';
-		if (value === 'warn')
-			return 'border-status-warning/40 bg-status-warning-bg text-status-warning';
-		if (value === 'danger') return 'border-status-danger/40 bg-status-danger-bg text-status-danger';
-		return 'border-surface-border bg-surface-2 text-white/70';
-	}
-
 	function moduleHref(module: FalconModule) {
 		return moduleRoutes[module.id as keyof typeof moduleRoutes] ?? '/';
+	}
+
+	const readinessChecks = $derived([
+		{
+			label: 'Gateway event stream',
+			detail: gatewayState === 'ready' ? 'Live event stream connected' : 'Reconnect gateway',
+			state: gatewayState === 'ready' ? 'healthy' : 'warning'
+		},
+		{
+			label: 'Work database',
+			detail: `${openWorkCount} open queue items in active Work DB`,
+			state: 'healthy'
+		},
+		{
+			label: 'Vault provider',
+			detail: vault?.available ? 'KeePassXC and SecretRef are available' : 'Vault needs attention',
+			state: vault?.available ? 'healthy' : 'warning'
+		},
+		{
+			label: 'First-party modules',
+			detail: `${primaryModules.length} active modules registered`,
+			state: primaryModules.length > 0 ? 'healthy' : 'warning'
+		}
+	]);
+
+	function statusLabel(state: string): string {
+		if (state === 'healthy') return 'Healthy';
+		if (state === 'warning') return 'Needs setup';
+		return 'Check';
 	}
 </script>
 
@@ -140,9 +161,11 @@
 	title="Readiness console"
 	description="One entry point for the active Falcon Dash product: Work, Vault, Channels, and advanced operator surfaces."
 >
-	<div class="space-y-4 p-4 sm:p-5">
+	<div class="grid min-h-full gap-px bg-outline-variant/40 p-3 md:grid-cols-[1fr_320px] md:p-4">
 		{#if loading}
-			<div class="border border-surface-border bg-surface-1 p-4 text-sm text-status-muted">
+			<div
+				class="border border-outline-variant bg-surface-container p-4 text-sm text-on-surface-variant"
+			>
 				Loading readiness...
 			</div>
 		{:else if error}
@@ -152,155 +175,209 @@
 				{error}
 			</div>
 		{:else}
-			<section class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-				<div class="border p-4 {toneFor(ready?.ready ? 'ready' : 'danger')}">
-					<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] opacity-70">
-						Service
-					</p>
-					<p class="mt-2 text-xl font-semibold">{ready?.ready ? 'Ready' : 'Not ready'}</p>
-					<p class="mt-1 text-xs opacity-80">Version {health?.version ?? '--'}</p>
-				</div>
-				<div class="border p-4 {toneFor(gatewayState === 'ready' ? 'ready' : 'warn')}">
-					<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] opacity-70">
-						Gateway
-					</p>
-					<p class="mt-2 text-xl font-semibold">{gatewayState}</p>
-					<p class="mt-1 text-xs opacity-80">Live event stream</p>
-				</div>
-				<div class="border p-4 {toneFor(vault?.available ? 'ready' : 'warn')}">
-					<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] opacity-70">
-						Vault
-					</p>
-					<p class="mt-2 text-xl font-semibold">{vault?.available ? 'Available' : 'Check vault'}</p>
-					<p class="mt-1 text-xs opacity-80">KeePassXC / SecretRef</p>
-				</div>
-				<div class="border border-surface-border bg-surface-1 p-4">
-					<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted">
-						Work
-					</p>
-					<p class="mt-2 text-xl font-semibold text-white">{openWorkCount}</p>
-					<p class="mt-1 text-xs text-status-muted">Open queue items</p>
-				</div>
-			</section>
-
-			<section class="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-				<div class="border border-surface-border bg-surface-1">
-					<div class="border-b border-surface-border px-4 py-3">
-						<h2 class="text-sm font-semibold text-white">First-party modules</h2>
-					</div>
-					<div class="divide-y divide-surface-border">
-						{#each primaryModules as module (module.id)}
-							<a
-								href={resolve(moduleHref(module))}
-								class="grid gap-3 px-4 py-3 transition hover:bg-surface-2 md:grid-cols-[10rem_1fr_auto]"
-							>
-								<div>
-									<p class="font-semibold text-white">{module.label}</p>
-									<p
-										class="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-status-active"
-									>
-										{module.status}
-									</p>
-								</div>
-								<p class="text-sm leading-5 text-white/70">{module.description}</p>
-								<div class="flex flex-wrap gap-1 md:justify-end">
-									{#each module.capabilities.slice(0, 3) as capability (capability)}
-										<span
-											class="border border-surface-border bg-surface-2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-white/60"
-										>
-											{capability}
-										</span>
-									{/each}
-								</div>
-							</a>
-						{/each}
-					</div>
-				</div>
-
-				<div class="border border-surface-border bg-surface-1">
-					<div class="border-b border-surface-border px-4 py-3">
-						<h2 class="text-sm font-semibold text-white">Queue pressure</h2>
-					</div>
-					<div class="grid grid-cols-2 gap-px bg-surface-border">
-						<div class="bg-surface-1 p-3">
-							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
-								Next
+			<div class="min-w-0 space-y-3 md:space-y-4">
+				<section class="border border-error-container bg-error-container/10">
+					<div
+						class="grid gap-4 border-l-4 border-error p-4 md:grid-cols-[1fr_auto] md:items-center"
+					>
+						<div>
+							<h2 class="flex items-center gap-2 text-[18px] font-semibold text-error">
+								{gatewayState === 'ready'
+									? 'Production channel checks are current'
+									: 'Discord is not configured yet'}
+							</h2>
+							<p class="mt-1 max-w-3xl text-sm leading-5 text-on-surface-variant">
+								{gatewayState === 'ready'
+									? 'Gateway events, Work DB, Vault provider, and channel surfaces are ready for operator review.'
+									: 'The shell needs a valid channel configuration before incoming events can route through the production operator flow.'}
 							</p>
-							<p class="mt-2 text-2xl font-semibold text-white">{queue?.nextActions.length ?? 0}</p>
 						</div>
-						<div class="bg-surface-1 p-3">
-							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+						<div class="flex flex-wrap gap-2">
+							<a
+								href={resolve('/channels')}
+								class="bg-error px-3 py-2 text-sm font-semibold text-on-error transition hover:opacity-90"
+							>
+								Set up Discord
+							</a>
+							<a
+								href={resolve('/passwords')}
+								class="border border-outline bg-transparent px-3 py-2 text-sm text-on-surface transition hover:bg-surface-variant"
+							>
+								Open Vault health
+							</a>
+							<a
+								href={resolve('/work')}
+								class="border border-outline bg-transparent px-3 py-2 text-sm text-on-surface transition hover:bg-surface-variant"
+							>
+								Work seed review
+							</a>
+						</div>
+					</div>
+				</section>
+
+				<section
+					class="overflow-hidden border border-outline-variant bg-outline-variant/40"
+					aria-label="Readiness checklist"
+				>
+					{#each readinessChecks as check (check.label)}
+						<div
+							class="grid gap-3 border-b border-outline-variant bg-surface-container p-4 last:border-b-0 md:grid-cols-[220px_1fr_132px]"
+						>
+							<div>
+								<p
+									class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant"
+								>
+									{check.label}
+								</p>
+								<p class="mt-1 text-[18px] font-semibold text-primary">
+									{statusLabel(check.state)}
+								</p>
+							</div>
+							<p class="text-sm leading-5 text-on-surface-variant md:self-center">{check.detail}</p>
+							<span
+								class="self-start border px-2 py-1 text-center font-mono text-[10px] font-bold uppercase tracking-[0.14em] md:self-center {check.state ===
+								'healthy'
+									? 'border-status-active text-status-active'
+									: 'border-status-warning text-status-warning'}"
+							>
+								{check.state}
+							</span>
+						</div>
+					{/each}
+				</section>
+
+				<section class="grid gap-px bg-outline-variant/40 lg:grid-cols-2">
+					<div class="border border-outline-variant bg-surface-container">
+						<div class="border-b border-outline-variant bg-surface-container-high px-4 py-3">
+							<h2 class="text-sm font-semibold text-primary">First-party modules</h2>
+						</div>
+						<div class="divide-y divide-outline-variant">
+							{#each primaryModules as module (module.id)}
+								<a
+									href={resolve(moduleHref(module))}
+									class="grid gap-3 px-4 py-3 transition hover:bg-surface-container-high md:grid-cols-[8rem_1fr]"
+								>
+									<div>
+										<p class="font-semibold text-primary">{module.label}</p>
+										<p
+											class="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-status-active"
+										>
+											{module.status}
+										</p>
+									</div>
+									<div>
+										<p class="text-sm leading-5 text-on-surface-variant">{module.description}</p>
+										<div class="mt-2 flex flex-wrap gap-1">
+											{#each module.capabilities.slice(0, 3) as capability (capability)}
+												<span
+													class="border border-outline-variant bg-surface-container-high px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-on-surface-variant"
+												>
+													{capability}
+												</span>
+											{/each}
+										</div>
+									</div>
+								</a>
+							{/each}
+						</div>
+					</div>
+
+					<div class="border border-outline-variant bg-surface-container">
+						<div class="border-b border-outline-variant bg-surface-container-high px-4 py-3">
+							<h2 class="text-sm font-semibold text-primary">Operator route map</h2>
+						</div>
+						<div class="grid gap-px bg-outline-variant/40">
+							{#each primaryModules as module (module.id)}
+								<a
+									href={resolve(moduleHref(module))}
+									class="grid grid-cols-[1fr_auto] bg-surface-container px-4 py-3 text-sm transition hover:bg-surface-container-high"
+								>
+									<span class="font-medium text-primary">{module.label}</span>
+									<span class="font-mono text-xs text-on-surface-variant">{moduleHref(module)}</span
+									>
+								</a>
+							{/each}
+							<a
+								href={resolve('/settings')}
+								class="grid grid-cols-[1fr_auto] bg-surface-container px-4 py-3 text-sm transition hover:bg-surface-container-high"
+							>
+								<span class="font-medium text-primary">Labs / Advanced</span>
+								<span class="font-mono text-xs text-on-surface-variant">/settings</span>
+							</a>
+						</div>
+					</div>
+				</section>
+			</div>
+
+			<aside class="min-w-0 border border-outline-variant bg-surface-container">
+				<div class="border-b border-outline-variant bg-surface-container-high px-4 py-3">
+					<h2 class="text-sm font-semibold text-primary">System status</h2>
+				</div>
+				<div class="grid gap-px bg-outline-variant/40">
+					<div class="bg-surface-container p-4">
+						<p
+							class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant"
+						>
+							Service
+						</p>
+						<p
+							class="mt-2 text-2xl font-semibold {ready?.ready
+								? 'text-status-active'
+								: 'text-error'}"
+						>
+							{ready?.ready ? 'Ready' : 'Not ready'}
+						</p>
+						<p class="mt-1 text-xs text-on-surface-variant">Version {health?.version ?? '--'}</p>
+					</div>
+					<div class="grid grid-cols-2 gap-px">
+						<div class="bg-surface-container p-4">
+							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
+								Work
+							</p>
+							<p class="mt-2 text-2xl font-semibold text-primary">{openWorkCount}</p>
+							<p class="mt-1 text-xs text-on-surface-variant">Open</p>
+						</div>
+						<div class="bg-surface-container p-4">
+							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
 								Review
 							</p>
-							<p class="mt-2 text-2xl font-semibold text-white">{queue?.needsReview.length ?? 0}</p>
+							<p class="mt-2 text-2xl font-semibold text-primary">
+								{queue?.needsReview.length ?? 0}
+							</p>
+							<p class="mt-1 text-xs text-on-surface-variant">Items</p>
 						</div>
-						<div class="bg-surface-1 p-3">
-							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+					</div>
+					<div class="grid grid-cols-2 gap-px">
+						<div class="bg-surface-container p-4">
+							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
 								Fred
 							</p>
-							<p class="mt-2 text-2xl font-semibold text-white">
+							<p class="mt-2 text-2xl font-semibold text-primary">
 								{queue?.waitingOnFred.length ?? 0}
 							</p>
+							<p class="mt-1 text-xs text-on-surface-variant">Waiting</p>
 						</div>
-						<div class="bg-surface-1 p-3">
-							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+						<div class="bg-surface-container p-4">
+							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
 								Risk
 							</p>
-							<p class="mt-2 text-2xl font-semibold text-white">
+							<p class="mt-2 text-2xl font-semibold text-primary">
 								{queue?.blockedRisky.length ?? 0}
 							</p>
+							<p class="mt-1 text-xs text-on-surface-variant">Blocked</p>
 						</div>
 					</div>
-					<div class="border-t border-surface-border px-4 py-3 text-xs text-status-muted">
-						Uptime {formatUptime(health?.uptime)}. Advanced surfaces stay available without being
-						the default workflow.
+					<div class="bg-surface-container p-4">
+						<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
+							Uptime
+						</p>
+						<p class="mt-2 text-xl font-semibold text-primary">{formatUptime(health?.uptime)}</p>
+						<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+							Advanced surfaces stay available without being the default workflow.
+						</p>
 					</div>
 				</div>
-			</section>
-
-			<section class="border border-surface-border bg-surface-1">
-				<div class="border-b border-surface-border px-4 py-3">
-					<h2 class="text-sm font-semibold text-white">Labs / Advanced</h2>
-				</div>
-				<div class="flex flex-wrap gap-2 p-4">
-					<a
-						href={resolve('/apps')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						apps
-					</a>
-					<a
-						href={resolve('/approvals')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						approvals
-					</a>
-					<a
-						href={resolve('/jobs')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						jobs
-					</a>
-					<a
-						href={resolve('/documents')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						documents
-					</a>
-					<a
-						href={resolve('/settings')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						settings
-					</a>
-					<a
-						href={resolve('/skills')}
-						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
-					>
-						skills
-					</a>
-				</div>
-			</section>
+			</aside>
 		{/if}
 	</div>
 </FalconModuleShell>

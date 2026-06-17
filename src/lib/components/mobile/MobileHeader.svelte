@@ -40,21 +40,21 @@
 	});
 
 	const routeTitles: Record<string, string> = {
-		'/': 'Dashboard',
-		'/settings': 'Settings',
+		'/': 'Shell Readiness Console',
+		'/settings': 'Labs / Advanced',
 		'/documents': 'Documents',
-		'/work': 'Work',
-		'/channels': 'Channels',
-		'/secrets': 'Secrets',
+		'/work': 'Work Queue Home',
+		'/channels': 'Channels Hub',
+		'/secrets': 'Vault Secret Providers',
 		'/skills': 'Skills',
-		'/passwords': 'Passwords',
+		'/passwords': 'Vault Operations',
 		'/ops': 'Ops'
 	};
 
 	let title = $derived(() => {
 		if (pathname === '/jobs') return `${agentName}'s Jobs`;
 		if (pathname.startsWith('/agents')) return agentName;
-		return routeTitles[pathname] ?? 'Falcon Dashboard';
+		return routeTitles[pathname] ?? 'Falcon Dash';
 	});
 
 	let notifCount = $state(0);
@@ -67,9 +67,7 @@
 	});
 
 	let isSecondaryRoute = $derived(
-		['/documents', '/work', '/channels', '/secrets', '/passwords', '/ops', '/skills'].includes(
-			pathname
-		) || pathname.startsWith('/agents')
+		['/documents', '/ops', '/skills'].includes(pathname) || pathname.startsWith('/agents')
 	);
 </script>
 
@@ -97,7 +95,7 @@
 {/snippet}
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
-<header class="flex shrink-0 items-center border-b border-surface-border bg-surface-1 px-3 py-2">
+<header class="flex shrink-0 items-center border-b border-outline-variant bg-surface px-3 py-2">
 	{#if isSecondaryRoute}
 		<a
 			href="/"
@@ -108,7 +106,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
 			</svg>
 		</a>
-		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
+		<span class="flex-1 truncate text-center text-sm font-semibold text-primary">{title()}</span>
 		{@render notifBell()}
 		<a
 			href="/settings"
@@ -126,7 +124,7 @@
 		</a>
 	{:else}
 		<div class="h-6 w-6"></div>
-		<span class="flex-1 truncate text-center text-sm font-semibold text-white">{title()}</span>
+		<span class="flex-1 truncate text-center text-sm font-semibold text-primary">{title()}</span>
 		{#if pathname !== '/settings'}
 			{@render notifBell()}
 			<a
