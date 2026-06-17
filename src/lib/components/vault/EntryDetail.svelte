@@ -14,7 +14,6 @@
 	let entry = $state<VaultEntry | null>(null);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
-	let showPassword = $state(false);
 	let confirmDelete = $state(false);
 	let deleting = $state(false);
 
@@ -26,12 +25,10 @@
 	let editPassword = $state('');
 	let editUrl = $state('');
 	let editNotes = $state('');
-	let showEditPassword = $state(false);
 
 	async function loadEntry() {
 		loading = true;
 		error = null;
-		showPassword = false;
 		confirmDelete = false;
 		try {
 			entry = await fetchEntry(entryPath);
@@ -84,10 +81,9 @@
 		if (!entry) return;
 		editTitle = entry.title;
 		editUsername = entry.username ?? '';
-		editPassword = entry.password ?? '';
+		editPassword = '';
 		editUrl = entry.url ?? '';
 		editNotes = entry.notes ?? '';
-		showEditPassword = false;
 		editing = true;
 	}
 
@@ -283,44 +279,15 @@
 						<div class="relative">
 							<input
 								id="edit-password"
-								type={showEditPassword ? 'text' : 'password'}
+								type="password"
 								bind:value={editPassword}
-								placeholder="Leave blank to keep existing"
-								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 pr-9 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
+								placeholder="Leave blank to keep existing secret"
+								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-[length:var(--text-body)] text-white placeholder-status-muted/40 focus:border-status-info focus:outline-none"
 							/>
-							<button
-								type="button"
-								onclick={() => (showEditPassword = !showEditPassword)}
-								class="absolute right-2 top-1/2 -translate-y-1/2 text-status-muted hover:text-white"
-							>
-								<svg
-									class="h-4 w-4"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									{#if showEditPassword}
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-										/>
-									{:else}
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-										/>
-									{/if}
-								</svg>
-							</button>
 						</div>
+						<p class="mt-1 text-[length:var(--text-label)] text-status-muted/70">
+							Secret values are never revealed here. Enter a replacement only when rotating.
+						</p>
 					</div>
 
 					<!-- URL -->
@@ -418,75 +385,17 @@
 
 					<!-- Password -->
 					{#if entry.password}
-						<div class="flex items-center px-4 py-3">
+						<div class="px-4 py-3">
 							<div class="min-w-0 flex-1">
 								<div class="mb-0.5 text-[length:var(--text-label)] font-medium text-status-muted">
 									Password
 								</div>
 								<div class="font-mono text-[length:var(--text-mono)] text-white/90">
-									{showPassword ? entry.password : '•'.repeat(Math.min(entry.password.length, 20))}
+									{`Secret material present (${entry.password.length} chars)`}
 								</div>
-							</div>
-							<div class="ml-3 flex items-center gap-1">
-								<button
-									onclick={() => (showPassword = !showPassword)}
-									class="rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
-									title={showPassword ? 'Hide password' : 'Show password'}
-								>
-									{#if showPassword}
-										<svg
-											class="h-4 w-4"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-											/>
-										</svg>
-									{:else}
-										<svg
-											class="h-4 w-4"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-											/>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-											/>
-										</svg>
-									{/if}
-								</button>
-								<button
-									onclick={() => copyToClipboard(entry!.password, 'Password')}
-									class="rounded p-1.5 text-status-muted hover:bg-surface-3 hover:text-white"
-									title="Copy password"
-								>
-									<svg
-										class="h-4 w-4"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-										stroke-width="2"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-										/>
-									</svg>
-								</button>
+								<p class="mt-1 text-[length:var(--text-label)] text-status-muted/70">
+									Hidden by Falcon Dash. Use the vault-backed consumer flow or rotate in edit mode.
+								</p>
 							</div>
 						</div>
 					{/if}

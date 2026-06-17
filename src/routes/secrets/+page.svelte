@@ -1,10 +1,11 @@
 <script lang="ts">
+	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import { gatewayEvents } from '$lib/gateway-api.js';
 	import {
-		secrets,
-		loadSecrets,
 		addProvider,
+		loadSecrets,
 		removeProvider,
+		secrets,
 		type SecretProvider
 	} from '$lib/stores/secrets.js';
 	import { addToast } from '$lib/stores/toast.js';
@@ -14,13 +15,14 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
-	// Add provider form
 	let showAddForm = $state(false);
 	let newType = $state<'env' | 'file' | 'exec'>('env');
 	let newName = $state('');
 	let newPath = $state('');
 	let newCommand = $state('');
 	let saving = $state(false);
+
+	const isConnected = $derived(connState === 'ready');
 
 	$effect(() => {
 		const unsub = gatewayEvents.state.subscribe((s) => {
@@ -56,12 +58,8 @@
 		saving = true;
 		try {
 			const provider: SecretProvider = { type: newType, name: newName.trim() };
-			if (newType === 'file' && newPath.trim()) {
-				provider.path = newPath.trim();
-			}
-			if (newType === 'exec' && newCommand.trim()) {
-				provider.command = newCommand.trim();
-			}
+			if (newType === 'file' && newPath.trim()) provider.path = newPath.trim();
+			if (newType === 'exec' && newCommand.trim()) provider.command = newCommand.trim();
 			await addProvider(provider);
 			addToast(`Provider "${newName}" added`, 'success');
 			resetForm();
@@ -88,194 +86,177 @@
 		newPath = '';
 		newCommand = '';
 	}
-
-	let isConnected = $derived(connState === 'ready');
 </script>
 
-<div class="flex flex-col gap-5 p-4 sm:p-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-lg font-semibold text-white">Secrets</h1>
-			<p class="text-sm text-status-muted">Manage secret providers for API keys and credentials</p>
-		</div>
-		{#if isConnected}
-			<button
-				onclick={() => (showAddForm = !showAddForm)}
-				class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+<svelte:head>
+	<title>Secret Providers - Falcon Dash</title>
+</svelte:head>
+
+<FalconModuleShell
+	active="Vault"
+	eyebrow="Falcon Dash / Vault"
+	title="Secret providers"
+	description="Provider configuration for resolving SecretRefs. Provider metadata is visible; resolved secret values are not."
+>
+	<div class="space-y-4 p-4 sm:p-5">
+		<section class="grid gap-3 sm:grid-cols-3">
+			<div
+				class="border p-4 {isConnected
+					? 'border-status-active/40 bg-status-active-bg text-status-active'
+					: 'border-status-warning/40 bg-status-warning-bg text-status-warning'}"
 			>
-				{showAddForm ? 'Cancel' : 'Add Provider'}
-			</button>
-		{/if}
-	</div>
-
-	{#if !isConnected}
-		<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-8 text-center">
-			<p class="text-sm text-status-muted">Connect to gateway to manage secrets</p>
-		</div>
-	{:else}
-		<!-- Add provider form -->
-		{#if showAddForm}
-			<div class="rounded-lg border border-blue-600/30 bg-blue-900/10 p-4">
-				<h3 class="mb-3 text-sm font-semibold text-white">New Provider</h3>
-				<div class="space-y-3">
-					<div>
-						<label for="provider-name" class="mb-1 block text-xs font-medium text-status-muted"
-							>Name</label
-						>
-						<input
-							id="provider-name"
-							type="text"
-							bind:value={newName}
-							placeholder="my-secrets"
-							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label for="provider-type" class="mb-1 block text-xs font-medium text-status-muted"
-							>Type</label
-						>
-						<select
-							id="provider-type"
-							bind:value={newType}
-							class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white focus:border-status-info focus:outline-none"
-						>
-							<option value="env">Environment Variables</option>
-							<option value="file">File</option>
-							<option value="exec">Executable</option>
-						</select>
-					</div>
-					{#if newType === 'file'}
-						<div>
-							<label for="provider-path" class="mb-1 block text-xs font-medium text-status-muted"
-								>File Path</label
-							>
-							<input
-								id="provider-path"
-								type="text"
-								bind:value={newPath}
-								placeholder="/path/to/secrets.json"
-								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-							/>
-						</div>
-					{/if}
-					{#if newType === 'exec'}
-						<div>
-							<label for="provider-command" class="mb-1 block text-xs font-medium text-status-muted"
-								>Command</label
-							>
-							<input
-								id="provider-command"
-								type="text"
-								bind:value={newCommand}
-								placeholder="/usr/bin/secret-tool"
-								class="w-full rounded-lg border border-surface-border bg-surface-1 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-status-info focus:outline-none"
-							/>
-						</div>
-					{/if}
-					<button
-						onclick={handleAddProvider}
-						disabled={saving || !newName.trim()}
-						class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-					>
-						{saving ? 'Adding...' : 'Add Provider'}
-					</button>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Provider list -->
-		{#if loading}
-			<div class="flex items-center gap-2 py-4">
-				<div
-					class="h-4 w-4 animate-spin rounded-full border-2 border-surface-border border-t-blue-400"
-				></div>
-				<span class="text-sm text-status-muted">Loading providers...</span>
-			</div>
-		{:else if error}
-			<div class="rounded-lg border border-red-600/30 bg-red-900/10 p-3">
-				<p class="text-sm text-red-400">{error}</p>
-			</div>
-		{:else if providers.length === 0}
-			<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 px-4 py-8 text-center">
-				<div class="mb-2 text-3xl text-status-muted">
-					<svg
-						class="mx-auto h-10 w-10"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="1.5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
-						/>
-					</svg>
-				</div>
-				<p class="text-sm text-status-muted">No secret providers configured</p>
-				<p class="mt-1 text-xs text-status-muted">
-					Add a provider to manage API keys and credentials
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] opacity-75">
+					Gateway
 				</p>
+				<p class="mt-2 text-xl font-semibold">{connState}</p>
+			</div>
+			<div class="border border-surface-border bg-surface-1 p-4">
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted">
+					Providers
+				</p>
+				<p class="mt-2 text-xl font-semibold text-white">{providers.length}</p>
+			</div>
+			<div class="border border-surface-border bg-surface-1 p-4">
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted">
+					Secret values
+				</p>
+				<p class="mt-2 text-xl font-semibold text-white">Hidden</p>
+			</div>
+		</section>
+
+		{#if !isConnected}
+			<div class="border border-surface-border bg-surface-1 px-4 py-10 text-center">
+				<p class="text-sm text-status-muted">Connect to gateway to manage secret providers.</p>
 			</div>
 		{:else}
-			<div class="space-y-3">
-				{#each providers as provider, i (provider.name ?? i)}
-					<div
-						class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-4"
+			<section class="border border-surface-border bg-surface-1">
+				<div
+					class="flex items-center justify-between gap-3 border-b border-surface-border px-4 py-3"
+				>
+					<h2 class="text-sm font-semibold text-white">Providers</h2>
+					<button
+						type="button"
+						onclick={() => (showAddForm = !showAddForm)}
+						class="border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
 					>
-						<div class="min-w-0 flex-1">
-							<div class="flex items-center gap-2">
-								<span class="rounded bg-surface-3 px-1.5 py-0.5 text-xs font-mono text-white/80"
-									>{provider.type}</span
-								>
-								<span class="text-sm font-medium text-white"
-									>{provider.name || `Provider ${i + 1}`}</span
-								>
+						{showAddForm ? 'Cancel' : 'Add provider'}
+					</button>
+				</div>
+
+				{#if showAddForm}
+					<div class="border-b border-surface-border p-4">
+						<div class="grid gap-3 md:grid-cols-3">
+							<div>
+								<label for="provider-name" class="mb-1 block text-xs text-status-muted">Name</label>
+								<input
+									id="provider-name"
+									type="text"
+									bind:value={newName}
+									placeholder="vault-secrets"
+									class="w-full border border-surface-border bg-surface-0 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-white/40 focus:outline-none"
+								/>
 							</div>
-							<div class="mt-1 text-xs text-status-muted">
-								{#if provider.type === 'env'}
-									Reads secrets from environment variables
-								{:else if provider.type === 'file'}
-									{provider.path || 'No path configured'}
-								{:else if provider.type === 'exec'}
-									{provider.command || 'No command configured'}
+							<div>
+								<label for="provider-type" class="mb-1 block text-xs text-status-muted">Type</label>
+								<select
+									id="provider-type"
+									bind:value={newType}
+									class="w-full border border-surface-border bg-surface-0 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+								>
+									<option value="env">Environment</option>
+									<option value="file">File</option>
+									<option value="exec">Executable</option>
+								</select>
+							</div>
+							<div>
+								{#if newType === 'exec'}
+									<label for="provider-command" class="mb-1 block text-xs text-status-muted">
+										Command
+									</label>
+									<input
+										id="provider-command"
+										type="text"
+										bind:value={newCommand}
+										placeholder="/usr/bin/secret-tool"
+										class="w-full border border-surface-border bg-surface-0 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-white/40 focus:outline-none"
+									/>
+								{:else if newType === 'file'}
+									<label for="provider-path" class="mb-1 block text-xs text-status-muted"
+										>Path</label
+									>
+									<input
+										id="provider-path"
+										type="text"
+										bind:value={newPath}
+										placeholder="/path/to/secrets.json"
+										class="w-full border border-surface-border bg-surface-0 px-3 py-2 text-sm text-white placeholder-status-muted focus:border-white/40 focus:outline-none"
+									/>
+								{:else}
+									<label for="provider-source" class="mb-1 block text-xs text-status-muted">
+										Source
+									</label>
+									<input
+										id="provider-source"
+										type="text"
+										value="Environment variables"
+										disabled
+										class="w-full border border-surface-border bg-surface-0 px-3 py-2 text-sm text-white placeholder-status-muted opacity-50"
+									/>
 								{/if}
 							</div>
 						</div>
 						<button
-							onclick={() => handleRemoveProvider(provider.name || '')}
-							class="ml-3 rounded-lg bg-red-600/20 px-3 py-1.5 text-xs text-red-400 hover:bg-red-600/30"
+							type="button"
+							onclick={handleAddProvider}
+							disabled={saving || !newName.trim()}
+							class="mt-3 border border-status-active/40 bg-status-active-bg px-4 py-2 text-sm font-semibold text-status-active hover:border-status-active disabled:opacity-50"
 						>
-							Remove
+							{saving ? 'Adding...' : 'Add provider'}
 						</button>
 					</div>
-				{/each}
-			</div>
-		{/if}
+				{/if}
 
-		<!-- Info section -->
-		<div class="rounded-lg border border-surface-border/40 bg-surface-2/20 p-4">
-			<h3 class="mb-2 text-xs font-semibold uppercase text-status-muted">About Secrets</h3>
-			<div class="space-y-2 text-xs text-status-muted">
-				<p>
-					<span class="font-semibold text-status-muted">env</span> — Reads secrets from environment variables
-				</p>
-				<p>
-					<span class="font-semibold text-status-muted">file</span> — Reads secrets from a JSON or single-value
-					file
-				</p>
-				<p>
-					<span class="font-semibold text-status-muted">exec</span> — Runs a command to fetch secrets
-					on demand
-				</p>
-				<p class="mt-2">
-					Providers are resolved eagerly at gateway startup. Run
-					<span class="rounded bg-surface-3 px-1 py-0.5 font-mono text-white/80"
-						>openclaw secrets audit --check</span
+				{#if loading}
+					<div class="p-4 text-sm text-status-muted">Loading providers...</div>
+				{:else if error}
+					<div
+						class="m-4 border border-status-danger/40 bg-status-danger-bg p-3 text-sm text-status-danger"
 					>
-					to verify all secrets resolve correctly.
-				</p>
-			</div>
-		</div>
-	{/if}
-</div>
+						{error}
+					</div>
+				{:else if providers.length === 0}
+					<div class="p-4 text-sm text-status-muted">No providers configured.</div>
+				{:else}
+					<div class="divide-y divide-surface-border">
+						{#each providers as provider, i (provider.name ?? i)}
+							<div class="grid gap-3 px-4 py-3 md:grid-cols-[8rem_1fr_auto] md:items-center">
+								<span class="font-mono text-xs uppercase tracking-[0.16em] text-status-muted">
+									{provider.type}
+								</span>
+								<div class="min-w-0">
+									<p class="truncate text-sm font-semibold text-white">
+										{provider.name || `Provider ${i + 1}`}
+									</p>
+									<p class="mt-1 truncate text-xs text-status-muted">
+										{provider.type === 'env'
+											? 'Environment provider'
+											: provider.type === 'file'
+												? provider.path || 'No path configured'
+												: provider.command || 'No command configured'}
+									</p>
+								</div>
+								<button
+									type="button"
+									onclick={() => handleRemoveProvider(provider.name || '')}
+									class="border border-status-danger/40 bg-status-danger-bg px-3 py-2 text-sm text-status-danger hover:border-status-danger"
+								>
+									Remove
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</section>
+		{/if}
+	</div>
+</FalconModuleShell>

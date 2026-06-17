@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import {
 		aggregateChatReadiness,
 		aggregateChatSummary,
@@ -7,13 +10,16 @@
 		startChannelReadiness,
 		type ChannelReadiness
 	} from '$lib/stores/channel-readiness.js';
-	import { gatewayEvents } from '$lib/gateway-api.js';
 
 	let connectionState = $state('disconnected');
 	let channels = $state<ChannelReadiness[]>([]);
 	let aggregateState = $state('not_configured');
 	let aggregateSummary = $state('No chat channels configured');
 	let loading = $state(false);
+
+	const discordChannel = $derived(channels.find((channel) => channel.id === 'discord') ?? null);
+	const telegramChannel = $derived(channels.find((channel) => channel.id === 'telegram') ?? null);
+	const isConnected = $derived(connectionState === 'ready');
 
 	$effect(() => {
 		const unsub = gatewayEvents.state.subscribe((state) => {
@@ -51,113 +57,186 @@
 		return unsub;
 	});
 
-	let isConnected = $derived(connectionState === 'ready');
-
 	function stateTone(state: string): string {
-		if (state === 'ready') return 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10';
-		if (state === 'degraded') return 'text-amber-200 border-amber-500/30 bg-amber-500/10';
-		if (state === 'misconfigured') return 'text-rose-200 border-rose-500/30 bg-rose-500/10';
-		if (state === 'needs_input') return 'text-sky-200 border-sky-500/30 bg-sky-500/10';
-		return 'text-white/70 border-surface-border bg-surface-2/70';
+		if (state === 'ready') return 'text-status-active border-status-active/40 bg-status-active-bg';
+		if (state === 'degraded')
+			return 'text-status-warning border-status-warning/40 bg-status-warning-bg';
+		if (state === 'misconfigured')
+			return 'text-status-danger border-status-danger/40 bg-status-danger-bg';
+		if (state === 'needs_input') return 'text-status-info border-status-info/40 bg-status-info-bg';
+		return 'text-white/70 border-surface-border bg-surface-2';
 	}
 
 	function stateBadge(state: string): string {
 		if (state === 'ready') return 'Ready';
 		if (state === 'degraded') return 'Degraded';
 		if (state === 'misconfigured') return 'Repair';
-		if (state === 'needs_input') return 'Needs Input';
-		return 'Not Configured';
+		if (state === 'needs_input') return 'Needs input';
+		return 'Not configured';
 	}
 </script>
 
-<div class="flex flex-col gap-6 p-4 sm:p-6">
-	<section
-		class="overflow-hidden rounded-3xl border border-surface-border bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_45%),linear-gradient(180deg,_rgba(255,255,255,0.04),_rgba(255,255,255,0.01))] p-5 sm:p-6"
-	>
-		<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-			<div class="max-w-2xl space-y-3">
-				<p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/80">
-					Chat Readiness
-				</p>
-				<h1 class="text-2xl font-semibold text-white sm:text-3xl">
-					Channel setup, repair, and live status in one place
-				</h1>
-				<p class="max-w-xl text-sm leading-6 text-white/70 sm:text-base">
-					Falcon Dash treats chat as operator infrastructure. At least one supported channel must be
-					healthy for chat to be ready.
-				</p>
-			</div>
-			<div
-				class="rounded-2xl border px-4 py-3 backdrop-blur-sm {stateTone(
-					aggregateState
-				)} lg:min-w-72"
-			>
-				<p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">Overall</p>
-				<div class="mt-1 flex items-center gap-2">
-					<span class="text-lg font-semibold">{stateBadge(aggregateState)}</span>
-					{#if loading}
-						<span class="text-xs opacity-75">Refreshing…</span>
-					{/if}
-				</div>
-				<p class="mt-1 text-sm opacity-90">{aggregateSummary}</p>
-			</div>
-		</div>
-	</section>
+<svelte:head>
+	<title>Channels - Falcon Dash</title>
+</svelte:head>
 
-	{#if !isConnected}
-		<div class="rounded-2xl border border-surface-border bg-surface-1 px-4 py-10 text-center">
-			<p class="text-sm text-status-muted">
-				Connect to the gateway to inspect or repair chat channels.
-			</p>
-		</div>
-	{:else}
-		<!-- eslint-disable svelte/no-navigation-without-resolve -- shared readiness cards link to known local wizard routes -->
-		<section class="grid gap-4 lg:grid-cols-2">
-			{#each channels as channel (channel.id)}
-				<article class="overflow-hidden rounded-3xl border border-surface-border bg-surface-2/80">
+<FalconModuleShell
+	active="Channels"
+	eyebrow="Falcon Dash / Channels"
+	title="Channel readiness"
+	description="Live chat surface readiness, repair entry points, and provider boundaries for the installed Falcon Dash build."
+>
+	<div class="space-y-4 p-4 sm:p-5">
+		<section class="grid gap-3 md:grid-cols-3">
+			<div class="border p-4 {stateTone(aggregateState)}">
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] opacity-75">
+					Overall
+				</p>
+				<p class="mt-2 text-xl font-semibold">{stateBadge(aggregateState)}</p>
+				<p class="mt-1 text-xs opacity-80">{aggregateSummary}</p>
+			</div>
+			<div class="border border-surface-border bg-surface-1 p-4">
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted">
+					Gateway
+				</p>
+				<p class="mt-2 text-xl font-semibold text-white">{connectionState}</p>
+				<p class="mt-1 text-xs text-status-muted">
+					{loading ? 'Refreshing status' : 'Readiness source'}
+				</p>
+			</div>
+			<div class="border border-surface-border bg-surface-1 p-4">
+				<p class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted">
+					Primary
+				</p>
+				<p class="mt-2 text-xl font-semibold text-white">Discord + WhatsApp</p>
+				<p class="mt-1 text-xs text-status-muted">WhatsApp status-only until wired</p>
+			</div>
+		</section>
+
+		{#if !isConnected}
+			<div class="border border-surface-border bg-surface-1 px-4 py-10 text-center">
+				<p class="text-sm text-status-muted">
+					Connect to the gateway to inspect or repair chat channels.
+				</p>
+			</div>
+		{:else}
+			<section class="grid gap-4 xl:grid-cols-2">
+				<article class="border border-surface-border bg-surface-1">
 					<div
-						class="flex items-start justify-between gap-4 border-b border-surface-border/70 px-5 py-4"
+						class="flex items-start justify-between gap-4 border-b border-surface-border px-4 py-3"
 					>
 						<div>
-							<p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
-								{channel.id}
+							<p
+								class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted"
+							>
+								Live provider
 							</p>
-							<h2 class="mt-1 text-xl font-semibold text-white">{channel.label}</h2>
+							<h2 class="mt-1 text-lg font-semibold text-white">Discord</h2>
 						</div>
 						<span
-							class="rounded-full border px-3 py-1 text-xs font-semibold {stateTone(channel.state)}"
-							>{stateBadge(channel.state)}</span
+							class="border px-3 py-1 text-xs font-semibold {stateTone(
+								discordChannel?.state ?? ''
+							)}"
 						>
+							{stateBadge(discordChannel?.state ?? '')}
+						</span>
 					</div>
-					<div class="space-y-5 px-5 py-5">
+					<div class="space-y-4 p-4">
 						<div>
-							<p class="text-base font-medium text-white">{channel.summary}</p>
-							<p class="mt-1 text-sm leading-6 text-white/65">{channel.detail}</p>
-						</div>
-						<dl class="grid grid-cols-2 gap-3 text-sm text-white/70">
-							<div class="rounded-2xl bg-surface-1/70 px-3 py-3">
-								<dt class="text-xs uppercase tracking-[0.18em] text-white/40">Configured</dt>
-								<dd class="mt-1 font-medium text-white">{channel.configured ? 'Yes' : 'No'}</dd>
-							</div>
-							<div class="rounded-2xl bg-surface-1/70 px-3 py-3">
-								<dt class="text-xs uppercase tracking-[0.18em] text-white/40">Running</dt>
-								<dd class="mt-1 font-medium text-white">{channel.running ? 'Yes' : 'No'}</dd>
-							</div>
-						</dl>
-						<div class="flex items-center justify-between gap-3">
-							<a
-								href={channel.href}
-								class="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
-							>
-								{channel.ctaLabel}
-							</a>
-							<p class="text-xs uppercase tracking-[0.18em] text-white/40">
-								Shared readiness model
+							<p class="text-sm font-medium text-white">
+								{discordChannel?.summary ?? 'Not configured'}
+							</p>
+							<p class="mt-1 text-sm leading-6 text-white/65">
+								{discordChannel?.detail ?? 'Set up Discord for Falcon Dash operator chat.'}
 							</p>
 						</div>
+						<dl class="grid grid-cols-2 gap-px bg-surface-border text-sm">
+							<div class="bg-surface-1 p-3">
+								<dt class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+									Configured
+								</dt>
+								<dd class="mt-1 text-white">{discordChannel?.configured ? 'Yes' : 'No'}</dd>
+							</div>
+							<div class="bg-surface-1 p-3">
+								<dt class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+									Running
+								</dt>
+								<dd class="mt-1 text-white">{discordChannel?.running ? 'Yes' : 'No'}</dd>
+							</div>
+						</dl>
+						<a
+							href={resolve('/channels/discord')}
+							class="inline-flex border border-white bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+						>
+							{discordChannel?.ctaLabel ?? 'Open wizard'}
+						</a>
 					</div>
 				</article>
-			{/each}
-		</section>
-	{/if}
-</div>
+
+				<article class="border border-surface-border bg-surface-1">
+					<div
+						class="flex items-start justify-between gap-4 border-b border-surface-border px-4 py-3"
+					>
+						<div>
+							<p
+								class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-status-muted"
+							>
+								Planned provider
+							</p>
+							<h2 class="mt-1 text-lg font-semibold text-white">WhatsApp</h2>
+						</div>
+						<span
+							class="border border-status-warning/40 bg-status-warning-bg px-3 py-1 text-xs font-semibold text-status-warning"
+						>
+							Not wired
+						</span>
+					</div>
+					<div class="space-y-4 p-4">
+						<p class="text-sm leading-6 text-white/70">
+							WhatsApp is part of the approved operator surface, but this Falcon Dash build has no
+							route, gateway method, or `wacli` readiness adapter yet.
+						</p>
+						<div class="grid grid-cols-2 gap-px bg-surface-border text-sm">
+							<div class="bg-surface-1 p-3">
+								<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+									Configured
+								</p>
+								<p class="mt-1 text-white">No</p>
+							</div>
+							<div class="bg-surface-1 p-3">
+								<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-status-muted">
+									Build scope
+								</p>
+								<p class="mt-1 text-white">Status-only</p>
+							</div>
+						</div>
+						<p class="text-xs leading-5 text-status-muted">
+							Adding real WhatsApp controls should be a separate Change that connects Falcon Dash to
+							the local WhatsApp archive/runtime safely.
+						</p>
+					</div>
+				</article>
+			</section>
+
+			<section class="border border-surface-border bg-surface-1">
+				<div class="border-b border-surface-border px-4 py-3">
+					<h2 class="text-sm font-semibold text-white">Advanced provider</h2>
+				</div>
+				<div class="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center">
+					<div>
+						<p class="text-sm font-medium text-white">Telegram</p>
+						<p class="mt-1 text-sm leading-6 text-white/65">
+							{telegramChannel?.detail ?? 'Telegram remains available as an advanced provider.'}
+						</p>
+					</div>
+					<a
+						href={resolve('/channels/telegram')}
+						class="inline-flex border border-surface-border bg-surface-2 px-4 py-2 text-sm text-white/75 hover:border-white/40 hover:text-white"
+					>
+						Open Telegram
+					</a>
+				</div>
+			</section>
+		{/if}
+	</div>
+</FalconModuleShell>
