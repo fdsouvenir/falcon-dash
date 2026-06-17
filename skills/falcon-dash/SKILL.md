@@ -26,6 +26,7 @@ These are non-optional operating rules:
 - **Set Changes to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress. When done, **write a result summary** and set status to `complete` or `needs_review`.
 - **On heartbeat, check the Work Queue** — these are your queue buckets. Pick up Work items waiting on the agent and execute approved Changes.
 - **Changes are specifications.** A Change description is a carefully crafted instruction set — the spec for the work. Write it with care.
+- **Refer to Work by object type, not a universal prefix.** In human/operator conversation, say `Change 176`, `Project 4`, `Routine 12`, etc. Use raw `id` fields in API/debug contexts. Do not call everything `W-{id}`; the `W-` prefix is reserved for generated context filenames where collision-proof file names are useful.
 
 ### Sub-agent Execution
 

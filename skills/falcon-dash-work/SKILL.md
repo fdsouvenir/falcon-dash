@@ -27,6 +27,13 @@ archived migration input; there is no active PM API.
 
 Evidence is attached through evidence refs/provenance. It is not standalone work.
 
+## ID References
+
+Use object-type references in human/operator conversation: `Change 176`, `Project 4`,
+`Routine 12`, `Decision 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
+all Work items as `W-{id}`. The `W-` prefix is reserved for generated context filenames where
+collision-proof file names are useful.
+
 ## Statuses
 
 `backlog`, `planning`, `ready`, `in_progress`, `waiting`, `needs_review`, `blocked`,

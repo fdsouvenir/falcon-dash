@@ -20,4 +20,7 @@ Agents should use `/api/work/*` or generated context files:
 - `FALCON-DASH.md`
 - `Work/W-{id}.md`
 
+In normal conversation and UI copy, refer to items by object type and ID, such as `Change 176` or
+`Project 4`. The `W-` prefix is only for generated context filenames.
+
 The former work interface is not part of active Falcon Dash.

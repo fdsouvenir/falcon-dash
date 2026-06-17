@@ -28,6 +28,14 @@ on disk only as static migration input and is opened read-only through
 
 Evidence is attached as provenance through `work_evidence_refs`; evidence is not standalone work.
 
+## ID Reference Convention
+
+Work item IDs are not a user-facing taxonomy. Human/operator-facing references should use the
+object type plus ID, such as `Change 176`, `Project 4`, `Routine 12`, or `Decision 9`. API and
+debug contexts may use raw `id` fields. Avoid using `W-{id}` as a blanket name for all Work
+objects; the `W-` prefix is reserved for generated context filenames where collision-proof file
+names are useful.
+
 ## Server Modules
 
 Work server code lives in `src/lib/server/work/`:
