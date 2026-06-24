@@ -3,14 +3,14 @@
 [![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-The primary user interface for [OpenClaw](https://github.com/fdsouvenir/openclaw) — a web dashboard that connects to the OpenClaw Gateway over WebSocket to provide real-time control of the AI agent, project management, file browsing, and system monitoring.
+The primary user interface for [OpenClaw](https://github.com/fdsouvenir/openclaw) — a web dashboard that connects to the OpenClaw Gateway over WebSocket to provide real-time control of the AI agent, Work management, file browsing, and system monitoring.
 
 Falcon Dash is designed to be installed alongside OpenClaw and serves as the main operator console. It reads its configuration directly from `~/.openclaw/openclaw.json`, so once OpenClaw is running, the dashboard connects automatically with no manual setup.
 
 ## Features
 
 - **Chat** — Real-time conversation with the OpenClaw agent. Supports streaming responses, thinking blocks, tool call visualization, slash commands, threads, bookmarks, and search. Markdown rendering includes syntax highlighting (Shiki), math (KaTeX), and diagrams (Mermaid).
-- **Project Management** — PM system with categories, sub-categories, and projects. Each project is a rich markdown document that agents write freely. Includes a project list with filtering, stat cards, and project detail overlays with rendered markdown and activity feed.
+- **Work Management** — Work module for operator projects, tasks, decisions, routines, observations, and changes. It is the agent-facing source of truth and writes generated Work context into agent workspaces.
 - **Documents** — Browse and edit files in the OpenClaw workspace. Supports creating, renaming, and deleting files and directories.
 - **Agent Jobs** — Create and manage cron jobs that run on a schedule (cron expressions, intervals, or one-shot timestamps). View run history and job status.
 - **Heartbeat** — Monitor system health with heartbeat history and status indicators.
@@ -117,14 +117,14 @@ src/
   lib/
     gateway/       WebSocket client (connection, correlator, event bus,
                    snapshot store, reconnector, stream manager, diagnostics)
-    stores/        Svelte stores (gateway, chat, sessions, PM, files, etc.)
-    components/    UI components (chat, PM, settings, canvas, etc.)
+    stores/        Svelte stores (gateway, chat, sessions, files, etc.)
+    components/    UI components (chat, Work, settings, canvas, etc.)
     canvas/        A2UI bridge and canvas delivery system
     chat/          Markdown pipeline, commands, highlighting
-    server/        Server-side code (PM database, file config, passwords)
+    server/        Server-side code (Work database, file config, passwords)
   routes/
     /              Chat view (default) or welcome screen
-    /projects      Project management dashboard
+    /work          Work management dashboard
     /documents     File browser and editor
     /jobs          Cron job management
     /heartbeat     System health monitoring

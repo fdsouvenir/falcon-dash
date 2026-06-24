@@ -6,7 +6,7 @@ See also:
 
 - [Architecture overview](architecture.md) -- Falcon Dash system architecture
 - [Deployment](deployment.md) -- build, Docker, and reverse proxy details
-- [PM pipeline](pm-pipeline.md) -- PM context files that agents consume
+- [Work management](work-management.md) -- Work context files that agents consume
 - [Gateway plugin](gateway-plugin.md) -- plugin installed alongside the gateway
 
 ## What fredbot-backend does
@@ -58,7 +58,7 @@ Falcon Dash reads this config:
 
 - **Server-side:** `/api/gateway-config` reads `gateway.auth.token`, `gateway.port`, `gateway.bind` for the WebSocket connection URL and token
 - **Server-side:** `src/lib/server/agents/` reads and writes `agents.list[]` for agent CRUD
-- **Server-side:** `src/lib/server/pm/workspace-discovery.ts` reads `agents.list[].workspace` for symlink targets
+- **Server-side:** `src/lib/server/work/workspace-discovery.ts` reads `agents.list[].workspace` for Work context symlink targets
 
 Config writes from Falcon Dash use optimistic concurrency (hash check) to avoid conflicting with external changes.
 

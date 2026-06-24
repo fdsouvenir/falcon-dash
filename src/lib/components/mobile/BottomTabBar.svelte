@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { keyboardVisible } from '$lib/stores/viewport.js';
-	import { unreadNotificationCount } from '$lib/stores/notifications.js';
 
-	let { onmore, hidden = false }: { onmore: () => void; hidden?: boolean } = $props();
+	let { hidden = false }: { onmore?: () => void; hidden?: boolean } = $props();
 
 	let pathname = $state('/');
 	let kbVisible = $state(false);
-	let unreadCount = $state(0);
 
 	$effect(() => {
 		const unsub = page.subscribe((p) => {
@@ -23,131 +21,59 @@
 		return unsub;
 	});
 
-	$effect(() => {
-		const unsub = unreadNotificationCount.subscribe((v) => {
-			unreadCount = v;
-		});
-		return unsub;
-	});
-
 	function isActive(path: string): boolean {
 		if (path === '/') return pathname === '/';
 		return pathname.startsWith(path);
 	}
+
+	const tabs = [
+		{
+			label: 'Shell',
+			href: '/',
+			path: 'M3.75 5.25h16.5v10.5H3.75V5.25zm4.5 13.5h7.5m-4.5-3v3'
+		},
+		{
+			label: 'Work',
+			href: '/work',
+			path: 'M6 8.25h12M6 12h12M6 15.75h7.5M4.5 4.5h15v15h-15z'
+		},
+		{
+			label: 'Vault',
+			href: '/passwords',
+			path: 'M8.25 10.5V8.25a3.75 3.75 0 017.5 0v2.25m-9 0h10.5v9H6.75v-9z'
+		},
+		{
+			label: 'Channels',
+			href: '/channels',
+			path: 'M7.5 8.25h9m-9 3H12m-7.5 6.75V5.25h15v9.75H12L7.5 18z'
+		},
+		{
+			label: 'Labs',
+			href: '/settings',
+			path: 'M9.75 3.75h4.5m-3 0v5.25l-4.5 7.5a2.25 2.25 0 001.95 3.375h6.6a2.25 2.25 0 001.95-3.375l-4.5-7.5V3.75'
+		}
+	];
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
 {#if !kbVisible && !hidden}
 	<nav
-		class="flex shrink-0 items-stretch border-t border-surface-border bg-surface-1 pb-[var(--safe-bottom)]"
+		class="grid shrink-0 grid-cols-5 border-t border-outline-variant bg-surface-container-lowest pb-[var(--safe-bottom)]"
 	>
-		<a
-			href="/"
-			class="touch-target relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/'
-			)
-				? 'text-blue-400'
-				: 'text-status-muted'}"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-				/>
-			</svg>
-			<span>Home</span>
-			{#if unreadCount > 0}
-				<span
-					class="absolute right-1/4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
-				>
-					{unreadCount > 99 ? '99+' : unreadCount}
-				</span>
-			{/if}
-		</a>
-
-		<a
-			href="/projects"
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/projects'
-			)
-				? 'text-blue-400'
-				: 'text-status-muted'}"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-				/>
-			</svg>
-			<span>Projects</span>
-		</a>
-
-		<a
-			href="/jobs"
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/jobs'
-			)
-				? 'text-blue-400'
-				: 'text-status-muted'}"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-				/>
-			</svg>
-			<span>Jobs</span>
-		</a>
-
-		<a
-			href="/documents"
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/documents'
-			)
-				? 'text-blue-400'
-				: 'text-status-muted'}"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-				/>
-			</svg>
-			<span>Docs</span>
-		</a>
-
-		<a
-			href="/channels"
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs {isActive(
-				'/channels'
-			)
-				? 'text-blue-400'
-				: 'text-status-muted'}"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-				/>
-			</svg>
-			<span>Channels</span>
-		</a>
-
-		<button
-			onclick={onmore}
-			class="touch-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs text-status-muted"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
-				<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-				<circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
-			</svg>
-			<span>More</span>
-		</button>
+		{#each tabs as tab (tab.label)}
+			<a
+				href={tab.href}
+				class="touch-target flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] {isActive(
+					tab.href
+				)
+					? 'text-primary'
+					: 'text-on-surface-variant'}"
+			>
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d={tab.path} />
+				</svg>
+				<span>{tab.label}</span>
+			</a>
+		{/each}
 	</nav>
 {/if}

@@ -8,7 +8,8 @@ See also:
 - [Stores](stores.md) -- Svelte store layer
 - [Components](components.md) -- UI component architecture
 - [Gateway plugin](gateway-plugin.md) -- `falcon-dash-plugin/` channel and canvas bridge
-- [PM pipeline](pm-pipeline.md) -- project management system
+- [Work management](work-management.md) -- Work module schema, migration, API, and agent context
+- [Work management](work-management.md) -- Falcon Dash work system
 - [fredbot integration](fredbot-integration.md) -- deployment infrastructure
 - [Deployment](deployment.md) -- build, Docker, reverse proxy setup
 
@@ -17,27 +18,27 @@ See also:
 ```
 Browser (Falcon Dash SvelteKit app)
    |
-   |  HTTP (SvelteKit API routes)      WebSocket (protocol v3)
-   |  /api/pm/*, /api/agents/*, etc.   /ws (proxied in dev)
-   v                                    v
-+--SvelteKit Server--+         +--OpenClaw Gateway--+
-|  better-sqlite3    |         |  Session mgmt      |
-|  PM CRUD           |         |  Auth / Pairing     |
-|  File ops          |         |  Event broadcast    |
-|  Password vault    |         |  Canvas pipeline    |
-+--------------------+         +----+----------------+
-                                    |
-                                    v
-                             +--Agent Process--+
-                             |  Claude Code    |
-                             |  Tool execution |
-                             |  Workspace      |
-                             +-----------------+
+   |  HTTP (SvelteKit API routes)         WebSocket (protocol v3)
+   |  /api/work/*, etc.                  /ws (proxied in dev)
+   v                                      v
++--SvelteKit Server--+           +--OpenClaw Gateway--+
+|  better-sqlite3    |           |  Session mgmt      |
+|  Work CRUD/context |           |  Auth / Pairing     |
+|  PM compatibility  |           |  Event broadcast    |
+|  File ops          |           |  Canvas pipeline    |
+|  Password vault    |           +----+----------------+
++--------------------+                |
+                                      v
+                               +--Agent Process--+
+                               |  Claude Code    |
+                               |  Tool execution |
+                               |  Workspace      |
+                               +-----------------+
 ```
 
 The browser client communicates over two channels:
 
-1. **HTTP** -- SvelteKit API routes for server-side operations (PM database, file system, password vault, agent config CRUD). These endpoints run inside the SvelteKit Node.js process and access local resources directly.
+1. **HTTP** -- SvelteKit API routes for server-side operations (Work Management, legacy PM compatibility, file system, password vault, agent config CRUD). These endpoints run inside the SvelteKit Node.js process and access local resources directly.
 
 2. **WebSocket** -- A persistent connection to the OpenClaw Gateway for real-time operations (chat, sessions, presence, health, canvas, exec approvals). In development, Vite proxies `/ws` to `GATEWAY_URL` (default `ws://127.0.0.1:18789`). In production, a reverse proxy terminates TLS and forwards `wss://` connections.
 
@@ -55,11 +56,13 @@ falcon-dash/
 │   │   ├── jobs/                 # Cron job management
 │   │   ├── heartbeat/            # System health monitoring
 │   │   ├── passwords/            # Password vault (KeePassXC)
-│   │   ├── projects/             # PM dashboard
+│   │   ├── projects/             # Legacy PM dashboard / compatibility UI
 │   │   ├── settings/             # Settings page
 │   │   └── api/                  # Server-side API routes
 │   │       ├── agents/           # Agent CRUD
-│   │       ├── pm/               # PM REST API
+│   │       ├── work/             # Work Management REST API, context, migration
+│   │       ├── pm/               # Legacy PM REST API
+│   │       ├── falcon-dash/      # Falcon Dash plugin/module metadata
 │   │       ├── files/            # File CRUD
 │   │       ├── files-bulk/       # Bulk file operations
 │   │       ├── gateway-config/   # Gateway config proxy
@@ -90,7 +93,8 @@ falcon-dash/
 │       │   ├── pm/               # PM list, detail, utils
 │       │   └── ai/               # AI display adapters (reasoning, tools, etc.)
 │       ├── server/               # Server-only code
-│       │   ├── pm/               # PM database, context generation, scheduling
+│       │   ├── work/             # Work schema, CRUD, migration, context, module metadata
+│       │   ├── pm/               # Legacy PM database and compatibility context generation
 │       │   ├── agents/           # Agent CRUD against openclaw.json
 │       │   └── ...               # Files, passwords, config
 │       ├── chat/                 # Markdown pipeline, Shiki, slash commands
@@ -208,12 +212,12 @@ Svelte stores (`writable`/`readable`/`derived`) drive component rendering. Compo
 
 The SvelteKit server process handles operations that require local filesystem or database access:
 
-| Subsystem          | Storage                                               | Key files                        |
-| ------------------ | ----------------------------------------------------- | -------------------------------- |
-| Project management | better-sqlite3 at `~/.openclaw/data/pm.db` (WAL mode) | `src/lib/server/pm/`             |
-| Agent CRUD         | `~/.openclaw/openclaw.json`                           | `src/lib/server/agents/`         |
-| File browser       | Filesystem (agent workspaces)                         | `src/lib/server/files-config.ts` |
-| Password vault     | KeePassXC database                                    | `src/lib/server/keepassxc.ts`    |
-| Gateway config     | `~/.openclaw/openclaw.json`                           | `src/routes/api/gateway-config/` |
+| Subsystem       | Storage                                                             | Key files                        |
+| --------------- | ------------------------------------------------------------------- | -------------------------------- |
+| Work Management | better-sqlite3 at `~/.openclaw/data/falcon-dash/work.db` (WAL mode) | `src/lib/server/work/`           |
+| Agent CRUD      | `~/.openclaw/openclaw.json`                                         | `src/lib/server/agents/`         |
+| File browser    | Filesystem (agent workspaces)                                       | `src/lib/server/files-config.ts` |
+| Password vault  | KeePassXC database                                                  | `src/lib/server/keepassxc.ts`    |
+| Gateway config  | `~/.openclaw/openclaw.json`                                         | `src/routes/api/gateway-config/` |
 
-The PM subsystem also generates context files (`PROJECTS.md`, per-project markdown, `PM-API.md`) and symlinks them into agent workspaces so agents can read PM data. See [PM pipeline](pm-pipeline.md) for details.
+Work Management is the active agent-facing module for operator work. It stores areas, projects, tasks, decisions, routines, observations, and changes in its own SQLite database, exposes `/api/work/*` for agent and app use, and generates Work context files (`WORK.md`, `Work/W-{id}.md`, `WORK-API.md`, `FALCON-DASH.md`). The archived PM database may remain on disk as read-only migration source material, but old PM routes, stores, context writers, and UI components are not part of Falcon Dash. See [Work management](work-management.md) for the current contract.

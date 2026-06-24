@@ -50,9 +50,9 @@
 			"projects": ["desktop", "mobile"]
 		},
 		{
-			"id": "projects",
-			"path": "/projects",
-			"label": "Projects",
+			"id": "work",
+			"path": "/work",
+			"label": "Work",
 			"offlineSafe": true,
 			"projects": ["desktop", "mobile"]
 		},

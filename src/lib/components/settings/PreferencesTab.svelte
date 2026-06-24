@@ -7,15 +7,13 @@
 		notificationsEnabled: boolean;
 		soundEnabled: boolean;
 		compactMode: boolean;
-		defaultPmView: 'dashboard' | 'kanban' | 'list' | 'tree';
 	}
 
 	const defaultPreferences: Preferences = {
 		theme: 'system',
 		notificationsEnabled: true,
 		soundEnabled: true,
-		compactMode: false,
-		defaultPmView: 'dashboard'
+		compactMode: false
 	};
 
 	let preferences = $state<Preferences>(loadPreferences());
@@ -79,11 +77,6 @@
 	function toggleCompactMode() {
 		preferences.compactMode = !preferences.compactMode;
 		applyCompactMode(preferences.compactMode);
-		savePreferences();
-	}
-
-	function updateDefaultPmView(view: 'dashboard' | 'kanban' | 'list' | 'tree') {
-		preferences.defaultPmView = view;
 		savePreferences();
 	}
 </script>
@@ -197,28 +190,6 @@
 							: 'translate-x-1'}"
 					></span>
 				</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- Project Management Card -->
-	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
-		<h3 class="mb-4 text-lg font-semibold text-white">Project Management</h3>
-		<div>
-			<label class="mb-2 block text-sm font-medium text-white/70">Default View</label>
-			<select
-				value={preferences.defaultPmView}
-				onchange={(e) =>
-					updateDefaultPmView(e.currentTarget.value as 'dashboard' | 'kanban' | 'list' | 'tree')}
-				class="w-full rounded border border-surface-border bg-surface-3 px-3 py-2 text-sm text-white focus:border-status-info focus:outline-none focus:ring-1 focus:ring-status-info"
-			>
-				<option value="dashboard">Dashboard</option>
-				<option value="kanban">Kanban Board</option>
-				<option value="list">List View</option>
-				<option value="tree">Tree View</option>
-			</select>
-			<div class="mt-1 text-xs text-status-muted">
-				Choose which view to show by default when opening Project Management
 			</div>
 		</div>
 	</div>

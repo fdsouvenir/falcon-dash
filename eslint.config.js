@@ -30,13 +30,6 @@ export default ts.config(
 		}
 	},
 	{
-		ignores: [
-			'build/',
-			'.svelte-kit/',
-			'dist/',
-			'node_modules/',
-			'static/a2ui.bundle.js',
-			'openclaw-pm/'
-		]
+		ignores: ['build/', '.svelte-kit/', 'dist/', 'node_modules/', 'static/a2ui.bundle.js']
 	}
 );

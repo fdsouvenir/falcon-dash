@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import '@xterm/xterm/css/xterm.css';
@@ -31,6 +32,23 @@
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar);
+	--color-on-background: var(--on-background);
+	--color-error: var(--error);
+	--color-error-container: var(--error-container);
+	--color-on-error: var(--on-error);
+	--color-on-surface: var(--on-surface);
+	--color-on-surface-variant: var(--on-surface-variant);
+	--color-outline: var(--outline);
+	--color-outline-variant: var(--outline-variant);
+	--color-surface: var(--surface);
+	--color-surface-container-lowest: var(--surface-container-lowest);
+	--color-surface-container-low: var(--surface-container-low);
+	--color-surface-container: var(--surface-container);
+	--color-surface-container-high: var(--surface-container-high);
+	--color-surface-container-highest: var(--surface-container-highest);
+	--color-surface-variant: var(--surface-variant);
+	--color-primary-container: var(--primary-container);
+	--color-secondary-container: var(--secondary-container);
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
@@ -59,42 +77,58 @@
 }
 
 :root {
-	--radius: 0.625rem;
+	--radius: 0.25rem;
 
 	/* ── Shadcn base tokens (existing) ── */
-	--background: oklch(0.129 0.042 264.695);
-	--foreground: oklch(0.984 0.003 247.858);
-	--card: oklch(0.129 0.042 264.695);
-	--card-foreground: oklch(0.984 0.003 247.858);
-	--popover: oklch(0.129 0.042 264.695);
-	--popover-foreground: oklch(0.984 0.003 247.858);
-	--primary: oklch(0.929 0.013 255.508);
-	--primary-foreground: oklch(0.208 0.042 265.755);
-	--secondary: oklch(0.208 0.042 265.755);
-	--secondary-foreground: oklch(0.929 0.013 255.508);
-	--muted: oklch(0.208 0.042 265.755);
-	--muted-foreground: oklch(0.556 0.022 257.417);
-	--accent: oklch(0.208 0.042 265.755);
-	--accent-foreground: oklch(0.929 0.013 255.508);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(0.278 0.033 256.848);
-	--input: oklch(0.278 0.033 256.848);
-	--ring: oklch(0.551 0.027 264.364);
-	--sidebar: oklch(0.129 0.042 264.695);
-	--sidebar-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-primary: oklch(0.929 0.013 255.508);
-	--sidebar-primary-foreground: oklch(0.208 0.042 265.755);
-	--sidebar-accent: oklch(0.208 0.042 265.755);
-	--sidebar-accent-foreground: oklch(0.929 0.013 255.508);
-	--sidebar-border: oklch(0.278 0.033 256.848);
-	--sidebar-ring: oklch(0.551 0.027 264.364);
+	--background: #0b1326;
+	--foreground: #dae2fd;
+	--card: #171f33;
+	--card-foreground: #dae2fd;
+	--popover: #171f33;
+	--popover-foreground: #dae2fd;
+	--primary: #ffffff;
+	--primary-foreground: #2f3131;
+	--secondary: #bcc7de;
+	--secondary-foreground: #263143;
+	--muted: #3e495d;
+	--muted-foreground: #c4c7c8;
+	--accent: #d5e3fd;
+	--accent-foreground: #233144;
+	--destructive: #ffb4ab;
+	--border: #444748;
+	--input: #444748;
+	--ring: #8e9192;
+	--sidebar: #060e20;
+	--sidebar-foreground: #dae2fd;
+	--sidebar-primary: #ffffff;
+	--sidebar-primary-foreground: #2f3131;
+	--sidebar-accent: #2d3449;
+	--sidebar-accent-foreground: #dae2fd;
+	--sidebar-border: #444748;
+	--sidebar-ring: #8e9192;
+
+	/* ── Stitch material tokens ── */
+	--on-background: #dae2fd;
+	--surface: #0b1326;
+	--on-surface: #dae2fd;
+	--on-surface-variant: #c4c7c8;
+	--outline: #8e9192;
+	--outline-variant: #444748;
+	--surface-container-lowest: #060e20;
+	--surface-container-low: #131b2e;
+	--surface-container: #171f33;
+	--surface-container-high: #222a3d;
+	--surface-container-highest: #2d3449;
+	--surface-variant: #2d3449;
+	--primary-container: #e2e2e2;
+	--secondary-container: #3e495d;
 
 	/* ── Surface layers (4-level depth system) ── */
-	--surface-0: #0a0a0f;
-	--surface-1: #12121a;
-	--surface-2: #1a1a2e;
-	--surface-3: #2a2a3e;
-	--surface-border: rgba(42, 42, 62, 0.6);
+	--surface-0: #0b1326;
+	--surface-1: #171f33;
+	--surface-2: #222a3d;
+	--surface-3: #2d3449;
+	--surface-border: #444748;
 
 	/* ── Semantic status colors ── */
 	--status-active: #4ade80;
@@ -105,7 +139,7 @@
 	--status-danger-bg: rgba(248, 113, 113, 0.12);
 	--status-info: #60a5fa;
 	--status-info-bg: rgba(96, 165, 250, 0.12);
-	--status-muted: #6b7280;
+	--status-muted: #c4c7c8;
 	--status-muted-bg: rgba(107, 114, 128, 0.12);
 	--status-purple: #a78bfa;
 	--status-purple-bg: rgba(167, 139, 250, 0.12);
@@ -135,6 +169,22 @@ body {
 	height: 100%;
 	overflow: hidden;
 	overscroll-behavior: none;
+	font-family:
+		'Hanken Grotesk',
+		ui-sans-serif,
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* Safe area insets for notch phones */

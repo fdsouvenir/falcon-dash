@@ -9,7 +9,7 @@ Before deploying Falcon Dash, ensure you have:
 - **Node.js 20+** — Required for building and running the application
 - **npm** — Included with Node.js; used for dependency installation and build scripts
 - **OpenClaw Gateway** — A running instance of the OpenClaw gateway (default: `ws://127.0.0.1:18789`)
-- **Gateway Plugins** — The `openclaw-canvas-bridge` and `openclaw-pm` plugins installed on your gateway
+- **Gateway Plugins** — The Falcon Dash plugin and `openclaw-canvas-bridge` installed on your gateway
 
 ## Local Development
 
@@ -222,19 +222,20 @@ Start the stack:
 docker-compose up -d
 ```
 
-## PM Database
+## Work Database
 
-The Project Management system uses better-sqlite3 with WAL mode. The database file is located at:
+The Work module uses better-sqlite3 with WAL mode. The database file is located at:
 
 ```
-~/.openclaw/data/pm.db
+~/.openclaw/data/falcon-dash/work.db
 ```
 
-Override the data directory with the `OPENCLAW_DATA_DIR` environment variable. The directory is created automatically if it doesn't exist.
+Override the database path with `FALCON_DASH_WORK_DATABASE_PATH`, or the Falcon Dash data directory
+with `FALCON_DASH_DATA_DIR`. The directory is created automatically if it doesn't exist.
 
 ### Docker Volume Mounts
 
-In Docker deployments, mount the OpenClaw data directory to persist the PM database across container restarts:
+In Docker deployments, mount the OpenClaw data directory to persist the Work database across container restarts:
 
 ```bash
 docker run -p 3000:3000 \
@@ -246,22 +247,22 @@ docker run -p 3000:3000 \
 
 Or use a named volume in Docker Compose (see the Compose example above — both `gateway` and `dashboard` share the `openclaw-data` volume).
 
-### PM Context Pipeline
+### Work Context Pipeline
 
-Falcon Dash generates markdown context files that give agents read access to PM data:
+Falcon Dash generates markdown context files that give agents read access to Work data:
 
-- **Shared directory:** `~/.openclaw/data/pm-context/` (override via `PM_CONTEXT_DIR` env var)
-- **Files generated:** `PROJECTS.md`, `Projects/{id}.md`, `PM-API.md`
+- **Shared directory:** `~/.openclaw/data/falcon-dash/context/` (override via `FALCON_DASH_WORK_CONTEXT_DIR` env var)
+- **Files generated:** `WORK.md`, `Work/W-{id}.md`, `WORK-API.md`, `FALCON-DASH.md`
 - **Symlinks:** created in each agent workspace discovered from `~/.openclaw/openclaw.json`
 
-These files are regenerated automatically after PM mutations (debounced at 5 seconds, max staleness 60 seconds).
+These files are regenerated automatically after Work mutations (debounced at 5 seconds, max staleness 60 seconds).
 
 ### Backups
 
-The PM database is a single SQLite file. Back it up by copying the file while the server is stopped, or use SQLite's `.backup` command:
+The Work database is a single SQLite file. Back it up by copying the file while the server is stopped, or use SQLite's `.backup` command:
 
 ```bash
-sqlite3 ~/.openclaw/data/pm.db ".backup /path/to/backup.db"
+sqlite3 ~/.openclaw/data/falcon-dash/work.db ".backup /path/to/backup.db"
 ```
 
 ## Reverse Proxy (Nginx)
@@ -384,17 +385,6 @@ cd openclaw-canvas-bridge
 npm install
 npm run build
 openclaw plugins install ./openclaw-canvas-bridge
-```
-
-### Project Management (openclaw-pm)
-
-Provides the PM backend with SQLite storage at `~/.openclaw/data/pm.db`.
-
-```bash
-cd openclaw-pm
-npm install
-npm run build
-openclaw plugins install ./openclaw-pm
 ```
 
 After installing plugins, restart the OpenClaw gateway:

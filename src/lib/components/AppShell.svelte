@@ -1,23 +1,44 @@
 <script lang="ts">
-	import AgentRail from './AgentRail.svelte';
-	import Sidebar from './Sidebar.svelte';
 	import CanvasBlock from './canvas/CanvasBlock.svelte';
 	import ExecApprovalPrompt from './ExecApprovalPrompt.svelte';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { canvasStore } from '$lib/stores/canvas.js';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
+	import { gatewayEvents } from '$lib/gateway-api.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
+	import {
+		Bell,
+		FlaskConical,
+		HelpCircle,
+		LockKeyhole,
+		MessageSquareText,
+		Monitor,
+		Search,
+		Settings,
+		ShieldCheck,
+		TerminalSquare,
+		Workflow
+	} from '@lucide/svelte';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
-	let sidebarCollapsed = $state(false);
-	let selectedAgentId = $state('default');
 	let currentSurface = $state<CanvasSurface | null>(null);
 	let canvasPanelMinimized = $state(false);
 	let approvals = $state<PendingApproval[]>([]);
+	let gatewayState = $state('disconnected');
 
 	$effect(() => {
 		const unsub = pendingApprovals.subscribe((v) => {
 			approvals = v;
+		});
+		return unsub;
+	});
+
+	$effect(() => {
+		const unsub = gatewayEvents.state.subscribe((state) => {
+			gatewayState = state;
 		});
 		return unsub;
 	});
@@ -31,60 +52,193 @@
 		resolveApproval(requestId, 'deny').catch(() => {});
 	}
 
-	function toggleSidebar() {
-		sidebarCollapsed = !sidebarCollapsed;
-	}
-
 	// Track current canvas surface at the shell level
 	$effect(() => {
 		const unsub = canvasStore.currentSurface.subscribe((v) => {
 			currentSurface = v;
-			console.log('[AppShell] currentSurface updated:', v?.surfaceId, 'visible:', v?.visible);
 		});
 		return unsub;
 	});
+
+	const modules = [
+		{ label: 'Shell', href: '/', icon: Monitor, title: 'Shell Readiness Console' },
+		{ label: 'Work', href: '/work', icon: Workflow, title: 'Work Queue Home' },
+		{ label: 'Vault', href: '/passwords', icon: LockKeyhole, title: 'Vault Operations' },
+		{ label: 'Channels', href: '/channels', icon: MessageSquareText, title: 'Channels Hub' },
+		{ label: 'Labs', href: '/settings', icon: FlaskConical, title: 'Labs / Advanced' }
+	] as const;
+
+	const path = $derived(page.url.pathname);
+	const activeModule = $derived.by(() => {
+		if (path === '/secrets') return modules[2];
+		if (
+			path.startsWith('/approvals') ||
+			path.startsWith('/documents') ||
+			path.startsWith('/jobs') ||
+			path.startsWith('/ops') ||
+			path.startsWith('/skills') ||
+			path.startsWith('/settings') ||
+			path.startsWith('/apps') ||
+			path.startsWith('/agents') ||
+			path.startsWith('/heartbeat')
+		) {
+			return modules[4];
+		}
+		return (
+			modules.find((item) => (item.href === '/' ? path === '/' : path.startsWith(item.href))) ??
+			modules[0]
+		);
+	});
+
+	const gatewayLabel = $derived(
+		gatewayState === 'ready' ? 'Gateway: Connected' : `Gateway: ${gatewayState}`
+	);
+
+	type ModuleHref = (typeof modules)[number]['href'];
+
+	function navigate(href: ModuleHref) {
+		goto(resolve(href));
+	}
 </script>
 
-<div class="flex h-screen bg-surface-0 text-white">
-	<!-- Agent rail — always visible on desktop, hidden on mobile -->
-	<div class="hidden md:flex">
-		<AgentRail bind:selectedAgentId />
-	</div>
-
-	<Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} {selectedAgentId} />
-
-	<!-- Mobile overlay -->
-	{#if !sidebarCollapsed}
+<div class="falcon-product-shell bg-background text-on-surface">
+	<nav
+		class="fixed left-0 top-0 z-50 hidden h-screen w-16 flex-col items-center border-r border-outline-variant bg-surface-container-lowest py-4 md:flex"
+		aria-label="Falcon Dash modules"
+	>
 		<button
-			class="fixed inset-0 z-30 bg-black/50 md:hidden"
-			onclick={toggleSidebar}
-			aria-label="Close sidebar"
-		></button>
-	{/if}
+			type="button"
+			onclick={() => navigate('/')}
+			class="mb-8 flex h-10 w-10 items-center justify-center border border-primary-container bg-primary-container text-sm font-bold text-background"
+			aria-label="Shell"
+			title="Shell"
+		>
+			<ShieldCheck class="h-5 w-5" />
+		</button>
 
-	<!-- Main content -->
-	<main class="flex flex-1 flex-col overflow-hidden">
-		<!-- Mobile header with menu button -->
-		<header class="flex items-center border-b border-surface-border px-4 py-2 md:hidden">
+		<div class="flex flex-1 flex-col items-center gap-3">
+			{#each modules as item (item.label)}
+				{@const Icon = item.icon}
+				<button
+					type="button"
+					onclick={() => navigate(item.href)}
+					class="group relative flex h-12 w-12 items-center justify-center border-l-2 transition {activeModule.label ===
+					item.label
+						? 'border-primary bg-secondary-container text-primary'
+						: 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'}"
+					aria-label={item.label}
+					title={item.label}
+				>
+					<Icon class="h-5 w-5" />
+					<span
+						class="pointer-events-none absolute left-14 z-50 border border-outline-variant bg-surface-container-high px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-primary opacity-0 shadow-lg transition group-hover:opacity-100"
+					>
+						{item.label}
+					</span>
+				</button>
+			{/each}
+		</div>
+
+		<div class="flex flex-col items-center gap-3">
 			<button
-				class="text-status-muted hover:text-white"
-				onclick={toggleSidebar}
-				aria-label="Open sidebar"
+				type="button"
+				class="flex h-12 w-12 items-center justify-center text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
+				aria-label="Notifications"
+				title="Notifications"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M4 6h16M4 12h16M4 18h16"
-					/>
-				</svg>
+				<Bell class="h-5 w-5" />
 			</button>
-			<span class="ml-3 text-sm font-semibold">Falcon Dashboard</span>
-		</header>
+			<button
+				type="button"
+				onclick={() => navigate('/settings')}
+				class="flex h-12 w-12 items-center justify-center text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
+				aria-label="Settings"
+				title="Settings"
+			>
+				<Settings class="h-5 w-5" />
+			</button>
+		</div>
+	</nav>
 
+	<header
+		class="fixed left-0 right-0 top-0 z-40 flex min-h-12 items-center justify-between gap-3 border-b border-outline-variant bg-surface px-3 md:left-16 md:px-4"
+	>
+		<div class="flex min-w-0 flex-1 items-center gap-3">
+			<div class="flex items-center gap-2 md:hidden">
+				<ShieldCheck class="h-5 w-5 text-primary" />
+				<span class="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+					Falcon
+				</span>
+			</div>
+			<div class="hidden items-center gap-3 md:flex">
+				<TerminalSquare class="h-4 w-4 text-on-surface-variant" />
+				<h1 class="truncate text-[18px] font-semibold leading-6 tracking-normal text-primary">
+					{activeModule.title}
+				</h1>
+			</div>
+			<div class="hidden h-5 w-px bg-outline-variant lg:block"></div>
+			<div
+				class="hidden min-w-0 items-center gap-2 border border-outline-variant bg-surface-container-low px-2 py-1 text-on-surface-variant md:flex"
+			>
+				<Search class="h-4 w-4" />
+				<input
+					type="search"
+					placeholder={activeModule.label === 'Work'
+						? 'Search Work Queue...'
+						: 'Search Falcon Dash...'}
+					class="h-7 w-48 border-0 bg-transparent p-0 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 lg:w-72"
+				/>
+			</div>
+		</div>
+
+		<div class="flex shrink-0 items-center gap-3">
+			<div class="hidden items-center gap-2 text-xs text-on-surface-variant lg:flex">
+				<span
+					class="h-2 w-2 rounded-full {gatewayState === 'ready'
+						? 'bg-status-active'
+						: 'bg-status-warning'}"
+				></span>
+				<span>{gatewayLabel}</span>
+			</div>
+			<button
+				type="button"
+				class="hidden h-8 items-center gap-2 bg-primary px-3 text-xs font-semibold text-background transition hover:bg-primary-container md:inline-flex"
+			>
+				{activeModule.label === 'Work' ? 'CAPTURE' : 'RUN CHECKS'}
+			</button>
+			<button
+				type="button"
+				class="flex h-8 w-8 items-center justify-center text-on-surface-variant transition hover:bg-surface-variant hover:text-primary"
+				aria-label="Help"
+			>
+				<HelpCircle class="h-4 w-4" />
+			</button>
+		</div>
+	</header>
+
+	<nav
+		class="fixed bottom-0 left-0 right-0 z-50 grid h-16 grid-cols-5 border-t border-outline-variant bg-surface-container-lowest md:hidden"
+		aria-label="Falcon Dash mobile modules"
+	>
+		{#each modules as item (item.label)}
+			{@const Icon = item.icon}
+			<button
+				type="button"
+				onclick={() => navigate(item.href)}
+				class="flex flex-col items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] {activeModule.label ===
+				item.label
+					? 'text-primary'
+					: 'text-on-surface-variant'}"
+			>
+				<Icon class="h-4 w-4" />
+				<span>{item.label}</span>
+			</button>
+		{/each}
+	</nav>
+
+	<main class="min-h-screen overflow-hidden pl-0 pt-12 md:pl-16">
 		{#if approvals.length > 0}
-			<div class="shrink-0 border-b border-surface-border p-3">
+			<div class="border-b border-outline-variant bg-surface-container-low p-3">
 				<ExecApprovalPrompt
 					approval={approvals[0]}
 					pendingCount={approvals.length}
@@ -94,20 +248,20 @@
 			</div>
 		{/if}
 
-		<div class="relative flex-1 overflow-y-auto">
+		<div class="h-[calc(100vh-3rem)] overflow-y-auto pb-20 md:pb-0">
 			{@render children()}
 		</div>
 
 		<!-- Floating canvas panel: visible on ALL pages when a surface is active -->
 		{#if currentSurface && currentSurface.visible}
-			<div class="canvas-float-panel border-t border-surface-border">
+			<div class="canvas-float-panel border-t border-outline-variant">
 				<div class="flex items-center justify-between px-3 py-1.5">
-					<span class="text-xs font-medium text-status-muted">
+					<span class="text-xs font-medium text-on-surface-variant">
 						Canvas: {currentSurface.title}
 					</span>
 					<button
 						onclick={() => (canvasPanelMinimized = !canvasPanelMinimized)}
-						class="text-xs text-status-muted hover:text-white/80"
+						class="text-xs text-on-surface-variant hover:text-primary"
 						aria-label={canvasPanelMinimized ? 'Expand canvas' : 'Minimize canvas'}
 					>
 						{canvasPanelMinimized ? 'Expand' : 'Minimize'}

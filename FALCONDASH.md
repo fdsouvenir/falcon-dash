@@ -16,7 +16,7 @@ Falcon Dash is the operator console for OpenClaw deployments. It exists so opera
 - `/channels/*` channel setup and repair
 - `/settings` devices, approvals, diagnostics, skills, config, agents
 - chat and session control through the main shell
-- `/jobs`, `/documents`, `/projects`, `/passwords`, `/heartbeat`, `/apps/[surfaceId]`
+- `/work`, `/jobs`, `/documents`, `/passwords`, `/heartbeat`, `/apps/[surfaceId]`
 
 ## Architecture Rules
 
@@ -39,4 +39,4 @@ Falcon Dash is the operator console for OpenClaw deployments. It exists so opera
 - `docs/Technical/architecture.md`
 - `docs/Technical/stores.md`
 - `docs/Technical/gateway-protocol.md`
-- `docs/Technical/pm-pipeline.md`
+- `docs/Technical/work-management.md`

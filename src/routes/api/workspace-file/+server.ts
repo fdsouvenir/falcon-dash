@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types.js';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { createHash } from 'crypto';
 import { join, dirname } from 'path';
-import { discoverAgentWorkspaces } from '$lib/server/pm/workspace-discovery.js';
+import { discoverAgentWorkspaces } from '$lib/server/work/workspace-discovery.js';
 import { listAgents } from '$lib/server/agents/index.js';
 
 const ALLOWED_FILES = new Set(['SOUL.md', 'AGENTS.md', 'IDENTITY.md', 'MEMORY.md', 'USER.md']);

@@ -22,7 +22,7 @@ verification in tests and scripts.
 - [docs/Technical/architecture.md](docs/Technical/architecture.md) — system overview and request flow
 - [docs/Technical/components.md](docs/Technical/components.md) — Svelte 5 component conventions and shell layout
 - [docs/Technical/stores.md](docs/Technical/stores.md) — store architecture and event wiring
-- [docs/Technical/pm-pipeline.md](docs/Technical/pm-pipeline.md) — PM model, context generation, and API flow
+- [docs/Technical/work-management.md](docs/Technical/work-management.md) — Work model, context generation, and API flow
 - [docs/Technical/gateway-protocol.md](docs/Technical/gateway-protocol.md) — gateway protocol integration
 - [docs/Technical/deployment.md](docs/Technical/deployment.md) — build, runtime, and deployment behavior
 
@@ -40,9 +40,9 @@ verification in tests and scripts.
 
 ### Skills
 
-- [skills/falcon-dash/SKILL.md](skills/falcon-dash/SKILL.md) — operator dashboard rules and PM-first workflow
+- [skills/falcon-dash/SKILL.md](skills/falcon-dash/SKILL.md) — operator dashboard rules and Work-first workflow
 - [skills/falcon-dash-harness/SKILL.md](skills/falcon-dash-harness/SKILL.md) — harness routing and verification workflow
-- [skills/falcon-dash-pm/SKILL.md](skills/falcon-dash-pm/SKILL.md) — PM API reference
+- [skills/falcon-dash-work/SKILL.md](skills/falcon-dash-work/SKILL.md) — Work API reference
 - [skills/frontend-skill/SKILL.md](skills/frontend-skill/SKILL.md) — Falcon Dash frontend execution guidance
 - [skills/keepassxc/SKILL.md](skills/keepassxc/SKILL.md) — password vault workflows
 

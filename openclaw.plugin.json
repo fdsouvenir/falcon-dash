@@ -1,0 +1,37 @@
+{
+	"id": "falcon-dash",
+	"name": "Falcon Dash",
+	"description": "Operator dashboard with Work, Vault, Channels, Shell, and Labs modules",
+	"modules": [
+		{
+			"id": "work",
+			"name": "Work",
+			"description": "Work Management schema, queue, migration, context, and agent operations"
+		},
+		{
+			"id": "vault",
+			"name": "Vault",
+			"description": "KeePassXC-backed password vault and SecretRef operations"
+		},
+		{
+			"id": "channels",
+			"name": "Channels",
+			"description": "Channel onboarding, readiness, validation, and recovery"
+		},
+		{
+			"id": "shell",
+			"name": "Shell",
+			"description": "Falcon Dash UI shell and readiness"
+		},
+		{
+			"id": "labs",
+			"name": "Labs / Advanced",
+			"description": "Advanced operator surfaces outside the default workflow"
+		}
+	],
+	"configSchema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {}
+	}
+}
