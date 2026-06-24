@@ -7,7 +7,9 @@
 	import {
 		aggregateChatReadiness,
 		aggregateChatSummary,
+		channelReadinessLastLoadedAt,
 		channelReadinessList,
+		channelReadinessLoading,
 		startChannelReadiness,
 		type ChannelReadiness
 	} from '$lib/stores/channel-readiness.js';
@@ -57,6 +59,9 @@
 	let approvalsCount = $state(0);
 	let aggregateState = $state('not_configured');
 	let aggregateSummary = $state('No chat channels configured');
+	let channelLoading = $state(false);
+	let channelLoadedAt = $state<number | null>(null);
+	let connectionState = $state('disconnected');
 	let loadingAgents = $state(false);
 	let configAgents = $state<ConfigAgent[]>([]);
 	let healthAgents = $state<HealthAgent[]>([]);
@@ -66,10 +71,15 @@
 	let identityCache = $state<Record<string, AgentIdentity>>({});
 
 	onMount(() => {
+		startChannelReadiness();
+		void loadAgents();
+
 		const unsubs = [
 			gatewayEvents.state.subscribe((state) => {
+				connectionState = state;
+				void rebuildAgentSummaries();
+
 				if (state === 'ready') {
-					startChannelReadiness();
 					if (!loadedForReadyState) {
 						loadedForReadyState = true;
 						void loadAgents();
@@ -91,6 +101,12 @@
 			}),
 			channelReadinessList.subscribe((value) => {
 				primaryChannelAction = value.find((channel) => channel.state !== 'ready') ?? null;
+			}),
+			channelReadinessLoading.subscribe((value) => {
+				channelLoading = value;
+			}),
+			channelReadinessLastLoadedAt.subscribe((value) => {
+				channelLoadedAt = value;
 			}),
 			pendingApprovals.subscribe((value) => {
 				approvalsCount = value.length;
@@ -134,17 +150,20 @@
 				let name = config?.identity?.name ?? health?.name ?? id;
 				let emoji = config?.identity?.emoji;
 
-				if (!config?.identity?.name || !emoji) {
-					const cachedIdentity = identityCache[id];
-					const identity = cachedIdentity ?? (await getAgentIdentity(id));
-					if (!cachedIdentity) {
-						identityCache[id] = identity;
-					}
+				const cachedIdentity = identityCache[id];
+				if (cachedIdentity) {
+					if (!config?.identity?.name && cachedIdentity.name) name = cachedIdentity.name;
+					if (!emoji) emoji = cachedIdentity.emoji;
+				}
+
+				if (connectionState === 'ready' && (!config?.identity?.name || !emoji) && !cachedIdentity) {
+					const identity = await getAgentIdentity(id);
+					identityCache[id] = identity;
 					if (!config?.identity?.name && identity.name) name = identity.name;
 					if (!emoji) emoji = identity.emoji;
 				}
 
-				const status = deriveAgentStatus(health);
+				const status = deriveAgentStatus(health, connectionState);
 				return {
 					id,
 					name,
@@ -173,12 +192,23 @@
 		});
 	}
 
-	function deriveAgentStatus(health: HealthAgent | undefined): {
+	function deriveAgentStatus(
+		health: HealthAgent | undefined,
+		state: string
+	): {
 		label: string;
 		detail: string;
 		tone: string;
 	} {
 		if (!health) {
+			if (state !== 'ready') {
+				return {
+					label: 'Offline',
+					detail: 'Reconnect the gateway to load live agent health',
+					tone: 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+				};
+			}
+
 			return {
 				label: 'Waiting',
 				detail: 'Waiting for gateway health data',
@@ -257,118 +287,150 @@
 		if (state === 'needs_input') return 'border-sky-500/30 bg-sky-500/10 text-sky-100';
 		return 'border-surface-border bg-surface-1/70 text-white/75';
 	}
+
+	function agentSummaryValue(): string {
+		if (loadingAgents && configAgents.length === 0) return '…';
+		return String(agents.length || configAgents.length);
+	}
+
+	function agentSummaryDetail(): string {
+		const count = agents.length || configAgents.length;
+		if (loadingAgents && count === 0) return 'Loading configured agents';
+		if (count === 0) return 'No configured agents';
+		if (connectionState !== 'ready') return `${count} configured, live health unavailable`;
+		return `${count} configured operators`;
+	}
+
+	function approvalsSummaryValue(): string {
+		if (connectionState !== 'ready' && approvalsCount === 0) return '—';
+		return String(approvalsCount);
+	}
+
+	function approvalsSummaryDetail(): string {
+		if (approvalsCount > 0) {
+			return approvalsCount === 1 ? '1 approval waiting' : `${approvalsCount} approvals waiting`;
+		}
+		if (connectionState !== 'ready') return 'Reconnect to load the queue';
+		return 'No approvals waiting';
+	}
+
+	function chatSummaryValue(): string {
+		if (connectionState !== 'ready' && channelLoadedAt == null) return 'Unknown';
+		return readinessBadge(aggregateState);
+	}
+
+	function chatSummaryDetail(): string {
+		if (connectionState !== 'ready' && channelLoadedAt == null) {
+			return 'Reconnect to load channel readiness';
+		}
+		if (channelLoading && channelLoadedAt == null) return 'Loading live channel status';
+		return aggregateSummary;
+	}
+
+	function channelsHeadline(): string {
+		if (connectionState !== 'ready' && channelLoadedAt == null) return 'Channels unavailable';
+		return aggregateState === 'ready' ? 'Channels ready' : 'Channels need attention';
+	}
+
+	function approvalsHeadline(): string {
+		if (approvalsCount > 0) return 'Queue needs attention';
+		if (connectionState !== 'ready') return 'Approval queue unavailable';
+		return 'Queue is clear';
+	}
+
+	function channelsSupport(): string {
+		if (connectionState !== 'ready' && channelLoadedAt == null) {
+			return 'Live channel health appears after the gateway reconnects.';
+		}
+		if (primaryChannelAction) return primaryChannelAction.detail;
+		return aggregateSummary;
+	}
+
+	function channelCardTone(channel: ChannelReadiness): string {
+		return channel.state === 'ready'
+			? 'border-surface-border bg-surface-1/60'
+			: readinessTone(channel.state);
+	}
 </script>
 
 <div class="flex flex-col gap-6 bg-surface-0 p-4 sm:p-6">
 	<GatewayStatus />
 
-	<section
-		class="overflow-hidden rounded-[2rem] border border-surface-border bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.18),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.12),_transparent_35%),linear-gradient(180deg,_rgba(255,255,255,0.04),_rgba(255,255,255,0.01))] px-5 py-6 sm:px-6 sm:py-7"
-	>
-		<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-			<div class="max-w-2xl space-y-3">
-				<p class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-200/80">
-					Mission Control
+	<section class="rounded-[2rem] border border-surface-border bg-surface-1/60 px-5 py-5 sm:px-6">
+		<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+			<div class="max-w-xl space-y-2">
+				<p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/45">
+					Operator Dashboard
 				</p>
-				<h1 class="text-3xl font-semibold leading-tight text-white sm:text-4xl">
-					Operate agents, repair chat, and clear blockers from one surface
+				<h1 class="text-2xl font-semibold tracking-tight text-white sm:text-[1.9rem]">
+					Gateway, agents, channels, and approvals
 				</h1>
-				<p class="max-w-xl text-sm leading-6 text-white/70 sm:text-base">
-					Falcon Dash is the operator console. The first screen should answer whether chat is ready,
-					whether approvals are waiting, and which agents need attention.
+				<p class="max-w-lg text-sm leading-6 text-white/60">
+					Use this page to spot blockers quickly, confirm live health, and jump into the next
+					operator action.
 				</p>
 			</div>
-			<div class="grid gap-3 sm:grid-cols-3 lg:min-w-[34rem]">
-				<div class="rounded-2xl border border-surface-border bg-surface-1/70 px-4 py-4">
-					<p class="text-xs uppercase tracking-[0.18em] text-white/45">Agents</p>
-					<p class="mt-1 text-2xl font-semibold text-white">{agents.length}</p>
-					<p class="mt-1 text-xs text-white/55">Configured operators</p>
-				</div>
-				<div class="rounded-2xl border px-4 py-4 {readinessTone(aggregateState)}">
-					<p class="text-xs uppercase tracking-[0.18em] opacity-80">Chat</p>
-					<p class="mt-1 text-2xl font-semibold">{readinessBadge(aggregateState)}</p>
-					<p class="mt-1 text-xs opacity-80">{aggregateSummary}</p>
+			<div class="grid gap-3 sm:grid-cols-3 lg:min-w-[42rem]">
+				<div class="rounded-2xl border border-surface-border bg-surface-0/60 px-4 py-3.5">
+					<p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Agents</p>
+					<p class="mt-1 text-2xl font-semibold text-white">{agentSummaryValue()}</p>
+					<p class="mt-1 text-xs text-white/55">{agentSummaryDetail()}</p>
 				</div>
 				<div
-					class="rounded-2xl border px-4 py-4 {approvalsCount > 0
-						? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
-						: 'border-surface-border bg-surface-1/70 text-white/75'}"
+					class="rounded-2xl border px-4 py-3.5 {connectionState !== 'ready' &&
+					channelLoadedAt == null
+						? 'border-rose-500/30 bg-rose-500/10 text-rose-100'
+						: readinessTone(aggregateState)}"
 				>
-					<p class="text-xs uppercase tracking-[0.18em] opacity-80">Approvals</p>
-					<p class="mt-1 text-2xl font-semibold">{approvalsCount}</p>
-					<p class="mt-1 text-xs opacity-80">Requests waiting for operator action</p>
+					<p class="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">Channels</p>
+					<p class="mt-1 text-2xl font-semibold">{chatSummaryValue()}</p>
+					<p class="mt-1 text-xs opacity-80">{chatSummaryDetail()}</p>
+				</div>
+				<div
+					class="rounded-2xl border px-4 py-3.5 {approvalsCount > 0
+						? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+						: 'border-surface-border bg-surface-0/60 text-white/75'}"
+				>
+					<p class="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">Approvals</p>
+					<p class="mt-1 text-2xl font-semibold">{approvalsSummaryValue()}</p>
+					<p class="mt-1 text-xs opacity-80">{approvalsSummaryDetail()}</p>
 				</div>
 			</div>
 		</div>
 	</section>
 
-	<section class="grid gap-4 lg:grid-cols-[1.2fr,0.8fr] lg:items-start">
+	<section class="grid gap-4 xl:grid-cols-[minmax(0,1.45fr),minmax(20rem,0.9fr)] xl:items-start">
 		<div class="space-y-4">
-			{#if approvalsCount > 0}
-				<a
-					href={resolve('/approvals')}
-					class="block rounded-3xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 transition hover:bg-amber-500/15"
-				>
-					<p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">
-						Attention
-					</p>
-					<div class="mt-2 flex items-center justify-between gap-3">
-						<div>
-							<p class="text-lg font-semibold text-white">{approvalsCount} approvals waiting</p>
-							<p class="mt-1 text-sm text-white/70">
-								Review and resolve pending operator approvals from the global queue.
-							</p>
-						</div>
-						<span class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
-							>Open queue</span
-						>
-					</div>
-				</a>
-			{/if}
-
-			{#if aggregateState !== 'ready'}
-				<!-- eslint-disable svelte/no-navigation-without-resolve -- shared readiness cards link to known local wizard routes -->
-				<a
-					href={primaryChannelAction?.href ?? '/channels'}
-					class="block rounded-3xl border {readinessTone(
-						aggregateState
-					)} px-5 py-4 transition hover:opacity-95"
-				>
-					<p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">Chat Readiness</p>
-					<div class="mt-2 flex items-center justify-between gap-3">
-						<div>
-							<p class="text-lg font-semibold text-white">
-								{primaryChannelAction
-									? `${primaryChannelAction.label}: ${primaryChannelAction.summary}`
-									: readinessBadge(aggregateState)}
-							</p>
-							<p class="mt-1 text-sm text-white/75">
-								{primaryChannelAction?.detail ?? aggregateSummary}
-							</p>
-						</div>
-						<span class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
-							>{primaryChannelAction?.ctaLabel ?? 'Open channels'}</span
-						>
-					</div>
-				</a>
-			{/if}
-
 			<section class="rounded-3xl border border-surface-border bg-surface-2/70 px-5 py-5">
-				<div class="flex items-center justify-between gap-3">
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div>
-						<p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Roster</p>
-						<h2 class="mt-1 text-xl font-semibold text-white">Agent overview</h2>
+						<p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Agents</p>
+						<h2 class="mt-1 text-xl font-semibold text-white">Configured operators</h2>
+						<p class="mt-1 text-sm text-white/55">
+							Configured agents stay visible even when the gateway is offline.
+						</p>
 					</div>
-					{#if loadingAgents}
-						<span class="text-xs text-white/45">Refreshing…</span>
-					{/if}
+					<div class="flex items-center gap-2 text-xs text-white/45">
+						{#if loadingAgents}
+							<span>Refreshing…</span>
+						{/if}
+						{#if connectionState !== 'ready'}
+							<span
+								class="rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-rose-100"
+							>
+								Gateway disconnected
+							</span>
+						{/if}
+					</div>
 				</div>
 				<div class="mt-4 divide-y divide-surface-border/70">
-					{#if agents.length === 0}
+					{#if loadingAgents && agents.length === 0}
+						<div class="py-6 text-sm text-status-muted">Loading configured agents…</div>
+					{:else if agents.length === 0}
 						<div class="py-6 text-sm text-status-muted">No configured agents found.</div>
 					{:else}
 						{#each agents as agent (agent.id)}
-							<div class="flex flex-col gap-4 py-4 xl:flex-row xl:items-center xl:justify-between">
+							<div class="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
 								<div class="min-w-0 flex items-start gap-3">
 									<div
 										class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-1 text-base font-semibold text-white"
@@ -404,8 +466,10 @@
 										</div>
 									</div>
 								</div>
-								<div class="flex items-center justify-between gap-3 xl:flex-col xl:items-end">
-									<p class="text-xs uppercase tracking-[0.18em] text-white/40">
+								<div
+									class="flex items-center justify-between gap-3 lg:min-w-[11rem] lg:flex-col lg:items-end"
+								>
+									<p class="text-xs uppercase tracking-[0.18em] text-white/40 lg:text-right">
 										{agent.lastActivityLabel}
 									</p>
 									<a
@@ -423,8 +487,92 @@
 
 		<div class="space-y-4">
 			<section class="rounded-3xl border border-surface-border bg-surface-2/70 px-5 py-5">
-				<p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Quick Actions</p>
-				<h2 class="mt-1 text-xl font-semibold text-white">High-value operator workflows</h2>
+				<p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Approvals</p>
+				<h2 class="mt-1 text-xl font-semibold text-white">{approvalsHeadline()}</h2>
+				<p class="mt-1 text-sm text-white/55">
+					{approvalsCount > 0
+						? 'Resolve waiting approval requests before returning to routine monitoring.'
+						: connectionState === 'ready'
+							? 'No operator approval requests are waiting right now.'
+							: 'Reconnect the gateway to confirm whether approvals are waiting.'}
+				</p>
+				<div class="mt-4">
+					<a
+						href={resolve('/approvals')}
+						class="flex items-center justify-between rounded-2xl border px-4 py-4 transition hover:bg-surface-1/80 {approvalsCount >
+						0
+							? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+							: 'border-surface-border bg-surface-1/60 text-white/75'}"
+					>
+						<div>
+							<p class="text-sm font-semibold text-white">
+								{approvalsCount > 0
+									? approvalsCount === 1
+										? '1 approval request waiting'
+										: `${approvalsCount} approval requests waiting`
+									: connectionState === 'ready'
+										? 'No approvals waiting'
+										: 'Approval status unavailable'}
+							</p>
+							<p class="mt-1 text-xs opacity-80">{approvalsSummaryDetail()}</p>
+						</div>
+						<span class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">
+							Open queue
+						</span>
+					</a>
+				</div>
+			</section>
+
+			<section class="rounded-3xl border border-surface-border bg-surface-2/70 px-5 py-5">
+				<p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Channels</p>
+				<h2 class="mt-1 text-xl font-semibold text-white">{channelsHeadline()}</h2>
+				<p class="mt-1 text-sm text-white/55">{channelsSupport()}</p>
+				<div class="mt-4 space-y-3">
+					{#each $channelReadinessList as channel (channel.id)}
+						<!-- eslint-disable svelte/no-navigation-without-resolve -- readiness cards deep-link to existing local routes -->
+						<a
+							href={channel.href}
+							class="flex items-start justify-between gap-4 rounded-2xl border px-4 py-4 transition hover:bg-surface-1/80 {connectionState !==
+								'ready' && channelLoadedAt == null
+								? 'border-surface-border bg-surface-1/60'
+								: channelCardTone(channel)}"
+						>
+							<div>
+								<div class="flex items-center gap-2">
+									<p class="text-sm font-semibold text-white">{channel.label}</p>
+									<span
+										class="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] {connectionState !==
+											'ready' && channelLoadedAt == null
+											? 'border-surface-border bg-surface-0/60 text-white/60'
+											: readinessTone(channel.state)}"
+									>
+										{connectionState !== 'ready' && channelLoadedAt == null
+											? 'Unavailable'
+											: channel.summary}
+									</span>
+								</div>
+								<p class="mt-2 text-sm text-white/70">
+									{connectionState !== 'ready' && channelLoadedAt == null
+										? 'Reconnect the gateway to load live channel readiness.'
+										: channel.detail}
+								</p>
+							</div>
+							<span
+								class="rounded-full border border-surface-border bg-surface-0/60 px-4 py-2 text-sm font-semibold text-white/80"
+							>
+								{connectionState !== 'ready' && channelLoadedAt == null ? 'Open' : channel.ctaLabel}
+							</span>
+						</a>
+					{/each}
+				</div>
+			</section>
+
+			<section class="rounded-3xl border border-surface-border bg-surface-2/70 px-5 py-5">
+				<p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">Navigation</p>
+				<h2 class="mt-1 text-xl font-semibold text-white">Open a workspace</h2>
+				<p class="mt-1 text-sm text-white/55">
+					Jump into the operating area you need without using the sidebar.
+				</p>
 				<div class="mt-4">
 					<QuickActions />
 				</div>
