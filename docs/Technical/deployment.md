@@ -24,28 +24,47 @@ npm run dev
 
 Open `http://localhost:5173`. The dashboard reads gateway configuration from `~/.openclaw/openclaw.json` automatically.
 
-### Vite Proxy
+### Gateway Resolution
 
-In development, Vite proxies `/ws` to the gateway so the browser connects through the dev server. This is configured in `vite.config.ts`:
+Falcon Dash resolves gateway configuration on the server. Explicit environment variables win first:
 
-```ts
-server: {
-    proxy: {
-        '/ws': {
-            target: gatewayTarget, // from GATEWAY_URL env or ws://127.0.0.1:18789
-            ws: true
-        }
-    }
-}
+```bash
+GATEWAY_URL=ws://127.0.0.1:18789
+GATEWAY_TOKEN=your-gateway-token
 ```
+
+If those are absent, Falcon Dash reads OpenClaw gateway config from the OpenClaw CLI or
+`~/.openclaw/openclaw.json`. Local gateway configs use `gateway.port` and `gateway.bind`. Remote
+gateway configs use `gateway.remote.url` and `gateway.remote.token` when `gateway.mode` is
+`remote`.
+
+The browser talks to Falcon Dash through same-origin routes:
+
+- `/api/gateway/events` streams gateway state and events from the server-side gateway client.
+- `/api/gateway/rpc` forwards gateway RPC calls.
+- `/api/gateway/proxy` proxies the Gateway Control UI in both dev and production.
 
 ### Remote Gateway
 
-To develop against a gateway running on another machine, create a `.env` file:
+To develop against a gateway running on another machine, either set explicit environment variables:
 
 ```bash
-GATEWAY_URL=ws://192.168.x.x:18789
+GATEWAY_URL=wss://your-remote-gateway.example.com
 GATEWAY_TOKEN=your-gateway-token
+```
+
+Or rely on OpenClaw remote mode:
+
+```json
+{
+	"gateway": {
+		"mode": "remote",
+		"remote": {
+			"url": "wss://your-remote-gateway.example.com",
+			"token": "your-gateway-token"
+		}
+	}
+}
 ```
 
 On the gateway machine, configure access:
@@ -101,9 +120,10 @@ The server listens on port 3000 by default. Override with `PORT` and `HOST` envi
 
 ### Auto-Configuration
 
-If `GATEWAY_URL` and `GATEWAY_TOKEN` are not set, Falcon Dash reads the gateway configuration from `~/.openclaw/openclaw.json` via the `/api/gateway-config` endpoint. If that file is unavailable (e.g., in containerized deployments), users see a manual token entry screen on first visit. The token and URL are persisted to `localStorage` in the browser.
-
-When `ORIGIN` is set to an `https://` URL, the gateway config endpoint derives a `wss://` WebSocket URL so the browser connects through the reverse proxy instead of directly to the gateway.
+If `GATEWAY_URL` and `GATEWAY_TOKEN` are not set, Falcon Dash reads the gateway configuration from
+OpenClaw CLI output or `~/.openclaw/openclaw.json`. In local mode it builds a WebSocket URL from
+`gateway.port` and `gateway.bind`. In remote mode it uses `gateway.remote.url` and
+`gateway.remote.token`.
 
 For production deployments, set `GATEWAY_URL` and `GATEWAY_TOKEN` explicitly.
 
@@ -120,6 +140,10 @@ Falcon Dash connects to the OpenClaw Gateway using WebSocket protocol v3. The ga
 		"bind": "loopback",
 		"auth": {
 			"token": "your-gateway-token"
+		},
+		"remote": {
+			"url": "wss://gateway.example.com",
+			"token": "your-remote-gateway-token"
 		},
 		"controlUi": {
 			"allowInsecureAuth": true,
@@ -461,8 +485,9 @@ pm2 restart falcon-dash
 If the dashboard cannot connect to the gateway:
 
 1. Verify the gateway is running and accessible at the configured URL
-2. Check that `GATEWAY_URL` is set correctly (use `ws://` for local, `ws://host:port` for remote)
-3. Ensure `GATEWAY_TOKEN` matches the token in `~/.openclaw/openclaw.json`
+2. Check that `GATEWAY_URL` is set correctly, or that `gateway.mode: "remote"` has
+   `gateway.remote.url` configured
+3. Ensure `GATEWAY_TOKEN` or `gateway.remote.token` matches the gateway token
 4. Check gateway logs for authentication errors
 5. For dev environments, enable `gateway.controlUi.allowInsecureAuth: true` in the gateway config
 

@@ -83,8 +83,11 @@ export interface WorkMigrationMap {
 
 export interface WorkQueue {
 	nextActions: WorkItem[];
+	needsOperator: WorkItem[];
+	waitingOnOperator: WorkItem[];
 	waitingOnFred: WorkItem[];
 	waitingOnAgent: WorkItem[];
+	waitingOnExternal: WorkItem[];
 	needsReview: WorkItem[];
 	scheduledRoutines: WorkItem[];
 	staleCleanup: WorkItem[];

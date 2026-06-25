@@ -12,9 +12,13 @@ This document captures Falcon Dash frontend constraints that should stay stable 
 
 ## Core UI Rules
 
-- Extend the existing dark layered surface system instead of inventing a new palette.
+- Extend the warm navy-charcoal V2 surface system in `src/app.css` instead of inventing a new
+  palette.
 - Use semantic status colors for operational meaning.
-- Keep operator surfaces compact, scannable, and information-dense.
+- Keep operator surfaces compact and scannable, but avoid visuals that feel like a utilitarian IT
+  admin console.
+- Prefer soft panel depth, 8px radius, readable sentence-case labels, and clear hierarchy over
+  harsh grids, heavy borders, all-caps labels, and dense monospaced chrome.
 - Prefer existing UI primitives in `src/lib/components/ui/` before building bespoke variants.
 - Treat cards as optional containers, not default layout.
 

@@ -131,7 +131,7 @@ Statuses: backlog, planning, ready, in_progress, waiting, needs_review, blocked,
 
 - GET /queue
 
-Returns nextActions, waitingOnFred, waitingOnAgent, needsReview, scheduledRoutines, staleCleanup, and blockedRisky buckets.
+Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOnExternal, needsReview, scheduledRoutines, staleCleanup, and blockedRisky buckets. The legacy waitingOnFred alias is still returned for older callers.
 
 ## Context
 

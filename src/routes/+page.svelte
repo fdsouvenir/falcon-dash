@@ -29,8 +29,11 @@
 
 	interface WorkQueue {
 		nextActions: WorkItem[];
+		needsOperator: WorkItem[];
+		waitingOnOperator: WorkItem[];
 		waitingOnFred: WorkItem[];
 		waitingOnAgent: WorkItem[];
+		waitingOnExternal: WorkItem[];
 		needsReview: WorkItem[];
 		scheduledRoutines: WorkItem[];
 		staleCleanup: WorkItem[];
@@ -104,7 +107,8 @@
 	const openWorkCount = $derived(
 		(queue?.nextActions.length ?? 0) +
 			(queue?.waitingOnAgent.length ?? 0) +
-			(queue?.waitingOnFred.length ?? 0) +
+			(queue?.needsOperator.length ?? queue?.waitingOnFred.length ?? 0) +
+			(queue?.waitingOnExternal.length ?? 0) +
 			(queue?.needsReview.length ?? 0) +
 			(queue?.blockedRisky.length ?? 0)
 	);
@@ -350,12 +354,12 @@
 					<div class="grid grid-cols-2 gap-px">
 						<div class="bg-surface-container p-4">
 							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
-								Fred
+								Operator
 							</p>
 							<p class="mt-2 text-2xl font-semibold text-primary">
-								{queue?.waitingOnFred.length ?? 0}
+								{queue?.needsOperator.length ?? queue?.waitingOnFred.length ?? 0}
 							</p>
-							<p class="mt-1 text-xs text-on-surface-variant">Waiting</p>
+							<p class="mt-1 text-xs text-on-surface-variant">Needs attention</p>
 						</div>
 						<div class="bg-surface-container p-4">
 							<p class="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">

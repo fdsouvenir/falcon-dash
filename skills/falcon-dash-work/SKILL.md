@@ -48,12 +48,17 @@ GET /api/work/queue
 Returns actionability buckets:
 
 - `nextActions`
-- `waitingOnFred`
+- `needsOperator`
+- `waitingOnOperator`
 - `waitingOnAgent`
+- `waitingOnExternal`
 - `needsReview`
 - `scheduledRoutines`
 - `staleCleanup`
 - `blockedRisky`
+
+`waitingOnFred` is still returned as a legacy alias for older callers. Prefer the operator-focused
+bucket names in new code, docs, and generated context.
 
 ## Items
 

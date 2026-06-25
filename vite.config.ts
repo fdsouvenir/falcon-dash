@@ -9,6 +9,36 @@ import { loadEnv, type ViteDevServer } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import pkg from './package.json' with { type: 'json' };
 
+interface OpenClawGatewayConfig {
+	mode?: string;
+	port?: number;
+	bind?: string;
+	auth?: {
+		token?: string;
+	};
+	remote?: {
+		url?: string;
+		token?: string;
+	};
+}
+
+function tokenFromGateway(gateway: OpenClawGatewayConfig): string | undefined {
+	if (gateway.mode === 'remote') {
+		return gateway.remote?.token ?? gateway.auth?.token;
+	}
+	return gateway.auth?.token;
+}
+
+function wsUrlFromGateway(gateway: OpenClawGatewayConfig): string | undefined {
+	if (gateway.mode === 'remote' && gateway.remote?.url) {
+		return gateway.remote.url;
+	}
+	if (!gateway.port) return undefined;
+	const bind = gateway.bind ?? 'loopback';
+	const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
+	return `ws://${host}:${gateway.port}`;
+}
+
 /**
  * Resolve gateway WebSocket URL and auth token from env vars or config file.
  * Runs once at Vite startup for the dev WS proxy.
@@ -21,13 +51,9 @@ function resolveGatewayForDev() {
 		try {
 			const raw = readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf-8');
 			const config = JSON.parse(raw);
-			if (!token) token = config?.gateway?.auth?.token;
-			if (!wsUrl) {
-				const port = config?.gateway?.port;
-				const bind = config?.gateway?.bind ?? 'loopback';
-				const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
-				wsUrl = `ws://${host}:${port}`;
-			}
+			const gateway = (config?.gateway ?? {}) as OpenClawGatewayConfig;
+			if (!token) token = tokenFromGateway(gateway);
+			if (!wsUrl) wsUrl = wsUrlFromGateway(gateway);
 		} catch {
 			/* config unreadable — fall through */
 		}

@@ -18,6 +18,39 @@ import { homedir } from 'node:os';
 import pty from 'node-pty';
 
 /**
+ * @typedef {{
+ *   mode?: string;
+ *   port?: number;
+ *   bind?: string;
+ *   auth?: { token?: string };
+ *   remote?: { url?: string; token?: string };
+ * }} OpenClawGatewayConfig
+ */
+
+/**
+ * @param {OpenClawGatewayConfig | undefined} gateway
+ */
+function tokenFromGateway(gateway) {
+	if (gateway?.mode === 'remote') {
+		return gateway?.remote?.token ?? gateway?.auth?.token;
+	}
+	return gateway?.auth?.token;
+}
+
+/**
+ * @param {OpenClawGatewayConfig | undefined} gateway
+ */
+function wsUrlFromGateway(gateway) {
+	if (gateway?.mode === 'remote' && gateway?.remote?.url) {
+		return gateway.remote.url;
+	}
+	if (!gateway?.port) return undefined;
+	const bind = gateway.bind ?? 'loopback';
+	const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
+	return `ws://${host}:${gateway.port}`;
+}
+
+/**
  * Resolve gateway WebSocket URL and auth token.
  * Reads from env vars or ~/.openclaw/openclaw.json (mirrors gateway-config.ts
  * but without $env/dynamic/private which isn't available in entry.js).
@@ -32,14 +65,9 @@ function resolveGatewayConfig() {
 			const raw = readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf-8');
 			const config = JSON.parse(raw);
 			if (!token) {
-				token = config?.gateway?.auth?.token;
+				token = tokenFromGateway(config?.gateway);
 			}
-			if (!wsUrl) {
-				const port = config?.gateway?.port;
-				const bind = config?.gateway?.bind ?? 'loopback';
-				const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
-				wsUrl = `ws://${host}:${port}`;
-			}
+			if (!wsUrl) wsUrl = wsUrlFromGateway(config?.gateway);
 		} catch {
 			// Config file unreadable — fall through with whatever we have
 		}

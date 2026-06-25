@@ -28,6 +28,7 @@
 	let canvasPanelMinimized = $state(false);
 	let approvals = $state<PendingApproval[]>([]);
 	let gatewayState = $state('disconnected');
+	let shellSearch = $state('');
 
 	$effect(() => {
 		const unsub = pendingApprovals.subscribe((v) => {
@@ -62,7 +63,7 @@
 
 	const modules = [
 		{ label: 'Shell', href: '/', icon: Monitor, title: 'Shell Readiness Console' },
-		{ label: 'Work', href: '/work', icon: Workflow, title: 'Work Queue Home' },
+		{ label: 'Work', href: '/work', icon: Workflow, title: 'Work' },
 		{ label: 'Vault', href: '/passwords', icon: LockKeyhole, title: 'Vault Operations' },
 		{ label: 'Channels', href: '/channels', icon: MessageSquareText, title: 'Channels Hub' },
 		{ label: 'Labs', href: '/settings', icon: FlaskConical, title: 'Labs / Advanced' }
@@ -94,6 +95,14 @@
 		gatewayState === 'ready' ? 'Gateway: Connected' : `Gateway: ${gatewayState}`
 	);
 
+	$effect(() => {
+		if (activeModule.label !== 'Work') {
+			shellSearch = '';
+			return;
+		}
+		if (path === '/work/search') shellSearch = page.url.searchParams.get('q') ?? '';
+	});
+
 	type ModuleHref = (typeof modules)[number]['href'];
 
 	function navigate(href: ModuleHref) {
@@ -103,13 +112,13 @@
 
 <div class="falcon-product-shell bg-background text-on-surface">
 	<nav
-		class="fixed left-0 top-0 z-50 hidden h-screen w-16 flex-col items-center border-r border-outline-variant bg-surface-container-lowest py-4 md:flex"
+		class="fixed left-0 top-0 z-50 hidden h-screen w-16 flex-col items-center border-r border-outline-variant/70 bg-surface-container-lowest/95 py-4 shadow-[12px_0_40px_rgba(0,0,0,0.18)] md:flex"
 		aria-label="Falcon Dash modules"
 	>
 		<button
 			type="button"
 			onclick={() => navigate('/')}
-			class="mb-8 flex h-10 w-10 items-center justify-center border border-primary-container bg-primary-container text-sm font-bold text-background"
+			class="falcon-focus mb-8 flex h-10 w-10 items-center justify-center rounded-lg border border-primary/35 bg-primary text-sm font-bold text-primary-foreground shadow-lg shadow-primary/10 transition hover:bg-primary/90"
 			aria-label="Shell"
 			title="Shell"
 		>
@@ -122,16 +131,16 @@
 				<button
 					type="button"
 					onclick={() => navigate(item.href)}
-					class="group relative flex h-12 w-12 items-center justify-center border-l-2 transition {activeModule.label ===
+					class="falcon-focus group relative flex h-12 w-12 items-center justify-center rounded-lg border transition {activeModule.label ===
 					item.label
-						? 'border-primary bg-secondary-container text-primary'
-						: 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'}"
+						? 'border-primary/40 bg-primary-container text-primary'
+						: 'border-transparent text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-high hover:text-primary'}"
 					aria-label={item.label}
 					title={item.label}
 				>
 					<Icon class="h-5 w-5" />
 					<span
-						class="pointer-events-none absolute left-14 z-50 border border-outline-variant bg-surface-container-high px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-primary opacity-0 shadow-lg transition group-hover:opacity-100"
+						class="pointer-events-none absolute left-14 z-50 rounded-md border border-outline-variant bg-surface-container-high px-2 py-1 text-xs font-semibold text-primary opacity-0 shadow-lg transition group-hover:opacity-100"
 					>
 						{item.label}
 					</span>
@@ -142,7 +151,7 @@
 		<div class="flex flex-col items-center gap-3">
 			<button
 				type="button"
-				class="flex h-12 w-12 items-center justify-center text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
+				class="falcon-focus flex h-12 w-12 items-center justify-center rounded-lg text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
 				aria-label="Notifications"
 				title="Notifications"
 			>
@@ -151,7 +160,7 @@
 			<button
 				type="button"
 				onclick={() => navigate('/settings')}
-				class="flex h-12 w-12 items-center justify-center text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
+				class="falcon-focus flex h-12 w-12 items-center justify-center rounded-lg text-on-surface-variant transition hover:bg-surface-container-high hover:text-primary"
 				aria-label="Settings"
 				title="Settings"
 			>
@@ -161,14 +170,12 @@
 	</nav>
 
 	<header
-		class="fixed left-0 right-0 top-0 z-40 flex min-h-12 items-center justify-between gap-3 border-b border-outline-variant bg-surface px-3 md:left-16 md:px-4"
+		class="fixed left-0 right-0 top-0 z-40 flex min-h-12 items-center justify-between gap-3 border-b border-outline-variant/70 bg-surface/95 px-3 shadow-[0_10px_40px_rgba(0,0,0,0.14)] backdrop-blur md:left-16 md:px-4"
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-3">
 			<div class="flex items-center gap-2 md:hidden">
 				<ShieldCheck class="h-5 w-5 text-primary" />
-				<span class="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-					Falcon
-				</span>
+				<span class="text-xs font-bold text-primary"> Falcon </span>
 			</div>
 			<div class="hidden items-center gap-3 md:flex">
 				<TerminalSquare class="h-4 w-4 text-on-surface-variant" />
@@ -177,18 +184,24 @@
 				</h1>
 			</div>
 			<div class="hidden h-5 w-px bg-outline-variant lg:block"></div>
-			<div
-				class="hidden min-w-0 items-center gap-2 border border-outline-variant bg-surface-container-low px-2 py-1 text-on-surface-variant md:flex"
-			>
-				<Search class="h-4 w-4" />
-				<input
-					type="search"
-					placeholder={activeModule.label === 'Work'
-						? 'Search Work Queue...'
-						: 'Search Falcon Dash...'}
-					class="h-7 w-48 border-0 bg-transparent p-0 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 lg:w-72"
-				/>
-			</div>
+			{#if activeModule.label === 'Work'}
+				<form
+					action={resolve('/work/search')}
+					method="GET"
+					class="hidden min-w-0 items-center gap-2 rounded-md border border-outline-variant/70 bg-surface-container-low px-2 py-1 text-on-surface-variant md:flex"
+					role="search"
+					aria-label="Search Work"
+				>
+					<Search class="h-4 w-4" />
+					<input
+						type="search"
+						name="q"
+						bind:value={shellSearch}
+						placeholder="Search work..."
+						class="h-7 w-48 border-0 bg-transparent p-0 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 lg:w-72"
+					/>
+				</form>
+			{/if}
 		</div>
 
 		<div class="flex shrink-0 items-center gap-3">
@@ -200,15 +213,17 @@
 				></span>
 				<span>{gatewayLabel}</span>
 			</div>
+			{#if activeModule.label !== 'Work'}
+				<button
+					type="button"
+					class="falcon-focus hidden h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 md:inline-flex"
+				>
+					Run checks
+				</button>
+			{/if}
 			<button
 				type="button"
-				class="hidden h-8 items-center gap-2 bg-primary px-3 text-xs font-semibold text-background transition hover:bg-primary-container md:inline-flex"
-			>
-				{activeModule.label === 'Work' ? 'CAPTURE' : 'RUN CHECKS'}
-			</button>
-			<button
-				type="button"
-				class="flex h-8 w-8 items-center justify-center text-on-surface-variant transition hover:bg-surface-variant hover:text-primary"
+				class="falcon-focus flex h-8 w-8 items-center justify-center rounded-md text-on-surface-variant transition hover:bg-surface-variant hover:text-primary"
 				aria-label="Help"
 			>
 				<HelpCircle class="h-4 w-4" />
@@ -217,7 +232,7 @@
 	</header>
 
 	<nav
-		class="fixed bottom-0 left-0 right-0 z-50 grid h-16 grid-cols-5 border-t border-outline-variant bg-surface-container-lowest md:hidden"
+		class="fixed bottom-0 left-0 right-0 z-50 grid h-16 grid-cols-5 border-t border-outline-variant/70 bg-surface-container-lowest/95 shadow-[0_-10px_40px_rgba(0,0,0,0.2)] backdrop-blur md:hidden"
 		aria-label="Falcon Dash mobile modules"
 	>
 		{#each modules as item (item.label)}
@@ -225,7 +240,7 @@
 			<button
 				type="button"
 				onclick={() => navigate(item.href)}
-				class="flex flex-col items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] {activeModule.label ===
+				class="falcon-focus flex flex-col items-center justify-center gap-1 text-[10px] font-semibold {activeModule.label ===
 				item.label
 					? 'text-primary'
 					: 'text-on-surface-variant'}"
@@ -238,7 +253,7 @@
 
 	<main class="min-h-screen overflow-hidden pl-0 pt-12 md:pl-16">
 		{#if approvals.length > 0}
-			<div class="border-b border-outline-variant bg-surface-container-low p-3">
+			<div class="border-b border-outline-variant/70 bg-surface-container-low p-3">
 				<ExecApprovalPrompt
 					approval={approvals[0]}
 					pendingCount={approvals.length}
@@ -254,7 +269,7 @@
 
 		<!-- Floating canvas panel: visible on ALL pages when a surface is active -->
 		{#if currentSurface && currentSurface.visible}
-			<div class="canvas-float-panel border-t border-outline-variant">
+			<div class="canvas-float-panel border-t border-outline-variant/70">
 				<div class="flex items-center justify-between px-3 py-1.5">
 					<span class="text-xs font-medium text-on-surface-variant">
 						Canvas: {currentSurface.title}

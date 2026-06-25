@@ -67,6 +67,21 @@ GET    /api/falcon-dash/modules
 
 There is no active PM API. Old PM routes and stores have been removed from the repo.
 
+`GET /api/work/queue` returns actionability buckets:
+
+- `nextActions`
+- `needsOperator`
+- `waitingOnOperator`
+- `waitingOnAgent`
+- `waitingOnExternal`
+- `needsReview`
+- `scheduledRoutines`
+- `staleCleanup`
+- `blockedRisky`
+
+`waitingOnFred` is still returned as a legacy alias for older callers, but new UI, docs, and
+generated context should use operator-focused bucket names.
+
 ## Context Generation
 
 `src/lib/server/work/context-writer.ts` writes Work-owned context:

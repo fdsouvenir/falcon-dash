@@ -13,8 +13,9 @@ export function generateWorkContext(): WorkContextResponse {
 		'Falcon Dash Work is the agent-facing source of truth. Archived source IDs are evidence, not active API guidance.\n\n';
 
 	markdown += renderBucket('Next Actions', queue.nextActions);
-	markdown += renderBucket('Waiting on Fred', queue.waitingOnFred);
+	markdown += renderBucket('Needs Operator', queue.needsOperator);
 	markdown += renderBucket('Waiting on Agent', queue.waitingOnAgent);
+	markdown += renderBucket('Waiting on External / System', queue.waitingOnExternal);
 	markdown += renderBucket('Needs Review', queue.needsReview);
 	markdown += renderBucket('Scheduled / Routines', queue.scheduledRoutines);
 	markdown += renderBucket('Blocked / Risky', queue.blockedRisky);
@@ -28,8 +29,11 @@ export function generateWorkContext(): WorkContextResponse {
 			active: active.length,
 			...counts,
 			nextActions: queue.nextActions.length,
+			needsOperator: queue.needsOperator.length,
+			waitingOnOperator: queue.waitingOnOperator.length,
 			waitingOnFred: queue.waitingOnFred.length,
 			waitingOnAgent: queue.waitingOnAgent.length,
+			waitingOnExternal: queue.waitingOnExternal.length,
 			needsReview: queue.needsReview.length,
 			scheduledRoutines: queue.scheduledRoutines.length,
 			blockedRisky: queue.blockedRisky.length

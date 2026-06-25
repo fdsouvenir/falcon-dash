@@ -10,6 +10,26 @@ export interface GatewayConfig {
 	source: string;
 }
 
+interface OpenClawGatewayConfig {
+	mode?: string;
+	port?: number;
+	bind?: string;
+	auth?: {
+		token?: string;
+	};
+	remote?: {
+		url?: string;
+		token?: string;
+	};
+}
+
+function readGatewayFromFile(): OpenClawGatewayConfig {
+	const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+	const raw = readFileSync(configPath, 'utf-8');
+	const config = JSON.parse(raw);
+	return config?.gateway ?? {};
+}
+
 /**
  * Resolve the gateway token.
  * Priority: GATEWAY_TOKEN env → OPENCLAW_GATEWAY_TOKEN env → file read.
@@ -26,10 +46,7 @@ function resolveToken(): { token: string; source: string } {
 		return { token: env.OPENCLAW_GATEWAY_TOKEN, source: 'env:OPENCLAW_GATEWAY_TOKEN' };
 	}
 
-	const configPath = join(homedir(), '.openclaw', 'openclaw.json');
-	const raw = readFileSync(configPath, 'utf-8');
-	const config = JSON.parse(raw);
-	const gateway = config?.gateway;
+	const gateway = readGatewayFromFile();
 	const isRemoteMode = gateway?.mode === 'remote';
 	const token = isRemoteMode
 		? (gateway?.remote?.token ?? gateway?.auth?.token)
@@ -66,18 +83,30 @@ function buildHttpUrl(port: number, bind: string): string {
 	return `http://${host}:${port}`;
 }
 
+function resolveGatewayUrl(
+	gateway: OpenClawGatewayConfig,
+	source: string
+): { url: string; source: string } {
+	if (gateway.mode === 'remote' && gateway.remote?.url) {
+		return { url: gateway.remote.url, source: `${source}:gateway.remote.url` };
+	}
+	if (gateway.port) {
+		const bind = gateway.bind ?? 'loopback';
+		return { url: buildWsUrl(gateway.port, bind), source };
+	}
+	throw new Error('No gateway remote URL or port found');
+}
+
 /**
  * Read port and bind from ~/.openclaw/openclaw.json.
  * Throws if port is missing (no hardcoded default).
  */
-function readConfigFile(): { port: number; bind: string } {
-	const configPath = join(homedir(), '.openclaw', 'openclaw.json');
-	const raw = readFileSync(configPath, 'utf-8');
-	const config = JSON.parse(raw);
-	const port = config?.gateway?.port;
-	if (!port) throw new Error('No gateway.port in ~/.openclaw/openclaw.json');
-	const bind = config?.gateway?.bind ?? 'loopback';
-	return { port, bind };
+function readConfigFile(): { url: string; source: string } {
+	try {
+		return resolveGatewayUrl(readGatewayFromFile(), 'file');
+	} catch {
+		throw new Error('No gateway.remote.url or gateway.port in ~/.openclaw/openclaw.json');
+	}
 }
 
 /**
@@ -93,16 +122,12 @@ async function resolveUrl(): Promise<{ url: string; source: string }> {
 	try {
 		const cliResult = await execCli('openclaw', ['config', 'get', 'gateway', '--json']);
 		const gw = JSON.parse(cliResult);
-		if (gw.port) {
-			const bind = gw.bind ?? 'loopback';
-			return { url: buildWsUrl(gw.port, bind), source: 'cli' };
-		}
+		return resolveGatewayUrl(gw, 'cli');
 	} catch {
 		// CLI not available or failed — fall through to file read
 	}
 
-	const { port, bind } = readConfigFile();
-	return { url: buildWsUrl(port, bind), source: 'file' };
+	return readConfigFile();
 }
 
 /**
@@ -127,6 +152,11 @@ export function readGatewayUrlSync(): string {
 	if (env.GATEWAY_URL) {
 		return env.GATEWAY_URL.replace(/^ws(s?)/, 'http$1');
 	}
-	const { port, bind } = readConfigFile();
-	return buildHttpUrl(port, bind);
+	const gateway = readGatewayFromFile();
+	if (gateway.mode === 'remote' && gateway.remote?.url) {
+		return gateway.remote.url.replace(/^ws(s?)/, 'http$1');
+	}
+	if (!gateway.port)
+		throw new Error('No gateway.remote.url or gateway.port in ~/.openclaw/openclaw.json');
+	return buildHttpUrl(gateway.port, gateway.bind ?? 'loopback');
 }

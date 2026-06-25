@@ -13,8 +13,14 @@ See also:
 ### URL and proxy
 
 - **Default URL:** `ws://127.0.0.1:18789`
-- **Dev proxy:** Vite proxies `/ws` to `GATEWAY_URL` so the browser connects to the same origin
-- **Production:** set `ORIGIN=https://your-domain.com` and the client derives `wss://` URLs. A reverse proxy (Caddy, nginx) terminates TLS and forwards to the gateway
+- **Server client:** Falcon Dash resolves the gateway URL server-side from `GATEWAY_URL`, then
+  `openclaw config get gateway --json`, then `~/.openclaw/openclaw.json`. When
+  `gateway.mode` is `remote`, `gateway.remote.url` and `gateway.remote.token` are used.
+- **Control UI proxy:** Dev and production both proxy `/api/gateway/proxy` to the resolved gateway so
+  browser-facing Control UI traffic stays same-origin.
+- **Production:** set `ORIGIN=https://your-domain.com` for the SvelteKit server origin and expose
+  Falcon Dash behind a reverse proxy. The server-side gateway client and proxy still resolve the
+  upstream gateway from `GATEWAY_URL` or OpenClaw config.
 
 ### Handshake sequence
 

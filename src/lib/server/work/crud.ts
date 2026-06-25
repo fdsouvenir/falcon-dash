@@ -268,13 +268,26 @@ export function listWorkQueue(): WorkQueue {
 	const active = listWorkItems({ limit: 500 });
 	const isAgent = (item: WorkItem) =>
 		item.waiting_on === 'agent' || item.waiting_on === 'me' || item.owner === 'agent';
+	const needsOperator = active.filter(
+		(i) =>
+			i.waiting_on === 'operator' ||
+			i.waiting_on === 'me' ||
+			i.waiting_on === 'fred' ||
+			i.status === 'needs_review'
+	);
+	const waitingOnExternal = active.filter(
+		(i) => i.waiting_on === 'external' || i.waiting_on === 'system'
+	);
 
 	return {
 		nextActions: active.filter(
 			(i) => ['task', 'change'].includes(i.type) && ['ready', 'in_progress'].includes(i.status)
 		),
-		waitingOnFred: active.filter((i) => i.waiting_on === 'fred' || i.status === 'needs_review'),
+		needsOperator,
+		waitingOnOperator: needsOperator,
+		waitingOnFred: needsOperator,
 		waitingOnAgent: active.filter((i) => isAgent(i) && i.status !== 'needs_review'),
+		waitingOnExternal,
 		needsReview: active.filter((i) => i.status === 'needs_review'),
 		scheduledRoutines: active.filter((i) => i.type === 'routine' || i.status === 'scheduled'),
 		staleCleanup: active.filter((i) => Boolean(i.stale_after)),

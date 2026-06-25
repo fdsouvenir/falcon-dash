@@ -18,29 +18,34 @@ See also:
 ```
 Browser (Falcon Dash SvelteKit app)
    |
-   |  HTTP (SvelteKit API routes)         WebSocket (protocol v3)
-   |  /api/work/*, etc.                  /ws (proxied in dev)
-   v                                      v
-+--SvelteKit Server--+           +--OpenClaw Gateway--+
-|  better-sqlite3    |           |  Session mgmt      |
-|  Work CRUD/context |           |  Auth / Pairing     |
-|  PM compatibility  |           |  Event broadcast    |
-|  File ops          |           |  Canvas pipeline    |
-|  Password vault    |           +----+----------------+
-+--------------------+                |
-                                      v
-                               +--Agent Process--+
-                               |  Claude Code    |
-                               |  Tool execution |
-                               |  Workspace      |
-                               +-----------------+
+   |  HTTP/SSE (SvelteKit API routes)
+   |  /api/work/*, /api/gateway/*
+   v
++--SvelteKit Server--+   WebSocket (protocol v3)   +--OpenClaw Gateway--+
+|  better-sqlite3    |---------------------------->|  Session mgmt      |
+|  Work CRUD/context |                             |  Auth / Pairing     |
+|  Gateway client    |                             |  Event broadcast    |
+|  Gateway proxy     |                             |  Canvas pipeline    |
+|  File ops          |                             +----+----------------+
+|  Password vault    |                                  |
++--------------------+                                  v
+                                                  +--Agent Process--+
+                                                  |  Claude Code    |
+                                                  |  Tool execution |
+                                                  |  Workspace      |
+                                                  +-----------------+
 ```
 
 The browser client communicates over two channels:
 
 1. **HTTP** -- SvelteKit API routes for server-side operations (Work Management, legacy PM compatibility, file system, password vault, agent config CRUD). These endpoints run inside the SvelteKit Node.js process and access local resources directly.
 
-2. **WebSocket** -- A persistent connection to the OpenClaw Gateway for real-time operations (chat, sessions, presence, health, canvas, exec approvals). In development, Vite proxies `/ws` to `GATEWAY_URL` (default `ws://127.0.0.1:18789`). In production, a reverse proxy terminates TLS and forwards `wss://` connections.
+2. **Gateway stream** -- The SvelteKit server owns a persistent WebSocket connection to the
+   OpenClaw Gateway for real-time operations (chat, sessions, presence, health, canvas, exec
+   approvals). Browser clients subscribe through `/api/gateway/events` and invoke RPC through
+   `/api/gateway/rpc`. Falcon Dash resolves the upstream gateway from `GATEWAY_URL`, OpenClaw CLI
+   config, or `~/.openclaw/openclaw.json`, including `gateway.remote.url` when `gateway.mode` is
+   `remote`.
 
 The gateway manages agent processes, routes messages between operators and agents, and broadcasts events. The `falcon-dash-plugin` registers a custom channel (`falcon-dash`) and a canvas bridge so agents can present canvas surfaces to the dashboard.
 

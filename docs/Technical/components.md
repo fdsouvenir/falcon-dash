@@ -146,12 +146,33 @@ Session info bar with session name, model indicator, chat settings access, and s
 
 ## Work surface
 
-### Work route (`src/routes/work/+page.svelte`)
+### Work routes (`src/routes/work/**`)
 
-Dashboard view for the `/work` page:
+Routeable Work surface for the `/work` module:
 
-- **Queue buckets** -- next actions, review, waiting states, scheduled routines, and blocked/risky work
-- **Recent items** -- active Work records with type, status, next action, and last update
+- **Overview** -- `/work` is an executive status board. Top signals focus the matching overview
+  section (`#needs-you`, `#at-risk`, `#due-next`, `#recent`) instead of opening an arbitrary item
+  detail. The main content is a project health table followed by grouped operator asks,
+  blocked/waiting work, a due-next timeline, and a single chronological recent activity log.
+- **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
+  shell Work search form routes there and result rows link to exact item detail routes. The Work
+  shell does not expose manual capture/create controls until a dedicated capture workflow exists.
+- **Type pages** -- `/work/projects`, `/work/changes`, `/work/decisions`, `/work/tasks`,
+  `/work/routines`, and `/work/observations` use type-specific page anatomy instead of one generic
+  list row. Projects show outcomes, upcoming dates, operator moves, supporting work, and blockers;
+  change requests show scope, approval, and waiting state; questions show recommendation and impact;
+  tasks show parent and due state; routines show cadence, next run, and last result; observations
+  render as a feed. Row clicks select the right-side quick inspector in place. The inspector shows
+  read-only item context, exposes only status/priority/waiting state controls, and links to the
+  full item page. The UI labels `change` as Change request and `decision` as Question to clarify
+  the operator-facing distinction.
+- **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
+  not render the peer list; they show type-aware sections, blockers, related work, and the same
+  lightweight state controls without text editors for agent-managed narrative fields.
+- **Areas** -- `area` remains a Work model type for grouping, but it is not shown as a primary
+  operator tab until an explicit area-management workflow exists
+- **Operator language** -- waiting states use operator, agent, and external/system labels; no
+  person-specific copy is hardcoded
 - **Refresh path** -- reloads `/api/work/items` and `/api/work/queue`
 
 Work-specific context, migration, and API behavior live in [Work management](work-management.md).
