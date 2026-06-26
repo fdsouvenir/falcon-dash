@@ -1,98 +1,76 @@
 <script lang="ts">
-	import { setThemeConfig, getThemeConfig, applyTheme } from '$lib/theme/theme-manager.js';
+	import {
+		preferences,
+		setCompactModePreference,
+		setNotificationsPreference,
+		setSoundPreference,
+		setTextSizePreference,
+		setThemePreference,
+		type FalconPreferences,
+		type TextSize
+	} from '$lib/stores/preferences.js';
 	import type { ThemeMode } from '$lib/theme/theme-manager.js';
 
-	interface Preferences {
-		theme: ThemeMode;
-		notificationsEnabled: boolean;
-		soundEnabled: boolean;
-		compactMode: boolean;
-	}
-
-	const defaultPreferences: Preferences = {
+	let current = $state<FalconPreferences>({
 		theme: 'system',
 		notificationsEnabled: true,
 		soundEnabled: true,
-		compactMode: false
-	};
-
-	let preferences = $state<Preferences>(loadPreferences());
-
-	function loadPreferences(): Preferences {
-		if (typeof localStorage === 'undefined') return defaultPreferences;
-		const stored = localStorage.getItem('falcon-dash-preferences');
-		if (!stored) return defaultPreferences;
-		try {
-			return { ...defaultPreferences, ...JSON.parse(stored) };
-		} catch {
-			return defaultPreferences;
-		}
-	}
-
-	function savePreferences() {
-		if (typeof localStorage === 'undefined') return;
-		localStorage.setItem('falcon-dash-preferences', JSON.stringify(preferences));
-	}
-
-	function applyCompactMode(compact: boolean) {
-		document.documentElement.classList.toggle('compact', compact);
-	}
-
-	// Apply preferences on mount
-	$effect(() => {
-		const config = getThemeConfig();
-		applyTheme({ mode: preferences.theme, accent: config.accent });
-		applyCompactMode(preferences.compactMode);
+		compactMode: false,
+		textSize: 'comfortable'
 	});
+	let hydrated = $state(false);
 
-	// Listen for system theme changes when theme is 'system'
+	const textSizeOptions: { value: TextSize; label: string; detail: string }[] = [
+		{ value: 'comfortable', label: 'Comfortable', detail: 'Readable default' },
+		{ value: 'large', label: 'Large', detail: 'Bigger interface text' },
+		{ value: 'extra-large', label: 'Extra large', detail: 'Maximum app text' }
+	];
+
 	$effect(() => {
-		if (preferences.theme !== 'system') return;
-		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-		const handler = () => {
-			const config = getThemeConfig();
-			applyTheme({ mode: 'system', accent: config.accent });
-		};
-		mediaQuery.addEventListener('change', handler);
-		return () => mediaQuery.removeEventListener('change', handler);
+		const unsubscribe = preferences.subscribe((value) => {
+			current = value;
+		});
+		hydrated = true;
+		return unsubscribe;
 	});
 
 	function updateTheme(theme: ThemeMode) {
-		preferences.theme = theme;
-		const config = getThemeConfig();
-		setThemeConfig({ mode: theme, accent: config.accent });
-		savePreferences();
+		setThemePreference(theme);
+	}
+
+	function updateTextSize(textSize: TextSize) {
+		setTextSizePreference(textSize);
 	}
 
 	function toggleNotifications() {
-		preferences.notificationsEnabled = !preferences.notificationsEnabled;
-		savePreferences();
+		setNotificationsPreference(!current.notificationsEnabled);
 	}
 
 	function toggleSound() {
-		preferences.soundEnabled = !preferences.soundEnabled;
-		savePreferences();
+		setSoundPreference(!current.soundEnabled);
 	}
 
 	function toggleCompactMode() {
-		preferences.compactMode = !preferences.compactMode;
-		applyCompactMode(preferences.compactMode);
-		savePreferences();
+		setCompactModePreference(!current.compactMode);
 	}
 </script>
 
-<div class="flex flex-col gap-6 p-6">
+<div
+	class="flex flex-col gap-6 p-6"
+	data-testid="settings-preferences-panel"
+	data-hydrated={hydrated}
+>
 	<!-- Appearance Card -->
 	<div class="rounded-lg border border-surface-border bg-surface-2 p-4">
 		<h3 class="mb-4 text-lg font-semibold text-white">Appearance</h3>
 		<div class="space-y-4">
 			<!-- Theme -->
 			<div>
-				<label class="mb-2 block text-sm font-medium text-white/70">Theme</label>
-				<div class="flex gap-2">
+				<p id="theme-preference-label" class="mb-2 text-sm font-medium text-white/70">Theme</p>
+				<div class="flex gap-2" role="group" aria-labelledby="theme-preference-label">
 					<button
 						onclick={() => updateTheme('dark')}
-						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'dark'
+						class="flex-1 rounded px-4 py-2 text-sm {current.theme === 'dark'
 							? 'bg-blue-600 text-white'
 							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
@@ -100,7 +78,7 @@
 					</button>
 					<button
 						onclick={() => updateTheme('light')}
-						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'light'
+						class="flex-1 rounded px-4 py-2 text-sm {current.theme === 'light'
 							? 'bg-blue-600 text-white'
 							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
@@ -108,7 +86,7 @@
 					</button>
 					<button
 						onclick={() => updateTheme('system')}
-						class="flex-1 rounded px-4 py-2 text-sm {preferences.theme === 'system'
+						class="flex-1 rounded px-4 py-2 text-sm {current.theme === 'system'
 							? 'bg-blue-600 text-white'
 							: 'bg-surface-3 text-white/70 hover:bg-surface-3'}"
 					>
@@ -117,22 +95,50 @@
 				</div>
 			</div>
 
+			<!-- Text Size -->
+			<div>
+				<p id="text-size-preference-label" class="mb-2 text-sm font-medium text-white/70">
+					Text size
+				</p>
+				<div
+					class="grid gap-2 sm:grid-cols-3"
+					role="group"
+					aria-labelledby="text-size-preference-label"
+				>
+					{#each textSizeOptions as option (option.value)}
+						<button
+							type="button"
+							onclick={() => updateTextSize(option.value)}
+							class="rounded border px-4 py-3 text-left transition {current.textSize ===
+							option.value
+								? 'border-blue-400 bg-blue-600 text-white'
+								: 'border-surface-border bg-surface-3 text-white/70 hover:border-blue-400 hover:text-white'}"
+							aria-pressed={current.textSize === option.value}
+						>
+							<span class="block text-sm font-semibold">{option.label}</span>
+							<span class="mt-1 block text-xs opacity-80">{option.detail}</span>
+						</button>
+					{/each}
+				</div>
+			</div>
+
 			<!-- Compact Mode -->
 			<div class="flex items-center justify-between">
 				<div>
 					<div class="text-sm font-medium text-white/70">Compact Mode</div>
-					<div class="text-xs text-status-muted">Use denser spacing for UI elements</div>
+					<div class="text-xs text-status-muted">Use denser spacing without shrinking text</div>
 				</div>
 				<button
 					onclick={toggleCompactMode}
-					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.compactMode
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {current.compactMode
 						? 'bg-blue-600'
 						: 'bg-surface-3'}"
 					role="switch"
-					aria-checked={preferences.compactMode}
+					aria-checked={current.compactMode}
+					aria-label="Compact mode"
 				>
 					<span
-						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {preferences.compactMode
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {current.compactMode
 							? 'translate-x-6'
 							: 'translate-x-1'}"
 					></span>
@@ -155,14 +161,15 @@
 				</div>
 				<button
 					onclick={toggleNotifications}
-					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.notificationsEnabled
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {current.notificationsEnabled
 						? 'bg-blue-600'
 						: 'bg-surface-3'}"
 					role="switch"
-					aria-checked={preferences.notificationsEnabled}
+					aria-checked={current.notificationsEnabled}
+					aria-label="Browser notifications"
 				>
 					<span
-						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {preferences.notificationsEnabled
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {current.notificationsEnabled
 							? 'translate-x-6'
 							: 'translate-x-1'}"
 					></span>
@@ -177,15 +184,16 @@
 				</div>
 				<button
 					onclick={toggleSound}
-					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {preferences.soundEnabled
+					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {current.soundEnabled
 						? 'bg-blue-600'
 						: 'bg-surface-3'}"
 					role="switch"
-					aria-checked={preferences.soundEnabled}
-					disabled={!preferences.notificationsEnabled}
+					aria-checked={current.soundEnabled}
+					disabled={!current.notificationsEnabled}
+					aria-label="Notification sound"
 				>
 					<span
-						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {preferences.soundEnabled
+						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {current.soundEnabled
 							? 'translate-x-6'
 							: 'translate-x-1'}"
 					></span>

@@ -23,6 +23,7 @@
 	import { measureWebVitals } from '$lib/performance/web-vitals.js';
 	import { preloadHighlighter } from '$lib/utils/highlighter.js';
 	import { startChannelReadiness } from '$lib/stores/channel-readiness.js';
+	import { initDisplayPreferences } from '$lib/stores/preferences.js';
 
 	let { children } = $props();
 
@@ -37,6 +38,7 @@
 
 	$effect(() => {
 		if (browser) {
+			const stopDisplayPreferences = initDisplayPreferences();
 			registerServiceWorker();
 			listenForInstallPrompt();
 			measureWebVitals();
@@ -53,6 +55,7 @@
 			]) {
 				localStorage.removeItem(key);
 			}
+			return stopDisplayPreferences;
 		}
 	});
 

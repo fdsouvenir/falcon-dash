@@ -74,6 +74,10 @@
 	--color-status-muted-bg: var(--status-muted-bg);
 	--color-status-purple: var(--status-purple);
 	--color-status-purple-bg: var(--status-purple-bg);
+	--text-xs: 0.875rem;
+	--text-xs--line-height: 1.35rem;
+	--text-sm: 0.9375rem;
+	--text-sm--line-height: 1.5rem;
 }
 
 :root {
@@ -145,13 +149,15 @@
 	--status-purple-bg: rgba(198, 184, 255, 0.13);
 
 	/* ── Typography scale ── */
-	--text-page-title: 1.25rem;
-	--text-section-header: 0.6875rem;
-	--text-card-title: 0.875rem;
-	--text-body: 0.8125rem;
-	--text-label: 0.6875rem;
-	--text-badge: 0.625rem;
-	--text-mono: 0.75rem;
+	--text-page-title: 1.35rem;
+	--text-section-header: 0.875rem;
+	--text-card-title: 1rem;
+	--text-body: 0.9375rem;
+	--text-label: 0.875rem;
+	--text-badge: 0.8125rem;
+	--text-mono: 0.875rem;
+	--text-xs: 0.875rem;
+	--text-sm: 0.9375rem;
 
 	/* ── Spacing scale ── */
 	--space-card-padding: 1rem;
@@ -169,6 +175,8 @@ body {
 	height: 100%;
 	overflow: hidden;
 	overscroll-behavior: none;
+	font-size: var(--text-body);
+	line-height: 1.55;
 	font-family:
 		'Hanken Grotesk',
 		ui-sans-serif,
@@ -177,6 +185,30 @@ body {
 		BlinkMacSystemFont,
 		'Segoe UI',
 		sans-serif;
+}
+
+:root[data-text-size='large'] {
+	--text-page-title: 1.5rem;
+	--text-section-header: 0.9375rem;
+	--text-card-title: 1.125rem;
+	--text-body: 1.0625rem;
+	--text-label: 0.9375rem;
+	--text-badge: 0.875rem;
+	--text-mono: 0.9375rem;
+	--text-xs: 0.9375rem;
+	--text-sm: 1.0625rem;
+}
+
+:root[data-text-size='extra-large'] {
+	--text-page-title: 1.75rem;
+	--text-section-header: 1rem;
+	--text-card-title: 1.25rem;
+	--text-body: 1.1875rem;
+	--text-label: 1rem;
+	--text-badge: 0.9375rem;
+	--text-mono: 1rem;
+	--text-xs: 1rem;
+	--text-sm: 1.125rem;
 }
 
 code,
@@ -268,10 +300,6 @@ body.sheet-open {
 }
 
 /* Compact mode */
-.compact {
-	font-size: 0.9375rem;
-}
-
 .compact .p-6 {
 	padding: 1rem;
 }
@@ -291,14 +319,6 @@ body.sheet-open {
 .compact .py-3 {
 	padding-top: 0.5rem;
 	padding-bottom: 0.5rem;
-}
-
-.compact .text-lg {
-	font-size: 0.9375rem;
-}
-
-.compact .text-2xl {
-	font-size: 1.25rem;
 }
 
 /* GPU-composited slide for mobile chat panel */

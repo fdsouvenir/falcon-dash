@@ -19,6 +19,9 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   admin console.
 - Prefer soft panel depth, 8px radius, readable sentence-case labels, and clear hierarchy over
   harsh grids, heavy borders, all-caps labels, and dense monospaced chrome.
+- Design for low-vision operators by default. Normal UI copy should stay at a readable floor, text
+  size preferences must be honored globally, and browser zoom should not create horizontal
+  scrolling in normal workflows.
 - Prefer existing UI primitives in `src/lib/components/ui/` before building bespoke variants.
 - Treat cards as optional containers, not default layout.
 
@@ -43,6 +46,8 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 
 - Use direct operational copy, not ad language.
 - Keep support text short and decision-oriented.
+- Avoid clipped helper snippets in executive summaries; show labels, counts, status, dates, and
+  exact item titles before adding narrative preview text.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

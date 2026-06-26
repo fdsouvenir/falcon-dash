@@ -39,15 +39,15 @@ After making changes, a banner will remind you that the gateway needs to be rest
 
 The Preferences tab lets you customize how Falcon Dash looks and behaves.
 
-**When you would use it:** When you want to adjust the visual theme, turn notifications on or off, or change your default project view.
+**When you would use it:** When you want to adjust the visual theme, increase text size, or turn notifications on or off.
 
 **What you can do:**
 
 - **Theme** -- choose between Dark, Light, or System (follows your device setting).
-- **Compact mode** -- toggle tighter spacing throughout the interface.
+- **Text size** -- choose Comfortable, Large, or Extra large. The setting applies immediately and persists across Falcon Dash.
+- **Compact mode** -- toggle tighter spacing throughout the interface without shrinking text.
 - **Browser notifications** -- enable or disable desktop notifications for important events.
 - **Notification sound** -- turn the notification sound on or off.
-- **Default project view** -- choose which view (Dashboard, Kanban Board, List, or Tree) appears when you open the Projects page.
 - **Log out** -- end your Cloudflare Access session and sign out.
 
 ---
