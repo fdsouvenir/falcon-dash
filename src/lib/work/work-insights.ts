@@ -707,11 +707,12 @@ export function parseQuestionSections(markdown: string): QuestionBriefSection[] 
 	}
 
 	const sections: QuestionBriefSection[] = [];
+	const usedIds = new Map<string, number>();
 	const firstMatch = matches[0];
 	const preamble = source.slice(0, firstMatch.index).trim();
 	if (preamble) {
 		sections.push({
-			id: 'summary',
+			id: uniqueSectionId('summary', usedIds),
 			title: 'Summary',
 			content: preamble,
 			defaultOpen: true,
@@ -724,7 +725,7 @@ export function parseQuestionSections(markdown: string): QuestionBriefSection[] 
 		const start = (match.index ?? 0) + match[0].length;
 		const end = matches[index + 1]?.index ?? source.length;
 		sections.push({
-			id: slugify(title),
+			id: uniqueSectionId(slugify(title), usedIds),
 			title,
 			content: source.slice(start, end).trim() || 'No details recorded.',
 			defaultOpen: shouldOpenQuestionSection(title, index, matches.length),
@@ -896,6 +897,13 @@ function slugify(value: string): string {
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-|-$/g, '');
 	return slug || 'section';
+}
+
+function uniqueSectionId(baseId: string, usedIds: Map<string, number>): string {
+	const count = usedIds.get(baseId) ?? 0;
+	usedIds.set(baseId, count + 1);
+	if (count === 0) return baseId;
+	return `${baseId}-${count + 1}`;
 }
 
 function uniqueItems(source: WorkItem[]): WorkItem[] {

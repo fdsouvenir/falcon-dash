@@ -57,3 +57,5 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 - Follow the component conventions in `docs/Technical/components.md`.
 - Preserve tokenized styles where possible; avoid one-off hardcoded color systems.
 - Validate with the existing shell, not a detached component-only assumption.
+- Keep global CSS compatible with the deployed CSP. Do not import remote fonts or stylesheets from
+  `src/app.css`; use system font stacks or self-hosted assets when custom typography is required.

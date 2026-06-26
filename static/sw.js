@@ -1,12 +1,25 @@
 // Service worker for Falcon Dashboard PWA
-const CACHE_VERSION = '2';
+const CACHE_VERSION = '3';
 const CACHE_NAME = `falcon-dash-v${CACHE_VERSION}`;
 
 const APP_SHELL = ['/', '/manifest.json'];
 
 // Install: cache app shell
 self.addEventListener('install', (event) => {
-	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+	event.waitUntil(
+		caches.open(CACHE_NAME).then(async (cache) => {
+			await Promise.all(
+				APP_SHELL.map(async (path) => {
+					try {
+						const response = await fetch(path, { cache: 'reload' });
+						if (response.ok) await cache.put(path, response);
+					} catch {
+						// Cloudflare Access can reject manifest/app-shell fetches before auth is ready.
+					}
+				})
+			);
+		})
+	);
 	self.skipWaiting();
 });
 
@@ -51,10 +64,12 @@ self.addEventListener('fetch', (event) => {
 	event.respondWith(
 		caches.open(CACHE_NAME).then((cache) =>
 			cache.match(request).then((cached) => {
-				const fetching = fetch(request).then((response) => {
-					if (response.ok) cache.put(request, response.clone());
-					return response;
-				});
+				const fetching = fetch(request)
+					.then((response) => {
+						if (response.ok) cache.put(request, response.clone());
+						return response;
+					})
+					.catch(() => cached ?? new Response('', { status: 503, statusText: 'Offline' }));
 				return cached || fetching;
 			})
 		)

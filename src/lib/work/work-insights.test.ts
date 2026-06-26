@@ -198,8 +198,14 @@ Set up the internal workspace.
 ## Current Verified State
 - Agency token exists.
 
+## Current Verified State
+- Agent confirmed the same state again after a reload.
+
 ## Approval Gate
 Execution requires approval.
+
+## Approval Gate
+Second approval checkpoint.
 
 ## Legacy Version History
 - v1 planning notes`);
@@ -207,9 +213,12 @@ Execution requires approval.
 		expect(sections.map((section) => section.title)).toEqual([
 			'Objective',
 			'Current Verified State',
+			'Current Verified State',
+			'Approval Gate',
 			'Approval Gate',
 			'Legacy Version History'
 		]);
+		expect(new Set(sections.map((section) => section.id)).size).toBe(sections.length);
 		expect(sections.find((section) => section.title === 'Objective')?.defaultOpen).toBe(true);
 		expect(sections.find((section) => section.title === 'Approval Gate')?.defaultOpen).toBe(true);
 		expect(
