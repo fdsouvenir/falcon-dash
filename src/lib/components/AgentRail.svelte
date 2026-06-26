@@ -190,11 +190,11 @@
 	<!-- Dashboard icon -->
 	<div class="agent-slot group relative">
 		<button
-			onclick={() => goto(resolve('/'))}
+			onclick={() => goto(resolve('/work'))}
 			class="agent-icon agent-icon--home"
 			class:agent-icon--mobile={isMobile}
-			title="Dashboard"
-			aria-label="Go to dashboard"
+			title="Work"
+			aria-label="Go to Work"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path
@@ -205,7 +205,7 @@
 			</svg>
 		</button>
 		<div class="agent-tooltip">
-			<span class="agent-tooltip__name">Dashboard</span>
+			<span class="agent-tooltip__name">Work</span>
 		</div>
 	</div>
 

@@ -136,7 +136,7 @@
 	function openHistory(job: CronJob) {
 		if (job.sessionTarget) {
 			setActiveSession(job.sessionTarget);
-			goto(resolve('/'));
+			goto(resolve('/work'));
 		} else {
 			addToast('No chat session linked to this job', 'info');
 		}

@@ -7,6 +7,7 @@ An agent is a specialized AI assistant that Fredbot Hosting has set up for you. 
 The Agent Rail is the narrow vertical bar on the far left side of Falcon Dash. Each circle in the rail represents one of your agents. The circle shows either an emoji or the first letter of the agent's name.
 
 Hover over an agent icon to see a tooltip with the agent's name and how many active channels or sessions it has.
+The home button at the top of the rail returns to Work, the default Falcon Dash home surface.
 
 ## Switching between agents
 

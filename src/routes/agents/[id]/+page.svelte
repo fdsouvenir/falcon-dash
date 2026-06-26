@@ -174,9 +174,9 @@
 	<!-- Header -->
 	<div class="flex items-center gap-3">
 		<button
-			onclick={() => goto(resolve('/'))}
+			onclick={() => goto(resolve('/work'))}
 			class="flex h-8 w-8 items-center justify-center rounded-lg text-status-muted transition-colors hover:bg-surface-2 hover:text-white"
-			aria-label="Back to dashboard"
+			aria-label="Back to Work"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />

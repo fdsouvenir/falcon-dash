@@ -68,6 +68,11 @@ On READY state, the layout:
 
 ### AppShell (`src/lib/components/AppShell.svelte`)
 
+Desktop product shell for primary modules. Work is the default home surface: `/` redirects to
+`/work`, and the primary module rail starts with Work rather than a separate Shell readiness page.
+The right side of the global header stays quiet and shows the build version from `__APP_VERSION__`;
+gateway connection details live in settings/status surfaces instead of top-level chrome.
+
 Desktop layout with a three-column structure:
 
 ```
@@ -96,7 +101,22 @@ Mobile layout with bottom tab navigation:
 +--BottomTabBar--+
 ```
 
-The mobile shell includes its own `MobileHeader` and `BottomTabBar` components, plus mobile-specific variants of many pages (prefixed `Mobile*`).
+The mobile shell includes its own `MobileHeader` and `BottomTabBar` components, plus
+mobile-specific variants of many pages (prefixed `Mobile*`). Mobile primary navigation mirrors the
+desktop module set with Work, Vault, Channels, and Labs.
+
+## Work Surface Interaction
+
+`WorkSurface.svelte` uses one responsive component for Work overview, section lists, and detail
+pages. Section list rows follow a breakpoint-specific contract:
+
+- At `xl` and wider, rows single-click into the sticky quick inspector and double-click into the
+  standalone detail route.
+- Below `xl`, rows skip quick inspection and single-tap directly into the standalone detail route.
+- The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
+  line above search, type-specific primary filter chips, compact More filters, and refresh. That
+  full header stays fixed in the list frame while only the row list scrolls. The inspector remains
+  visible and internally scrollable.
 
 ## Chat components
 
@@ -152,7 +172,7 @@ Routeable Work surface for the `/work` module:
 
 - **Overview** -- `/work` is an executive status board. Top signals focus the matching overview
   section (`#needs-you`, `#at-risk`, `#due-next`, `#recent`) instead of opening an arbitrary item
-  detail. The main content is a project health table followed by grouped operator asks,
+  detail. The main content is a project portfolio pulse followed by grouped operator asks,
   blocked/waiting work, a due-next timeline, and a single chronological recent activity log.
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
@@ -162,18 +182,22 @@ Routeable Work surface for the `/work` module:
   list row. Projects show outcomes, upcoming dates, operator moves, supporting work, and blockers;
   change requests show scope, approval, and waiting state; questions show recommendation and impact;
   tasks show parent and due state; routines show cadence, next run, and last result; observations
-  render as a feed. Row clicks select the right-side quick inspector in place. The inspector shows
-  read-only item context, exposes only status/priority/waiting state controls, and links to the
-  full item page. The UI labels `change` as Change request and `decision` as Question to clarify
+  render as a feed. Section filters are type-aware and URL-backed through `q`, `status`, `focus`,
+  and observation `source` query params. Row clicks select the right-side quick inspector in place.
+  The inspector shows read-only item context, exposes only status/priority/waiting state controls,
+  and links to the full item page. The UI labels `change` as Change request and `decision` as Question to clarify
   the operator-facing distinction.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
-  not render the peer list; they show type-aware sections, blockers, related work, and the same
-  lightweight state controls without text editors for agent-managed narrative fields.
+  not render the peer list; they show type-aware sections, health reasons, literal blockers, related
+  work, and the same lightweight state controls without text editors for agent-managed narrative
+  fields. Question details render as a Question Brief with Markdown sections and collapsed history
+  or legacy material instead of one long paragraph.
 - **Areas** -- `area` remains a Work model type for grouping, but it is not shown as a primary
   operator tab until an explicit area-management workflow exists
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
   person-specific copy is hardcoded
-- **Refresh path** -- reloads `/api/work/items` and `/api/work/queue`
+- **Refresh path** -- overview reloads `/api/work/items` and `/api/work/queue`; type and detail
+  routes use narrower item, parent, and child requests where possible
 
 Work-specific context, migration, and API behavior live in [Work management](work-management.md).
 

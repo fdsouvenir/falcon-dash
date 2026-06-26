@@ -22,20 +22,14 @@
 	});
 
 	function isActive(path: string): boolean {
-		if (path === '/') return pathname === '/';
 		return pathname.startsWith(path);
 	}
 
 	const tabs = [
 		{
-			label: 'Shell',
-			href: '/',
-			path: 'M3.75 5.25h16.5v10.5H3.75V5.25zm4.5 13.5h7.5m-4.5-3v3'
-		},
-		{
 			label: 'Work',
 			href: '/work',
-			path: 'M6 8.25h12M6 12h12M6 15.75h7.5M4.5 4.5h15v15h-15z'
+			path: 'M9 3.75h6m-7.5 3h9a1.5 1.5 0 011.5 1.5v10.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 016 18.75V8.25a1.5 1.5 0 011.5-1.5zM9 11.25h6M9 15h4.5'
 		},
 		{
 			label: 'Vault',
@@ -58,7 +52,7 @@
 <!-- eslint-disable svelte/no-navigation-without-resolve -- static local routes -->
 {#if !kbVisible && !hidden}
 	<nav
-		class="grid shrink-0 grid-cols-5 border-t border-outline-variant bg-surface-container-lowest pb-[var(--safe-bottom)]"
+		class="grid shrink-0 grid-cols-4 border-t border-outline-variant bg-surface-container-lowest pb-[var(--safe-bottom)]"
 	>
 		{#each tabs as tab (tab.label)}
 			<a

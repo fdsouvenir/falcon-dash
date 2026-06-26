@@ -10,6 +10,9 @@ When you hire Fredbot Hosting to deploy AI agents for your business, those agent
 
 Falcon Dash eliminates that complexity. It provides a clean, intuitive web interface where you can do everything you need to adjust advanced settings — without ever touching a command line.
 
+The default surface is Work: an executive view of what the agent is doing, what needs the
+operator's call, what is at risk, and what changed recently.
+
 ## Where it sits in the stack
 
 ```

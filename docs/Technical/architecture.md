@@ -8,7 +8,6 @@ See also:
 - [Stores](stores.md) -- Svelte store layer
 - [Components](components.md) -- UI component architecture
 - [Gateway plugin](gateway-plugin.md) -- `falcon-dash-plugin/` channel and canvas bridge
-- [Work management](work-management.md) -- Work module schema, migration, API, and agent context
 - [Work management](work-management.md) -- Falcon Dash work system
 - [fredbot integration](fredbot-integration.md) -- deployment infrastructure
 - [Deployment](deployment.md) -- build, Docker, reverse proxy setup
@@ -56,7 +55,8 @@ falcon-dash/
 ├── src/
 │   ├── routes/                    # SvelteKit pages and API routes
 │   │   ├── +layout.svelte        # Root layout: auth gating, connection bootstrap
-│   │   ├── +page.svelte          # Chat view (session active) or welcome
+│   │   ├── +page.ts              # Redirects the product home to /work
+│   │   ├── work/                 # Work executive status board, lists, search, and details
 │   │   ├── documents/            # File browser + editor
 │   │   ├── jobs/                 # Cron job management
 │   │   ├── heartbeat/            # System health monitoring
@@ -115,6 +115,10 @@ falcon-dash/
 │       └── context.ts            # Agent context injection
 └── docs/                         # Project documentation
 ```
+
+Work is the product home for the current operator flow. Shared shell and agent-detail back links
+return to `/work`; deeper gateway and agent status remain available through settings and specialist
+surfaces rather than the retired Shell readiness page.
 
 ## Request flow
 

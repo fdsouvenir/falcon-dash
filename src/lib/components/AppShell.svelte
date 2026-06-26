@@ -6,40 +6,29 @@
 	import { resolve } from '$app/paths';
 	import { canvasStore } from '$lib/stores/canvas.js';
 	import { pendingApprovals, resolveApproval, addToDenylist } from '$lib/stores/exec-approvals.js';
-	import { gatewayEvents } from '$lib/gateway-api.js';
 	import type { CanvasSurface } from '$lib/stores/canvas.js';
 	import type { PendingApproval } from '$lib/stores/exec-approvals.js';
 	import {
 		Bell,
+		ClipboardList,
 		FlaskConical,
-		HelpCircle,
 		LockKeyhole,
 		MessageSquareText,
-		Monitor,
 		Search,
 		Settings,
 		ShieldCheck,
-		TerminalSquare,
-		Workflow
+		TerminalSquare
 	} from '@lucide/svelte';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
 	let currentSurface = $state<CanvasSurface | null>(null);
 	let canvasPanelMinimized = $state(false);
 	let approvals = $state<PendingApproval[]>([]);
-	let gatewayState = $state('disconnected');
 	let shellSearch = $state('');
 
 	$effect(() => {
 		const unsub = pendingApprovals.subscribe((v) => {
 			approvals = v;
-		});
-		return unsub;
-	});
-
-	$effect(() => {
-		const unsub = gatewayEvents.state.subscribe((state) => {
-			gatewayState = state;
 		});
 		return unsub;
 	});
@@ -62,8 +51,7 @@
 	});
 
 	const modules = [
-		{ label: 'Shell', href: '/', icon: Monitor, title: 'Shell Readiness Console' },
-		{ label: 'Work', href: '/work', icon: Workflow, title: 'Work' },
+		{ label: 'Work', href: '/work', icon: ClipboardList, title: 'Work' },
 		{ label: 'Vault', href: '/passwords', icon: LockKeyhole, title: 'Vault Operations' },
 		{ label: 'Channels', href: '/channels', icon: MessageSquareText, title: 'Channels Hub' },
 		{ label: 'Labs', href: '/settings', icon: FlaskConical, title: 'Labs / Advanced' }
@@ -71,7 +59,7 @@
 
 	const path = $derived(page.url.pathname);
 	const activeModule = $derived.by(() => {
-		if (path === '/secrets') return modules[2];
+		if (path === '/secrets') return modules[1];
 		if (
 			path.startsWith('/approvals') ||
 			path.startsWith('/documents') ||
@@ -83,17 +71,12 @@
 			path.startsWith('/agents') ||
 			path.startsWith('/heartbeat')
 		) {
-			return modules[4];
+			return modules[3];
 		}
-		return (
-			modules.find((item) => (item.href === '/' ? path === '/' : path.startsWith(item.href))) ??
-			modules[0]
-		);
+		return modules.find((item) => path.startsWith(item.href)) ?? modules[0];
 	});
 
-	const gatewayLabel = $derived(
-		gatewayState === 'ready' ? 'Gateway: Connected' : `Gateway: ${gatewayState}`
-	);
+	const appVersion = `v${__APP_VERSION__}`;
 
 	$effect(() => {
 		if (activeModule.label !== 'Work') {
@@ -103,7 +86,7 @@
 		if (path === '/work/search') shellSearch = page.url.searchParams.get('q') ?? '';
 	});
 
-	type ModuleHref = (typeof modules)[number]['href'];
+	type ModuleHref = (typeof modules)[number]['href'] | '/work';
 
 	function navigate(href: ModuleHref) {
 		goto(resolve(href));
@@ -117,10 +100,10 @@
 	>
 		<button
 			type="button"
-			onclick={() => navigate('/')}
+			onclick={() => navigate('/work')}
 			class="falcon-focus mb-8 flex h-10 w-10 items-center justify-center rounded-lg border border-primary/35 bg-primary text-sm font-bold text-primary-foreground shadow-lg shadow-primary/10 transition hover:bg-primary/90"
-			aria-label="Shell"
-			title="Shell"
+			aria-label="Work"
+			title="Work"
 		>
 			<ShieldCheck class="h-5 w-5" />
 		</button>
@@ -205,34 +188,12 @@
 		</div>
 
 		<div class="flex shrink-0 items-center gap-3">
-			<div class="hidden items-center gap-2 text-xs text-on-surface-variant lg:flex">
-				<span
-					class="h-2 w-2 rounded-full {gatewayState === 'ready'
-						? 'bg-status-active'
-						: 'bg-status-warning'}"
-				></span>
-				<span>{gatewayLabel}</span>
-			</div>
-			{#if activeModule.label !== 'Work'}
-				<button
-					type="button"
-					class="falcon-focus hidden h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 md:inline-flex"
-				>
-					Run checks
-				</button>
-			{/if}
-			<button
-				type="button"
-				class="falcon-focus flex h-8 w-8 items-center justify-center rounded-md text-on-surface-variant transition hover:bg-surface-variant hover:text-primary"
-				aria-label="Help"
-			>
-				<HelpCircle class="h-4 w-4" />
-			</button>
+			<span class="font-mono text-xs font-semibold text-on-surface-variant">{appVersion}</span>
 		</div>
 	</header>
 
 	<nav
-		class="fixed bottom-0 left-0 right-0 z-50 grid h-16 grid-cols-5 border-t border-outline-variant/70 bg-surface-container-lowest/95 shadow-[0_-10px_40px_rgba(0,0,0,0.2)] backdrop-blur md:hidden"
+		class="fixed bottom-0 left-0 right-0 z-50 grid h-16 grid-cols-4 border-t border-outline-variant/70 bg-surface-container-lowest/95 shadow-[0_-10px_40px_rgba(0,0,0,0.2)] backdrop-blur md:hidden"
 		aria-label="Falcon Dash mobile modules"
 	>
 		{#each modules as item (item.label)}
