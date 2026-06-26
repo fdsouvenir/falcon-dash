@@ -3,39 +3,49 @@
 Work is Falcon Dash's operator queue and agent-facing source of truth.
 
 Use `/work` for an executive status board across active projects, operator decisions, blocked or
-waiting work, near-term dates, and recent activity.
+waiting work, near-term dates, and recent activity. Falcon Dash opens to Work by default; `/`
+redirects to `/work`.
 
 ## What It Shows
 
 - Executive signals for work needing your call, at-risk work, near-term dates, and recent changes.
-  These signals jump to the matching overview section instead of opening an arbitrary item.
-- A project health table that treats projects as outcomes and shows health, upcoming dates, next
-  moves, concrete supporting work counts, and blockers
+  These signals jump to the matching overview section instead of opening an arbitrary item, and
+  avoid clipped preview snippets that are hard to read at a glance.
+- A project portfolio pulse that summarizes open project count, blocked work, overdue work,
+  decisions needed, projects without a next move, stale projects, and the overall health mix.
 - Purpose-built overview sections for operator asks, blocked or waiting work, due-next work, and a
   single chronological recent activity log
 - Type-specific pages for projects, change requests, questions, tasks, routines, and observations
-- Type pages with a list on the left and a quick inspector on the right. Row clicks select the
-  inspector in place; they do not open a random or appended detail view.
-- Standalone detail pages for individual Work items. These pages show type-aware context, blockers,
-  related work, and read-only narrative fields.
+- Desktop type pages with the section title above fixed search/filter controls, a scrollable item
+  list, and a quick inspector on the right. Single clicks select and highlight a row in place;
+  double clicks open that item's standalone detail page.
+- Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page
+  directly.
+- Standalone detail pages for individual Work items. These pages show type-aware context, health
+  reasons, literal blockers, related work, and read-only narrative fields. Question detail pages use
+  a sectioned Question Brief so long agent-written Markdown plans remain scannable.
 - Observation feed for captured findings, events, and evidence
 - Work data generated from the new `~/.openclaw/data/falcon-dash/work.db` database
 
 ## Pages
 
 - `/work` -- dashboard overview across all Work types
+- `/` -- redirects to `/work`
 - `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
 - `/work/search?q=...` -- read-only search across existing Work records
 - `/work/projects`, `/work/changes`, `/work/decisions`, `/work/tasks`, `/work/routines`,
   `/work/observations` -- type-specific lists optimized for each Work shape
+- `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
+  portfolio filters such as `focus=blocked`; tasks use due filters such as `focus=due-this-week`;
+  questions use answer/review filters such as `focus=needs-answer`.
 - `/work/{type}/{id}` -- routeable standalone detail page for one Work item
 
 The top Work search field navigates to `/work/search` and searches existing agent-managed Work
 records. It does not create new work. Direct capture or manual creation controls are intentionally
 absent from the primary Work shell until an explicit capture workflow exists.
 
-Quick inspectors and detail pages expose lightweight state controls for status, priority, and
-waiting state. Narrative fields such as title, next action, notes, description, and results are
+Desktop quick inspectors and detail pages expose lightweight state controls for status, priority,
+and waiting state. Narrative fields such as title, next action, notes, description, and results are
 shown as agent-managed record content rather than casual text editors.
 
 In UI copy, `/work/changes` is labeled **Change requests** because those items are implementation

@@ -67,6 +67,11 @@ GET    /api/falcon-dash/modules
 
 There is no active PM API. Old PM routes and stores have been removed from the repo.
 
+`GET /api/work/items` supports `type`, `status`, `area_id`, `parent_item_id`,
+`includeClosed=true`, and `limit` filters. Detail-oriented UI uses `parent_item_id` to load related
+child and sibling work without hydrating the whole Work database. The Projects list intentionally
+hydrates Work items broadly because project filters and summaries depend on child work context.
+
 `GET /api/work/queue` returns actionability buckets:
 
 - `nextActions`

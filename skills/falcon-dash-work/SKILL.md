@@ -74,6 +74,7 @@ List filters:
 - `type`
 - `status`
 - `area_id`
+- `parent_item_id`
 - `includeClosed=true`
 - `limit`
 

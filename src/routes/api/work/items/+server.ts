@@ -8,12 +8,19 @@ export const GET: RequestHandler = async ({ url }) => {
 		const type = url.searchParams.get('type') as WorkItemType | null;
 		const status = url.searchParams.get('status') as WorkStatus | null;
 		const areaId = url.searchParams.get('area_id');
+		const parentItemIdParam = url.searchParams.get('parent_item_id');
 		const includeClosed = url.searchParams.get('includeClosed') === 'true';
 		const limitParam = url.searchParams.get('limit');
 		const items = listWorkItems({
 			type: type ?? undefined,
 			status: status ?? undefined,
 			area_id: areaId ?? undefined,
+			parent_item_id:
+				parentItemIdParam === null
+					? undefined
+					: parentItemIdParam === 'null'
+						? null
+						: Number(parentItemIdParam),
 			includeClosed,
 			limit: limitParam ? Number(limitParam) : undefined
 		});

@@ -1,6 +1,25 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import {
+		focusDefinitionForType,
+		focusDefinitionsForType,
+		literalBlockersFor,
+		matchesWorkFocus,
+		parseQuestionSections,
+		projectPortfolioPulse,
+		projectHealth as deriveProjectHealth,
+		projectNextMove,
+		projectOpenWork as deriveProjectOpenWork,
+		projectUpcomingItem as deriveProjectUpcomingItem,
+		riskFlagsFor,
+		type ProjectHealth,
+		type QuestionBriefSection,
+		type RiskFlag
+	} from '$lib/work/work-insights.js';
 	import {
 		configForType,
 		formatDate,
@@ -30,9 +49,11 @@
 		Clock,
 		RefreshCw,
 		Save,
-		Search
+		Search,
+		X
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { SvelteMap, SvelteURLSearchParams } from 'svelte/reactivity';
 
 	type Mode = 'overview' | 'section' | 'detail';
 
@@ -70,8 +91,6 @@
 		breakdown: string;
 		anchor: OverviewAnchor;
 		tone: string;
-		previewLabel: string;
-		preview: string;
 	};
 
 	type OverviewGroup = {
@@ -84,12 +103,6 @@
 	type TimelineGroup = {
 		title: string;
 		items: WorkItem[];
-	};
-
-	type ProjectHealth = {
-		label: 'On track' | 'Needs attention' | 'Blocked' | 'No date';
-		tone: string;
-		rank: number;
 	};
 
 	type DetailSection = {
@@ -119,8 +132,15 @@
 	let queue = $state<WorkQueue | null>(null);
 	let search = $state('');
 	let statusFilter = $state<WorkStatus | 'open' | 'all'>('open');
+	let focusFilter = $state('');
+	let sourceFilter = $state('');
 	let selectedId = $state<number | null>(null);
 	let draft = $state<Draft>(emptyDraft());
+	let showQuickPane = $state(false);
+
+	const itemRequestCache = new SvelteMap<string, Promise<WorkItem[]>>();
+	const singleItemRequestCache = new SvelteMap<number, Promise<WorkItem>>();
+	const queueRequestCache = new SvelteMap<string, Promise<WorkQueue>>();
 
 	const visibleTypeConfigs: TypeConfig[] = typeConfigs.filter((config) => config.type !== 'area');
 
@@ -138,6 +158,22 @@
 	const recentItems = $derived(
 		[...items].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 14)
 	);
+	const primaryFocusDefinitions = $derived(
+		focusDefinitionsForType(activeType, { primaryOnly: true })
+	);
+	const secondaryFocusDefinitions = $derived(
+		focusDefinitionsForType(activeType).filter((definition) => !definition.primary)
+	);
+	const activeFocusDefinition = $derived(focusDefinitionForType(activeType, focusFilter));
+	const observationSourceOptions = $derived.by(() => {
+		const sources: string[] = [];
+		for (const item of typeItems) {
+			if (item.type !== 'observation') continue;
+			const source = observationSourceLabel(item);
+			if (!sources.includes(source)) sources.push(source);
+		}
+		return sources.sort((a, b) => a.localeCompare(b));
+	});
 	const filteredItems = $derived.by(() => {
 		const source = mode === 'overview' ? items : typeItems;
 		const query = search.trim().toLowerCase();
@@ -151,13 +187,21 @@
 			const matchesStatus =
 				statusFilter === 'all' ||
 				(statusFilter === 'open' ? openStatuses.has(item.status) : item.status === statusFilter);
-			return matchesSearch && matchesStatus;
+			const matchesFocus = matchesWorkFocus(item, focusFilter, items, Date.now(), {
+				source: sourceFilter || null
+			});
+			return matchesSearch && matchesStatus && matchesFocus;
 		});
 	});
 	const selectedItem = $derived.by(() => {
 		if (mode === 'detail') return items.find((item) => item.id === id) ?? null;
 		const selected = items.find((item) => item.id === selectedId);
-		if (selected?.type === activeType) return selected;
+		if (
+			selected?.type === activeType &&
+			filteredItems.some((candidate) => candidate.id === selected.id)
+		) {
+			return selected;
+		}
 		return filteredItems[0] ?? null;
 	});
 
@@ -170,8 +214,14 @@
 	const blockedItems = $derived.by(() =>
 		uniqueItems([
 			...(queue?.blockedRisky ?? []),
-			...openItems.filter((item) => item.status === 'blocked' || item.priority === 'urgent')
-		]).filter(isOpen)
+			...openItems.filter((item) => item.status === 'blocked')
+		]).filter((item) => isOpen(item) && item.status === 'blocked')
+	);
+	const urgentRiskItems = $derived.by(() =>
+		openItems.filter(
+			(item) =>
+				item.priority === 'urgent' && !blockedItems.some((blocked) => blocked.id === item.id)
+		)
 	);
 	const waitingExternalItems = $derived.by(() =>
 		(queue?.waitingOnExternal ?? []).filter(
@@ -187,16 +237,12 @@
 		)
 	);
 	const atRiskItems = $derived.by(() =>
-		uniqueItems([...blockedItems, ...waitingExternalItems, ...waitingAgentItems]).filter(isOpen)
-	);
-	const attentionItems = $derived.by(() =>
 		uniqueItems([
-			...needsOperator,
-			...(queue?.needsReview ?? []),
-			...(queue?.blockedRisky ?? []),
-			...(queue?.waitingOnExternal ?? []),
-			...(queue?.waitingOnAgent ?? [])
-		]).slice(0, 12)
+			...blockedItems,
+			...urgentRiskItems,
+			...waitingExternalItems,
+			...waitingAgentItems
+		]).filter(isOpen)
 	);
 	const needsYourCallGroups = $derived.by<OverviewGroup[]>(() => {
 		return [
@@ -234,7 +280,13 @@
 				title: 'Blocked',
 				description: 'Work that cannot move without clearing a blocker',
 				items: blockedItems,
-				empty: 'No blocked or urgent work'
+				empty: 'No blocked work'
+			},
+			{
+				title: 'Urgent',
+				description: 'High-priority work that needs attention but is not blocked',
+				items: urgentRiskItems,
+				empty: 'No urgent work'
 			},
 			{
 				title: 'Waiting external',
@@ -250,9 +302,7 @@
 			}
 		];
 	});
-	const activeProjects = $derived.by(() =>
-		sortProjectsByHealth(openItems.filter((item) => item.type === 'project')).slice(0, 8)
-	);
+	const projectPortfolio = $derived(projectPortfolioPulse(items));
 	const recentChangedItems = $derived.by(() =>
 		recentItems.filter((item) => isRecent(item.last_activity_at, 7))
 	);
@@ -296,36 +346,28 @@
 				value: needsYourCallItems.length,
 				breakdown: typeBreakdown(needsYourCallItems, 'No operator asks'),
 				anchor: '#needs-you',
-				tone: 'text-status-warning',
-				previewLabel: 'Oldest waiting',
-				preview: labelledPreview(oldestItem(needsYourCallItems), 'Nothing is waiting on you')
+				tone: 'text-status-warning'
 			},
 			{
 				label: 'At risk',
 				value: atRiskItems.length,
 				breakdown: riskBreakdown(),
 				anchor: '#at-risk',
-				tone: 'text-status-danger',
-				previewLabel: 'Highest risk',
-				preview: labelledPreview(highestRiskItem(atRiskItems), 'No urgent blockers')
+				tone: 'text-status-danger'
 			},
 			{
 				label: 'Due next',
 				value: dueNextItems.length,
 				breakdown: typeBreakdown(dueNextItems, 'No near-term dates'),
 				anchor: '#due-next',
-				tone: 'text-status-active',
-				previewLabel: 'Next due',
-				preview: labelledPreview(dueNextItems[0], 'No near-term dates')
+				tone: 'text-status-active'
 			},
 			{
 				label: 'Changed recently',
 				value: recentChangedItems.length,
 				breakdown: typeBreakdown(recentChangedItems, 'No recent updates'),
 				anchor: '#recent',
-				tone: 'text-primary',
-				previewLabel: 'Latest update',
-				preview: labelledPreview(recentChangedItems[0], 'No recent updates')
+				tone: 'text-primary'
 			}
 		];
 	});
@@ -339,11 +381,25 @@
 	});
 
 	$effect(() => {
-		if (activeType === 'observation' && statusFilter === 'open') statusFilter = 'all';
+		if (mode !== 'section') return;
+		const params = page.url.searchParams;
+		const nextSearch = params.get('q') ?? '';
+		const nextStatus = statusFilterFromParam(
+			params.get('status'),
+			defaultStatusForType(activeType)
+		);
+		const nextFocus = focusDefinitionForType(activeType, params.get('focus'))?.key ?? '';
+		const nextSource = params.get('source') ?? '';
+		if (search !== nextSearch) search = nextSearch;
+		if (statusFilter !== nextStatus) statusFilter = nextStatus;
+		if (focusFilter !== nextFocus) focusFilter = nextFocus;
+		if (sourceFilter !== nextSource) sourceFilter = nextSource;
 	});
 
 	onMount(() => {
+		const cleanupQuickPaneQuery = setupQuickPaneQuery();
 		void loadWork();
+		return cleanupQuickPaneQuery;
 	});
 
 	async function loadWork() {
@@ -351,22 +407,115 @@
 		error = null;
 		saveMessage = null;
 		try {
-			const [itemsRes, queueRes] = await Promise.all([
-				fetch('/api/work/items?limit=500&includeClosed=true'),
-				fetch('/api/work/queue')
-			]);
-			if (!itemsRes.ok) throw new Error(`Items request failed: ${itemsRes.status}`);
-			if (!queueRes.ok) throw new Error(`Queue request failed: ${queueRes.status}`);
-			const itemsJson = await itemsRes.json();
-			const queueJson = await queueRes.json();
-			items = itemsJson.items ?? [];
-			queue = queueJson.queue ?? null;
-			selectedId = id ?? queue?.nextActions[0]?.id ?? items[0]?.id ?? null;
+			if (mode === 'overview') {
+				const [loadedItems, loadedQueue] = await Promise.all([
+					loadItems('/api/work/items?limit=500&includeClosed=true'),
+					loadQueue()
+				]);
+				items = loadedItems;
+				queue = loadedQueue;
+				selectedId = id ?? queue?.nextActions[0]?.id ?? items[0]?.id ?? null;
+				return;
+			}
+
+			if (mode === 'detail' && id) {
+				const item = await loadItem(id);
+				items = mergeItems(items, [item]);
+				selectedId = item.id;
+				await ensureItemContext(item);
+				return;
+			}
+
+			const loadedItems = await loadItems(
+				activeType === 'project'
+					? '/api/work/items?limit=500&includeClosed=true'
+					: `/api/work/items?type=${activeType}&limit=500&includeClosed=true`
+			);
+			items =
+				activeType === 'project'
+					? loadedItems
+					: mergeItems(
+							items.filter((item) => item.type !== activeType),
+							loadedItems
+						);
+			const loadedTypeItems = loadedItems.filter((item) => item.type === activeType);
+			selectedId = id ?? loadedTypeItems[0]?.id ?? null;
+			const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
+			if (selected) await ensureItemContext(selected);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to load Work';
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function loadItems(url: string): Promise<WorkItem[]> {
+		const cached = itemRequestCache.get(url);
+		if (cached) return cached;
+		const request = fetch(url)
+			.then(async (response) => {
+				if (!response.ok) throw new Error(`Items request failed: ${response.status}`);
+				const json = await response.json();
+				return (json.items ?? []) as WorkItem[];
+			})
+			.finally(() => itemRequestCache.delete(url));
+		itemRequestCache.set(url, request);
+		return request;
+	}
+
+	async function loadItem(itemId: number): Promise<WorkItem> {
+		const cached = singleItemRequestCache.get(itemId);
+		if (cached) return cached;
+		const request = fetch(`/api/work/items/${itemId}`)
+			.then(async (response) => {
+				if (!response.ok) throw new Error(`Item request failed: ${response.status}`);
+				return (await response.json()) as WorkItem;
+			})
+			.finally(() => singleItemRequestCache.delete(itemId));
+		singleItemRequestCache.set(itemId, request);
+		return request;
+	}
+
+	async function loadQueue(): Promise<WorkQueue> {
+		const cached = queueRequestCache.get('queue');
+		if (cached) return cached;
+		const request = fetch('/api/work/queue')
+			.then(async (response) => {
+				if (!response.ok) throw new Error(`Queue request failed: ${response.status}`);
+				const json = await response.json();
+				return (json.queue ?? null) as WorkQueue;
+			})
+			.finally(() => queueRequestCache.delete('queue'));
+		queueRequestCache.set('queue', request);
+		return request;
+	}
+
+	async function ensureItemContext(item: WorkItem) {
+		const requests = [
+			loadItems(`/api/work/items?parent_item_id=${item.id}&includeClosed=true&limit=500`)
+		];
+		if (item.parent_item_id) {
+			requests.push(
+				loadItems(
+					`/api/work/items?parent_item_id=${item.parent_item_id}&includeClosed=true&limit=500`
+				)
+			);
+			if (!items.some((candidate) => candidate.id === item.parent_item_id)) {
+				requests.push(loadItem(item.parent_item_id).then((parent) => [parent]));
+			}
+		}
+		const groups = await Promise.all(requests);
+		items = mergeItems(items, groups.flat());
+	}
+
+	function mergeItems(current: WorkItem[], incoming: WorkItem[]): WorkItem[] {
+		const merged = [...current];
+		for (const item of incoming) {
+			const index = merged.findIndex((candidate) => candidate.id === item.id);
+			if (index === -1) merged.push(item);
+			else merged[index] = item;
+		}
+		return merged;
 	}
 
 	async function saveSelected(event: SubmitEvent) {
@@ -384,6 +533,10 @@
 			if (!response.ok) throw new Error(`Save failed: ${response.status}`);
 			const updated = (await response.json()) as WorkItem;
 			items = items.map((item) => (item.id === updated.id ? updated : item));
+			singleItemRequestCache.delete(updated.id);
+			itemRequestCache.clear();
+			queueRequestCache.clear();
+			if (mode === 'overview') queue = await loadQueue();
 			saveMessage = 'Saved';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to save Work item';
@@ -437,10 +590,6 @@
 		};
 	}
 
-	function typeCount(type: WorkItemType): number {
-		return items.filter((item) => item.type === type && openStatuses.has(item.status)).length;
-	}
-
 	function isOpen(item: WorkItem): boolean {
 		return openStatuses.has(item.status);
 	}
@@ -478,52 +627,24 @@
 	}
 
 	function blockersFor(item: WorkItem): WorkItem[] {
-		const parent = parentFor(item);
-		const source = uniqueItems([
-			item,
-			...childrenFor(item),
-			...(parent ? childrenFor(parent) : [])
-		]);
-		return source
-			.filter((candidate) => candidate.status === 'blocked' || candidate.priority === 'urgent')
-			.sort(
-				(a, b) =>
-					statusRank(a.status) - statusRank(b.status) ||
-					priorityRank(a.priority) - priorityRank(b.priority)
-			);
+		return literalBlockersFor(item, insightRelatedItemsFor(item));
 	}
 
-	function childCount(item: WorkItem, type?: WorkItemType): number {
-		return childrenFor(item).filter(
-			(child) => openStatuses.has(child.status) && (!type || child.type === type)
-		).length;
+	function healthReasonsFor(item: WorkItem): RiskFlag[] {
+		return riskFlagsFor(item, insightRelatedItemsFor(item));
+	}
+
+	function insightRelatedItemsFor(item: WorkItem): WorkItem[] {
+		const parent = parentFor(item);
+		return uniqueItems([...(parent ? [parent] : []), ...childrenFor(item), ...siblingsFor(item)]);
 	}
 
 	function projectOpenWork(project: WorkItem): string {
-		const parts = [
-			[childCount(project, 'task'), 'task'],
-			[childCount(project, 'change'), 'change'],
-			[childCount(project, 'decision'), 'question']
-		]
-			.filter(([count]) => Number(count) > 0)
-			.map(([count, label]) => `${count} ${label}${Number(count) === 1 ? '' : 's'}`);
-		return parts.length ? parts.join(' · ') : 'No tracked next steps';
+		return deriveProjectOpenWork(project, childrenFor(project));
 	}
 
 	function projectUpcomingItem(project: WorkItem): WorkItem | null {
-		const candidates = [project, ...childrenFor(project)].filter(
-			(item) =>
-				openStatuses.has(item.status) &&
-				(dateValue(item.due_date) !== Number.MAX_SAFE_INTEGER ||
-					dateValue(item.scheduled_at) !== Number.MAX_SAFE_INTEGER)
-		);
-		return (
-			[...candidates].sort(
-				(a, b) =>
-					Math.min(dateValue(a.due_date), dateValue(a.scheduled_at)) -
-					Math.min(dateValue(b.due_date), dateValue(b.scheduled_at))
-			)[0] ?? null
-		);
+		return deriveProjectUpcomingItem(project, childrenFor(project));
 	}
 
 	function projectUpcoming(project: WorkItem): string {
@@ -531,49 +652,14 @@
 		if (!upcoming) return 'No date on the calendar';
 		const date = upcoming.due_date ?? upcoming.scheduled_at;
 		const prefix = upcoming.id === project.id ? 'Project' : typeLabel(upcoming);
-		return `${prefix} · ${formatDate(date)}`;
-	}
-
-	function projectDateValue(project: WorkItem): number {
-		const upcoming = projectUpcomingItem(project);
-		if (!upcoming) return Number.MAX_SAFE_INTEGER;
-		return Math.min(dateValue(upcoming.due_date), dateValue(upcoming.scheduled_at));
+		const overdue = dateValue(date) < startOfToday();
+		return overdue
+			? `Overdue · ${prefix} · ${formatDate(date)}`
+			: `${prefix} · ${formatDate(date)}`;
 	}
 
 	function projectHealth(project: WorkItem): ProjectHealth {
-		if (blockerCount(project) > 0 || project.status === 'blocked') {
-			return { label: 'Blocked', tone: 'text-status-danger', rank: 0 };
-		}
-
-		const needsAttention =
-			project.status === 'needs_review' ||
-			project.waiting_on === 'operator' ||
-			childrenFor(project).some(
-				(item) =>
-					isOpen(item) &&
-					(item.status === 'needs_review' ||
-						item.waiting_on === 'operator' ||
-						(item.type === 'decision' && item.status !== 'complete'))
-			);
-		if (needsAttention) {
-			return { label: 'Needs attention', tone: 'text-status-warning', rank: 1 };
-		}
-
-		if (projectDateValue(project) === Number.MAX_SAFE_INTEGER) {
-			return { label: 'No date', tone: 'text-status-muted', rank: 2 };
-		}
-
-		return { label: 'On track', tone: 'text-status-active', rank: 3 };
-	}
-
-	function healthPillClass(label: ProjectHealth['label']): string {
-		if (label === 'Blocked')
-			return 'border-status-danger/35 bg-status-danger-bg text-status-danger';
-		if (label === 'Needs attention')
-			return 'border-status-warning/35 bg-status-warning-bg text-status-warning';
-		if (label === 'On track')
-			return 'border-status-active/35 bg-status-active-bg text-status-active';
-		return 'border-outline-variant/60 bg-status-muted-bg text-on-surface-variant';
+		return deriveProjectHealth(project, childrenFor(project));
 	}
 
 	function signalAccentClass(anchor: OverviewAnchor): string {
@@ -583,37 +669,12 @@
 		return 'bg-primary';
 	}
 
-	function sortProjectsByHealth(source: WorkItem[]): WorkItem[] {
-		return [...source].sort((a, b) => {
-			const healthDiff = projectHealth(a).rank - projectHealth(b).rank;
-			if (healthDiff !== 0) return healthDiff;
-			const dateDiff = projectDateValue(a) - projectDateValue(b);
-			if (dateDiff !== 0) return dateDiff;
-			return b.last_activity_at - a.last_activity_at;
-		});
-	}
-
 	function projectOperatorMove(project: WorkItem): string {
-		const blocked = childrenFor(project).find(
-			(item) =>
-				openStatuses.has(item.status) && (item.status === 'blocked' || item.priority === 'urgent')
-		);
-		if (blocked) return `Clear: ${blocked.title}`;
-		const question = childrenFor(project).find(
-			(item) => openStatuses.has(item.status) && item.type === 'decision'
-		);
-		if (question) return `Decide: ${question.title}`;
-		const task = childrenFor(project).find(
-			(item) => openStatuses.has(item.status) && item.type === 'task'
-		);
-		return firstText(project.next_action, task?.next_action, task?.title, 'No operator action set');
+		return projectNextMove(project, childrenFor(project));
 	}
 
 	function blockerCount(item: WorkItem): number {
-		const childBlockers = childrenFor(item).filter(
-			(child) => child.status === 'blocked' || child.priority === 'urgent'
-		).length;
-		return childBlockers + (item.status === 'blocked' || item.priority === 'urgent' ? 1 : 0);
+		return blockersFor(item).length;
 	}
 
 	function firstText(...values: Array<string | number | null | undefined>): string {
@@ -648,27 +709,6 @@
 		return sentenceCase(formatStatus(item.status));
 	}
 
-	function labelledPreview(item: WorkItem | null | undefined, fallback: string): string {
-		if (!item) return fallback;
-		return `${typeLabel(item)} · ${item.title}`;
-	}
-
-	function oldestItem(source: WorkItem[]): WorkItem | null {
-		return [...source].sort((a, b) => a.last_activity_at - b.last_activity_at)[0] ?? null;
-	}
-
-	function highestRiskItem(source: WorkItem[]): WorkItem | null {
-		return (
-			[...source].sort((a, b) => {
-				return (
-					statusRank(a.status) - statusRank(b.status) ||
-					priorityRank(a.priority) - priorityRank(b.priority) ||
-					a.last_activity_at - b.last_activity_at
-				);
-			})[0] ?? null
-		);
-	}
-
 	function pluralize(count: number, singular: string, plural = `${singular}s`): string {
 		return `${count} ${count === 1 ? singular : plural}`;
 	}
@@ -695,6 +735,7 @@
 	function riskBreakdown(): string {
 		const parts = [
 			blockedItems.length ? `${blockedItems.length} blocked` : null,
+			urgentRiskItems.length ? `${urgentRiskItems.length} urgent` : null,
 			waitingExternalItems.length
 				? pluralize(waitingExternalItems.length, 'external wait', 'external waits')
 				: null,
@@ -702,7 +743,7 @@
 				? pluralize(waitingAgentItems.length, 'agent follow-up', 'agent follow-ups')
 				: null
 		].filter(Boolean);
-		return parts.length ? parts.join(' · ') : 'No urgent blockers';
+		return parts.length ? parts.join(' · ') : 'No risk flags';
 	}
 
 	function itemTimelineDate(item: WorkItem): number {
@@ -741,8 +782,138 @@
 		return `${label} ${formatDate(item.type === 'routine' ? item.scheduled_at : item.due_date)}`;
 	}
 
+	function defaultStatusForType(type: WorkItemType): WorkStatus | 'open' | 'all' {
+		return type === 'observation' ? 'all' : 'open';
+	}
+
+	function statusFilterFromParam(
+		value: string | null,
+		fallback: WorkStatus | 'open' | 'all'
+	): WorkStatus | 'open' | 'all' {
+		if (value === 'open' || value === 'all') return value;
+		if (workStatuses.includes(value as WorkStatus)) return value as WorkStatus;
+		return fallback;
+	}
+
+	function updateSectionQuery(
+		updates: Partial<{
+			q: string;
+			status: WorkStatus | 'open' | 'all';
+			focus: string;
+			source: string;
+		}>
+	) {
+		if (mode !== 'section') return;
+		const params = new SvelteURLSearchParams(page.url.searchParams);
+		const defaultStatus = defaultStatusForType(activeType);
+		if ('q' in updates) setQueryValue(params, 'q', updates.q?.trim() ?? '');
+		if ('focus' in updates) setQueryValue(params, 'focus', updates.focus ?? '');
+		if ('source' in updates) setQueryValue(params, 'source', updates.source ?? '');
+		if ('status' in updates) {
+			const value = updates.status ?? defaultStatus;
+			if (value === defaultStatus) params.delete('status');
+			else params.set('status', value);
+		}
+		if (params.get('focus') !== 'source') params.delete('source');
+		const query = params.toString();
+		void goto(resolve(`/work/${activeConfig.path}${query ? `?${query}` : ''}`), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
+	function setQueryValue(params: URLSearchParams, key: string, value: string) {
+		if (value) params.set(key, value);
+		else params.delete(key);
+	}
+
+	function handleSearchInput(event: Event) {
+		const value = event.currentTarget instanceof HTMLInputElement ? event.currentTarget.value : '';
+		search = value;
+		updateSectionQuery({ q: value });
+	}
+
+	function setStatusFilter(value: WorkStatus | 'open' | 'all') {
+		statusFilter = value;
+		updateSectionQuery({ status: value });
+	}
+
+	function toggleFocusFilter(key: string) {
+		const nextFocus = focusFilter === key ? '' : key;
+		const definition = focusDefinitionForType(activeType, nextFocus);
+		focusFilter = nextFocus;
+		if (!nextFocus) {
+			sourceFilter = '';
+			updateSectionQuery({ focus: '', source: '' });
+			return;
+		}
+		const status = definition?.statusMode ?? statusFilter;
+		if (definition?.statusMode) statusFilter = definition.statusMode;
+		updateSectionQuery({
+			focus: nextFocus,
+			status,
+			source: nextFocus === 'source' ? sourceFilter : ''
+		});
+	}
+
+	function setSourceFilter(value: string) {
+		sourceFilter = value;
+		if (value && focusFilter !== 'source') focusFilter = 'source';
+		if (!value && focusFilter === 'source') focusFilter = '';
+		updateSectionQuery({ focus: value ? 'source' : focusFilter, source: value });
+	}
+
+	function clearListFilters() {
+		search = '';
+		statusFilter = defaultStatusForType(activeType);
+		focusFilter = '';
+		sourceFilter = '';
+		updateSectionQuery({ q: '', status: statusFilter, focus: '', source: '' });
+	}
+
+	function hasActiveListFilters(): boolean {
+		return (
+			Boolean(search.trim()) ||
+			Boolean(focusFilter) ||
+			Boolean(sourceFilter) ||
+			statusFilter !== defaultStatusForType(activeType)
+		);
+	}
+
+	function observationSourceLabel(item: WorkItem): string {
+		return firstText(item.owner, item.area_id, 'Work');
+	}
+
 	function inspect(item: WorkItem) {
 		selectedId = item.id;
+	}
+
+	function setupQuickPaneQuery(): () => void {
+		const query = window.matchMedia('(min-width: 1280px)');
+		showQuickPane = query.matches;
+		const update = (event: MediaQueryListEvent) => {
+			showQuickPane = event.matches;
+		};
+		query.addEventListener('change', update);
+		return () => query.removeEventListener('change', update);
+	}
+
+	function handleSectionRowClick(item: WorkItem) {
+		if (showQuickPane) {
+			inspect(item);
+			return;
+		}
+		openDetail(item);
+	}
+
+	function handleSectionRowDoubleClick(item: WorkItem) {
+		if (!showQuickPane) return;
+		openDetail(item);
+	}
+
+	function openDetail(item: WorkItem) {
+		void goto(resolve(routeFor(item)));
 	}
 
 	function parentFor(item: WorkItem): WorkItem | null {
@@ -792,37 +963,6 @@
 		if (!value) return Number.MAX_SAFE_INTEGER;
 		const parsed = new Date(value).valueOf();
 		return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
-	}
-
-	function withinDays(value: string | null | undefined, days: number): boolean {
-		const parsed = dateValue(value);
-		if (parsed === Number.MAX_SAFE_INTEGER) return false;
-		const now = Date.now();
-		const horizon = now + days * 24 * 60 * 60 * 1000;
-		return parsed >= now && parsed <= horizon;
-	}
-
-	function metricFor(type: WorkItemType, label: string): number {
-		if (label === 'Attention') return attentionItems.filter((item) => item.type === type).length;
-		if (label === 'Blocked')
-			return typeItems.filter((item) => item.status === 'blocked' || item.priority === 'urgent')
-				.length;
-		if (label === 'Waiting') return typeItems.filter((item) => item.waiting_on).length;
-		if (label === 'Due soon')
-			return typeItems.filter((item) => withinDays(item.due_date, 14)).length;
-		if (label === 'Scheduled')
-			return typeItems.filter((item) => withinDays(item.scheduled_at, 14)).length;
-		return typeCount(type);
-	}
-
-	function pageMetricLabels(type: WorkItemType): string[] {
-		if (type === 'project') return ['Active', 'Attention', 'Blocked'];
-		if (type === 'change') return ['Open', 'Attention', 'Waiting'];
-		if (type === 'decision') return ['Open', 'Attention', 'Waiting'];
-		if (type === 'task') return ['Open', 'Due soon', 'Blocked'];
-		if (type === 'routine') return ['Open', 'Scheduled', 'Attention'];
-		if (type === 'observation') return ['Open', 'Attention', 'Waiting'];
-		return ['Open', 'Attention', 'Waiting'];
 	}
 
 	function compactDetail(item: WorkItem): string {
@@ -895,6 +1035,33 @@
 			];
 		}
 		return [{ title: 'Summary', text: compactDetail(item) }];
+	}
+
+	function questionMarkdownContent(item: WorkItem): string {
+		return firstText(item.body, item.description, 'No question context recorded yet.');
+	}
+
+	function questionSections(item: WorkItem): QuestionBriefSection[] {
+		return parseQuestionSections(questionMarkdownContent(item));
+	}
+
+	function questionPrimaryAnswer(item: WorkItem): string {
+		if (item.next_action?.trim()) return item.next_action;
+		const sections = questionSections(item);
+		const preferred = sections.find((section) =>
+			['question', 'recommendation', 'approval'].some((word) =>
+				section.title.toLowerCase().includes(word)
+			)
+		);
+		return preferred?.content ?? detailLead(item);
+	}
+
+	function questionCategoryLabel(category: QuestionBriefSection['category']): string {
+		if (category === 'decision') return 'Decision';
+		if (category === 'risks') return 'Risks';
+		if (category === 'approval') return 'Approval';
+		if (category === 'history') return 'History';
+		return 'Context';
 	}
 
 	function quickFacts(item: WorkItem): DetailFact[] {
@@ -1039,29 +1206,6 @@
 					</nav>
 				</section>
 
-				{#if mode === 'section'}
-					<section class="falcon-soft-panel grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
-						<div class="min-w-0">
-							<h2 class="text-2xl font-semibold leading-tight text-on-surface sm:text-3xl">
-								{activeConfig.title}
-							</h2>
-							<p class="mt-2 max-w-3xl text-sm leading-6 text-on-surface-variant">
-								{activeConfig.summary}
-							</p>
-						</div>
-						<div class="grid grid-cols-3 gap-2 lg:w-[24rem]">
-							{#each pageMetricLabels(activeType) as metric (metric)}
-								<div class="falcon-subtle-panel p-3">
-									<p class="text-xs text-on-surface-variant">{metric}</p>
-									<p class="mt-1 text-2xl font-semibold text-on-surface">
-										{metricFor(activeType, metric)}
-									</p>
-								</div>
-							{/each}
-						</div>
-					</section>
-				{/if}
-
 				{#if mode === 'overview'}
 					<section
 						class="falcon-soft-panel overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.14)]"
@@ -1088,15 +1232,9 @@
 											{signal.value}
 										</p>
 									</div>
-									<p class="mt-3 line-clamp-2 min-h-9 text-sm leading-5 text-on-surface-variant">
+									<p class="mt-3 text-sm leading-6 text-on-surface-variant">
 										{signal.breakdown}
 									</p>
-									<div class="mt-3 flex min-w-0 items-center gap-2 text-xs">
-										<span class="shrink-0 font-semibold text-on-surface-variant">
-											{signal.previewLabel}
-										</span>
-										<span class="min-w-0 truncate text-on-surface">{signal.preview}</span>
-									</div>
 								</a>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{/each}
@@ -1104,85 +1242,61 @@
 					</section>
 
 					<section
-						id="project-health"
-						data-testid="project-health"
+						id="project-portfolio"
+						data-testid="project-portfolio"
 						tabindex="-1"
 						class="scroll-mt-24 overflow-hidden rounded-lg border border-outline-variant/65 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
 					>
 						<div
-							class="flex flex-wrap items-end justify-between gap-3 border-b border-outline-variant/55 bg-surface-2/35 px-4 py-3"
+							class="flex flex-wrap items-end justify-between gap-3 border-b border-outline-variant/55 bg-surface-2/30 px-4 py-3"
 						>
 							<div>
-								<h3 class="text-xl font-semibold leading-tight text-on-surface">Project health</h3>
-								<p class="mt-1 max-w-2xl text-sm leading-5 text-on-surface-variant">
-									Active outcomes sorted by risk, next date, and recent movement.
-								</p>
+								<h3 class="text-xl font-semibold leading-tight text-on-surface">
+									Project portfolio
+								</h3>
 							</div>
 							<a
 								href={resolve('/work/projects')}
 								class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
 							>
-								All projects <ArrowRight class="h-4 w-4" />
+								Open projects <ArrowRight class="h-4 w-4" />
 							</a>
 						</div>
 						<div
-							class="hidden border-b border-outline-variant/45 bg-surface-0/35 px-4 py-2 text-xs font-semibold text-on-surface-variant lg:grid lg:grid-cols-[minmax(16rem,1.25fr)_9rem_minmax(10rem,0.8fr)_minmax(16rem,1fr)_minmax(10rem,0.75fr)] lg:gap-4"
+							class="grid divide-y divide-outline-variant/40 md:grid-cols-3 md:divide-x md:divide-y-0 xl:grid-cols-6"
 						>
-							<span>Project</span>
-							<span>Health</span>
-							<span>Next date</span>
-							<span>Next move</span>
-							<span>Open work</span>
-						</div>
-						<div class="divide-y divide-outline-variant/35">
-							{#each activeProjects as project (project.id)}
-								{@const health = projectHealth(project)}
+							{#each projectPortfolio.metrics as metric (metric.key)}
+								<!-- eslint-disable svelte/no-navigation-without-resolve -->
 								<a
-									href={resolve(routeFor(project))}
-									data-testid="project-health-row"
-									class="grid gap-3 px-4 py-4 transition hover:bg-surface-2/55 lg:grid-cols-[minmax(16rem,1.25fr)_9rem_minmax(10rem,0.8fr)_minmax(16rem,1fr)_minmax(10rem,0.75fr)] lg:items-center lg:gap-4"
+									href={metric.href}
+									data-testid={`project-portfolio-metric-${metric.key}`}
+									class="falcon-focus px-4 py-3 transition hover:bg-surface-2/55"
 								>
-									<div class="min-w-0">
-										<div class="flex min-w-0 flex-wrap items-center gap-2">
-											<span class="truncate font-semibold text-on-surface">{project.title}</span>
-											<span class="text-xs text-on-surface-variant">{itemDisplayId(project)}</span>
-										</div>
-										<p class="mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant/90">
-											{firstText(project.description, project.body, 'Outcome not written yet')}
-										</p>
-									</div>
-									<div>
-										<p class="text-xs text-on-surface-variant lg:hidden">Health</p>
-										<span
-											class="mt-1 inline-flex rounded-md border px-2 py-1 text-xs font-semibold {healthPillClass(
-												health.label
-											)}"
-										>
-											{health.label}
-										</span>
-									</div>
-									<div>
-										<p class="text-xs text-on-surface-variant lg:hidden">Next date</p>
-										<p class="mt-1 text-sm font-semibold leading-5 text-on-surface">
-											{projectUpcoming(project)}
-										</p>
-									</div>
-									<div>
-										<p class="text-xs text-on-surface-variant lg:hidden">Next move</p>
-										<p class="mt-1 line-clamp-2 text-sm leading-5 text-on-surface">
-											{projectOperatorMove(project)}
-										</p>
-									</div>
-									<div>
-										<p class="text-xs text-on-surface-variant lg:hidden">Open work</p>
-										<p class="mt-1 text-sm font-semibold leading-5 text-on-surface">
-											{projectOpenWork(project)}
+									<div class="flex items-start justify-between gap-3">
+										<p class="text-sm font-semibold text-on-surface">{metric.label}</p>
+										<p class="text-2xl font-semibold leading-none {metric.tone}">
+											{metric.value}
 										</p>
 									</div>
 								</a>
-							{:else}
-								<p class="p-4 text-sm text-on-surface-variant">No active projects.</p>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{/each}
+						</div>
+						<div class="border-t border-outline-variant/45 px-4 py-3">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="mr-1 text-xs font-semibold text-on-surface-variant"> Health mix </span>
+								{#each projectPortfolio.healthDistribution as health (health.label)}
+									<a
+										href={resolve(
+											`/work/projects?focus=${health.label.toLowerCase().replaceAll(' ', '-')}`
+										)}
+										class="falcon-focus inline-flex items-center gap-2 rounded-md border border-outline-variant/55 px-2.5 py-1 text-xs font-semibold transition hover:bg-surface-2"
+									>
+										<span class={health.tone}>{health.value}</span>
+										<span class="text-on-surface-variant">{health.label}</span>
+									</a>
+								{/each}
+							</div>
 						</div>
 					</section>
 
@@ -1196,9 +1310,6 @@
 							<div class="border-b border-outline-variant/45 px-4 py-3">
 								<div>
 									<h3 class="text-lg font-semibold text-on-surface">Needs your call</h3>
-									<p class="mt-1 text-sm text-on-surface-variant">
-										Grouped by the kind of judgment or approval being asked for.
-									</p>
 								</div>
 							</div>
 							<div class="divide-y divide-outline-variant/35">
@@ -1212,9 +1323,6 @@
 														{group.items.length}
 													</span>
 												</div>
-												<p class="mt-0.5 text-xs leading-5 text-on-surface-variant">
-													{group.description}
-												</p>
 											</div>
 										</div>
 										<div
@@ -1232,9 +1340,6 @@
 														</div>
 														<p class="mt-1 truncate text-sm font-semibold text-on-surface">
 															{item.title}
-														</p>
-														<p class="mt-1 line-clamp-1 text-xs leading-5 text-on-surface-variant">
-															{compactDetail(item)}
 														</p>
 													</div>
 													<span class="hidden text-right text-xs text-on-surface-variant md:block">
@@ -1262,9 +1367,6 @@
 						>
 							<div class="border-b border-outline-variant/45 px-4 py-3">
 								<h3 class="text-lg font-semibold text-on-surface">At risk and waiting</h3>
-								<p class="mt-1 text-sm text-on-surface-variant">
-									Blocked work and dependencies that can stall real-world progress.
-								</p>
 							</div>
 							<div class="divide-y divide-outline-variant/35">
 								{#each atRiskGroups as group (group.title)}
@@ -1277,9 +1379,6 @@
 														{group.items.length}
 													</span>
 												</div>
-												<p class="mt-0.5 text-xs leading-5 text-on-surface-variant">
-													{group.description}
-												</p>
 											</div>
 										</div>
 										<div
@@ -1299,9 +1398,6 @@
 														</div>
 														<p class="mt-1 truncate text-sm font-semibold text-on-surface">
 															{item.title}
-														</p>
-														<p class="mt-1 line-clamp-1 text-xs leading-5 text-on-surface-variant">
-															{compactDetail(item)}
 														</p>
 													</div>
 													<span class="hidden text-right text-xs text-on-surface-variant md:block">
@@ -1330,9 +1426,6 @@
 					>
 						<div class="border-b border-outline-variant/45 px-4 py-3">
 							<h3 class="text-lg font-semibold text-on-surface">Due next</h3>
-							<p class="mt-1 text-sm text-on-surface-variant">
-								Tasks and routine checks on the near-term calendar.
-							</p>
 						</div>
 						<div
 							class="grid divide-y divide-outline-variant/35 lg:grid-cols-4 lg:divide-x lg:divide-y-0"
@@ -1388,7 +1481,6 @@
 						>
 							<div>
 								<h3 class="text-lg font-semibold text-on-surface">Recent activity</h3>
-								<p class="mt-1 text-sm text-on-surface-variant">Newest Work updates in order.</p>
 							</div>
 							<Clock class="h-5 w-5 text-on-surface-variant" />
 						</div>
@@ -1419,230 +1511,498 @@
 					</section>
 				{:else if mode === 'detail'}
 					{#if selectedItem}
-						<section
-							class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
-							data-testid="work-detail-page"
-						>
-							<div class="border-b border-outline-variant/55 bg-surface-2/35 px-4 py-4 sm:px-5">
-								<a
-									href={resolve(`/work/${activeConfig.path}`)}
-									class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
-								>
-									<ArrowRight class="h-4 w-4 rotate-180" />
-									Back to {activeConfig.label.toLowerCase()}
-								</a>
-								<div class="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start">
-									<div class="min-w-0">
-										<div class="flex flex-wrap items-center gap-2">
-											<span class="falcon-chip px-2 py-1 text-xs">
-												{itemDisplayId(selectedItem)}
-											</span>
-											<span class="text-sm {statusTone(selectedItem.status)}">
-												{formatStatus(selectedItem.status)}
-											</span>
-											<span class="text-sm {priorityTone(selectedItem.priority)}">
-												{sentenceCase(selectedItem.priority ?? 'normal')}
-											</span>
+						{#if selectedItem.type === 'decision'}
+							<section
+								class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
+								data-testid="work-detail-page"
+							>
+								<div class="border-b border-outline-variant/55 bg-surface-2/35 px-4 py-4 sm:px-5">
+									<a
+										href={resolve(`/work/${activeConfig.path}`)}
+										class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
+									>
+										<ArrowRight class="h-4 w-4 rotate-180" />
+										Back to questions
+									</a>
+									<div class="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start">
+										<div class="min-w-0">
+											<div class="flex flex-wrap items-center gap-2">
+												<span class="falcon-chip px-2 py-1 text-xs">
+													{itemDisplayId(selectedItem)}
+												</span>
+												<span class="text-sm {statusTone(selectedItem.status)}">
+													{formatStatus(selectedItem.status)}
+												</span>
+												<span class="text-sm {priorityTone(selectedItem.priority)}">
+													{sentenceCase(selectedItem.priority ?? 'normal')}
+												</span>
+											</div>
+											<p
+												class="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary"
+											>
+												Question Brief
+											</p>
+											<h2
+												class="mt-2 max-w-5xl text-3xl font-semibold leading-tight text-on-surface sm:text-4xl"
+											>
+												{selectedItem.title}
+											</h2>
 										</div>
-										<h2
-											class="mt-3 max-w-5xl text-3xl font-semibold leading-tight text-on-surface sm:text-4xl"
-										>
-											{selectedItem.title}
-										</h2>
-										<p class="mt-3 max-w-4xl text-sm leading-6 text-on-surface-variant">
-											{detailLead(selectedItem)}
-										</p>
-									</div>
-									<form class="falcon-subtle-panel space-y-3 p-4" onsubmit={saveSelected}>
-										<div class="flex items-center justify-between gap-3">
-											<h3 class="text-sm font-semibold text-on-surface">State</h3>
-											{#if saveMessage}<span class="text-xs text-status-active">{saveMessage}</span
-												>{/if}
-										</div>
-										<div class="grid grid-cols-2 gap-2">
+										<form class="falcon-subtle-panel space-y-3 p-4" onsubmit={saveSelected}>
+											<div class="flex items-center justify-between gap-3">
+												<h3 class="text-sm font-semibold text-on-surface">State</h3>
+												{#if saveMessage}<span class="text-xs text-status-active"
+														>{saveMessage}</span
+													>{/if}
+											</div>
+											<div class="grid grid-cols-2 gap-2">
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Status
+													<select
+														bind:value={draft.status}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														{#each workStatuses as status (status)}
+															<option value={status}>{sentenceCase(formatStatus(status))}</option>
+														{/each}
+													</select>
+												</label>
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Priority
+													<select
+														bind:value={draft.priority}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														<option value="low">Low</option>
+														<option value="normal">Normal</option>
+														<option value="high">High</option>
+														<option value="urgent">Urgent</option>
+													</select>
+												</label>
+											</div>
 											<label class="grid gap-1 text-xs text-on-surface-variant">
-												Status
+												Waiting on
 												<select
-													bind:value={draft.status}
+													bind:value={draft.waiting_on}
 													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
 												>
-													{#each workStatuses as status (status)}
-														<option value={status}>{sentenceCase(formatStatus(status))}</option>
+													{#each waitingOptions as option (option.value)}
+														<option value={option.value}>{option.label}</option>
 													{/each}
 												</select>
 											</label>
-											<label class="grid gap-1 text-xs text-on-surface-variant">
-												Priority
-												<select
-													bind:value={draft.priority}
-													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-												>
-													<option value="low">Low</option>
-													<option value="normal">Normal</option>
-													<option value="high">High</option>
-													<option value="urgent">Urgent</option>
-												</select>
-											</label>
-										</div>
-										<label class="grid gap-1 text-xs text-on-surface-variant">
-											Waiting on
-											<select
-												bind:value={draft.waiting_on}
-												class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+											<button
+												type="submit"
+												disabled={saving}
+												class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
 											>
-												{#each waitingOptions as option (option.value)}
-													<option value={option.value}>{option.label}</option>
-												{/each}
-											</select>
-										</label>
-										<button
-											type="submit"
-											disabled={saving}
-											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-										>
-											<Save class="h-4 w-4" />
-											{saving ? 'Saving...' : 'Save state'}
-										</button>
-										{#if error}<p class="text-sm text-status-danger">{error}</p>{/if}
-									</form>
+												<Save class="h-4 w-4" />
+												{saving ? 'Saving...' : 'Save state'}
+											</button>
+											{#if error}<p class="text-sm text-status-danger">{error}</p>{/if}
+										</form>
+									</div>
 								</div>
-							</div>
 
-							<div class="grid gap-5 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-								<div class="min-w-0 space-y-5">
-									<div class="grid gap-3 md:grid-cols-4">
-										{#each quickFacts(selectedItem) as fact (fact.label)}
-											<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
-												<p class="text-xs text-on-surface-variant">{fact.label}</p>
-												<p
-													class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
-														''}"
+								<div class="grid gap-5 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
+									<div class="min-w-0 space-y-5">
+										<div class="grid gap-3 md:grid-cols-4">
+											{#each quickFacts(selectedItem) as fact (fact.label)}
+												<div
+													class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3"
 												>
-													{fact.value}
-												</p>
-											</div>
-										{/each}
-									</div>
-
-									<div class="rounded-lg border border-outline-variant/45 bg-surface-0/35">
-										{#each detailSections(selectedItem) as section (section.title)}
-											<div class="border-b border-outline-variant/35 p-4 last:border-b-0">
-												<h3 class="text-sm font-semibold text-on-surface">{section.title}</h3>
-												<p
-													class="mt-2 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant"
-												>
-													{section.text}
-												</p>
-											</div>
-										{/each}
-									</div>
-
-									{#if blockersFor(selectedItem).length}
-										<section
-											class="rounded-lg border border-status-danger/35 bg-status-danger-bg/45"
-										>
-											<div class="border-b border-status-danger/25 px-4 py-3">
-												<h3 class="text-sm font-semibold text-status-danger">Blockers</h3>
-												<p class="mt-1 text-xs text-on-surface-variant">
-													Urgent or blocked work attached to this record.
-												</p>
-											</div>
-											<div class="divide-y divide-status-danger/20">
-												{#each blockersFor(selectedItem) as blocker (blocker.id)}
-													<a
-														href={resolve(routeFor(blocker))}
-														class="block px-4 py-3 transition hover:bg-status-danger-bg"
+													<p class="text-xs text-on-surface-variant">{fact.label}</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
+															''}"
 													>
-														<div class="flex flex-wrap items-center gap-2 text-xs">
-															<span class="text-status-danger">{attentionReason(blocker)}</span>
-															<span class="text-on-surface-variant">{itemDisplayId(blocker)}</span>
+														{fact.value}
+													</p>
+												</div>
+											{/each}
+										</div>
+
+										<section
+											class="rounded-lg border border-primary/25 bg-primary-container/10 p-4"
+											data-testid="question-primary-answer"
+										>
+											<p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+												What needs your answer
+											</p>
+											<div class="mt-3 text-sm leading-6 text-on-surface">
+												<MarkdownRenderer content={questionPrimaryAnswer(selectedItem)} />
+											</div>
+										</section>
+
+										{#if healthReasonsFor(selectedItem).length}
+											<section class="rounded-lg border border-outline-variant/45 bg-surface-0/35">
+												<div class="border-b border-outline-variant/35 px-4 py-3">
+													<h3 class="text-sm font-semibold text-on-surface">Health reasons</h3>
+												</div>
+												<div class="grid gap-2 p-3 md:grid-cols-2">
+													{#each healthReasonsFor(selectedItem) as flag (flag.key)}
+														<div
+															class="rounded-md border border-outline-variant/40 bg-surface-1/55 p-3"
+														>
+															<p class="text-sm font-semibold {flag.tone}">{flag.label}</p>
+															<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+																{flag.detail}
+															</p>
 														</div>
-														<p class="mt-1 text-sm font-semibold text-on-surface">
-															{blocker.title}
-														</p>
-														<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-															{compactDetail(blocker)}
-														</p>
-													</a>
+													{/each}
+												</div>
+											</section>
+										{/if}
+
+										<section
+											class="overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-0/25"
+											data-testid="question-brief-sections"
+										>
+											<div class="border-b border-outline-variant/35 px-4 py-3">
+												<h3 class="text-sm font-semibold text-on-surface">Question context</h3>
+												<p class="mt-1 text-xs text-on-surface-variant">
+													Long agent notes are split into sections so the decision is easier to
+													scan.
+												</p>
+											</div>
+											<div class="divide-y divide-outline-variant/35">
+												{#each questionSections(selectedItem) as section (section.id)}
+													<details
+														id={section.id}
+														open={section.defaultOpen}
+														class="group scroll-mt-24"
+													>
+														<summary
+															class="falcon-focus flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2/45"
+														>
+															<span>{section.title}</span>
+															<span class="text-xs text-on-surface-variant">
+																{questionCategoryLabel(section.category)}
+															</span>
+														</summary>
+														<div class="border-t border-outline-variant/25 px-4 py-4">
+															<MarkdownRenderer content={section.content} />
+														</div>
+													</details>
 												{/each}
 											</div>
 										</section>
-									{/if}
+									</div>
 
-									<section class="rounded-lg border border-outline-variant/45 bg-surface-0/25">
-										<div class="border-b border-outline-variant/35 px-4 py-3">
-											<h3 class="text-sm font-semibold text-on-surface">
-												{relationHeading(selectedItem)}
-											</h3>
-											<p class="mt-1 text-xs text-on-surface-variant">
-												{relationDescription(selectedItem)}
-											</p>
+									<aside class="space-y-4">
+										<div class="rounded-lg border border-outline-variant/45 bg-surface-0/35 p-4">
+											<h3 class="text-sm font-semibold text-on-surface">Sections</h3>
+											<div class="mt-3 space-y-1">
+												{#each questionSections(selectedItem) as section (section.id)}
+													<a
+														href={`#${section.id}`}
+														class="falcon-focus flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm text-on-surface-variant transition hover:bg-surface-2 hover:text-on-surface"
+													>
+														<span class="truncate">{section.title}</span>
+														<span class="shrink-0 text-xs"
+															>{questionCategoryLabel(section.category)}</span
+														>
+													</a>
+												{/each}
+											</div>
 										</div>
-										<div class="divide-y divide-outline-variant/30">
-											{#each relatedItemsFor(selectedItem) as related (related.id)}
-												<a
-													href={resolve(routeFor(related))}
-													class="grid gap-2 px-4 py-3 transition hover:bg-surface-2/45 md:grid-cols-[minmax(0,1fr)_8rem]"
-												>
-													<div class="min-w-0">
+
+										<section class="rounded-lg border border-outline-variant/45 bg-surface-0/25">
+											<div class="border-b border-outline-variant/35 px-4 py-3">
+												<h3 class="text-sm font-semibold text-on-surface">
+													{relationHeading(selectedItem)}
+												</h3>
+											</div>
+											<div class="divide-y divide-outline-variant/30">
+												{#each relatedItemsFor(selectedItem) as related (related.id)}
+													<a
+														href={resolve(routeFor(related))}
+														class="block px-4 py-3 transition hover:bg-surface-2/45"
+													>
 														<div class="flex flex-wrap items-center gap-2 text-xs">
 															<span class="text-on-surface-variant">{typeLabel(related)}</span>
 															<span class={statusTone(related.status)}>
 																{formatStatus(related.status)}
 															</span>
-															<span class="text-on-surface-variant">{itemDisplayId(related)}</span>
 														</div>
-														<p class="mt-1 truncate text-sm font-semibold text-on-surface">
+														<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
 															{related.title}
 														</p>
-														<p class="mt-1 line-clamp-1 text-xs leading-5 text-on-surface-variant">
-															{compactDetail(related)}
-														</p>
-													</div>
-													<p class="text-xs text-on-surface-variant md:text-right">
-														{formatDateTime(related.last_activity_at)}
+													</a>
+												{:else}
+													<p class="px-4 py-3 text-sm text-on-surface-variant">
+														{emptyRelationText(selectedItem)}
 													</p>
-												</a>
-											{:else}
-												<p class="px-4 py-3 text-sm text-on-surface-variant">
-													{emptyRelationText(selectedItem)}
-												</p>
-											{/each}
+												{/each}
+											</div>
+										</section>
+									</aside>
+								</div>
+							</section>
+						{:else}
+							<section
+								class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
+								data-testid="work-detail-page"
+							>
+								<div class="border-b border-outline-variant/55 bg-surface-2/35 px-4 py-4 sm:px-5">
+									<a
+										href={resolve(`/work/${activeConfig.path}`)}
+										class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
+									>
+										<ArrowRight class="h-4 w-4 rotate-180" />
+										Back to {activeConfig.label.toLowerCase()}
+									</a>
+									<div class="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start">
+										<div class="min-w-0">
+											<div class="flex flex-wrap items-center gap-2">
+												<span class="falcon-chip px-2 py-1 text-xs">
+													{itemDisplayId(selectedItem)}
+												</span>
+												<span class="text-sm {statusTone(selectedItem.status)}">
+													{formatStatus(selectedItem.status)}
+												</span>
+												<span class="text-sm {priorityTone(selectedItem.priority)}">
+													{sentenceCase(selectedItem.priority ?? 'normal')}
+												</span>
+											</div>
+											<h2
+												class="mt-3 max-w-5xl text-3xl font-semibold leading-tight text-on-surface sm:text-4xl"
+											>
+												{selectedItem.title}
+											</h2>
+											<p class="mt-3 max-w-4xl text-sm leading-6 text-on-surface-variant">
+												{detailLead(selectedItem)}
+											</p>
 										</div>
-									</section>
+										<form class="falcon-subtle-panel space-y-3 p-4" onsubmit={saveSelected}>
+											<div class="flex items-center justify-between gap-3">
+												<h3 class="text-sm font-semibold text-on-surface">State</h3>
+												{#if saveMessage}<span class="text-xs text-status-active"
+														>{saveMessage}</span
+													>{/if}
+											</div>
+											<div class="grid grid-cols-2 gap-2">
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Status
+													<select
+														bind:value={draft.status}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														{#each workStatuses as status (status)}
+															<option value={status}>{sentenceCase(formatStatus(status))}</option>
+														{/each}
+													</select>
+												</label>
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Priority
+													<select
+														bind:value={draft.priority}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														<option value="low">Low</option>
+														<option value="normal">Normal</option>
+														<option value="high">High</option>
+														<option value="urgent">Urgent</option>
+													</select>
+												</label>
+											</div>
+											<label class="grid gap-1 text-xs text-on-surface-variant">
+												Waiting on
+												<select
+													bind:value={draft.waiting_on}
+													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+												>
+													{#each waitingOptions as option (option.value)}
+														<option value={option.value}>{option.label}</option>
+													{/each}
+												</select>
+											</label>
+											<button
+												type="submit"
+												disabled={saving}
+												class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+											>
+												<Save class="h-4 w-4" />
+												{saving ? 'Saving...' : 'Save state'}
+											</button>
+											{#if error}<p class="text-sm text-status-danger">{error}</p>{/if}
+										</form>
+									</div>
 								</div>
 
-								<aside class="space-y-4">
-									<div class="rounded-lg border border-outline-variant/45 bg-surface-0/35 p-4">
-										<h3 class="text-sm font-semibold text-on-surface">Record</h3>
-										<div class="mt-3 space-y-3 text-sm">
-											<div>
-												<p class="text-xs text-on-surface-variant">Type</p>
-												<p class="mt-1 font-semibold text-on-surface">{typeLabel(selectedItem)}</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Current state</p>
-												<p class="mt-1 font-semibold text-on-surface">
-													{detailStatusLine(selectedItem)}
+								<div class="grid gap-5 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+									<div class="min-w-0 space-y-5">
+										<div class="grid gap-3 md:grid-cols-4">
+											{#each quickFacts(selectedItem) as fact (fact.label)}
+												<div
+													class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3"
+												>
+													<p class="text-xs text-on-surface-variant">{fact.label}</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
+															''}"
+													>
+														{fact.value}
+													</p>
+												</div>
+											{/each}
+										</div>
+
+										<div class="rounded-lg border border-outline-variant/45 bg-surface-0/35">
+											{#each detailSections(selectedItem) as section (section.title)}
+												<div class="border-b border-outline-variant/35 p-4 last:border-b-0">
+													<h3 class="text-sm font-semibold text-on-surface">{section.title}</h3>
+													<p
+														class="mt-2 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant"
+													>
+														{section.text}
+													</p>
+												</div>
+											{/each}
+										</div>
+
+										{#if healthReasonsFor(selectedItem).length}
+											<section class="rounded-lg border border-outline-variant/45 bg-surface-0/35">
+												<div class="border-b border-outline-variant/35 px-4 py-3">
+													<h3 class="text-sm font-semibold text-on-surface">Health reasons</h3>
+												</div>
+												<div class="grid gap-2 p-3 md:grid-cols-2">
+													{#each healthReasonsFor(selectedItem) as flag (flag.key)}
+														<div
+															class="rounded-md border border-outline-variant/40 bg-surface-1/55 p-3"
+														>
+															<p class="text-sm font-semibold {flag.tone}">{flag.label}</p>
+															<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+																{flag.detail}
+															</p>
+														</div>
+													{/each}
+												</div>
+											</section>
+										{/if}
+
+										{#if blockersFor(selectedItem).length}
+											<section
+												class="rounded-lg border border-status-danger/35 bg-status-danger-bg/45"
+											>
+												<div class="border-b border-status-danger/25 px-4 py-3">
+													<h3 class="text-sm font-semibold text-status-danger">Blockers</h3>
+													<p class="mt-1 text-xs text-on-surface-variant">
+														Blocked related work attached to this record.
+													</p>
+												</div>
+												<div class="divide-y divide-status-danger/20">
+													{#each blockersFor(selectedItem) as blocker (blocker.id)}
+														<a
+															href={resolve(routeFor(blocker))}
+															class="block px-4 py-3 transition hover:bg-status-danger-bg"
+														>
+															<div class="flex flex-wrap items-center gap-2 text-xs">
+																<span class="text-status-danger">{attentionReason(blocker)}</span>
+																<span class="text-on-surface-variant">{itemDisplayId(blocker)}</span
+																>
+															</div>
+															<p class="mt-1 text-sm font-semibold text-on-surface">
+																{blocker.title}
+															</p>
+															<p
+																class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant"
+															>
+																{compactDetail(blocker)}
+															</p>
+														</a>
+													{/each}
+												</div>
+											</section>
+										{:else}
+											<section
+												class="rounded-lg border border-outline-variant/35 bg-surface-0/25 px-4 py-3"
+											>
+												<h3 class="text-sm font-semibold text-on-surface">Blockers</h3>
+												<p class="mt-1 text-sm text-on-surface-variant">No active blockers.</p>
+											</section>
+										{/if}
+
+										<section class="rounded-lg border border-outline-variant/45 bg-surface-0/25">
+											<div class="border-b border-outline-variant/35 px-4 py-3">
+												<h3 class="text-sm font-semibold text-on-surface">
+													{relationHeading(selectedItem)}
+												</h3>
+												<p class="mt-1 text-xs text-on-surface-variant">
+													{relationDescription(selectedItem)}
 												</p>
 											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Owner/source</p>
-												<p class="mt-1 font-semibold text-on-surface">
-													{firstText(selectedItem.owner, selectedItem.area_id, 'Not set')}
-												</p>
+											<div class="divide-y divide-outline-variant/30">
+												{#each relatedItemsFor(selectedItem) as related (related.id)}
+													<a
+														href={resolve(routeFor(related))}
+														class="grid gap-2 px-4 py-3 transition hover:bg-surface-2/45 md:grid-cols-[minmax(0,1fr)_8rem]"
+													>
+														<div class="min-w-0">
+															<div class="flex flex-wrap items-center gap-2 text-xs">
+																<span class="text-on-surface-variant">{typeLabel(related)}</span>
+																<span class={statusTone(related.status)}>
+																	{formatStatus(related.status)}
+																</span>
+																<span class="text-on-surface-variant">{itemDisplayId(related)}</span
+																>
+															</div>
+															<p class="mt-1 truncate text-sm font-semibold text-on-surface">
+																{related.title}
+															</p>
+															<p
+																class="mt-1 line-clamp-1 text-xs leading-5 text-on-surface-variant"
+															>
+																{compactDetail(related)}
+															</p>
+														</div>
+														<p class="text-xs text-on-surface-variant md:text-right">
+															{formatDateTime(related.last_activity_at)}
+														</p>
+													</a>
+												{:else}
+													<p class="px-4 py-3 text-sm text-on-surface-variant">
+														{emptyRelationText(selectedItem)}
+													</p>
+												{/each}
 											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Created</p>
-												<p class="mt-1 font-semibold text-on-surface">
-													{formatDateTime(selectedItem.created_at)}
-												</p>
+										</section>
+									</div>
+
+									<aside class="space-y-4">
+										<div class="rounded-lg border border-outline-variant/45 bg-surface-0/35 p-4">
+											<h3 class="text-sm font-semibold text-on-surface">Record</h3>
+											<div class="mt-3 space-y-3 text-sm">
+												<div>
+													<p class="text-xs text-on-surface-variant">Type</p>
+													<p class="mt-1 font-semibold text-on-surface">
+														{typeLabel(selectedItem)}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs text-on-surface-variant">Current state</p>
+													<p class="mt-1 font-semibold text-on-surface">
+														{detailStatusLine(selectedItem)}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs text-on-surface-variant">Owner/source</p>
+													<p class="mt-1 font-semibold text-on-surface">
+														{firstText(selectedItem.owner, selectedItem.area_id, 'Not set')}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs text-on-surface-variant">Created</p>
+													<p class="mt-1 font-semibold text-on-surface">
+														{formatDateTime(selectedItem.created_at)}
+													</p>
+												</div>
 											</div>
 										</div>
-									</div>
-								</aside>
-							</div>
-						</section>
+									</aside>
+								</div>
+							</section>
+						{/if}
 					{:else}
 						<section class="falcon-soft-panel p-5">
 							<h2 class="text-lg font-semibold text-on-surface">Work item not found</h2>
@@ -1658,48 +2018,198 @@
 						</section>
 					{/if}
 				{:else}
-					<section class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_25rem]">
-						<div class="falcon-soft-panel overflow-hidden">
-							<div class="border-b border-outline-variant/60 p-4">
-								<div class="grid gap-2 md:grid-cols-[1fr_auto_auto]">
-									<label class="relative block">
-										<Search
-											class="pointer-events-none absolute left-3 top-3 h-4 w-4 text-on-surface-variant"
-										/>
-										<input
-											type="search"
-											bind:value={search}
-											placeholder={`Search ${activeConfig.label.toLowerCase()}...`}
-											class="falcon-focus min-h-10 w-full rounded-md border border-outline-variant/70 bg-surface-0 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant"
-										/>
-									</label>
-									<select
-										bind:value={statusFilter}
-										class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-3 text-sm text-on-surface"
-									>
-										<option value="open">Open status</option>
-										{#each workStatuses as status (status)}
-											<option value={status}>{sentenceCase(formatStatus(status))}</option>
-										{/each}
-										<option value="all">All status</option>
-									</select>
-									<button
-										type="button"
-										onclick={loadWork}
-										class="falcon-focus inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-outline-variant/70 px-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2"
-									>
-										<RefreshCw class="h-4 w-4" />
-										Refresh
-									</button>
+					<section
+						class="grid gap-4 xl:h-[calc(100dvh-5.75rem)] xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_25rem]"
+					>
+						<div class="falcon-soft-panel flex min-h-0 flex-col overflow-hidden">
+							<div class="border-b border-outline-variant/60 p-3 sm:p-4">
+								<div class="space-y-3">
+									<h2 class="text-xl font-semibold leading-tight text-on-surface">
+										{activeConfig.title}
+									</h2>
+									<div class="grid gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto] lg:items-start">
+										<label class="relative block">
+											<Search
+												class="pointer-events-none absolute left-3 top-3 h-4 w-4 text-on-surface-variant"
+											/>
+											<input
+												type="search"
+												value={search}
+												oninput={handleSearchInput}
+												placeholder={`Search ${activeConfig.label.toLowerCase()}...`}
+												class="falcon-focus min-h-10 w-full rounded-md border border-outline-variant/70 bg-surface-0 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant"
+											/>
+										</label>
+										<div class="flex flex-wrap items-center gap-2">
+											{#each primaryFocusDefinitions as definition (definition.key)}
+												<button
+													type="button"
+													title={definition.description}
+													aria-pressed={focusFilter === definition.key}
+													onclick={() => toggleFocusFilter(definition.key)}
+													class="falcon-focus min-h-10 rounded-md border px-3 text-sm font-semibold transition {focusFilter ===
+													definition.key
+														? 'border-primary/60 bg-primary text-primary-foreground'
+														: 'border-outline-variant/70 text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
+												>
+													{definition.label}
+												</button>
+											{/each}
+											<details class="relative">
+												<summary
+													class="falcon-focus inline-flex min-h-10 cursor-pointer list-none items-center rounded-md border border-outline-variant/70 px-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2"
+												>
+													More
+												</summary>
+												<div
+													class="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-outline-variant/70 bg-surface-1 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.28)]"
+												>
+													<label class="block text-xs font-semibold text-on-surface-variant">
+														Status
+														<select
+															value={statusFilter}
+															onchange={(event) =>
+																setStatusFilter(
+																	statusFilterFromParam(
+																		event.currentTarget instanceof HTMLSelectElement
+																			? event.currentTarget.value
+																			: null,
+																		defaultStatusForType(activeType)
+																	)
+																)}
+															class="falcon-focus mt-1 min-h-10 w-full rounded-md border border-outline-variant/70 bg-surface-0 px-3 text-sm font-normal text-on-surface"
+														>
+															<option value="open">Open status</option>
+															<option value="all">All status</option>
+															{#each workStatuses as status (status)}
+																<option value={status}>{sentenceCase(formatStatus(status))}</option>
+															{/each}
+														</select>
+													</label>
+													{#if secondaryFocusDefinitions.length}
+														<div class="mt-3">
+															<p class="text-xs font-semibold text-on-surface-variant">
+																More filters
+															</p>
+															<div class="mt-2 flex flex-wrap gap-2">
+																{#each secondaryFocusDefinitions as definition (definition.key)}
+																	<button
+																		type="button"
+																		title={definition.description}
+																		aria-pressed={focusFilter === definition.key}
+																		onclick={() => toggleFocusFilter(definition.key)}
+																		class="falcon-focus rounded-md border px-2.5 py-1.5 text-xs font-semibold transition {focusFilter ===
+																		definition.key
+																			? 'border-primary/60 bg-primary text-primary-foreground'
+																			: 'border-outline-variant/70 text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
+																	>
+																		{definition.label}
+																	</button>
+																{/each}
+															</div>
+														</div>
+													{/if}
+													{#if activeType === 'observation' && observationSourceOptions.length}
+														<label class="mt-3 block text-xs font-semibold text-on-surface-variant">
+															Source
+															<select
+																value={sourceFilter}
+																onchange={(event) =>
+																	setSourceFilter(
+																		event.currentTarget instanceof HTMLSelectElement
+																			? event.currentTarget.value
+																			: ''
+																	)}
+																class="falcon-focus mt-1 min-h-10 w-full rounded-md border border-outline-variant/70 bg-surface-0 px-3 text-sm font-normal text-on-surface"
+															>
+																<option value="">Any source</option>
+																{#each observationSourceOptions as source (source)}
+																	<option value={source}>{source}</option>
+																{/each}
+															</select>
+														</label>
+													{/if}
+												</div>
+											</details>
+											<button
+												type="button"
+												onclick={loadWork}
+												class="falcon-focus inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-outline-variant/70 px-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2"
+											>
+												<RefreshCw class="h-4 w-4" />
+												Refresh
+											</button>
+										</div>
+									</div>
+									{#if hasActiveListFilters()}
+										<div class="flex flex-wrap items-center gap-2">
+											<span class="text-xs font-semibold text-on-surface-variant">Active</span>
+											{#if search.trim()}
+												<button
+													type="button"
+													onclick={() => {
+														search = '';
+														updateSectionQuery({ q: '' });
+													}}
+													class="falcon-focus inline-flex items-center gap-1 rounded-md border border-outline-variant/70 px-2 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-2"
+												>
+													Search: {search.trim()}
+													<X class="h-3 w-3" />
+												</button>
+											{/if}
+											{#if activeFocusDefinition}
+												<button
+													type="button"
+													onclick={() => toggleFocusFilter(activeFocusDefinition.key)}
+													class="falcon-focus inline-flex items-center gap-1 rounded-md border border-primary/50 px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-2"
+												>
+													{activeFocusDefinition.label}
+													<X class="h-3 w-3" />
+												</button>
+											{/if}
+											{#if sourceFilter}
+												<button
+													type="button"
+													onclick={() => setSourceFilter('')}
+													class="falcon-focus inline-flex items-center gap-1 rounded-md border border-outline-variant/70 px-2 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-2"
+												>
+													Source: {sourceFilter}
+													<X class="h-3 w-3" />
+												</button>
+											{/if}
+											{#if statusFilter !== defaultStatusForType(activeType)}
+												<button
+													type="button"
+													onclick={() => setStatusFilter(defaultStatusForType(activeType))}
+													class="falcon-focus inline-flex items-center gap-1 rounded-md border border-outline-variant/70 px-2 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-2"
+												>
+													Status: {statusFilter === 'all'
+														? 'All'
+														: statusFilter === 'open'
+															? 'Open'
+															: sentenceCase(formatStatus(statusFilter))}
+													<X class="h-3 w-3" />
+												</button>
+											{/if}
+											<button
+												type="button"
+												onclick={clearListFilters}
+												class="falcon-focus rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-2"
+											>
+												Clear all
+											</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 
 							{#if activeType === 'project'}
-								<div class="divide-y divide-outline-variant/50">
+								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as project (project.id)}
 										<button
 											type="button"
-											onclick={() => inspect(project)}
+											onclick={() => handleSectionRowClick(project)}
+											ondblclick={() => handleSectionRowDoubleClick(project)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === project.id}
 											class="block w-full p-4 text-left transition hover:bg-surface-2/70 {selectedRowClass(
@@ -1761,11 +2271,12 @@
 									{/each}
 								</div>
 							{:else if activeType === 'change'}
-								<div class="divide-y divide-outline-variant/50">
+								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as change (change.id)}
 										<button
 											type="button"
-											onclick={() => inspect(change)}
+											onclick={() => handleSectionRowClick(change)}
+											ondblclick={() => handleSectionRowDoubleClick(change)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === change.id}
 											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 lg:grid-cols-[minmax(0,1fr)_11rem_9rem] {selectedRowClass(
@@ -1815,11 +2326,12 @@
 									{/each}
 								</div>
 							{:else if activeType === 'decision'}
-								<div class="grid gap-3 p-3">
+								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
 									{#each filteredItems as question (question.id)}
 										<button
 											type="button"
-											onclick={() => inspect(question)}
+											onclick={() => handleSectionRowClick(question)}
+											ondblclick={() => handleSectionRowDoubleClick(question)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === question.id}
 											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
@@ -1870,11 +2382,12 @@
 									{/each}
 								</div>
 							{:else if activeType === 'task'}
-								<div class="divide-y divide-outline-variant/50">
+								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as task (task.id)}
 										<button
 											type="button"
-											onclick={() => inspect(task)}
+											onclick={() => handleSectionRowClick(task)}
+											ondblclick={() => handleSectionRowDoubleClick(task)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === task.id}
 											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 lg:grid-cols-[1.4rem_minmax(0,1fr)_10rem_10rem] {selectedRowClass(
@@ -1921,11 +2434,12 @@
 									{/each}
 								</div>
 							{:else if activeType === 'routine'}
-								<div class="grid gap-3 p-3">
+								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
 									{#each filteredItems as routine (routine.id)}
 										<button
 											type="button"
-											onclick={() => inspect(routine)}
+											onclick={() => handleSectionRowClick(routine)}
+											ondblclick={() => handleSectionRowDoubleClick(routine)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === routine.id}
 											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
@@ -1975,11 +2489,12 @@
 									{/each}
 								</div>
 							{:else if activeType === 'observation'}
-								<div class="divide-y divide-outline-variant/50">
+								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as observation (observation.id)}
 										<button
 											type="button"
-											onclick={() => inspect(observation)}
+											onclick={() => handleSectionRowClick(observation)}
+											ondblclick={() => handleSectionRowDoubleClick(observation)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === observation.id}
 											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 md:grid-cols-[8rem_minmax(0,1fr)_9rem] {selectedRowClass(
@@ -2017,11 +2532,12 @@
 									{/each}
 								</div>
 							{:else}
-								<div class="divide-y divide-outline-variant/50">
+								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as item (item.id)}
 										<button
 											type="button"
-											onclick={() => inspect(item)}
+											onclick={() => handleSectionRowClick(item)}
+											ondblclick={() => handleSectionRowDoubleClick(item)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === item.id}
 											class="block w-full p-4 text-left transition hover:bg-surface-2/70 {selectedRowClass(
@@ -2038,8 +2554,10 @@
 							{/if}
 						</div>
 
-						<aside class="falcon-soft-panel overflow-hidden">
-							{#if selectedItem}
+						{#if showQuickPane && selectedItem}
+							<aside
+								class="falcon-soft-panel sticky top-16 max-h-[calc(100dvh-5rem)] overflow-y-auto"
+							>
 								<div class="border-b border-outline-variant/60 p-4">
 									<div class="flex flex-wrap items-center gap-2">
 										<p class="text-xs font-semibold text-on-surface-variant">
@@ -2053,7 +2571,9 @@
 										{selectedItem.title}
 									</h3>
 									<p class="mt-2 line-clamp-4 text-sm leading-6 text-on-surface-variant">
-										{detailLead(selectedItem)}
+										{selectedItem.type === 'decision'
+											? questionPrimaryAnswer(selectedItem)
+											: detailLead(selectedItem)}
 									</p>
 									<a
 										href={resolve(routeFor(selectedItem))}
@@ -2133,10 +2653,8 @@
 										<p class="text-sm text-status-danger">{error}</p>
 									{/if}
 								</form>
-							{:else}
-								<p class="p-4 text-sm text-on-surface-variant">Select a Work item.</p>
-							{/if}
-						</aside>
+							</aside>
+						{/if}
 					</section>
 				{/if}
 			</div>
