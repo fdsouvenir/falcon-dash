@@ -5,6 +5,12 @@
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import {
+		clearWorkDataCache,
+		loadCachedWorkItem,
+		loadCachedWorkItems,
+		loadCachedWorkQueue
+	} from '$lib/work/work-data-cache.js';
+	import {
 		focusDefinitionForType,
 		focusDefinitionsForType,
 		literalBlockersFor,
@@ -53,7 +59,7 @@
 		X
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { SvelteMap, SvelteURLSearchParams } from 'svelte/reactivity';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
 	type Mode = 'overview' | 'section' | 'detail';
 
@@ -138,9 +144,7 @@
 	let draft = $state<Draft>(emptyDraft());
 	let showQuickPane = $state(false);
 
-	const itemRequestCache = new SvelteMap<string, Promise<WorkItem[]>>();
-	const singleItemRequestCache = new SvelteMap<number, Promise<WorkItem>>();
-	const queueRequestCache = new SvelteMap<string, Promise<WorkQueue>>();
+	const workListLimit = 300;
 
 	const visibleTypeConfigs: TypeConfig[] = typeConfigs.filter((config) => config.type !== 'area');
 
@@ -409,7 +413,7 @@
 		try {
 			if (mode === 'overview') {
 				const [loadedItems, loadedQueue] = await Promise.all([
-					loadItems('/api/work/items?limit=500&includeClosed=true'),
+					loadItems(workItemsUrl({ limit: workListLimit })),
 					loadQueue()
 				]);
 				items = loadedItems;
@@ -426,10 +430,15 @@
 				return;
 			}
 
+			const routeStatus = statusFilterFromParam(
+				page.url.searchParams.get('status'),
+				defaultStatusForType(activeType)
+			);
+			const includeClosed = statusNeedsClosedRecords(routeStatus, activeType);
 			const loadedItems = await loadItems(
 				activeType === 'project'
-					? '/api/work/items?limit=500&includeClosed=true'
-					: `/api/work/items?type=${activeType}&limit=500&includeClosed=true`
+					? workItemsUrl({ includeClosed, limit: workListLimit })
+					: workItemsUrl({ type: activeType, includeClosed, limit: workListLimit })
 			);
 			items =
 				activeType === 'project'
@@ -450,55 +459,22 @@
 	}
 
 	async function loadItems(url: string): Promise<WorkItem[]> {
-		const cached = itemRequestCache.get(url);
-		if (cached) return cached;
-		const request = fetch(url)
-			.then(async (response) => {
-				if (!response.ok) throw new Error(`Items request failed: ${response.status}`);
-				const json = await response.json();
-				return (json.items ?? []) as WorkItem[];
-			})
-			.finally(() => itemRequestCache.delete(url));
-		itemRequestCache.set(url, request);
-		return request;
+		return loadCachedWorkItems(url);
 	}
 
 	async function loadItem(itemId: number): Promise<WorkItem> {
-		const cached = singleItemRequestCache.get(itemId);
-		if (cached) return cached;
-		const request = fetch(`/api/work/items/${itemId}`)
-			.then(async (response) => {
-				if (!response.ok) throw new Error(`Item request failed: ${response.status}`);
-				return (await response.json()) as WorkItem;
-			})
-			.finally(() => singleItemRequestCache.delete(itemId));
-		singleItemRequestCache.set(itemId, request);
-		return request;
+		return loadCachedWorkItem(itemId);
 	}
 
 	async function loadQueue(): Promise<WorkQueue> {
-		const cached = queueRequestCache.get('queue');
-		if (cached) return cached;
-		const request = fetch('/api/work/queue')
-			.then(async (response) => {
-				if (!response.ok) throw new Error(`Queue request failed: ${response.status}`);
-				const json = await response.json();
-				return (json.queue ?? null) as WorkQueue;
-			})
-			.finally(() => queueRequestCache.delete('queue'));
-		queueRequestCache.set('queue', request);
-		return request;
+		return loadCachedWorkQueue();
 	}
 
 	async function ensureItemContext(item: WorkItem) {
-		const requests = [
-			loadItems(`/api/work/items?parent_item_id=${item.id}&includeClosed=true&limit=500`)
-		];
+		const requests = [loadItems(workItemsUrl({ parent_item_id: item.id, limit: workListLimit }))];
 		if (item.parent_item_id) {
 			requests.push(
-				loadItems(
-					`/api/work/items?parent_item_id=${item.parent_item_id}&includeClosed=true&limit=500`
-				)
+				loadItems(workItemsUrl({ parent_item_id: item.parent_item_id, limit: workListLimit }))
 			);
 			if (!items.some((candidate) => candidate.id === item.parent_item_id)) {
 				requests.push(loadItem(item.parent_item_id).then((parent) => [parent]));
@@ -533,9 +509,7 @@
 			if (!response.ok) throw new Error(`Save failed: ${response.status}`);
 			const updated = (await response.json()) as WorkItem;
 			items = items.map((item) => (item.id === updated.id ? updated : item));
-			singleItemRequestCache.delete(updated.id);
-			itemRequestCache.clear();
-			queueRequestCache.clear();
+			clearWorkDataCache(updated.id);
 			if (mode === 'overview') queue = await loadQueue();
 			saveMessage = 'Saved';
 		} catch (err) {
@@ -837,6 +811,7 @@
 	function setStatusFilter(value: WorkStatus | 'open' | 'all') {
 		statusFilter = value;
 		updateSectionQuery({ status: value });
+		if (statusNeedsClosedRecords(value, activeType)) void loadWork();
 	}
 
 	function toggleFocusFilter(key: string) {
@@ -855,6 +830,7 @@
 			status,
 			source: nextFocus === 'source' ? sourceFilter : ''
 		});
+		if (statusNeedsClosedRecords(status, activeType)) void loadWork();
 	}
 
 	function setSourceFilter(value: string) {
@@ -1160,6 +1136,35 @@
 
 	function selectedRowClass(item: WorkItem): string {
 		return selectedItem?.id === item.id ? 'bg-surface-2/80 ring-1 ring-inset ring-primary/35' : '';
+	}
+
+	function workItemsUrl({
+		type,
+		parent_item_id,
+		includeClosed = false,
+		limit = workListLimit
+	}: {
+		type?: WorkItemType;
+		parent_item_id?: number;
+		includeClosed?: boolean;
+		limit?: number;
+	}): string {
+		const params = new SvelteURLSearchParams();
+		if (type) params.set('type', type);
+		if (parent_item_id !== undefined) params.set('parent_item_id', String(parent_item_id));
+		if (includeClosed) params.set('includeClosed', 'true');
+		params.set('limit', String(limit));
+		return `/api/work/items?${params.toString()}`;
+	}
+
+	function statusNeedsClosedRecords(
+		status: WorkStatus | 'open' | 'all',
+		type: WorkItemType
+	): boolean {
+		if (type === 'observation') return true;
+		if (status === 'all') return true;
+		if (status === 'open') return false;
+		return !openStatuses.has(status);
 	}
 </script>
 
