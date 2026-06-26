@@ -1,10 +1,15 @@
 import type { APIRequestContext } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { expect, test } from './fixtures';
 
 type SeededWorkItem = {
 	id: number;
 	title: string;
 };
+
+const packageVersion = JSON.parse(
+	readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+) as { version: string };
 
 function isoDaysFromNow(days: number): string {
 	const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -86,6 +91,86 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 	return { project, question, blockedChange, items };
 }
 
+async function seedUrgentOverdueProject(request: APIRequestContext) {
+	const stamp = Date.now();
+	const items: SeededWorkItem[] = [];
+	const project = await createWorkItem(request, {
+		type: 'project',
+		title: `E2E urgent overdue project ${stamp}`,
+		description: 'An urgent project that should not be its own blocker.',
+		status: 'in_progress',
+		priority: 'urgent',
+		due_date: isoDaysFromNow(-10),
+		next_action: 'Review the overdue project state'
+	});
+	items.push(project);
+
+	items.push(
+		await createWorkItem(request, {
+			type: 'decision',
+			parent_item_id: project.id,
+			title: `E2E overdue project decision ${stamp}`,
+			status: 'needs_review',
+			waiting_on: 'operator',
+			next_action: 'Decide whether to reset the launch date'
+		})
+	);
+
+	return { project, items };
+}
+
+async function seedLongQuestion(request: APIRequestContext) {
+	const stamp = Date.now();
+	const question = await createWorkItem(request, {
+		type: 'decision',
+		title: `E2E long question brief ${stamp}`,
+		status: 'needs_review',
+		waiting_on: 'operator',
+		next_action: 'Approve the safe internal workspace setup path',
+		body: `## Objective
+Set up the internal workspace as the operating control room.
+
+## Current Verified State
+- The agency token exists.
+- The internal location has reusable workflows.
+
+## Approval Gate
+Execution requires approval before any write batch.
+
+## Legacy Version History
+- v1 planning notes that should not dominate the first screen.`
+	});
+
+	return { question, items: [question] };
+}
+
+async function seedScrollableProjects(request: APIRequestContext) {
+	const stamp = Date.now();
+	const items: SeededWorkItem[] = [];
+	const target = await createWorkItem(request, {
+		type: 'project',
+		title: `E2E lower selected project ${stamp}`,
+		description: 'A project created first so later seeded rows push it lower in the list.',
+		status: 'in_progress',
+		next_action: 'Inspect this lower project without losing the quick detail pane'
+	});
+	items.push(target);
+
+	for (let index = 0; index < 10; index += 1) {
+		items.push(
+			await createWorkItem(request, {
+				type: 'project',
+				title: `E2E scroll filler project ${stamp}-${index}`,
+				description: 'A filler project that gives the section list enough height to scroll.',
+				status: 'in_progress',
+				next_action: 'Keep the selected target below the first viewport'
+			})
+		);
+	}
+
+	return { target, items };
+}
+
 async function archiveWorkItems(request: APIRequestContext, items: SeededWorkItem[]) {
 	await Promise.all(
 		items.map((item) =>
@@ -98,6 +183,34 @@ async function archiveWorkItems(request: APIRequestContext, items: SeededWorkIte
 
 test.describe('work overview executive status board', () => {
 	test.describe.configure({ mode: 'serial' });
+
+	test('uses Work as the home surface and keeps shell chrome focused', async ({
+		page,
+		baseURL
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto(`${baseURL ?? ''}/`);
+
+		await expect.poll(() => new URL(page.url()).pathname).toBe('/work');
+		await expect(page.getByRole('navigation', { name: 'Falcon Dash modules' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Shell' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Work' }).first()).toBeVisible();
+		await expect(page.getByText(`v${packageVersion.version}`, { exact: true })).toBeVisible();
+		await expect(page.getByText(/Gateway:/)).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Run checks' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Help' })).toHaveCount(0);
+	});
+
+	test('removes Shell from mobile primary navigation', async ({ page, baseURL }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${baseURL ?? ''}/work`);
+
+		await expect(page.getByRole('link', { name: 'Shell', exact: true })).toHaveCount(0);
+		await expect(page.getByRole('link', { name: 'Work', exact: true })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Vault', exact: true })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Channels', exact: true })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Labs', exact: true })).toBeVisible();
+	});
 
 	test('routes aggregate signals to overview sections instead of arbitrary item details', async ({
 		page,
@@ -123,12 +236,21 @@ test.describe('work overview executive status board', () => {
 				await expect.poll(() => new URL(page.url()).hash).toBe(hash);
 				await expect(page.getByTestId(sectionId)).toBeInViewport();
 			}
+
+			for (const removedPreview of [
+				'Oldest waiting',
+				'Highest risk',
+				'Next due',
+				'Latest update'
+			]) {
+				await expect(page.getByText(removedPreview, { exact: true })).toHaveCount(0);
+			}
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
 	});
 
-	test('opens a specific project detail from the project health row', async ({
+	test('routes portfolio aggregates to filtered project lists', async ({
 		page,
 		request,
 		baseURL
@@ -137,20 +259,95 @@ test.describe('work overview executive status board', () => {
 		try {
 			await page.goto(`${baseURL ?? ''}/work`);
 
-			const row = page
-				.getByTestId('project-health-row')
-				.filter({ hasText: seeded.project.title })
-				.first();
-			await expect(row).toBeVisible();
-			await expect(row).toContainText(/Blocked|Needs attention|On track|No date/);
-			await expect(row).toContainText(/task|question|change/);
-			await expect(row).not.toContainText(/\blinked\b/i);
-			await expect(row).toHaveAttribute('href', new RegExp(`/work/projects/${seeded.project.id}$`));
+			await expect(page.getByTestId('project-portfolio')).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project portfolio' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project health' })).toHaveCount(0);
+			await expect(page.getByTestId('project-health-row')).toHaveCount(0);
+			await expect(page.getByText('Active outcomes', { exact: true })).toHaveCount(0);
+			await expect(page.getByText('Projects blocked directly or by child work')).toHaveCount(0);
 
-			await row.click();
-			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
+			const blockedMetric = page.getByTestId('project-portfolio-metric-blocked');
+			await expect(blockedMetric).toHaveAttribute('href', /\/work\/projects\?focus=blocked$/);
+			await blockedMetric.click();
+
+			await expect(page).toHaveURL(/\/work\/projects\?focus=blocked$/);
+			await expect(
+				page.locator('button[aria-pressed="true"]').filter({ hasText: 'Blocked' })
+			).toBeVisible();
+			await expect(
+				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
+			).toBeVisible();
+
+			const search = page.getByPlaceholder('Search projects...');
+			await search.fill(seeded.project.title);
+			await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(seeded.project.title);
+			await page.reload();
+			await expect(
+				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
+			).toBeVisible();
 		} finally {
 			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('persists text size preferences and avoids overflow with larger text', async ({
+		page,
+		baseURL
+	}) => {
+		await page.goto(`${baseURL ?? ''}/settings`);
+		await page.getByRole('button', { name: 'Preferences' }).click();
+		await expect(page.getByText('Text size', { exact: true })).toBeVisible();
+		await expect(page.getByTestId('settings-preferences-panel')).toHaveAttribute(
+			'data-hydrated',
+			'true'
+		);
+		await page.getByRole('button', { name: /Extra large/ }).click();
+
+		await expect(page.locator('html')).toHaveAttribute('data-text-size', 'extra-large');
+		await page.reload();
+		await expect(page.locator('html')).toHaveAttribute('data-text-size', 'extra-large');
+
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto(`${baseURL ?? ''}/work`);
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+				)
+			)
+			.toBe(true);
+
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${baseURL ?? ''}/work`);
+		await expect(page.locator('html')).toHaveAttribute('data-text-size', 'extra-large');
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+				)
+			)
+			.toBe(true);
+	});
+
+	test('renders type-aware primary filters on section pages', async ({ page, baseURL }) => {
+		const expectations = [
+			['projects', ['Blocked', 'Overdue', 'Needs decision', 'No next move', 'Stale']],
+			['changes', ['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']],
+			[
+				'decisions',
+				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Answered']
+			],
+			['tasks', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
+			['routines', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
+			['observations', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
+		] as const;
+
+		for (const [section, labels] of expectations) {
+			await page.goto(`${baseURL ?? ''}/work/${section}`);
+			for (const label of labels) {
+				await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
+			}
+			await expect(page.getByText('More', { exact: true })).toBeVisible();
 		}
 	});
 
@@ -216,6 +413,130 @@ test.describe('work overview executive status board', () => {
 			await expect(
 				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()
 			).toBeVisible();
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('keeps desktop quick detail visible when selecting a scrolled list row', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const seeded = await seedScrollableProjects(request);
+		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
+			await page.goto(`${baseURL ?? ''}/work/projects`);
+
+			const row = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: seeded.target.title })
+				.first();
+			await row.scrollIntoViewIfNeeded();
+			await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+			await expect(page.getByRole('heading', { name: 'Projects' })).toBeInViewport();
+			await expect(page.getByPlaceholder('Search projects...')).toBeInViewport();
+			await row.click();
+
+			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
+			await expect(row).toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toBeInViewport();
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('opens full detail on desktop section row double click', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const seeded = await seedExecutiveOverview(request);
+		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
+			await page.goto(`${baseURL ?? ''}/work/projects`);
+
+			const row = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: seeded.project.title })
+				.first();
+			await expect(row).toBeVisible();
+			await row.dblclick();
+
+			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
+			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('routes mobile section taps directly to detail without quick inspection', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const seeded = await seedExecutiveOverview(request);
+		try {
+			await page.setViewportSize({ width: 390, height: 844 });
+			await page.goto(`${baseURL ?? ''}/work/projects`);
+
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+			const row = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: seeded.project.title })
+				.first();
+			await expect(row).toBeVisible();
+			await row.click();
+
+			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
+			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('does not show an urgent overdue project as its own blocker', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const seeded = await seedUrgentOverdueProject(request);
+		try {
+			await page.goto(`${baseURL ?? ''}/work/projects/${seeded.project.id}`);
+
+			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Health reasons' })).toBeVisible();
+			await expect(page.getByText('Overdue').first()).toBeVisible();
+			await expect(page.getByText('Urgent').first()).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
+			await expect(page.getByText('No active blockers.')).toBeVisible();
+			await expect(page.getByRole('link').filter({ hasText: seeded.project.title })).toHaveCount(0);
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('renders long questions as a sectioned brief instead of a raw text wall', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const seeded = await seedLongQuestion(request);
+		try {
+			await page.goto(`${baseURL ?? ''}/work/decisions/${seeded.question.id}`);
+
+			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.getByText('Question Brief', { exact: true })).toBeVisible();
+			await expect(page.getByTestId('question-primary-answer')).toContainText(
+				'Approve the safe internal workspace setup path'
+			);
+			await expect(page.getByTestId('question-brief-sections')).toContainText('Objective');
+			await expect(page.getByTestId('question-brief-sections')).toContainText('Approval Gate');
+
+			const history = page.locator('details#legacy-version-history');
+			await expect(history).toHaveCount(1);
+			await expect(history).not.toHaveAttribute('open', '');
+			await expect(page.getByTestId('question-brief-sections')).not.toContainText('## Objective');
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
