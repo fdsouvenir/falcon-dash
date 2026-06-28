@@ -1,6 +1,8 @@
 # Gateway protocol
 
-This document covers the OpenClaw Gateway protocol v3 as implemented by Falcon Dash. The client-side implementation lives in `src/lib/gateway/`.
+This document covers the OpenClaw Gateway protocol (v3–v4) as implemented by Falcon Dash. The connection is server-side (`src/lib/server/gateway-client.ts`); the browser talks to it via SSE + fetch RPC.
+
+> **Protocol v4 (2026.6.x):** Falcon Dash negotiates a **range** (`minProtocol: 3, maxProtocol: 4`) and reads the selected version from `hello-ok.protocol`. v4 renamed/reshaped many RPC methods and events — see `docs/LEARNINGS.md` → "Gateway protocol v4 migration" for the authoritative list (cron, agents.files, tasks ledger, heartbeat, status/usage, session events).
 
 See also:
 
@@ -156,7 +158,7 @@ The connect frame (`src/lib/gateway/connection.ts`, `buildAndSendConnectFrame`) 
   method: 'connect',
   params: {
     minProtocol: 3,
-    maxProtocol: 3,
+    maxProtocol: 4,   // range negotiation — gateway picks the version it supports
     client: {
       id: 'openclaw-control-ui',   // Hardcoded enum in gateway
       version: '0.1.0',

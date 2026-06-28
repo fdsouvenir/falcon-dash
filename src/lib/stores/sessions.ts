@@ -411,22 +411,18 @@ function debouncedLoadSessions(): void {
 
 export function subscribeToEvents(): void {
 	unsubscribeFromEvents();
+	// Gateway protocol v4 replaced the per-session `session` lifecycle event with
+	// the broad `sessions.changed` invalidation signal. Reload on any change —
+	// this covers create/update/delete without per-action payload fields.
 	unsubscribers.push(
-		gatewayEvents.on('session', (payload) => {
-			const action = payload.action as string;
-			const sessionKey = payload.sessionKey as string;
-			if (action === 'created' || action === 'updated') {
-				debouncedLoadSessions();
-			} else if (action === 'deleted') {
-				_sessions.update((list) =>
-					list.filter((s) => findSessionKeyInStore(sessionKey, [s]) !== s.sessionKey)
-				);
-			}
+		gatewayEvents.on('sessions.changed', () => {
+			debouncedLoadSessions();
 		})
 	);
 
+	// Gateway protocol v4 renamed `chat.message` to `session.message`.
 	unsubscribers.push(
-		gatewayEvents.on('chat.message', (payload) => {
+		gatewayEvents.on('session.message', (payload) => {
 			const sessionList = get(_sessions);
 			const msgSessionKey = payload.sessionKey as string;
 			const targetSessionKey = findSessionKeyInStore(msgSessionKey, sessionList);
@@ -439,7 +435,7 @@ export function subscribeToEvents(): void {
 			// Trigger notification (sound, browser notification, notification center)
 			const session = sessionList.find((s) => s.sessionKey === targetSessionKey);
 			const sessionName = session?.displayName ?? 'New message';
-			const content = (payload.content as string) ?? '';
+			const content = (payload.content ?? payload.text ?? payload.message ?? '') as string;
 			notifyNewMessage(sessionName, content, targetSessionKey);
 		})
 	);

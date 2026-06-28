@@ -172,16 +172,13 @@
 		uninstallLoading = true;
 		delete skillErrors[skillKey];
 
-		try {
-			await rpc('skills.uninstall', { skillKey });
-			skills = skills.filter((s) => s.name !== skillKey);
-			uninstallConfirmSkill = null;
-		} catch (e) {
-			skillErrors[skillKey] = e instanceof Error ? e.message : 'Failed to uninstall skill';
-			uninstallConfirmSkill = null;
-		} finally {
-			uninstallLoading = false;
-		}
+		// Gateway protocol v4 removed the `skills.uninstall` RPC; skill removal is
+		// now a gateway config operation with no granular method. Surface that
+		// clearly rather than calling a method the gateway no longer registers.
+		skillErrors[skillKey] =
+			'Uninstall is not available via gateway protocol v4. Remove the skill from the gateway config (skills.entries) instead.';
+		uninstallConfirmSkill = null;
+		uninstallLoading = false;
 	}
 
 	function toggleExpanded(skillKey: string) {

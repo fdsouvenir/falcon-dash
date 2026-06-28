@@ -25,18 +25,19 @@
 		loading = true;
 		try {
 			const [identity, status] = await Promise.all([
-				rpc<{ name: string; description?: string }>('agent-identity').catch(() => ({
+				rpc<{ name: string; description?: string }>('agent.identity.get').catch(() => ({
 					name: 'OpenClaw Agent'
 				})),
-				rpc<{ uptime?: number; sessions?: number }>('info.status').catch(() => ({
-					uptime: undefined,
+				// v4: `status` replaces `info.status`. Session count is under
+				// `sessions.count`; gateway uptime is not exposed by this method.
+				rpc<{ sessions?: { count?: number } }>('status').catch(() => ({
 					sessions: undefined
 				}))
 			]);
 			agentIdentity = identity;
 			gatewayStatus = {
-				uptime: status.uptime,
-				sessionCount: status.sessions
+				uptime: undefined,
+				sessionCount: status.sessions?.count
 			};
 		} catch (err) {
 			console.error('Failed to load about data:', err);
