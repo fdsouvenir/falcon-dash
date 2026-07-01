@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import ProjectLedger from '$lib/components/work/ProjectLedger.svelte';
 	import WorkSettings from '$lib/components/work/WorkSettings.svelte';
 	import {
 		clearWorkDataCache,
@@ -1491,7 +1492,17 @@
 					<WorkSettings />
 				{:else if mode === 'detail'}
 					{#if selectedItem}
-						{#if selectedItem.type === 'open_question' || selectedItem.type === 'decision'}
+						{#if selectedItem.type === 'project'}
+							<ProjectLedger
+								item={selectedItem}
+								{items}
+								bind:draft
+								{saving}
+								{saveMessage}
+								{error}
+								onSave={saveSelected}
+							/>
+						{:else if selectedItem.type === 'open_question' || selectedItem.type === 'decision'}
 							<section
 								class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
 								data-testid="work-detail-page"

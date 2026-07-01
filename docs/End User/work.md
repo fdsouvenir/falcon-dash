@@ -53,7 +53,10 @@ shown as agent-managed record content rather than casual text editors.
 The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
 workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
 next step, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
-hover only, and double-clicking opens the full project page.
+hover only, and double-clicking opens the full project page. The project page is a ledger-style
+operating brief: goal, definition of done, why it matters, scope, current next step, blockers,
+waiting state, decisions, open questions, change requests, milestones, automations, findings,
+activity, and health/status context are separated into scannable sections.
 
 Open questions and decisions are separate. An open question captures unresolved knowledge; a
 decision captures a commitment or approval with options and a recommendation. Change requests are

@@ -544,7 +544,14 @@ test.describe('work overview executive status board', () => {
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.getByTestId('project-ledger')).toBeVisible();
 			await expect(page.getByPlaceholder('Search projects...')).toHaveCount(0);
+			await expect(page.getByText('Project ledger', { exact: true })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Current state' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Decisions and commitments' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Controlled changes' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
 			await expect(
 				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()
