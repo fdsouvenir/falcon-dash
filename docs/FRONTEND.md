@@ -55,6 +55,8 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 - Project browsing should prioritize a searchable full-width list of structured multi-line project
   rows: keep the numbered title, short blurb, and next step contained in the project column while
   status, coming-up, open-work, blocker, and updated values stay aligned as scannable columns.
+- In dense project columns, center narrow numeric counts such as blockers with a small metric
+  anchor; reserve right alignment for date/time values.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

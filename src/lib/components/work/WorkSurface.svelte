@@ -2259,7 +2259,7 @@
 										<span>Status</span>
 										<span>Coming up</span>
 										<span>Open work</span>
-										<span class="text-right">Blockers</span>
+										<span class="text-center">Blockers</span>
 										<span class="text-right">Updated</span>
 									</div>
 									{#each filteredItems as project (project.id)}
@@ -2325,12 +2325,14 @@
 													</p>
 												</div>
 
-												<div class="xl:text-right">
+												<div class="xl:text-center">
 													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
 														Blockers
 													</p>
 													<p
-														class="mt-1 text-sm font-semibold xl:mt-0 {blockerCount(project)
+														class="mt-1 inline-flex min-w-7 justify-center rounded bg-surface-3/80 px-2 py-1 text-sm font-semibold xl:mt-0 {blockerCount(
+															project
+														)
 															? 'text-status-danger'
 															: 'text-status-muted'}"
 													>
