@@ -308,7 +308,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('routes portfolio aggregates to filtered project lists', async ({
+	test('prioritizes due-next work before call and risk sections without portfolio blocks', async ({
 		page,
 		request,
 		baseURL
@@ -317,32 +317,22 @@ test.describe('work overview executive status board', () => {
 		try {
 			await page.goto(`${baseURL ?? ''}/work`);
 
-			await expect(page.getByTestId('project-portfolio')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project portfolio' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project health' })).toHaveCount(0);
+			await expect(page.getByTestId('project-portfolio')).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'Project portfolio' })).toHaveCount(0);
+			await expect(page.getByText('Health mix', { exact: true })).toHaveCount(0);
 			await expect(page.getByTestId('project-health-row')).toHaveCount(0);
 			await expect(page.getByText('Active outcomes', { exact: true })).toHaveCount(0);
 			await expect(page.getByText('Projects blocked directly or by child work')).toHaveCount(0);
 
-			const blockedMetric = page.getByTestId('project-portfolio-metric-blocked');
-			await expect(blockedMetric).toHaveAttribute('href', /\/work\/projects\?focus=blocked$/);
-			await blockedMetric.click();
+			const dueNextBox = await page.getByTestId('due-next-section').boundingBox();
+			const needsYouBox = await page.getByTestId('needs-you-section').boundingBox();
+			const atRiskBox = await page.getByTestId('at-risk-section').boundingBox();
 
-			await expect(page).toHaveURL(/\/work\/projects\?focus=blocked$/);
-			await expect(
-				page.locator('button[aria-pressed="true"]').filter({ hasText: 'Blocked' })
-			).toBeVisible();
-			await expect(
-				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
-			).toBeVisible();
-
-			const search = page.getByPlaceholder('Search projects...');
-			await search.fill(seeded.project.title);
-			await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(seeded.project.title);
-			await page.reload();
-			await expect(
-				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
-			).toBeVisible();
+			expect(dueNextBox).not.toBeNull();
+			expect(needsYouBox).not.toBeNull();
+			expect(atRiskBox).not.toBeNull();
+			expect(dueNextBox!.y).toBeLessThan(needsYouBox!.y);
+			expect(dueNextBox!.y).toBeLessThan(atRiskBox!.y);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}

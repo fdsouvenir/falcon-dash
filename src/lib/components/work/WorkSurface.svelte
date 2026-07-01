@@ -17,7 +17,6 @@
 		literalBlockersFor,
 		matchesWorkFocus,
 		parseQuestionSections,
-		projectPortfolioPulse,
 		projectHealth as deriveProjectHealth,
 		projectNextMove,
 		projectOpenWork as deriveProjectOpenWork,
@@ -313,7 +312,6 @@
 			}
 		];
 	});
-	const projectPortfolio = $derived(projectPortfolioPulse(items));
 	const recentChangedItems = $derived.by(() =>
 		recentItems.filter((item) => isRecent(item.last_activity_at, 7))
 	);
@@ -1281,61 +1279,54 @@
 					</section>
 
 					<section
-						id="project-portfolio"
-						data-testid="project-portfolio"
+						id="due-next"
+						data-testid="due-next-section"
 						tabindex="-1"
-						class="scroll-mt-24 overflow-hidden rounded-lg border border-outline-variant/65 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
+						class="scroll-mt-24 overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-1"
 					>
-						<div
-							class="flex flex-wrap items-end justify-between gap-3 border-b border-outline-variant/55 bg-surface-2/30 px-4 py-3"
-						>
-							<div>
-								<h3 class="text-xl font-semibold leading-tight text-on-surface">
-									Project portfolio
-								</h3>
-							</div>
-							<a
-								href={resolve('/work/projects')}
-								class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
-							>
-								Open projects <ArrowRight class="h-4 w-4" />
-							</a>
+						<div class="border-b border-outline-variant/45 px-4 py-3">
+							<h3 class="text-lg font-semibold text-on-surface">Due next</h3>
 						</div>
 						<div
-							class="grid divide-y divide-outline-variant/40 md:grid-cols-3 md:divide-x md:divide-y-0 xl:grid-cols-6"
+							class="grid divide-y divide-outline-variant/35 lg:grid-cols-4 lg:divide-x lg:divide-y-0"
 						>
-							{#each projectPortfolio.metrics as metric (metric.key)}
-								<!-- eslint-disable svelte/no-navigation-without-resolve -->
-								<a
-									href={metric.href}
-									data-testid={`project-portfolio-metric-${metric.key}`}
-									class="falcon-focus px-4 py-3 transition hover:bg-surface-2/55"
-								>
-									<div class="flex items-start justify-between gap-3">
-										<p class="text-sm font-semibold text-on-surface">{metric.label}</p>
-										<p class="text-2xl font-semibold leading-none {metric.tone}">
-											{metric.value}
+							{#each dueNextGroups as group (group.title)}
+								<div class="min-w-0">
+									<div class="flex items-baseline justify-between gap-3 px-4 py-3">
+										<h4 class="text-sm font-semibold text-on-surface">{group.title}</h4>
+										<p class="text-xs text-on-surface-variant">
+											{pluralize(group.items.length, 'item')}
 										</p>
 									</div>
-								</a>
-								<!-- eslint-enable svelte/no-navigation-without-resolve -->
+									<div class="divide-y divide-outline-variant/30">
+										{#each group.items.slice(0, 4) as item (item.id)}
+											<a
+												href={resolve(routeFor(item))}
+												class="block px-4 py-3 transition hover:bg-surface-2/50"
+											>
+												<div class="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+													<span class="text-on-surface-variant">{typeLabel(item)}</span>
+													<span class="text-xs {statusTone(item.status)}">
+														{formatStatus(item.status)}
+													</span>
+												</div>
+												<p
+													class="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-on-surface"
+												>
+													{item.title}
+												</p>
+												<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+													{timelineDateLabel(item)}
+												</p>
+											</a>
+										{:else}
+											<p class="px-4 py-3 text-sm text-on-surface-variant">
+												No items in this window.
+											</p>
+										{/each}
+									</div>
+								</div>
 							{/each}
-						</div>
-						<div class="border-t border-outline-variant/45 px-4 py-3">
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="mr-1 text-xs font-semibold text-on-surface-variant"> Health mix </span>
-								{#each projectPortfolio.healthDistribution as health (health.label)}
-									<a
-										href={resolve(
-											`/work/projects?focus=${health.label.toLowerCase().replaceAll(' ', '-')}`
-										)}
-										class="falcon-focus inline-flex items-center gap-2 rounded-md border border-outline-variant/55 px-2.5 py-1 text-xs font-semibold transition hover:bg-surface-2"
-									>
-										<span class={health.tone}>{health.value}</span>
-										<span class="text-on-surface-variant">{health.label}</span>
-									</a>
-								{/each}
-							</div>
 						</div>
 					</section>
 
@@ -1454,58 +1445,6 @@
 									</p>
 								{/each}
 							</div>
-						</div>
-					</section>
-
-					<section
-						id="due-next"
-						data-testid="due-next-section"
-						tabindex="-1"
-						class="scroll-mt-24 overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-1"
-					>
-						<div class="border-b border-outline-variant/45 px-4 py-3">
-							<h3 class="text-lg font-semibold text-on-surface">Due next</h3>
-						</div>
-						<div
-							class="grid divide-y divide-outline-variant/35 lg:grid-cols-4 lg:divide-x lg:divide-y-0"
-						>
-							{#each dueNextGroups as group (group.title)}
-								<div class="min-w-0">
-									<div class="flex items-baseline justify-between gap-3 px-4 py-3">
-										<h4 class="text-sm font-semibold text-on-surface">{group.title}</h4>
-										<p class="text-xs text-on-surface-variant">
-											{pluralize(group.items.length, 'item')}
-										</p>
-									</div>
-									<div class="divide-y divide-outline-variant/30">
-										{#each group.items.slice(0, 4) as item (item.id)}
-											<a
-												href={resolve(routeFor(item))}
-												class="block px-4 py-3 transition hover:bg-surface-2/50"
-											>
-												<div class="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-													<span class="text-on-surface-variant">{typeLabel(item)}</span>
-													<span class="text-xs {statusTone(item.status)}">
-														{formatStatus(item.status)}
-													</span>
-												</div>
-												<p
-													class="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-on-surface"
-												>
-													{item.title}
-												</p>
-												<p class="mt-1 text-xs leading-5 text-on-surface-variant">
-													{timelineDateLabel(item)}
-												</p>
-											</a>
-										{:else}
-											<p class="px-4 py-3 text-sm text-on-surface-variant">
-												No items in this window.
-											</p>
-										{/each}
-									</div>
-								</div>
-							{/each}
 						</div>
 					</section>
 

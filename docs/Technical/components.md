@@ -172,8 +172,8 @@ Routeable Work surface for the `/work` module:
 
 - **Overview** -- `/work` is an executive status board. Top signals focus the matching overview
   section (`#needs-you`, `#at-risk`, `#due-next`, `#recent`) instead of opening an arbitrary item
-  detail. The main content is a project portfolio pulse followed by grouped operator asks,
-  blocked/waiting work, a due-next timeline, and a single chronological recent activity log.
+  detail. The main content starts with a due-next timeline, followed by grouped operator asks,
+  blocked/waiting work, and a single chronological recent activity log.
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.

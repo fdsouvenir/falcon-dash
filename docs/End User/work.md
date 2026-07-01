@@ -11,10 +11,9 @@ redirects to `/work`.
 - Executive signals for work needing your call, at-risk work, near-term dates, and recent changes.
   These signals jump to the matching overview section instead of opening an arbitrary item, and
   avoid clipped preview snippets that are hard to read at a glance.
-- A project portfolio pulse that summarizes open project count, blocked work, overdue work,
-  decisions needed, projects without a next move, stale projects, and the overall health mix.
-- Purpose-built overview sections for operator asks, blocked or waiting work, due-next work, and a
-  single chronological recent activity log
+- Purpose-built overview sections for due-next work, operator asks, blocked or waiting work, and a
+  single chronological recent activity log. The due-next section appears before the ask/risk
+  sections so near-term action is visible first.
 - Type-specific pages for projects, milestones, next steps, open questions, decisions, change
   requests, findings, and automations
 - Desktop type pages with the section title above fixed search/filter controls, a scrollable item
@@ -39,9 +38,8 @@ redirects to `/work`.
   type-specific lists optimized for each Work shape
 - `/work/settings` -- category and subcategory setup, opened from the Work settings gear
 - `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
-  portfolio filters such as `focus=blocked`; next steps use due filters such as
-  `focus=due-this-week`; open questions and decisions use answer/review filters such as
-  `focus=needs-answer`.
+  project filters such as `focus=blocked`; next steps use due filters such as `focus=due-this-week`;
+  open questions and decisions use answer/review filters such as `focus=needs-answer`.
 - `/work/{type}/{id}` -- routeable standalone detail page for one Work item
 
 The top Work search field navigates to `/work/search` and searches existing agent-managed Work
