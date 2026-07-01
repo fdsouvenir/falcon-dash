@@ -9,16 +9,12 @@
 		RefreshCw,
 		Save
 	} from '@lucide/svelte';
-	import type { WorkCategory, WorkItem } from '$lib/work/work-ui.js';
+	import type { WorkCategory } from '$lib/work/work-ui.js';
 
 	type CategoryResponse = {
 		categories: WorkCategory[];
 		subcategories: WorkCategory[];
 		all: WorkCategory[];
-	};
-
-	type ItemsResponse = {
-		items: WorkItem[];
 	};
 
 	type DrawerMode = 'new_category' | 'new_subcategory' | 'edit_category' | 'edit_subcategory';
@@ -29,13 +25,6 @@
 		description: string;
 		parent_category_id: string;
 		status: CategoryStatus;
-	};
-
-	type DirectoryCounts = {
-		projects: number;
-		nextSteps: number;
-		openQuestions: number;
-		waiting: number;
 	};
 
 	const emptyDraft = (): Draft => ({
@@ -52,7 +41,6 @@
 	let saveMessage = $state<string | null>(null);
 	let categories = $state<WorkCategory[]>([]);
 	let subcategories = $state<WorkCategory[]>([]);
-	let items = $state<WorkItem[]>([]);
 	let selectedCategoryId = $state('');
 	let selectedSubcategoryId = $state('');
 	let drawerMode = $state<DrawerMode>('new_category');
@@ -96,22 +84,16 @@
 		loading = true;
 		error = null;
 		try {
-			const [categoryResponse, itemResponse] = await Promise.all([
-				fetch('/api/work/categories'),
-				fetch('/api/work/items?includeClosed=true&limit=500')
-			]);
+			const categoryResponse = await fetch('/api/work/categories');
 			if (!categoryResponse.ok)
 				throw new Error(`Category request failed: ${categoryResponse.status}`);
-			if (!itemResponse.ok) throw new Error(`Work item request failed: ${itemResponse.status}`);
 
 			const categoryData = (await categoryResponse.json()) as CategoryResponse;
-			const itemData = (await itemResponse.json()) as ItemsResponse;
 			const nextCategories = categoryData.categories ?? [];
 			const nextSubcategories = categoryData.subcategories ?? [];
 
 			categories = nextCategories;
 			subcategories = nextSubcategories;
-			items = itemData.items ?? [];
 
 			if (!initialized) {
 				const firstCategory = nextCategories[0];
@@ -268,34 +250,6 @@
 		return subcategories.filter((subcategory) => subcategory.parent_category_id === category.id);
 	}
 
-	function countsForCategory(category: WorkCategory): DirectoryCounts {
-		const childIds = new Set(childrenFor(category).map((child) => child.id));
-		return countsFor(
-			(item) =>
-				item.category_id === category.id ||
-				item.area_id === category.id ||
-				childIds.has(item.subcategory_id ?? '') ||
-				childIds.has(item.area_id ?? '')
-		);
-	}
-
-	function countsForSubcategory(subcategory: WorkCategory): DirectoryCounts {
-		return countsFor(
-			(item) => item.subcategory_id === subcategory.id || item.area_id === subcategory.id
-		);
-	}
-
-	function countsFor(matches: (item: WorkItem) => boolean): DirectoryCounts {
-		const matched = items.filter(matches);
-		return {
-			projects: matched.filter((item) => item.type === 'project').length,
-			nextSteps: matched.filter((item) => item.type === 'next_step').length,
-			openQuestions: matched.filter((item) => item.type === 'open_question').length,
-			waiting: matched.filter((item) => item.status === 'waiting' || Boolean(item.waiting_on))
-				.length
-		};
-	}
-
 	function formatStatus(status: string): string {
 		return status
 			.split('_')
@@ -368,7 +322,7 @@
 	</div>
 
 	{#if loading}
-		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_23rem]">
+		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_30rem]">
 			<div class="rounded-lg border border-outline-variant/45 bg-surface-1 p-5">
 				<p class="text-sm text-on-surface-variant">Loading settings...</p>
 			</div>
@@ -377,7 +331,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_30rem] lg:items-start">
 			<div
 				class="overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.16)]"
 			>
@@ -393,14 +347,13 @@
 
 				<div class="divide-y divide-outline-variant/35" data-testid="work-settings-directory">
 					{#each categories as category (category.id)}
-						{@const categoryCounts = countsForCategory(category)}
 						{@const children = childrenFor(category)}
 						<section
 							class="bg-surface-1/85 transition {selectedCategoryId === category.id
 								? 'shadow-[inset_3px_0_0_var(--primary)]'
 								: ''}"
 						>
-							<div class="grid gap-3 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+							<div class="px-4 py-4">
 								<button
 									type="button"
 									onclick={() => selectCategory(category)}
@@ -432,35 +385,25 @@
 										</span>
 									</div>
 								</button>
-
-								<div class="flex flex-wrap items-center gap-2 xl:justify-end">
-									<span class="falcon-chip px-2 py-1 text-xs"
-										>{categoryCounts.projects} projects</span
-									>
-									<span class="falcon-chip px-2 py-1 text-xs"
-										>{categoryCounts.nextSteps} next steps</span
-									>
-									<span class="falcon-chip px-2 py-1 text-xs">
-										{categoryCounts.openQuestions} questions
-									</span>
-								</div>
 							</div>
 
 							<div class="px-4 pb-4">
 								{#if children.length > 0}
 									<div class="overflow-hidden rounded-lg bg-surface-0/55">
 										{#each children as subcategory (subcategory.id)}
-											{@const subcategoryCounts = countsForSubcategory(subcategory)}
 											<button
 												type="button"
 												onclick={() => selectSubcategory(category, subcategory)}
 												aria-pressed={selectedSubcategoryId === subcategory.id}
-												class="falcon-focus group grid w-full gap-3 border-t border-outline-variant/25 px-3 py-3 text-left first:border-t-0 transition hover:bg-surface-2/50 md:grid-cols-[minmax(0,1fr)_auto]"
+												class="falcon-focus group w-full border-t border-outline-variant/25 px-3 py-3 text-left first:border-t-0 transition hover:bg-surface-2/50 {selectedSubcategoryId ===
+												subcategory.id
+													? 'border-primary/35 bg-primary/10 shadow-[inset_3px_0_0_var(--primary)]'
+													: ''}"
 												data-testid="work-settings-subcategory-row"
 											>
 												<span class="flex min-w-0 items-center gap-3">
 													<span
-														class="h-2 w-2 shrink-0 rounded-full bg-primary/70 {selectedSubcategoryId ===
+														class="h-2.5 w-2.5 shrink-0 rounded-full bg-primary {selectedSubcategoryId ===
 														subcategory.id
 															? 'opacity-100'
 															: 'opacity-35'}"
@@ -479,17 +422,6 @@
 														<span class="mt-0.5 block text-sm text-on-surface-variant">
 															{subcategory.description || 'No notes yet.'}
 														</span>
-													</span>
-												</span>
-												<span class="flex flex-wrap items-center gap-2 md:justify-end">
-													<span class="falcon-chip px-2 py-1 text-xs">
-														{subcategoryCounts.projects} projects
-													</span>
-													<span class="falcon-chip px-2 py-1 text-xs">
-														{subcategoryCounts.nextSteps} next steps
-													</span>
-													<span class="falcon-chip px-2 py-1 text-xs">
-														{subcategoryCounts.waiting} waiting
 													</span>
 												</span>
 											</button>

@@ -450,6 +450,9 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText(
 				'Add subcategory'
 			);
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 projects');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 next steps');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 waiting');
 
 			await page.getByTestId('work-settings-add-category').click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
@@ -466,6 +469,9 @@ test.describe('work overview executive status board', () => {
 			await page.getByTestId('work-settings-directory').getByText(subcategory.title).click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit subcategory');
 			await expect(page.getByTestId('work-settings-drawer')).toContainText(subcategory.title);
+			await expect(
+				page.getByTestId('work-settings-subcategory-row').filter({ hasText: subcategory.title })
+			).toHaveAttribute('aria-pressed', 'true');
 		} finally {
 			await archiveWorkCategories(request, [subcategory, category]);
 		}
