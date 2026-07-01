@@ -2276,22 +2276,30 @@
 											<div
 												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_7rem_14rem_10rem_5rem_7rem] xl:items-center xl:gap-4"
 											>
-												<div class="min-w-0">
+												<div class="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-x-2">
+													<span class="text-base font-semibold leading-6 text-on-surface-variant">
+														{project.id}.
+													</span>
 													<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
-														<span class="text-on-surface-variant">{project.id}.</span>
 														{project.title}
 													</h3>
-													<p class="mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant">
+													<p
+														class="col-start-2 mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant"
+													>
 														{firstText(
 															project.description,
 															project.body,
 															'Outcome not written yet'
 														)}
 													</p>
-													<p class="mt-2 truncate text-sm font-semibold text-on-surface">
-														<span class="font-medium text-on-surface-variant">Next step:</span>
-														{projectOperatorMove(project)}
-													</p>
+													<div class="col-start-2 mt-2 flex min-w-0">
+														<span
+															class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
+														>
+															<span class="shrink-0 text-primary">Next step:</span>
+															<span class="truncate">{projectOperatorMove(project)}</span>
+														</span>
+													</div>
 												</div>
 
 												<div>
