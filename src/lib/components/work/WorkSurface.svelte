@@ -2060,7 +2060,9 @@
 					{/if}
 				{:else}
 					<section
-						class="grid gap-4 xl:h-[calc(100dvh-5.75rem)] xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_25rem]"
+						class="grid gap-4 {activeType === 'project'
+							? ''
+							: 'xl:h-[calc(100dvh-5.75rem)] xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_25rem]'}"
 					>
 						<div class="falcon-soft-panel flex min-h-0 flex-col overflow-hidden">
 							<div class="border-b border-outline-variant/60 p-3 sm:p-4">
@@ -2245,7 +2247,10 @@
 							</div>
 
 							{#if activeType === 'project'}
-								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
+								<div
+									class="grid min-h-0 flex-1 gap-3 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="project-list"
+								>
 									{#each filteredItems as project (project.id)}
 										<button
 											type="button"
@@ -2253,11 +2258,11 @@
 											ondblclick={() => handleSectionRowDoubleClick(project)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === project.id}
-											class="block w-full p-4 text-left transition hover:bg-surface-2/70 {selectedRowClass(
+											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
 												project
 											)}"
 										>
-											<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+											<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
 												<div class="min-w-0">
 													<div class="flex flex-wrap items-center gap-2">
 														<span class="text-base font-semibold text-on-surface"
@@ -2604,7 +2609,7 @@
 							{/if}
 						</div>
 
-						{#if showQuickPane && selectedItem}
+						{#if showQuickPane && selectedItem && activeType !== 'project'}
 							<aside
 								class="falcon-soft-panel sticky top-16 max-h-[calc(100dvh-5rem)] overflow-y-auto"
 							>

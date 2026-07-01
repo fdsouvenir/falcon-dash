@@ -521,7 +521,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('uses section rows for quick inspection and opens a standalone detail page', async ({
+	test('uses project rows as selectable cards and opens detail on double click', async ({
 		page,
 		request,
 		baseURL
@@ -531,6 +531,7 @@ test.describe('work overview executive status board', () => {
 			await page.setViewportSize({ width: 1440, height: 720 });
 			await page.goto(`${baseURL ?? ''}/work/projects`);
 
+			await expect(page.getByTestId('project-list')).toBeVisible();
 			const row = page
 				.getByTestId('work-section-row')
 				.filter({ hasText: seeded.project.title })
@@ -540,15 +541,9 @@ test.describe('work overview executive status board', () => {
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
 			await expect(row).toHaveAttribute('aria-pressed', 'true');
-			await expect(page.getByTestId('work-quick-state')).toBeVisible();
-			await expect(page.getByTestId('work-quick-state').locator('input, textarea')).toHaveCount(0);
-
-			const openFullPage = page.getByRole('link', { name: 'Open full page' });
-			await expect(openFullPage).toHaveAttribute(
-				'href',
-				new RegExp(`/work/projects/${seeded.project.id}$`)
-			);
-			await openFullPage.click();
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+			await expect(page.getByRole('link', { name: 'Open full page' })).toHaveCount(0);
+			await row.dblclick();
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
@@ -562,7 +557,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('keeps desktop quick detail visible when selecting a scrolled list row', async ({
+	test('keeps desktop project list stable when selecting a scrolled row', async ({
 		page,
 		request,
 		baseURL
@@ -578,13 +573,12 @@ test.describe('work overview executive status board', () => {
 				.first();
 			await row.scrollIntoViewIfNeeded();
 			await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-			await expect(page.getByRole('heading', { name: 'Projects' })).toBeInViewport();
-			await expect(page.getByPlaceholder('Search projects...')).toBeInViewport();
+			await expect(page.getByTestId('project-list')).toBeVisible();
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
 			await expect(row).toHaveAttribute('aria-pressed', 'true');
-			await expect(page.getByTestId('work-quick-state')).toBeInViewport();
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
