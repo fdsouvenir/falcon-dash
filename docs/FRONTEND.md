@@ -52,9 +52,9 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   operational stats, and archived rows when the entries either exist or do not exist.
 - Settings routes inside feature surfaces should highlight their settings affordance, not the
   nearest content tab; create actions for settings editors should stay with the sticky editor.
-- Project browsing should prioritize a searchable full-width list of compact project rows with a
-  numbered title and scannable status, coming-up, open-work, blocker, and updated columns; avoid
-  loose narrative text inside the row.
+- Project browsing should prioritize a searchable full-width list of structured multi-line project
+  rows: keep the numbered title, short blurb, and next step contained in the project column while
+  status, coming-up, open-work, blocker, and updated values stay aligned as scannable columns.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

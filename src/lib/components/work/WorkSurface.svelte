@@ -2281,6 +2281,17 @@
 														<span class="text-on-surface-variant">{project.id}.</span>
 														{project.title}
 													</h3>
+													<p class="mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant">
+														{firstText(
+															project.description,
+															project.body,
+															'Outcome not written yet'
+														)}
+													</p>
+													<p class="mt-2 truncate text-sm font-semibold text-on-surface">
+														<span class="font-medium text-on-surface-variant">Next step:</span>
+														{projectOperatorMove(project)}
+													</p>
 												</div>
 
 												<div>
