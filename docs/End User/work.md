@@ -58,9 +58,9 @@ reserved for controlled mutation of code, config, systems, data, auth, deploymen
 
 Categories and subcategories are setup records rather than front-and-center Work item lists. Work
 settings presents them as a grouped directory where rows are selected for editing in the right-side
-form. Top-level creation starts from `Add category`; subcategory creation starts from the selected
-category's form. Deleting a category or subcategory removes that directory entry and leaves any
-linked Work items unassigned.
+form. Top-level category and subcategory creation starts from the action strip above that editor;
+when a category is selected, `Add subcategory` preselects it as the parent. Deleting a category or
+subcategory removes that directory entry and leaves any linked Work items unassigned.
 
 ## Agent Contract
 

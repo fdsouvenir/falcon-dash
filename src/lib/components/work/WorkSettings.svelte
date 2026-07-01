@@ -343,15 +343,6 @@
 					<RefreshCw class="h-4 w-4" />
 					Refresh
 				</button>
-				<button
-					type="button"
-					onclick={openNewCategory}
-					data-testid="work-settings-add-category"
-					class="falcon-focus inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-				>
-					<FolderPlus class="h-4 w-4" />
-					Add category
-				</button>
 			</div>
 		</div>
 	</div>
@@ -472,129 +463,144 @@
 				</div>
 			</div>
 
-			<aside
-				class="sticky top-20 overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-2 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
-				data-testid="work-settings-drawer"
-			>
-				<div class="border-b border-outline-variant/35 px-4 py-4">
-					<p class="flex items-center gap-2 text-xs font-semibold text-primary">
-						{#if drawerIsCategory}
-							<Folder class="h-4 w-4" />
-						{:else}
-							<ListTree class="h-4 w-4" />
-						{/if}
-						{drawerEyebrow}
-					</p>
-					<h3 class="mt-2 text-xl font-semibold text-on-surface">{drawerTitle}</h3>
-					<div class="mt-3 rounded-lg bg-surface-1/65 px-3 py-2">
-						<p class="text-xs text-on-surface-variant">
-							{drawerMode === 'new_category'
-								? 'Creating'
-								: drawerMode === 'new_subcategory'
-									? 'Parent category'
-									: 'Selected'}
-						</p>
-						<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">{selectedLabel()}</p>
-					</div>
+			<div class="sticky top-20 space-y-3">
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						type="button"
+						onclick={openNewCategory}
+						data-testid="work-settings-add-category"
+						class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+					>
+						<FolderPlus class="h-4 w-4" />
+						Add category
+					</button>
+					<button
+						type="button"
+						onclick={() => openNewSubcategory()}
+						disabled={categories.length === 0}
+						data-testid="work-settings-add-subcategory"
+						class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant/60 bg-surface-1 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-55"
+					>
+						<Plus class="h-4 w-4" />
+						Add subcategory
+					</button>
 				</div>
 
-				<form class="space-y-4 px-4 py-4" onsubmit={submitDrawer}>
-					{#if !drawerIsCategory}
+				<aside
+					class="overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-2 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
+					data-testid="work-settings-drawer"
+				>
+					<div class="border-b border-outline-variant/35 px-4 py-4">
+						<p class="flex items-center gap-2 text-xs font-semibold text-primary">
+							{#if drawerIsCategory}
+								<Folder class="h-4 w-4" />
+							{:else}
+								<ListTree class="h-4 w-4" />
+							{/if}
+							{drawerEyebrow}
+						</p>
+						<h3 class="mt-2 text-xl font-semibold text-on-surface">{drawerTitle}</h3>
+						<div class="mt-3 rounded-lg bg-surface-1/65 px-3 py-2">
+							<p class="text-xs text-on-surface-variant">
+								{drawerMode === 'new_category'
+									? 'Creating'
+									: drawerMode === 'new_subcategory'
+										? 'Parent category'
+										: 'Selected'}
+							</p>
+							<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
+								{selectedLabel()}
+							</p>
+						</div>
+					</div>
+
+					<form class="space-y-4 px-4 py-4" onsubmit={submitDrawer}>
+						{#if !drawerIsCategory}
+							<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+								Category
+								<select
+									bind:value={draft.parent_category_id}
+									required
+									class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
+								>
+									{#each parentCategoryOptions as category (category.id)}
+										<option value={category.id}>{category.title}</option>
+									{/each}
+								</select>
+							</label>
+						{/if}
+
 						<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
-							Category
-							<select
-								bind:value={draft.parent_category_id}
+							Name
+							<input
+								bind:value={draft.title}
 								required
-								class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
-							>
-								{#each parentCategoryOptions as category (category.id)}
-									<option value={category.id}>{category.title}</option>
-								{/each}
-							</select>
+								class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface placeholder:text-on-surface-variant/55"
+								placeholder={drawerIsCategory ? 'Work' : 'Falcon Dash'}
+							/>
 						</label>
-					{/if}
 
-					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
-						Name
-						<input
-							bind:value={draft.title}
-							required
-							class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface placeholder:text-on-surface-variant/55"
-							placeholder={drawerIsCategory ? 'Work' : 'Falcon Dash'}
-						/>
-					</label>
+						<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+							Notes
+							<textarea
+								bind:value={draft.description}
+								rows="4"
+								class="falcon-focus min-h-28 resize-y rounded-md border border-outline-variant/55 bg-surface-1 px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/55"
+								placeholder="What belongs here?"
+							></textarea>
+						</label>
 
-					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
-						Notes
-						<textarea
-							bind:value={draft.description}
-							rows="4"
-							class="falcon-focus min-h-28 resize-y rounded-md border border-outline-variant/55 bg-surface-1 px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/55"
-							placeholder="What belongs here?"
-						></textarea>
-					</label>
-
-					{#if drawerMode === 'edit_category'}
-						<button
-							type="button"
-							onclick={() => openNewSubcategory(selectedCategoryId)}
-							class="falcon-focus flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-outline-variant/60 bg-surface-1/55 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-1"
-						>
-							<Plus class="h-4 w-4" />
-							Add subcategory to this category
-						</button>
-					{/if}
-
-					<div class="grid gap-2 pt-1 sm:grid-cols-[1fr_auto]">
-						<button
-							type="submit"
-							disabled={saving ||
-								!draft.title.trim() ||
-								(!drawerIsCategory && !draft.parent_category_id)}
-							class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-						>
-							<Save class="h-4 w-4" />
-							{drawerMode === 'new_category' || drawerMode === 'new_subcategory'
-								? 'Create'
-								: 'Save'}
-						</button>
-						{#if hasEditableSelection()}
+						<div class="grid gap-2 pt-1 sm:grid-cols-[1fr_auto]">
 							<button
-								type="button"
-								disabled={saving}
-								onclick={deleteSelected}
-								class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-status-danger/45 px-4 text-sm font-semibold text-status-danger transition hover:bg-status-danger-bg disabled:opacity-60"
+								type="submit"
+								disabled={saving ||
+									!draft.title.trim() ||
+									(!drawerIsCategory && !draft.parent_category_id)}
+								class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
 							>
-								<Trash2 class="h-4 w-4" />
-								Delete
+								<Save class="h-4 w-4" />
+								{drawerMode === 'new_category' || drawerMode === 'new_subcategory'
+									? 'Create'
+									: 'Save'}
 							</button>
+							{#if hasEditableSelection()}
+								<button
+									type="button"
+									disabled={saving}
+									onclick={deleteSelected}
+									class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-status-danger/45 px-4 text-sm font-semibold text-status-danger transition hover:bg-status-danger-bg disabled:opacity-60"
+								>
+									<Trash2 class="h-4 w-4" />
+									Delete
+								</button>
+							{/if}
+						</div>
+					</form>
+
+					<div class="border-t border-outline-variant/35 px-4 py-4">
+						{#if saveMessage}
+							<p
+								class="rounded-md border border-status-active/35 bg-status-active-bg px-3 py-2 text-sm text-status-active"
+							>
+								{saveMessage}
+							</p>
+						{/if}
+						{#if error}
+							<p
+								class="rounded-md border border-status-danger/35 bg-status-danger-bg px-3 py-2 text-sm text-status-danger"
+							>
+								{error}
+							</p>
+						{/if}
+						{#if !saveMessage && !error}
+							<p class="text-sm text-on-surface-variant">
+								Categories are broad life or work buckets. Subcategories are the smaller groups
+								inside them.
+							</p>
 						{/if}
 					</div>
-				</form>
-
-				<div class="border-t border-outline-variant/35 px-4 py-4">
-					{#if saveMessage}
-						<p
-							class="rounded-md border border-status-active/35 bg-status-active-bg px-3 py-2 text-sm text-status-active"
-						>
-							{saveMessage}
-						</p>
-					{/if}
-					{#if error}
-						<p
-							class="rounded-md border border-status-danger/35 bg-status-danger-bg px-3 py-2 text-sm text-status-danger"
-						>
-							{error}
-						</p>
-					{/if}
-					{#if !saveMessage && !error}
-						<p class="text-sm text-on-surface-variant">
-							Categories are broad life or work buckets. Subcategories are the smaller groups inside
-							them.
-						</p>
-					{/if}
-				</div>
-			</aside>
+				</aside>
+			</div>
 		</div>
 	{/if}
 </section>

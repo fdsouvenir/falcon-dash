@@ -1219,7 +1219,9 @@
 							<a
 								href={resolve(`/work/${config.path}`)}
 								class="falcon-focus rounded-md px-3 py-1.5 text-sm font-semibold transition {activeType ===
-									config.type && mode !== 'overview'
+									config.type &&
+								mode !== 'overview' &&
+								!isSettings
 									? 'bg-primary text-primary-foreground'
 									: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
 							>

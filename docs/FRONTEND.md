@@ -50,6 +50,8 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   exact item titles before adding narrative preview text.
 - Settings directories should read as clean configuration surfaces: avoid lifecycle badges,
   operational stats, and archived rows when the entries either exist or do not exist.
+- Settings routes inside feature surfaces should highlight their settings affordance, not the
+  nearest content tab; create actions for settings editors should stay with the sticky editor.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 
