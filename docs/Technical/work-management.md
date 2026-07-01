@@ -34,8 +34,8 @@ Categories and subcategories organize Work without being Work items. They live i
 internally and are exposed through `/api/work/categories` using the user-facing
 `category`/`subcategory` vocabulary. The Work UI keeps this setup in `/work/settings` behind the
 settings gear instead of putting categories in the primary Work navigation. Settings renders a
-grouped directory with top-level category creation and nested subcategory creation in a contextual
-drawer.
+read-only grouped directory; top-level category creation and nested subcategory creation happen in
+the contextual drawer.
 
 ## ID Reference Convention
 

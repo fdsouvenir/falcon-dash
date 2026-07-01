@@ -444,19 +444,28 @@ test.describe('work overview executive status board', () => {
 			await page.goto(`${baseURL ?? ''}/work/settings`);
 
 			await expect(page.getByTestId('work-settings-add-category')).toBeVisible();
+			await expect(page.getByTestId('work-settings')).not.toContainText('Linked projects');
 			await expect(page.getByTestId('work-settings-directory')).toContainText(category.title);
 			await expect(page.getByTestId('work-settings-directory')).toContainText(subcategory.title);
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText(
+				'Add subcategory'
+			);
 
 			await page.getByTestId('work-settings-add-category').click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
 			await expect(page.getByTestId('work-settings-drawer').getByLabel('Name')).toBeVisible();
 
-			await page
-				.getByTestId('work-settings-drawer')
-				.getByRole('button', { name: 'New subcategory' })
-				.click();
+			await page.getByTestId('work-settings-directory').getByText(category.title).click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit category');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await page.getByRole('button', { name: 'Add subcategory to this category' }).click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
 			await expect(page.getByTestId('work-settings-drawer').getByLabel('Category')).toBeVisible();
+
+			await page.getByTestId('work-settings-directory').getByText(subcategory.title).click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(subcategory.title);
 		} finally {
 			await archiveWorkCategories(request, [subcategory, category]);
 		}

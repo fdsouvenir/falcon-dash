@@ -57,8 +57,9 @@ decision captures a commitment or approval with options and a recommendation. Ch
 reserved for controlled mutation of code, config, systems, data, auth, deployment, or automation.
 
 Categories and subcategories are setup records rather than front-and-center Work item lists. Work
-settings presents them as a grouped directory with a contextual editor, including an explicit top
-level `Add category` action and nested `Add subcategory` actions.
+settings presents them as a grouped directory where rows are selected for editing in the right-side
+form. Top-level creation starts from `Add category`; subcategory creation starts from the selected
+category's form.
 
 ## Agent Contract
 

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
 		Archive,
-		ChevronRight,
 		Folder,
 		FolderPlus,
 		Layers,
@@ -60,8 +59,14 @@
 	let draft = $state<Draft>(emptyDraft());
 
 	const activeCategories = $derived(categories.filter((category) => category.status === 'active'));
+	const parentCategoryOptions = $derived(
+		drawerMode === 'edit_subcategory' ? categories : activeCategories
+	);
 	const selectedCategory = $derived(
 		categories.find((category) => category.id === selectedCategoryId) ?? null
+	);
+	const selectedSubcategory = $derived(
+		subcategories.find((subcategory) => subcategory.id === selectedSubcategoryId) ?? null
 	);
 	const drawerIsCategory = $derived(
 		drawerMode === 'new_category' || drawerMode === 'edit_category'
@@ -76,17 +81,11 @@
 					: 'Edit subcategory'
 	);
 	const drawerEyebrow = $derived(
-		drawerIsCategory ? 'Top-level bucket' : selectedCategory?.title || 'Nested group'
-	);
-	const archivedCount = $derived(
-		categories.filter((category) => category.status === 'archived').length +
-			subcategories.filter((subcategory) => subcategory.status === 'archived').length
-	);
-	const linkedProjectCount = $derived(
-		items.filter(
-			(item) =>
-				item.type === 'project' && Boolean(item.category_id || item.subcategory_id || item.area_id)
-		).length
+		drawerIsCategory
+			? 'Top-level bucket'
+			: selectedCategory
+				? `${selectedCategory.title} / Subcategory`
+				: 'Nested group'
 	);
 
 	$effect(() => {
@@ -167,12 +166,13 @@
 	}
 
 	function openNewSubcategory(categoryId = selectedCategoryId) {
+		const parentId = categoryId || activeCategories[0]?.id || '';
 		drawerMode = 'new_subcategory';
-		selectedCategoryId = categoryId || activeCategories[0]?.id || '';
+		selectedCategoryId = parentId;
 		selectedSubcategoryId = '';
 		draft = {
 			...emptyDraft(),
-			parent_category_id: selectedCategoryId
+			parent_category_id: parentId
 		};
 		saveMessage = null;
 	}
@@ -314,6 +314,15 @@
 	function hasEditableSelection(): boolean {
 		return drawerMode === 'edit_category' || drawerMode === 'edit_subcategory';
 	}
+
+	function selectedLabel(): string {
+		if (drawerMode === 'edit_category') return selectedCategory?.title ?? 'Selected category';
+		if (drawerMode === 'edit_subcategory') {
+			return selectedSubcategory?.title ?? 'Selected subcategory';
+		}
+		if (drawerMode === 'new_subcategory') return selectedCategory?.title ?? 'Selected category';
+		return 'New top-level category';
+	}
 </script>
 
 <section class="space-y-4" data-testid="work-settings">
@@ -356,25 +365,6 @@
 				</button>
 			</div>
 		</div>
-
-		<div class="grid gap-px bg-outline-variant/30 sm:grid-cols-4">
-			<div class="bg-surface-1 px-4 py-3 sm:px-5">
-				<p class="text-xs text-on-surface-variant">Categories</p>
-				<p class="mt-1 text-xl font-semibold text-on-surface">{categories.length}</p>
-			</div>
-			<div class="bg-surface-1 px-4 py-3 sm:px-5">
-				<p class="text-xs text-on-surface-variant">Subcategories</p>
-				<p class="mt-1 text-xl font-semibold text-on-surface">{subcategories.length}</p>
-			</div>
-			<div class="bg-surface-1 px-4 py-3 sm:px-5">
-				<p class="text-xs text-on-surface-variant">Archived</p>
-				<p class="mt-1 text-xl font-semibold text-on-surface">{archivedCount}</p>
-			</div>
-			<div class="bg-surface-1 px-4 py-3 sm:px-5">
-				<p class="text-xs text-on-surface-variant">Linked projects</p>
-				<p class="mt-1 text-xl font-semibold text-on-surface">{linkedProjectCount}</p>
-			</div>
-		</div>
 	</div>
 
 	{#if loading}
@@ -398,7 +388,7 @@
 						<ListTree class="h-4 w-4 text-primary" />
 						<h3 class="text-sm font-semibold text-on-surface">Category directory</h3>
 					</div>
-					<span class="text-xs text-on-surface-variant">Select a row to edit</span>
+					<span class="text-xs text-on-surface-variant">Select a row, edit on the right</span>
 				</div>
 
 				<div class="divide-y divide-outline-variant/35" data-testid="work-settings-directory">
@@ -453,14 +443,6 @@
 									<span class="falcon-chip px-2 py-1 text-xs">
 										{categoryCounts.openQuestions} questions
 									</span>
-									<button
-										type="button"
-										onclick={() => openNewSubcategory(category.id)}
-										class="falcon-focus inline-flex min-h-9 items-center gap-2 rounded-md border border-outline-variant/60 px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-2"
-									>
-										<Plus class="h-3.5 w-3.5" />
-										Add subcategory
-									</button>
 								</div>
 							</div>
 
@@ -477,7 +459,12 @@
 												data-testid="work-settings-subcategory-row"
 											>
 												<span class="flex min-w-0 items-center gap-3">
-													<ChevronRight class="h-4 w-4 shrink-0 text-on-surface-variant" />
+													<span
+														class="h-2 w-2 shrink-0 rounded-full bg-primary/70 {selectedSubcategoryId ===
+														subcategory.id
+															? 'opacity-100'
+															: 'opacity-35'}"
+													></span>
 													<span class="min-w-0">
 														<span class="flex flex-wrap items-center gap-2">
 															<span class="font-semibold text-on-surface">{subcategory.title}</span>
@@ -525,17 +512,6 @@
 							</p>
 						</div>
 					{/each}
-
-					<div class="bg-surface-2/25 px-4 py-4">
-						<button
-							type="button"
-							onclick={openNewCategory}
-							class="falcon-focus flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-outline-variant/70 text-sm font-semibold text-on-surface transition hover:border-primary/60 hover:bg-surface-2/60"
-						>
-							<FolderPlus class="h-4 w-4" />
-							Add category
-						</button>
-					</div>
 				</div>
 			</div>
 
@@ -553,35 +529,19 @@
 						{drawerEyebrow}
 					</p>
 					<h3 class="mt-2 text-xl font-semibold text-on-surface">{drawerTitle}</h3>
+					<div class="mt-3 rounded-lg bg-surface-1/65 px-3 py-2">
+						<p class="text-xs text-on-surface-variant">
+							{drawerMode === 'new_category'
+								? 'Creating'
+								: drawerMode === 'new_subcategory'
+									? 'Parent category'
+									: 'Selected'}
+						</p>
+						<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">{selectedLabel()}</p>
+					</div>
 				</div>
 
 				<form class="space-y-4 px-4 py-4" onsubmit={submitDrawer}>
-					<div class="grid grid-cols-2 gap-2 rounded-lg bg-surface-1/65 p-1">
-						<button
-							type="button"
-							onclick={openNewCategory}
-							aria-pressed={drawerMode === 'new_category'}
-							class="falcon-focus rounded-md px-3 py-2 text-sm font-semibold transition {drawerMode ===
-							'new_category'
-								? 'bg-primary text-primary-foreground'
-								: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
-						>
-							New category
-						</button>
-						<button
-							type="button"
-							onclick={() => openNewSubcategory()}
-							aria-pressed={drawerMode === 'new_subcategory'}
-							disabled={activeCategories.length === 0}
-							class="falcon-focus rounded-md px-3 py-2 text-sm font-semibold transition disabled:opacity-50 {drawerMode ===
-							'new_subcategory'
-								? 'bg-primary text-primary-foreground'
-								: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
-						>
-							New subcategory
-						</button>
-					</div>
-
 					{#if !drawerIsCategory}
 						<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
 							Category
@@ -590,7 +550,7 @@
 								required
 								class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
 							>
-								{#each activeCategories as category (category.id)}
+								{#each parentCategoryOptions as category (category.id)}
 									<option value={category.id}>{category.title}</option>
 								{/each}
 							</select>
@@ -628,6 +588,17 @@
 							<option value="archived">Archived</option>
 						</select>
 					</label>
+
+					{#if drawerMode === 'edit_category' && selectedCategory?.status === 'active'}
+						<button
+							type="button"
+							onclick={() => openNewSubcategory(selectedCategoryId)}
+							class="falcon-focus flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-outline-variant/60 bg-surface-1/55 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-1"
+						>
+							<Plus class="h-4 w-4" />
+							Add subcategory to this category
+						</button>
+					{/if}
 
 					<div class="grid gap-2 pt-1 sm:grid-cols-[1fr_auto]">
 						<button

@@ -194,8 +194,8 @@ Routeable Work surface for the `/work` module:
   fields. Question details render as a Question Brief with Markdown sections and collapsed history
   or legacy material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
-  categories and subcategories as a grouped directory with an explicit `Add category` action,
-  nested `Add subcategory` actions, and a contextual create/edit drawer
+  categories and subcategories as a read-only grouped directory with an explicit `Add category`
+  action and a contextual drawer for category/subcategory creation and edits
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
   person-specific copy is hardcoded
 - **Refresh path** -- overview reloads `/api/work/items` and `/api/work/queue`; type and detail
