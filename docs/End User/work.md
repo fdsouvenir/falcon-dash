@@ -56,9 +56,9 @@ Open questions and decisions are separate. An open question captures unresolved 
 decision captures a commitment or approval with options and a recommendation. Change requests are
 reserved for controlled mutation of code, config, systems, data, auth, deployment, or automation.
 
-Categories and subcategories are setup records rather than front-and-center Work item lists. They
-are maintained from Work settings and can be used by agents through the Work API to group projects
-and related work.
+Categories and subcategories are setup records rather than front-and-center Work item lists. Work
+settings presents them as a grouped directory with a contextual editor, including an explicit top
+level `Add category` action and nested `Add subcategory` actions.
 
 ## Agent Contract
 

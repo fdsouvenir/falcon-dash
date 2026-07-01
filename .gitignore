@@ -16,6 +16,7 @@ playwright-report/
 .vscode/
 .idea/
 mockups/
+.stitch/
 stats.html
 artifacts/*
 !artifacts/.gitkeep

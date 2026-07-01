@@ -1,6 +1,16 @@
 <script lang="ts">
-	import { RefreshCw, Save } from '@lucide/svelte';
-	import type { WorkCategory } from '$lib/work/work-ui.js';
+	import {
+		Archive,
+		ChevronRight,
+		Folder,
+		FolderPlus,
+		Layers,
+		ListTree,
+		Plus,
+		RefreshCw,
+		Save
+	} from '@lucide/svelte';
+	import type { WorkCategory, WorkItem } from '$lib/work/work-ui.js';
 
 	type CategoryResponse = {
 		categories: WorkCategory[];
@@ -8,36 +18,113 @@
 		all: WorkCategory[];
 	};
 
+	type ItemsResponse = {
+		items: WorkItem[];
+	};
+
+	type DrawerMode = 'new_category' | 'new_subcategory' | 'edit_category' | 'edit_subcategory';
+	type CategoryStatus = WorkCategory['status'];
+
+	type Draft = {
+		title: string;
+		description: string;
+		parent_category_id: string;
+		status: CategoryStatus;
+	};
+
+	type DirectoryCounts = {
+		projects: number;
+		nextSteps: number;
+		openQuestions: number;
+		waiting: number;
+	};
+
+	const emptyDraft = (): Draft => ({
+		title: '',
+		description: '',
+		parent_category_id: '',
+		status: 'active'
+	});
+
 	let loading = $state(true);
 	let saving = $state(false);
+	let initialized = $state(false);
 	let error = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
 	let categories = $state<WorkCategory[]>([]);
 	let subcategories = $state<WorkCategory[]>([]);
-	let categoryDraft = $state({ title: '', description: '' });
-	let subcategoryDraft = $state({ title: '', description: '', parent_category_id: '' });
+	let items = $state<WorkItem[]>([]);
+	let selectedCategoryId = $state('');
+	let selectedSubcategoryId = $state('');
+	let drawerMode = $state<DrawerMode>('new_category');
+	let draft = $state<Draft>(emptyDraft());
 
 	const activeCategories = $derived(categories.filter((category) => category.status === 'active'));
+	const selectedCategory = $derived(
+		categories.find((category) => category.id === selectedCategoryId) ?? null
+	);
+	const drawerIsCategory = $derived(
+		drawerMode === 'new_category' || drawerMode === 'edit_category'
+	);
+	const drawerTitle = $derived(
+		drawerMode === 'new_category'
+			? 'New category'
+			: drawerMode === 'new_subcategory'
+				? 'New subcategory'
+				: drawerMode === 'edit_category'
+					? 'Edit category'
+					: 'Edit subcategory'
+	);
+	const drawerEyebrow = $derived(
+		drawerIsCategory ? 'Top-level bucket' : selectedCategory?.title || 'Nested group'
+	);
+	const archivedCount = $derived(
+		categories.filter((category) => category.status === 'archived').length +
+			subcategories.filter((subcategory) => subcategory.status === 'archived').length
+	);
+	const linkedProjectCount = $derived(
+		items.filter(
+			(item) =>
+				item.type === 'project' && Boolean(item.category_id || item.subcategory_id || item.area_id)
+		).length
+	);
 
 	$effect(() => {
-		if (!subcategoryDraft.parent_category_id && activeCategories[0]) {
-			subcategoryDraft.parent_category_id = activeCategories[0].id;
-		}
+		void loadSettings();
 	});
 
-	$effect(() => {
-		void loadCategories();
-	});
-
-	async function loadCategories() {
+	async function loadSettings() {
 		loading = true;
 		error = null;
 		try {
-			const response = await fetch('/api/work/categories');
-			if (!response.ok) throw new Error(`Category request failed: ${response.status}`);
-			const data = (await response.json()) as CategoryResponse;
-			categories = data.categories ?? [];
-			subcategories = data.subcategories ?? [];
+			const [categoryResponse, itemResponse] = await Promise.all([
+				fetch('/api/work/categories'),
+				fetch('/api/work/items?includeClosed=true&limit=500')
+			]);
+			if (!categoryResponse.ok)
+				throw new Error(`Category request failed: ${categoryResponse.status}`);
+			if (!itemResponse.ok) throw new Error(`Work item request failed: ${itemResponse.status}`);
+
+			const categoryData = (await categoryResponse.json()) as CategoryResponse;
+			const itemData = (await itemResponse.json()) as ItemsResponse;
+			const nextCategories = categoryData.categories ?? [];
+			const nextSubcategories = categoryData.subcategories ?? [];
+
+			categories = nextCategories;
+			subcategories = nextSubcategories;
+			items = itemData.items ?? [];
+
+			if (!initialized) {
+				const firstCategory = nextCategories[0];
+				if (firstCategory) {
+					selectCategory(firstCategory);
+				} else {
+					openNewCategory();
+				}
+				initialized = true;
+			} else {
+				repairSelection(nextCategories, nextSubcategories);
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to load categories';
 		} finally {
@@ -45,36 +132,110 @@
 		}
 	}
 
-	async function createCategory(event: SubmitEvent) {
-		event.preventDefault();
-		await saveCategory({
-			kind: 'category',
-			title: categoryDraft.title,
-			description: categoryDraft.description
-		});
-		categoryDraft = { title: '', description: '' };
+	function repairSelection(nextCategories: WorkCategory[], nextSubcategories: WorkCategory[]) {
+		if (
+			selectedCategoryId &&
+			!nextCategories.some((category) => category.id === selectedCategoryId)
+		) {
+			selectedCategoryId = nextCategories[0]?.id ?? '';
+		}
+		if (
+			selectedSubcategoryId &&
+			!nextSubcategories.some((subcategory) => subcategory.id === selectedSubcategoryId)
+		) {
+			selectedSubcategoryId = '';
+		}
+		if (drawerMode === 'new_subcategory' && !draft.parent_category_id) {
+			draft.parent_category_id = selectedCategoryId || activeCategories[0]?.id || '';
+		}
 	}
 
-	async function createSubcategory(event: SubmitEvent) {
-		event.preventDefault();
-		await saveCategory({
-			kind: 'subcategory',
-			title: subcategoryDraft.title,
-			description: subcategoryDraft.description,
-			parent_category_id: subcategoryDraft.parent_category_id
-		});
-		subcategoryDraft = {
-			title: '',
-			description: '',
-			parent_category_id: subcategoryDraft.parent_category_id
+	function draftFromCategory(category: WorkCategory): Draft {
+		return {
+			title: category.title,
+			description: category.description ?? '',
+			parent_category_id: category.parent_category_id ?? '',
+			status: category.status
 		};
 	}
 
-	async function updateCategory(category: WorkCategory) {
-		await saveCategory(category, category.id);
+	function openNewCategory() {
+		drawerMode = 'new_category';
+		selectedSubcategoryId = '';
+		draft = emptyDraft();
+		saveMessage = null;
 	}
 
-	async function saveCategory(payload: Partial<WorkCategory>, id?: string) {
+	function openNewSubcategory(categoryId = selectedCategoryId) {
+		drawerMode = 'new_subcategory';
+		selectedCategoryId = categoryId || activeCategories[0]?.id || '';
+		selectedSubcategoryId = '';
+		draft = {
+			...emptyDraft(),
+			parent_category_id: selectedCategoryId
+		};
+		saveMessage = null;
+	}
+
+	function selectCategory(category: WorkCategory) {
+		selectedCategoryId = category.id;
+		selectedSubcategoryId = '';
+		drawerMode = 'edit_category';
+		draft = draftFromCategory(category);
+		saveMessage = null;
+	}
+
+	function selectSubcategory(category: WorkCategory, subcategory: WorkCategory) {
+		selectedCategoryId = category.id;
+		selectedSubcategoryId = subcategory.id;
+		drawerMode = 'edit_subcategory';
+		draft = draftFromCategory(subcategory);
+		saveMessage = null;
+	}
+
+	async function submitDrawer(event: SubmitEvent) {
+		event.preventDefault();
+		const isCategory = drawerMode === 'new_category' || drawerMode === 'edit_category';
+		const id =
+			drawerMode === 'edit_category'
+				? selectedCategoryId
+				: drawerMode === 'edit_subcategory'
+					? selectedSubcategoryId
+					: undefined;
+		const saved = await saveCategory(
+			{
+				kind: isCategory ? 'category' : 'subcategory',
+				title: draft.title.trim(),
+				description: draft.description.trim(),
+				parent_category_id: isCategory ? null : draft.parent_category_id,
+				status: draft.status
+			},
+			id
+		);
+		if (!saved) return;
+		if (saved.kind === 'category') {
+			selectCategory(saved);
+		} else {
+			const parent = categories.find((category) => category.id === saved.parent_category_id);
+			if (parent) selectSubcategory(parent, saved);
+		}
+	}
+
+	async function archiveSelected() {
+		const id = drawerMode === 'edit_category' ? selectedCategoryId : selectedSubcategoryId;
+		if (!id) return;
+		const saved = await saveCategory({ status: 'archived' }, id);
+		if (saved?.kind === 'category') selectCategory(saved);
+		if (saved?.kind === 'subcategory') {
+			const parent = categories.find((category) => category.id === saved.parent_category_id);
+			if (parent) selectSubcategory(parent, saved);
+		}
+	}
+
+	async function saveCategory(
+		payload: Partial<WorkCategory>,
+		id?: string
+	): Promise<WorkCategory | null> {
 		saving = true;
 		error = null;
 		saveMessage = null;
@@ -91,10 +252,13 @@
 				const body = await response.json().catch(() => null);
 				throw new Error(body?.error ?? `Save failed: ${response.status}`);
 			}
-			saveMessage = 'Saved';
-			await loadCategories();
+			const saved = (await response.json()) as WorkCategory;
+			saveMessage = id ? 'Saved changes' : 'Created';
+			await loadSettings();
+			return saved;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to save category';
+			return null;
 		} finally {
 			saving = false;
 		}
@@ -103,172 +267,418 @@
 	function childrenFor(category: WorkCategory): WorkCategory[] {
 		return subcategories.filter((subcategory) => subcategory.parent_category_id === category.id);
 	}
+
+	function countsForCategory(category: WorkCategory): DirectoryCounts {
+		const childIds = new Set(childrenFor(category).map((child) => child.id));
+		return countsFor(
+			(item) =>
+				item.category_id === category.id ||
+				item.area_id === category.id ||
+				childIds.has(item.subcategory_id ?? '') ||
+				childIds.has(item.area_id ?? '')
+		);
+	}
+
+	function countsForSubcategory(subcategory: WorkCategory): DirectoryCounts {
+		return countsFor(
+			(item) => item.subcategory_id === subcategory.id || item.area_id === subcategory.id
+		);
+	}
+
+	function countsFor(matches: (item: WorkItem) => boolean): DirectoryCounts {
+		const matched = items.filter(matches);
+		return {
+			projects: matched.filter((item) => item.type === 'project').length,
+			nextSteps: matched.filter((item) => item.type === 'next_step').length,
+			openQuestions: matched.filter((item) => item.type === 'open_question').length,
+			waiting: matched.filter((item) => item.status === 'waiting' || Boolean(item.waiting_on))
+				.length
+		};
+	}
+
+	function formatStatus(status: string): string {
+		return status
+			.split('_')
+			.map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+			.join(' ');
+	}
+
+	function statusClass(status: string): string {
+		if (status === 'active')
+			return 'border-status-active/35 bg-status-active-bg text-status-active';
+		if (status === 'paused')
+			return 'border-status-warning/35 bg-status-warning-bg text-status-warning';
+		return 'border-outline-variant/55 bg-surface-2/65 text-on-surface-variant';
+	}
+
+	function hasEditableSelection(): boolean {
+		return drawerMode === 'edit_category' || drawerMode === 'edit_subcategory';
+	}
 </script>
 
-<section
-	class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
-	data-testid="work-settings"
->
+<section class="space-y-4" data-testid="work-settings">
 	<div
-		class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/55 bg-surface-2/35 px-4 py-4"
+		class="overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
 	>
-		<div>
-			<h2 class="text-2xl font-semibold text-on-surface">Work settings</h2>
-			<p class="mt-1 text-sm text-on-surface-variant">Categories and subcategories</p>
-		</div>
-		<button
-			type="button"
-			onclick={loadCategories}
-			class="falcon-focus inline-flex min-h-10 items-center gap-2 rounded-md border border-outline-variant/70 px-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2"
+		<div
+			class="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant/35 bg-surface-2/45 px-4 py-4 sm:px-5"
 		>
-			<RefreshCw class="h-4 w-4" />
-			Refresh
-		</button>
+			<div class="min-w-0">
+				<div
+					class="flex flex-wrap items-center gap-2 text-xs font-semibold text-on-surface-variant"
+				>
+					<Layers class="h-4 w-4 text-primary" />
+					Categories and subcategories
+				</div>
+				<h2 class="mt-2 text-2xl font-semibold text-on-surface">Work settings</h2>
+				<p class="mt-1 max-w-2xl text-sm text-on-surface-variant">
+					Use categories for broad buckets, then add subcategories for the smaller groups inside
+					them.
+				</p>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				<button
+					type="button"
+					onclick={loadSettings}
+					class="falcon-focus inline-flex min-h-10 items-center gap-2 rounded-md border border-outline-variant/65 bg-surface-1 px-3 text-sm font-semibold text-on-surface transition hover:bg-surface-2"
+				>
+					<RefreshCw class="h-4 w-4" />
+					Refresh
+				</button>
+				<button
+					type="button"
+					onclick={openNewCategory}
+					data-testid="work-settings-add-category"
+					class="falcon-focus inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+				>
+					<FolderPlus class="h-4 w-4" />
+					Add category
+				</button>
+			</div>
+		</div>
+
+		<div class="grid gap-px bg-outline-variant/30 sm:grid-cols-4">
+			<div class="bg-surface-1 px-4 py-3 sm:px-5">
+				<p class="text-xs text-on-surface-variant">Categories</p>
+				<p class="mt-1 text-xl font-semibold text-on-surface">{categories.length}</p>
+			</div>
+			<div class="bg-surface-1 px-4 py-3 sm:px-5">
+				<p class="text-xs text-on-surface-variant">Subcategories</p>
+				<p class="mt-1 text-xl font-semibold text-on-surface">{subcategories.length}</p>
+			</div>
+			<div class="bg-surface-1 px-4 py-3 sm:px-5">
+				<p class="text-xs text-on-surface-variant">Archived</p>
+				<p class="mt-1 text-xl font-semibold text-on-surface">{archivedCount}</p>
+			</div>
+			<div class="bg-surface-1 px-4 py-3 sm:px-5">
+				<p class="text-xs text-on-surface-variant">Linked projects</p>
+				<p class="mt-1 text-xl font-semibold text-on-surface">{linkedProjectCount}</p>
+			</div>
+		</div>
 	</div>
 
 	{#if loading}
-		<p class="p-4 text-sm text-on-surface-variant">Loading settings...</p>
+		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_23rem]">
+			<div class="rounded-lg border border-outline-variant/45 bg-surface-1 p-5">
+				<p class="text-sm text-on-surface-variant">Loading settings...</p>
+			</div>
+			<div class="rounded-lg border border-outline-variant/45 bg-surface-1 p-5">
+				<p class="text-sm text-on-surface-variant">Preparing editor...</p>
+			</div>
+		</div>
 	{:else}
-		<div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-			<div class="overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-0/25">
-				<div class="border-b border-outline-variant/35 px-4 py-3">
-					<h3 class="text-sm font-semibold text-on-surface">Categories</h3>
+		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+			<div
+				class="overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.16)]"
+			>
+				<div
+					class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/35 bg-surface-2/35 px-4 py-3"
+				>
+					<div class="flex items-center gap-2">
+						<ListTree class="h-4 w-4 text-primary" />
+						<h3 class="text-sm font-semibold text-on-surface">Category directory</h3>
+					</div>
+					<span class="text-xs text-on-surface-variant">Select a row to edit</span>
 				</div>
-				<div class="divide-y divide-outline-variant/30">
+
+				<div class="divide-y divide-outline-variant/35" data-testid="work-settings-directory">
 					{#each categories as category (category.id)}
-						<div class="grid gap-3 p-4 xl:grid-cols-[minmax(0,1fr)_9rem]">
-							<div class="min-w-0">
-								<div class="grid gap-2 sm:grid-cols-2">
-									<label class="grid gap-1 text-xs text-on-surface-variant">
-										Name
-										<input
-											bind:value={category.title}
-											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-										/>
-									</label>
-									<label class="grid gap-1 text-xs text-on-surface-variant">
-										State
-										<select
-											bind:value={category.status}
-											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
+						{@const categoryCounts = countsForCategory(category)}
+						{@const children = childrenFor(category)}
+						<section
+							class="bg-surface-1/85 transition {selectedCategoryId === category.id
+								? 'shadow-[inset_3px_0_0_var(--primary)]'
+								: ''}"
+						>
+							<div class="grid gap-3 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+								<button
+									type="button"
+									onclick={() => selectCategory(category)}
+									aria-pressed={selectedCategoryId === category.id && !selectedSubcategoryId}
+									class="falcon-focus group min-w-0 rounded-md text-left transition hover:bg-surface-2/55"
+									data-testid="work-settings-category-row"
+								>
+									<div class="flex min-w-0 items-start gap-3 p-2">
+										<span
+											class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-2 text-primary"
 										>
-											<option value="active">Active</option>
-											<option value="paused">Paused</option>
-											<option value="archived">Archived</option>
-										</select>
-									</label>
-								</div>
-								<label class="mt-2 grid gap-1 text-xs text-on-surface-variant">
-									Notes
-									<input
-										bind:value={category.description}
-										class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-									/>
-								</label>
-								<div class="mt-3 flex flex-wrap gap-2">
-									{#each childrenFor(category) as subcategory (subcategory.id)}
-										<span class="falcon-chip px-2 py-1 text-xs">{subcategory.title}</span>
-									{:else}
-										<span class="text-xs text-on-surface-variant">No subcategories</span>
-									{/each}
+											<Folder class="h-4 w-4" />
+										</span>
+										<span class="min-w-0 flex-1">
+											<span class="flex flex-wrap items-center gap-2">
+												<span class="text-base font-semibold text-on-surface">{category.title}</span
+												>
+												<span
+													class="rounded-md border px-2 py-0.5 text-xs {statusClass(
+														category.status
+													)}"
+												>
+													{formatStatus(category.status)}
+												</span>
+											</span>
+											<span class="mt-1 block text-sm text-on-surface-variant">
+												{category.description || 'No notes yet.'}
+											</span>
+										</span>
+									</div>
+								</button>
+
+								<div class="flex flex-wrap items-center gap-2 xl:justify-end">
+									<span class="falcon-chip px-2 py-1 text-xs"
+										>{categoryCounts.projects} projects</span
+									>
+									<span class="falcon-chip px-2 py-1 text-xs"
+										>{categoryCounts.nextSteps} next steps</span
+									>
+									<span class="falcon-chip px-2 py-1 text-xs">
+										{categoryCounts.openQuestions} questions
+									</span>
+									<button
+										type="button"
+										onclick={() => openNewSubcategory(category.id)}
+										class="falcon-focus inline-flex min-h-9 items-center gap-2 rounded-md border border-outline-variant/60 px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-2"
+									>
+										<Plus class="h-3.5 w-3.5" />
+										Add subcategory
+									</button>
 								</div>
 							</div>
+
+							<div class="px-4 pb-4">
+								{#if children.length > 0}
+									<div class="overflow-hidden rounded-lg bg-surface-0/55">
+										{#each children as subcategory (subcategory.id)}
+											{@const subcategoryCounts = countsForSubcategory(subcategory)}
+											<button
+												type="button"
+												onclick={() => selectSubcategory(category, subcategory)}
+												aria-pressed={selectedSubcategoryId === subcategory.id}
+												class="falcon-focus group grid w-full gap-3 border-t border-outline-variant/25 px-3 py-3 text-left first:border-t-0 transition hover:bg-surface-2/50 md:grid-cols-[minmax(0,1fr)_auto]"
+												data-testid="work-settings-subcategory-row"
+											>
+												<span class="flex min-w-0 items-center gap-3">
+													<ChevronRight class="h-4 w-4 shrink-0 text-on-surface-variant" />
+													<span class="min-w-0">
+														<span class="flex flex-wrap items-center gap-2">
+															<span class="font-semibold text-on-surface">{subcategory.title}</span>
+															<span
+																class="rounded-md border px-2 py-0.5 text-xs {statusClass(
+																	subcategory.status
+																)}"
+															>
+																{formatStatus(subcategory.status)}
+															</span>
+														</span>
+														<span class="mt-0.5 block text-sm text-on-surface-variant">
+															{subcategory.description || 'No notes yet.'}
+														</span>
+													</span>
+												</span>
+												<span class="flex flex-wrap items-center gap-2 md:justify-end">
+													<span class="falcon-chip px-2 py-1 text-xs">
+														{subcategoryCounts.projects} projects
+													</span>
+													<span class="falcon-chip px-2 py-1 text-xs">
+														{subcategoryCounts.nextSteps} next steps
+													</span>
+													<span class="falcon-chip px-2 py-1 text-xs">
+														{subcategoryCounts.waiting} waiting
+													</span>
+												</span>
+											</button>
+										{/each}
+									</div>
+								{:else}
+									<div
+										class="rounded-lg border border-dashed border-outline-variant/45 bg-surface-0/35 px-4 py-5 text-sm text-on-surface-variant"
+									>
+										No subcategories yet.
+									</div>
+								{/if}
+							</div>
+						</section>
+					{:else}
+						<div class="px-4 py-12 text-center">
+							<p class="text-sm font-semibold text-on-surface">No categories yet</p>
+							<p class="mt-1 text-sm text-on-surface-variant">
+								Add broad buckets like Personal, Work, or Condo.
+							</p>
+						</div>
+					{/each}
+
+					<div class="bg-surface-2/25 px-4 py-4">
+						<button
+							type="button"
+							onclick={openNewCategory}
+							class="falcon-focus flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-outline-variant/70 text-sm font-semibold text-on-surface transition hover:border-primary/60 hover:bg-surface-2/60"
+						>
+							<FolderPlus class="h-4 w-4" />
+							Add category
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<aside
+				class="sticky top-20 overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-2 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
+				data-testid="work-settings-drawer"
+			>
+				<div class="border-b border-outline-variant/35 px-4 py-4">
+					<p class="flex items-center gap-2 text-xs font-semibold text-primary">
+						{#if drawerIsCategory}
+							<Folder class="h-4 w-4" />
+						{:else}
+							<ListTree class="h-4 w-4" />
+						{/if}
+						{drawerEyebrow}
+					</p>
+					<h3 class="mt-2 text-xl font-semibold text-on-surface">{drawerTitle}</h3>
+				</div>
+
+				<form class="space-y-4 px-4 py-4" onsubmit={submitDrawer}>
+					<div class="grid grid-cols-2 gap-2 rounded-lg bg-surface-1/65 p-1">
+						<button
+							type="button"
+							onclick={openNewCategory}
+							aria-pressed={drawerMode === 'new_category'}
+							class="falcon-focus rounded-md px-3 py-2 text-sm font-semibold transition {drawerMode ===
+							'new_category'
+								? 'bg-primary text-primary-foreground'
+								: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
+						>
+							New category
+						</button>
+						<button
+							type="button"
+							onclick={() => openNewSubcategory()}
+							aria-pressed={drawerMode === 'new_subcategory'}
+							disabled={activeCategories.length === 0}
+							class="falcon-focus rounded-md px-3 py-2 text-sm font-semibold transition disabled:opacity-50 {drawerMode ===
+							'new_subcategory'
+								? 'bg-primary text-primary-foreground'
+								: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
+						>
+							New subcategory
+						</button>
+					</div>
+
+					{#if !drawerIsCategory}
+						<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+							Category
+							<select
+								bind:value={draft.parent_category_id}
+								required
+								class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
+							>
+								{#each activeCategories as category (category.id)}
+									<option value={category.id}>{category.title}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+
+					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+						Name
+						<input
+							bind:value={draft.title}
+							required
+							class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface placeholder:text-on-surface-variant/55"
+							placeholder={drawerIsCategory ? 'Work' : 'Falcon Dash'}
+						/>
+					</label>
+
+					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+						Notes
+						<textarea
+							bind:value={draft.description}
+							rows="4"
+							class="falcon-focus min-h-28 resize-y rounded-md border border-outline-variant/55 bg-surface-1 px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/55"
+							placeholder="What belongs here?"
+						></textarea>
+					</label>
+
+					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
+						Status
+						<select
+							bind:value={draft.status}
+							class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
+						>
+							<option value="active">Active</option>
+							<option value="paused">Paused</option>
+							<option value="archived">Archived</option>
+						</select>
+					</label>
+
+					<div class="grid gap-2 pt-1 sm:grid-cols-[1fr_auto]">
+						<button
+							type="submit"
+							disabled={saving ||
+								!draft.title.trim() ||
+								(!drawerIsCategory && !draft.parent_category_id)}
+							class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+						>
+							<Save class="h-4 w-4" />
+							{drawerMode === 'new_category' || drawerMode === 'new_subcategory'
+								? 'Create'
+								: 'Save'}
+						</button>
+						{#if hasEditableSelection()}
 							<button
 								type="button"
 								disabled={saving}
-								onclick={() => updateCategory(category)}
-								class="falcon-focus inline-flex min-h-10 items-center justify-center gap-2 self-end rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+								onclick={archiveSelected}
+								class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant/60 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-1 disabled:opacity-60"
 							>
-								<Save class="h-4 w-4" />
-								Save
+								<Archive class="h-4 w-4" />
+								Archive
 							</button>
-						</div>
-					{:else}
-						<p class="p-4 text-sm text-on-surface-variant">No categories yet.</p>
-					{/each}
-				</div>
-			</div>
-
-			<div class="space-y-4">
-				<form
-					class="rounded-lg border border-outline-variant/45 bg-surface-0/25 p-4"
-					onsubmit={createCategory}
-				>
-					<h3 class="text-sm font-semibold text-on-surface">New category</h3>
-					<label class="mt-3 grid gap-1 text-xs text-on-surface-variant">
-						Name
-						<input
-							bind:value={categoryDraft.title}
-							required
-							class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-						/>
-					</label>
-					<label class="mt-2 grid gap-1 text-xs text-on-surface-variant">
-						Notes
-						<input
-							bind:value={categoryDraft.description}
-							class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-						/>
-					</label>
-					<button
-						type="submit"
-						disabled={saving}
-						class="falcon-focus mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-					>
-						<Save class="h-4 w-4" />
-						Create
-					</button>
+						{/if}
+					</div>
 				</form>
 
-				<form
-					class="rounded-lg border border-outline-variant/45 bg-surface-0/25 p-4"
-					onsubmit={createSubcategory}
-				>
-					<h3 class="text-sm font-semibold text-on-surface">New subcategory</h3>
-					<label class="mt-3 grid gap-1 text-xs text-on-surface-variant">
-						Category
-						<select
-							bind:value={subcategoryDraft.parent_category_id}
-							required
-							class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
+				<div class="border-t border-outline-variant/35 px-4 py-4">
+					{#if saveMessage}
+						<p
+							class="rounded-md border border-status-active/35 bg-status-active-bg px-3 py-2 text-sm text-status-active"
 						>
-							{#each activeCategories as category (category.id)}
-								<option value={category.id}>{category.title}</option>
-							{/each}
-						</select>
-					</label>
-					<label class="mt-2 grid gap-1 text-xs text-on-surface-variant">
-						Name
-						<input
-							bind:value={subcategoryDraft.title}
-							required
-							class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-						/>
-					</label>
-					<label class="mt-2 grid gap-1 text-xs text-on-surface-variant">
-						Notes
-						<input
-							bind:value={subcategoryDraft.description}
-							class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-1 px-3 text-sm text-on-surface"
-						/>
-					</label>
-					<button
-						type="submit"
-						disabled={saving || activeCategories.length === 0}
-						class="falcon-focus mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-					>
-						<Save class="h-4 w-4" />
-						Create
-					</button>
-				</form>
-
-				{#if saveMessage}
-					<p class="text-sm text-status-active">{saveMessage}</p>
-				{/if}
-				{#if error}
-					<p class="text-sm text-status-danger">{error}</p>
-				{/if}
-			</div>
+							{saveMessage}
+						</p>
+					{/if}
+					{#if error}
+						<p
+							class="rounded-md border border-status-danger/35 bg-status-danger-bg px-3 py-2 text-sm text-status-danger"
+						>
+							{error}
+						</p>
+					{/if}
+					{#if !saveMessage && !error}
+						<p class="text-sm text-on-surface-variant">
+							Categories are broad life or work buckets. Subcategories are the smaller groups inside
+							them.
+						</p>
+					{/if}
+				</div>
+			</aside>
 		</div>
 	{/if}
 </section>

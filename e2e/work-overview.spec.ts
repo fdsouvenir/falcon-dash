@@ -7,6 +7,11 @@ type SeededWorkItem = {
 	title: string;
 };
 
+type SeededWorkCategory = {
+	id: string;
+	title: string;
+};
+
 const packageVersion = JSON.parse(
 	readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
 ) as { version: string };
@@ -31,6 +36,20 @@ async function createWorkItem(
 	});
 	expect(response.ok()).toBe(true);
 	return (await response.json()) as SeededWorkItem;
+}
+
+async function createWorkCategory(
+	request: APIRequestContext,
+	body: Record<string, unknown>
+): Promise<SeededWorkCategory> {
+	const response = await request.post('/api/work/categories', {
+		data: {
+			status: 'active',
+			...body
+		}
+	});
+	expect(response.ok()).toBe(true);
+	return (await response.json()) as SeededWorkCategory;
 }
 
 function defaultTypedFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -214,6 +233,16 @@ async function archiveWorkItems(request: APIRequestContext, items: SeededWorkIte
 	);
 }
 
+async function archiveWorkCategories(request: APIRequestContext, categories: SeededWorkCategory[]) {
+	await Promise.all(
+		categories.map((category) =>
+			request.patch(`/api/work/categories/${category.id}`, {
+				data: { status: 'archived' }
+			})
+		)
+	);
+}
+
 test.describe('work overview executive status board', () => {
 	test.describe.configure({ mode: 'serial' });
 
@@ -389,6 +418,47 @@ test.describe('work overview executive status board', () => {
 				await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
 			}
 			await expect(page.getByText('More', { exact: true })).toBeVisible();
+		}
+	});
+
+	test('renders settings as a grouped directory with top-level category creation', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const stamp = Date.now();
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E settings category ${stamp}`,
+			description: 'A seeded category for settings directory coverage.'
+		});
+		const subcategory = await createWorkCategory(request, {
+			kind: 'subcategory',
+			parent_category_id: category.id,
+			title: `E2E settings subcategory ${stamp}`,
+			description: 'A seeded subcategory for settings directory coverage.'
+		});
+
+		try {
+			await page.setViewportSize({ width: 1440, height: 900 });
+			await page.goto(`${baseURL ?? ''}/work/settings`);
+
+			await expect(page.getByTestId('work-settings-add-category')).toBeVisible();
+			await expect(page.getByTestId('work-settings-directory')).toContainText(category.title);
+			await expect(page.getByTestId('work-settings-directory')).toContainText(subcategory.title);
+
+			await page.getByTestId('work-settings-add-category').click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
+			await expect(page.getByTestId('work-settings-drawer').getByLabel('Name')).toBeVisible();
+
+			await page
+				.getByTestId('work-settings-drawer')
+				.getByRole('button', { name: 'New subcategory' })
+				.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
+			await expect(page.getByTestId('work-settings-drawer').getByLabel('Category')).toBeVisible();
+		} finally {
+			await archiveWorkCategories(request, [subcategory, category]);
 		}
 	});
 
