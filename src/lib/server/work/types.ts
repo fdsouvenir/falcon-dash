@@ -52,6 +52,13 @@ export interface WorkCategory {
 	updated_at: number;
 }
 
+export interface WorkCategoryDeleteResult {
+	id: string;
+	deleted: boolean;
+	unassigned_items: number;
+	deleted_categories: number;
+}
+
 export interface WorkItem {
 	id: number;
 	type: WorkItemType;

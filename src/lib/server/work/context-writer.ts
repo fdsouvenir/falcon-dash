@@ -126,6 +126,7 @@ Base URL: http://localhost:3000/api/work
 Item types: project, milestone, next_step, open_question, decision, change_request, finding, automation.
 
 Categories and subcategories are setup records exposed through /categories, not Work item types.
+Deleting a category or subcategory removes it from the directory and unassigns linked Work items.
 
 Item filters include type, status, category_id, subcategory_id, parent_item_id, includeClosed, and limit.
 
@@ -137,6 +138,7 @@ Statuses: backlog, planning, ready, in_progress, waiting, needs_review, blocked,
 - POST /categories
 - GET /categories/{id}
 - PATCH /categories/{id}
+- DELETE /categories/{id}
 
 ## Queue
 

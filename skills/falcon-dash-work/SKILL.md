@@ -30,6 +30,7 @@ Evidence is attached through evidence refs/provenance. It is not standalone work
 
 Categories and subcategories are setup records, not Work item types. Use `/categories` to list or
 maintain them and `category_id`/`subcategory_id` item filters to group operational work.
+Deleting a category or subcategory removes that directory entry and unassigns linked Work items.
 
 ## ID References
 
@@ -89,9 +90,10 @@ GET    /api/work/categories
 POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
+DELETE /api/work/categories/{id}
 ```
 
-Public fields are `id`, `title`, `description`, `kind`, `parent_category_id`, and `status`.
+Public fields are `id`, `title`, `description`, `kind`, and `parent_category_id`.
 
 Create example:
 

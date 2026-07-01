@@ -233,14 +233,10 @@ async function archiveWorkItems(request: APIRequestContext, items: SeededWorkIte
 	);
 }
 
-async function archiveWorkCategories(request: APIRequestContext, categories: SeededWorkCategory[]) {
-	await Promise.all(
-		categories.map((category) =>
-			request.patch(`/api/work/categories/${category.id}`, {
-				data: { status: 'archived' }
-			})
-		)
-	);
+async function deleteWorkCategories(request: APIRequestContext, categories: SeededWorkCategory[]) {
+	for (const category of categories) {
+		await request.delete(`/api/work/categories/${category.id}`);
+	}
 }
 
 test.describe('work overview executive status board', () => {
@@ -453,6 +449,8 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 projects');
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 next steps');
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 waiting');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('Active');
+			await expect(page.getByTestId('work-settings-drawer')).not.toContainText('Archive');
 
 			await page.getByTestId('work-settings-add-category').click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
@@ -486,7 +484,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
 			await expect(subcategoryRow).toHaveAttribute('aria-pressed', 'false');
 		} finally {
-			await archiveWorkCategories(request, [subcategory, category]);
+			await deleteWorkCategories(request, [subcategory, category]);
 		}
 	});
 

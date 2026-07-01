@@ -34,8 +34,9 @@ Categories and subcategories organize Work without being Work items. They live i
 internally and are exposed through `/api/work/categories` using the user-facing
 `category`/`subcategory` vocabulary. The Work UI keeps this setup in `/work/settings` behind the
 settings gear instead of putting categories in the primary Work navigation. Settings renders a
-read-only grouped directory; top-level category creation and nested subcategory creation happen in
-the contextual drawer.
+clean grouped directory; top-level category creation, nested subcategory creation, edits, and
+deletes happen in the contextual drawer. Deleting a category or subcategory removes it from the
+directory and unassigns linked Work items instead of archiving the category record.
 
 ## ID Reference Convention
 
@@ -72,6 +73,7 @@ GET    /api/work/categories
 POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
+DELETE /api/work/categories/{id}
 GET    /api/work/context
 GET    /api/work/migration/preview
 POST   /api/work/migration/apply

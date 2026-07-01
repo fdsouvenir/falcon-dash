@@ -1,6 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { getWorkCategory, upsertWorkCategory, WorkError } from '$lib/server/work/index.js';
+import {
+	deleteWorkCategory,
+	getWorkCategory,
+	upsertWorkCategory,
+	WorkError
+} from '$lib/server/work/index.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
@@ -26,6 +31,16 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			kind: body.kind ?? current.kind
 		});
 		return json(category);
+	} catch (err) {
+		return handleWorkError(err);
+	}
+};
+
+export const DELETE: RequestHandler = async ({ params }) => {
+	try {
+		const result = deleteWorkCategory(params.id);
+		if (!result) throw new WorkError('WORK_NOT_FOUND', `Category ${params.id} not found`);
+		return json(result);
 	} catch (err) {
 		return handleWorkError(err);
 	}

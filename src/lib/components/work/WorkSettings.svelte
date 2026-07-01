@@ -1,13 +1,13 @@
 <script lang="ts">
 	import {
-		Archive,
 		Folder,
 		FolderPlus,
 		Layers,
 		ListTree,
 		Plus,
 		RefreshCw,
-		Save
+		Save,
+		Trash2
 	} from '@lucide/svelte';
 	import type { WorkCategory } from '$lib/work/work-ui.js';
 
@@ -18,20 +18,17 @@
 	};
 
 	type DrawerMode = 'new_category' | 'new_subcategory' | 'edit_category' | 'edit_subcategory';
-	type CategoryStatus = WorkCategory['status'];
 
 	type Draft = {
 		title: string;
 		description: string;
 		parent_category_id: string;
-		status: CategoryStatus;
 	};
 
 	const emptyDraft = (): Draft => ({
 		title: '',
 		description: '',
-		parent_category_id: '',
-		status: 'active'
+		parent_category_id: ''
 	});
 
 	let loading = $state(true);
@@ -46,10 +43,7 @@
 	let drawerMode = $state<DrawerMode>('new_category');
 	let draft = $state<Draft>(emptyDraft());
 
-	const activeCategories = $derived(categories.filter((category) => category.status === 'active'));
-	const parentCategoryOptions = $derived(
-		drawerMode === 'edit_subcategory' ? categories : activeCategories
-	);
+	const parentCategoryOptions = $derived(categories);
 	const selectedCategory = $derived(
 		categories.find((category) => category.id === selectedCategoryId) ?? null
 	);
@@ -113,16 +107,17 @@
 			selectedCategoryId &&
 			!nextCategories.some((category) => category.id === selectedCategoryId)
 		) {
-			selectedCategoryId = nextCategories[0]?.id ?? '';
+			openNewCategory();
+			return;
 		}
 		if (
 			selectedSubcategoryId &&
 			!nextSubcategories.some((subcategory) => subcategory.id === selectedSubcategoryId)
 		) {
-			selectedSubcategoryId = '';
+			openNewSubcategory(selectedCategoryId);
 		}
 		if (drawerMode === 'new_subcategory' && !draft.parent_category_id) {
-			draft.parent_category_id = selectedCategoryId || activeCategories[0]?.id || '';
+			draft.parent_category_id = selectedCategoryId || categories[0]?.id || '';
 		}
 	}
 
@@ -130,8 +125,7 @@
 		return {
 			title: category.title,
 			description: category.description ?? '',
-			parent_category_id: category.parent_category_id ?? '',
-			status: category.status
+			parent_category_id: category.parent_category_id ?? ''
 		};
 	}
 
@@ -144,7 +138,7 @@
 	}
 
 	function openNewSubcategory(categoryId = selectedCategoryId) {
-		const parentId = categoryId || activeCategories[0]?.id || '';
+		const parentId = categoryId || categories[0]?.id || '';
 		drawerMode = 'new_subcategory';
 		selectedCategoryId = parentId;
 		selectedSubcategoryId = '';
@@ -201,8 +195,7 @@
 				kind: isCategory ? 'category' : 'subcategory',
 				title: draft.title.trim(),
 				description: draft.description.trim(),
-				parent_category_id: isCategory ? null : draft.parent_category_id,
-				status: draft.status
+				parent_category_id: isCategory ? null : draft.parent_category_id
 			},
 			id
 		);
@@ -215,14 +208,33 @@
 		}
 	}
 
-	async function archiveSelected() {
+	async function deleteSelected() {
 		const id = drawerMode === 'edit_category' ? selectedCategoryId : selectedSubcategoryId;
 		if (!id) return;
-		const saved = await saveCategory({ status: 'archived' }, id);
-		if (saved?.kind === 'category') selectCategory(saved);
-		if (saved?.kind === 'subcategory') {
-			const parent = categories.find((category) => category.id === saved.parent_category_id);
-			if (parent) selectSubcategory(parent, saved);
+		const wasSubcategory = drawerMode === 'edit_subcategory';
+		const parentId = selectedSubcategory?.parent_category_id ?? selectedCategoryId;
+		saving = true;
+		error = null;
+		saveMessage = null;
+		try {
+			const response = await fetch(`/api/work/categories/${encodeURIComponent(id)}`, {
+				method: 'DELETE'
+			});
+			if (!response.ok) {
+				const body = await response.json().catch(() => null);
+				throw new Error(body?.error ?? `Delete failed: ${response.status}`);
+			}
+			saveMessage = 'Deleted';
+			await loadSettings();
+			if (wasSubcategory && categories.some((category) => category.id === parentId)) {
+				openNewSubcategory(parentId);
+			} else {
+				openNewCategory();
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Unable to delete category';
+		} finally {
+			saving = false;
 		}
 	}
 
@@ -260,21 +272,6 @@
 
 	function childrenFor(category: WorkCategory): WorkCategory[] {
 		return subcategories.filter((subcategory) => subcategory.parent_category_id === category.id);
-	}
-
-	function formatStatus(status: string): string {
-		return status
-			.split('_')
-			.map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-			.join(' ');
-	}
-
-	function statusClass(status: string): string {
-		if (status === 'active')
-			return 'border-status-active/35 bg-status-active-bg text-status-active';
-		if (status === 'paused')
-			return 'border-status-warning/35 bg-status-warning-bg text-status-warning';
-		return 'border-outline-variant/55 bg-surface-2/65 text-on-surface-variant';
 	}
 
 	function categorySectionClass(category: WorkCategory): string {
@@ -409,16 +406,8 @@
 											<Folder class="h-4 w-4" />
 										</span>
 										<span class="min-w-0 flex-1">
-											<span class="flex flex-wrap items-center gap-2">
-												<span class="text-base font-semibold text-on-surface">{category.title}</span
-												>
-												<span
-													class="rounded-md border px-2 py-0.5 text-xs {statusClass(
-														category.status
-													)}"
-												>
-													{formatStatus(category.status)}
-												</span>
+											<span class="block truncate text-base font-semibold text-on-surface">
+												{category.title}
 											</span>
 											<span class="mt-1 block text-sm text-on-surface-variant">
 												{category.description || 'No notes yet.'}
@@ -448,18 +437,14 @@
 															? 'opacity-100'
 															: 'opacity-35'}"
 													></span>
-													<span class="min-w-0">
-														<span class="flex flex-wrap items-center gap-2">
-															<span class="font-semibold text-on-surface">{subcategory.title}</span>
-															<span
-																class="rounded-md border px-2 py-0.5 text-xs {statusClass(
-																	subcategory.status
-																)}"
-															>
-																{formatStatus(subcategory.status)}
-															</span>
+													<span class="flex min-w-0 flex-1 items-center gap-2">
+														<span
+															class="max-w-[45%] shrink-0 truncate font-semibold text-on-surface"
+														>
+															{subcategory.title}
 														</span>
-														<span class="mt-0.5 block text-sm text-on-surface-variant">
+														<span class="h-3 w-px shrink-0 bg-outline-variant/60"></span>
+														<span class="min-w-0 truncate text-sm text-on-surface-variant">
 															{subcategory.description || 'No notes yet.'}
 														</span>
 													</span>
@@ -549,19 +534,7 @@
 						></textarea>
 					</label>
 
-					<label class="grid gap-1.5 text-xs font-semibold text-on-surface-variant">
-						Status
-						<select
-							bind:value={draft.status}
-							class="falcon-focus min-h-11 rounded-md border border-outline-variant/55 bg-surface-1 px-3 text-sm text-on-surface"
-						>
-							<option value="active">Active</option>
-							<option value="paused">Paused</option>
-							<option value="archived">Archived</option>
-						</select>
-					</label>
-
-					{#if drawerMode === 'edit_category' && selectedCategory?.status === 'active'}
+					{#if drawerMode === 'edit_category'}
 						<button
 							type="button"
 							onclick={() => openNewSubcategory(selectedCategoryId)}
@@ -589,11 +562,11 @@
 							<button
 								type="button"
 								disabled={saving}
-								onclick={archiveSelected}
-								class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant/60 px-4 text-sm font-semibold text-on-surface transition hover:bg-surface-1 disabled:opacity-60"
+								onclick={deleteSelected}
+								class="falcon-focus inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-status-danger/45 px-4 text-sm font-semibold text-status-danger transition hover:bg-status-danger-bg disabled:opacity-60"
 							>
-								<Archive class="h-4 w-4" />
-								Archive
+								<Trash2 class="h-4 w-4" />
+								Delete
 							</button>
 						{/if}
 					</div>

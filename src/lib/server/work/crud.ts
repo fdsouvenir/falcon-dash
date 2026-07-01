@@ -3,6 +3,7 @@ import { emitWorkEvent } from './events.js';
 import type {
 	WorkArea,
 	WorkCategory,
+	WorkCategoryDeleteResult,
 	WorkCategoryKind,
 	WorkItem,
 	WorkItemType,
@@ -57,7 +58,9 @@ export function listWorkAreas(): WorkArea[] {
 }
 
 export function listWorkCategories(): WorkCategory[] {
-	return listWorkAreas().map(mapWorkCategory);
+	return listWorkAreas()
+		.filter((area) => area.status !== 'archived')
+		.map(mapWorkCategory);
 }
 
 export function getWorkArea(id: string): WorkArea | undefined {
@@ -99,6 +102,50 @@ export function upsertWorkCategory(data: {
 		status: data.status ?? 'active'
 	});
 	return mapWorkCategory(area);
+}
+
+export function deleteWorkCategory(id: string): WorkCategoryDeleteResult | undefined {
+	const area = getWorkArea(id);
+	if (!area) return undefined;
+
+	const db = getWorkDb();
+	const childRows = db
+		.prepare('SELECT id FROM work_areas WHERE parent_area_id = ?')
+		.all(id) as Array<{ id: string }>;
+	const deletedIds = area.parent_area_id ? [id] : [id, ...childRows.map((child) => child.id)];
+	const placeholders = deletedIds.map(() => '?').join(', ');
+	const ts = now();
+
+	const result = db.transaction(() => {
+		const unassigned = db
+			.prepare(
+				`UPDATE work_items
+				 SET area_id = NULL, updated_at = ?, last_activity_at = ?
+				 WHERE area_id IN (${placeholders})`
+			)
+			.run(ts, ts, ...deletedIds);
+
+		let deletedCategories = 0;
+		if (!area.parent_area_id) {
+			deletedCategories += db
+				.prepare('DELETE FROM work_areas WHERE parent_area_id = ?')
+				.run(id).changes;
+		}
+		deletedCategories += db.prepare('DELETE FROM work_areas WHERE id = ?').run(id).changes;
+
+		return {
+			id,
+			deleted: deletedCategories > 0,
+			unassigned_items: unassigned.changes,
+			deleted_categories: deletedCategories
+		};
+	})();
+
+	emitWorkEvent({ type: 'work.changed', entity: 'area', id });
+	if (result.unassigned_items > 0) {
+		emitWorkEvent({ type: 'work.changed', entity: 'item', id: 'category-unassigned' });
+	}
+	return result;
 }
 
 export function upsertWorkArea(data: {

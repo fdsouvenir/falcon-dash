@@ -48,6 +48,8 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 - Keep support text short and decision-oriented.
 - Avoid clipped helper snippets in executive summaries; show labels, counts, status, dates, and
   exact item titles before adding narrative preview text.
+- Settings directories should read as clean configuration surfaces: avoid lifecycle badges,
+  operational stats, and archived rows when the entries either exist or do not exist.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

@@ -11,6 +11,7 @@ export {
 	WorkError,
 	addEvidenceRef,
 	createWorkItem,
+	deleteWorkCategory,
 	getWorkArea,
 	getWorkCategory,
 	getWorkItem,
@@ -32,6 +33,7 @@ export { getFalconDashModules, FALCON_DASH_MODULES } from './module.js';
 export type {
 	WorkArea,
 	WorkCategory,
+	WorkCategoryDeleteResult,
 	WorkCategoryKind,
 	WorkContextResponse,
 	WorkEvidenceRef,
