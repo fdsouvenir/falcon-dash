@@ -33,12 +33,13 @@
 		formatDateTime,
 		formatStatus,
 		itemDisplayId,
+		isStandaloneWorkType,
 		openStatuses,
 		pathForType,
 		priorityTone,
 		sentenceCase,
+		standaloneTypeConfigs,
 		statusTone,
-		typeConfigs,
 		typeFromSection,
 		waitingLabel,
 		workStatuses,
@@ -148,7 +149,7 @@
 
 	const workListLimit = 300;
 
-	const visibleTypeConfigs: TypeConfig[] = typeConfigs;
+	const visibleTypeConfigs: TypeConfig[] = standaloneTypeConfigs;
 
 	const isSettings = $derived(mode === 'section' && section === 'settings');
 	const activeType = $derived(typeFromSection(section));
@@ -164,10 +165,15 @@
 				: activeConfig.summary
 	);
 
-	const openItems = $derived(items.filter((item) => openStatuses.has(item.status)));
+	const openItems = $derived(
+		items.filter((item) => isStandaloneWorkType(item.type) && openStatuses.has(item.status))
+	);
 	const typeItems = $derived(items.filter((item) => item.type === activeType));
 	const recentItems = $derived(
-		[...items].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 14)
+		items
+			.filter((item) => isStandaloneWorkType(item.type))
+			.sort((a, b) => b.last_activity_at - a.last_activity_at)
+			.slice(0, 14)
 	);
 	const primaryFocusDefinitions = $derived(
 		focusDefinitionsForType(activeType, { primaryOnly: true })
@@ -216,7 +222,11 @@
 		return filteredItems[0] ?? null;
 	});
 
-	const needsOperator = $derived(queue?.needsOperator ?? queue?.waitingOnOperator ?? []);
+	const needsOperator = $derived(
+		(queue?.needsOperator ?? queue?.waitingOnOperator ?? []).filter((item) =>
+			isStandaloneWorkType(item.type)
+		)
+	);
 	const needsYourCallItems = $derived.by(() =>
 		uniqueItems([...needsOperator, ...(queue?.needsReview ?? [])]).filter(isOpen)
 	);
@@ -540,6 +550,11 @@
 		}
 	}
 
+	function handleProjectChildCreated(item: WorkItem) {
+		items = mergeItems(items, [item]);
+		clearWorkDataCache(item.id);
+	}
+
 	function emptyDraft(): Draft {
 		return {
 			title: '',
@@ -586,7 +601,7 @@
 	}
 
 	function isOpen(item: WorkItem): boolean {
-		return openStatuses.has(item.status);
+		return isStandaloneWorkType(item.type) && openStatuses.has(item.status);
 	}
 
 	function isRecent(value: number, days: number): boolean {
@@ -615,10 +630,12 @@
 			item.type === 'project'
 				? openChildrenFor(item)
 				: uniqueItems([...(parent ? [parent] : []), ...childrenFor(item), ...siblingsFor(item)]);
-		return source.sort(
-			(a, b) =>
-				statusRank(a.status) - statusRank(b.status) || b.last_activity_at - a.last_activity_at
-		);
+		return source
+			.filter((candidate) => isStandaloneWorkType(candidate.type))
+			.sort(
+				(a, b) =>
+					statusRank(a.status) - statusRank(b.status) || b.last_activity_at - a.last_activity_at
+			);
 	}
 
 	function blockersFor(item: WorkItem): WorkItem[] {
@@ -1511,6 +1528,7 @@
 								{saveMessage}
 								{error}
 								onSave={saveSelected}
+								onMilestoneCreated={handleProjectChildCreated}
 							/>
 						{:else if selectedItem.type === 'open_question' || selectedItem.type === 'decision'}
 							<section

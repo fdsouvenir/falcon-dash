@@ -244,6 +244,14 @@ export const typeConfigs: TypeConfig[] = [
 	}
 ];
 
+export const standaloneTypeConfigs: TypeConfig[] = typeConfigs.filter(
+	(config) => config.type !== 'milestone'
+);
+
+export function isStandaloneWorkType(type: WorkItemType): boolean {
+	return type !== 'milestone';
+}
+
 export const openStatuses = new Set<WorkStatus>([
 	'backlog',
 	'planning',
@@ -277,7 +285,7 @@ export function typeFromSection(section: string | undefined): WorkItemType {
 		area: 'project'
 	};
 	if (section && legacySectionAliases[section]) return legacySectionAliases[section];
-	return typeConfigs.find((config) => config.path === section)?.type ?? 'project';
+	return standaloneTypeConfigs.find((config) => config.path === section)?.type ?? 'project';
 }
 
 export function pathForType(type: WorkItemType): string {

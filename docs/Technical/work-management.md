@@ -19,7 +19,8 @@ on disk only as static migration input and is opened read-only through
 ## Object Model
 
 - `project` — bounded outcome with goal, health, timeline, and attached work
-- `milestone` — progress marker or checkpoint
+- `milestone` — short project-local progress checkpoint; milestones are created and shown inside
+  a project rather than browsed as standalone Work pages
 - `next_step` — concrete action, usually starting with a verb
 - `open_question` — unresolved knowledge with answerer, impact, and optional blocker
 - `decision` — unresolved commitment with options, recommendation, and no-decision consequence
@@ -86,7 +87,8 @@ There is no active PM API. Old PM routes and stores have been removed from the r
 `area_id`, `parent_item_id`, `includeClosed=true`, and `limit` filters. Detail-oriented UI uses
 `parent_item_id` to load related child and sibling work without hydrating the whole Work database.
 The Projects list intentionally hydrates Work items broadly because project filters and summaries
-depend on child work context.
+depend on child work context. Milestones remain valid API records for project structure, but the
+Work UI does not expose `/work/milestones` as a standalone list or detail surface.
 
 `GET /api/work/queue` returns actionability buckets:
 

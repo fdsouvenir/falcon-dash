@@ -177,9 +177,9 @@ Routeable Work surface for the `/work` module:
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
-- **Type pages** -- `/work/projects`, `/work/milestones`, `/work/next-steps`,
-  `/work/open-questions`, `/work/decisions`, `/work/change-requests`, `/work/findings`, and
-  `/work/automations` use type-specific page anatomy instead of one generic list row. Projects show
+- **Type pages** -- `/work/projects`, `/work/next-steps`, `/work/open-questions`,
+  `/work/decisions`, `/work/change-requests`, `/work/findings`, and `/work/automations` use
+  type-specific page anatomy instead of one generic list row. Projects show
   an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
   blockers; open questions show unresolved knowledge and answer context; decisions show commitment
   options and recommendations; change requests show scope, approval, risk, and verification state;
@@ -193,11 +193,13 @@ Routeable Work surface for the `/work` module:
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Project details render as a ledger-style operating brief with a left section index,
   compact header, schema-first brief, current next step, blocker/waiting state, and a project plan
-  that groups related next steps, decisions, open questions, and change requests under their
-  milestone. Work attached directly to the project appears in a project-level work group instead of
-  being mixed into the milestone structure. Automations, findings, activity, and the right
-  health/status rail remain supporting project context. Question details render as a Question Brief
-  with Markdown sections and collapsed history or legacy material instead of one long paragraph.
+  that groups related next steps, decisions, open questions, and change requests under short
+  project-local milestones. Milestones are inert headings with a title and optional one-sentence
+  description; they are added from the project right rail and do not have standalone list or detail
+  pages. Work attached directly to the project appears in a project-level work group instead of being
+  mixed into the milestone structure. Automations, findings, activity, and the right health/status
+  rail remain supporting project context. Question details render as a Question Brief with Markdown
+  sections and collapsed history or legacy material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
   categories and subcategories as a read-only grouped directory with an explicit `Add category`
   action and a contextual drawer for category/subcategory creation and edits

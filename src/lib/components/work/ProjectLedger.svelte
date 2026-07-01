@@ -19,7 +19,7 @@
 		type WorkPriority,
 		type WorkStatus
 	} from '$lib/work/work-ui.js';
-	import { ArrowRight, Save } from '@lucide/svelte';
+	import { ArrowRight, Plus, Save } from '@lucide/svelte';
 
 	type ProjectLedgerDraft = {
 		status: WorkStatus;
@@ -36,7 +36,7 @@
 	type ProjectPlanGroup = {
 		id: string;
 		title: string;
-		description: string;
+		description: string | null;
 		milestone: WorkItem | null;
 		work: WorkItem[];
 	};
@@ -48,7 +48,8 @@
 		saving,
 		saveMessage,
 		error,
-		onSave
+		onSave,
+		onMilestoneCreated
 	}: {
 		item: WorkItem;
 		items: WorkItem[];
@@ -57,7 +58,15 @@
 		saveMessage: string | null;
 		error: string | null;
 		onSave: (event: SubmitEvent) => void;
+		onMilestoneCreated?: (item: WorkItem) => void;
 	} = $props();
+
+	let addingMilestone = $state(false);
+	let creatingMilestone = $state(false);
+	let milestoneTitle = $state('');
+	let milestoneDescription = $state('');
+	let milestoneMessage = $state<string | null>(null);
+	let milestoneError = $state<string | null>(null);
 
 	const waitingOptions = [
 		{ value: '', label: 'No blocker' },
@@ -92,11 +101,14 @@
 		)
 	);
 	const children = $derived(uniqueItems([...directChildren, ...milestoneChildren]));
-	const health = $derived(projectHealth(item, children));
-	const healthReasons = $derived(riskFlagsFor(item, children));
-	const blockers = $derived(literalBlockersFor(item, children));
+	const projectWorkChildren = $derived(
+		children.filter((candidate) => candidate.type !== 'milestone')
+	);
+	const health = $derived(projectHealth(item, projectWorkChildren));
+	const healthReasons = $derived(riskFlagsFor(item, projectWorkChildren));
+	const blockers = $derived(literalBlockersFor(item, projectWorkChildren));
 	const waitingItems = $derived(
-		children
+		projectWorkChildren
 			.filter((candidate) => openStatuses.has(candidate.status) && Boolean(candidate.waiting_on))
 			.sort(
 				(a, b) =>
@@ -122,7 +134,7 @@
 		const groups: ProjectPlanGroup[] = milestones.map((milestone) => ({
 			id: `milestone-${milestone.id}`,
 			title: milestone.title,
-			description: itemPrimaryText(milestone),
+			description: milestoneBlurb(milestone),
 			milestone,
 			work: sortProjectItems(
 				children.filter(
@@ -145,7 +157,7 @@
 		return groups;
 	});
 	const recentActivity = $derived(
-		[...children].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 8)
+		[...projectWorkChildren].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 8)
 	);
 	const evidenceLabels = $derived(
 		findings
@@ -249,6 +261,58 @@
 		if (candidate.type === 'milestone')
 			return firstText(candidate.milestone_marker, candidate.description, candidate.title);
 		return compactDetail(candidate);
+	}
+
+	function milestoneBlurb(milestone: WorkItem): string | null {
+		const marker =
+			milestone.milestone_marker?.trim() && milestone.milestone_marker !== milestone.title
+				? milestone.milestone_marker
+				: null;
+		return firstText(milestone.description, marker, null) === 'Not set'
+			? null
+			: firstText(milestone.description, marker, null);
+	}
+
+	async function createMilestone(event: SubmitEvent) {
+		event.preventDefault();
+		const title = milestoneTitle.trim();
+		const description = milestoneDescription.trim().replace(/\s+/g, ' ');
+		if (!title) {
+			milestoneError = 'Add a milestone title first.';
+			return;
+		}
+		creatingMilestone = true;
+		milestoneMessage = null;
+		milestoneError = null;
+		try {
+			const response = await fetch('/api/work/items', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					type: 'milestone',
+					parent_item_id: item.id,
+					title,
+					description: description || null,
+					milestone_marker: description || title,
+					status: 'planning',
+					priority: 'normal',
+					category_id: item.category_id ?? null,
+					subcategory_id: item.subcategory_id ?? null,
+					actor: 'operator'
+				})
+			});
+			if (!response.ok) throw new Error(`Milestone create failed: ${response.status}`);
+			const created = (await response.json()) as WorkItem;
+			onMilestoneCreated?.(created);
+			milestoneTitle = '';
+			milestoneDescription = '';
+			addingMilestone = false;
+			milestoneMessage = 'Milestone added';
+		} catch (err) {
+			milestoneError = err instanceof Error ? err.message : 'Unable to add milestone';
+		} finally {
+			creatingMilestone = false;
+		}
 	}
 
 	function dateLabel(candidate: WorkItem): string {
@@ -498,34 +562,21 @@
 								class="overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-0/35"
 								data-testid="project-plan-group"
 							>
-								<div
-									class="grid gap-3 border-b border-outline-variant/45 bg-surface-1/45 px-4 py-3 md:grid-cols-[minmax(0,1fr)_9rem]"
-								>
+								<div class="border-b border-outline-variant/45 bg-surface-1/45 px-4 py-3">
 									<div class="min-w-0">
 										<div class="flex flex-wrap items-center gap-2">
 											{#if group.milestone}
-												<a
-													href={resolve(routeFor(group.milestone))}
-													class="falcon-focus text-base font-semibold text-on-surface transition hover:text-primary"
-												>
-													{group.title}
-												</a>
-												<span class="text-xs {statusTone(group.milestone.status)}">
-													{formatStatus(group.milestone.status)}
-												</span>
+												<p class="text-base font-semibold text-on-surface">{group.title}</p>
 											{:else}
 												<p class="text-base font-semibold text-on-surface">{group.title}</p>
 											{/if}
 										</div>
-										<p class="mt-1 text-sm leading-6 text-on-surface-variant">
-											{group.description}
-										</p>
+										{#if group.description}
+											<p class="mt-1 text-sm leading-6 text-on-surface-variant">
+												{group.description}
+											</p>
+										{/if}
 									</div>
-									{#if group.milestone}
-										<p class="text-xs font-semibold text-on-surface-variant md:text-right">
-											{dateLabel(group.milestone)}
-										</p>
-									{/if}
 								</div>
 								<div class="divide-y divide-outline-variant/35">
 									{#each group.work as work (work.id)}
@@ -691,6 +742,65 @@
 
 		<aside class="border-t border-outline-variant/55 bg-surface-0/45 p-4 xl:border-l xl:border-t-0">
 			<div class="space-y-5 xl:sticky xl:top-16">
+				<section class="rounded-lg border border-outline-variant/45 bg-surface-1/45 p-3">
+					<div class="flex items-center justify-between gap-3">
+						<div>
+							<h3 class="text-sm font-semibold text-on-surface">Milestones</h3>
+							<p class="mt-1 text-xs text-on-surface-variant">Short project checkpoints.</p>
+						</div>
+						<button
+							type="button"
+							class="falcon-focus inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+							onclick={() => {
+								addingMilestone = !addingMilestone;
+								milestoneMessage = null;
+								milestoneError = null;
+							}}
+						>
+							<Plus class="h-4 w-4" />
+							Add
+						</button>
+					</div>
+					{#if addingMilestone}
+						<form
+							class="mt-3 space-y-3 border-t border-outline-variant/35 pt-3"
+							onsubmit={createMilestone}
+						>
+							<label class="grid gap-1 text-xs text-on-surface-variant">
+								Title
+								<input
+									bind:value={milestoneTitle}
+									maxlength="90"
+									class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+									placeholder="Launch and stabilize"
+								/>
+							</label>
+							<label class="grid gap-1 text-xs text-on-surface-variant">
+								Short description
+								<textarea
+									bind:value={milestoneDescription}
+									maxlength="140"
+									rows="2"
+									class="falcon-focus resize-none rounded-md border border-outline-variant/70 bg-surface-0 px-2 py-2 text-sm text-on-surface"
+									placeholder="One sentence about what this checkpoint means."
+								></textarea>
+							</label>
+							<button
+								type="submit"
+								disabled={creatingMilestone}
+								class="falcon-focus inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+							>
+								<Plus class="h-4 w-4" />
+								{creatingMilestone ? 'Adding...' : 'Add milestone'}
+							</button>
+						</form>
+					{/if}
+					{#if milestoneMessage}<p class="mt-2 text-xs text-status-active">
+							{milestoneMessage}
+						</p>{/if}
+					{#if milestoneError}<p class="mt-2 text-xs text-status-danger">{milestoneError}</p>{/if}
+				</section>
+
 				<section>
 					<h3 class="text-sm font-semibold text-on-surface-variant">Health and status</h3>
 					<div class="mt-3 space-y-3 text-sm">

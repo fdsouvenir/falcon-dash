@@ -428,6 +428,22 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
+	test('keeps milestones inside projects instead of standalone pages', async ({
+		page,
+		baseURL
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto(`${baseURL ?? ''}/work/projects`);
+
+		await expect(page.getByRole('link', { name: 'Milestones', exact: true })).toHaveCount(0);
+
+		await page.goto(`${baseURL ?? ''}/work/milestones`);
+		await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
+
+		await page.goto(`${baseURL ?? ''}/work/milestones/1`);
+		await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
+	});
+
 	test('renders settings as a grouped directory with top-level category creation', async ({
 		page,
 		request,
@@ -573,10 +589,33 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
+			await expect(
+				page.getByTestId('project-plan').getByRole('link', { name: seeded.milestone.title })
+			).toHaveCount(0);
 			await expect(page.getByTestId('project-plan')).toContainText(
 				`E2E verify milestone checklist`
 			);
 			await expect(page.getByTestId('project-plan')).toContainText('Project-level work');
+			const addedMilestoneTitle = `E2E local milestone ${Date.now()}`;
+			const milestonePanel = page.locator('section').filter({
+				has: page.getByRole('heading', { name: 'Milestones', exact: true })
+			});
+			await milestonePanel.getByRole('button', { name: 'Add' }).click();
+			await milestonePanel.getByLabel('Title').fill(addedMilestoneTitle);
+			await milestonePanel
+				.getByLabel('Short description')
+				.fill('A compact checkpoint created from the project page.');
+			await milestonePanel.getByRole('button', { name: 'Add milestone' }).click();
+			await expect(page.getByTestId('project-plan')).toContainText(addedMilestoneTitle);
+			const milestoneResponse = await request.get(
+				`/api/work/items?parent_item_id=${seeded.project.id}&includeClosed=true&limit=100`
+			);
+			const milestoneJson = await milestoneResponse.json();
+			const createdMilestone = milestoneJson.items.find(
+				(item: SeededWorkItem) => item.title === addedMilestoneTitle
+			);
+			expect(createdMilestone).toBeTruthy();
+			seeded.items.push(createdMilestone);
 			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
 			await expect(
 				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()

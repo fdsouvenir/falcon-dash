@@ -14,8 +14,8 @@ redirects to `/work`.
 - Purpose-built overview sections for due-next work, operator asks, blocked or waiting work, and a
   single chronological recent activity log. The due-next section appears before the ask/risk
   sections so near-term action is visible first.
-- Type-specific pages for projects, milestones, next steps, open questions, decisions, change
-  requests, findings, and automations
+- Type-specific pages for projects, next steps, open questions, decisions, change requests,
+  findings, and automations
 - Desktop type pages with the section title above fixed search/filter controls, a scrollable item
   list, and a quick inspector on the right. Single clicks select and highlight a row in place;
   double clicks open that item's standalone detail page.
@@ -33,9 +33,9 @@ redirects to `/work`.
 - `/` -- redirects to `/work`
 - `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
 - `/work/search?q=...` -- read-only search across existing Work records
-- `/work/projects`, `/work/milestones`, `/work/next-steps`, `/work/open-questions`,
-  `/work/decisions`, `/work/change-requests`, `/work/findings`, `/work/automations` --
-  type-specific lists optimized for each Work shape
+- `/work/projects`, `/work/next-steps`, `/work/open-questions`, `/work/decisions`,
+  `/work/change-requests`, `/work/findings`, `/work/automations` -- type-specific lists optimized
+  for each standalone Work shape
 - `/work/settings` -- category and subcategory setup, opened from the Work settings gear
 - `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
   project filters such as `focus=blocked`; next steps use due filters such as `focus=due-this-week`;
@@ -56,9 +56,10 @@ next step, status, coming-up, open-work, blocker, and update columns. Desktop ro
 hover only, and double-clicking opens the full project page. The project page is a ledger-style
 operating brief: goal, definition of done, why it matters, scope, current next step, blockers, and
 waiting state lead into a project plan where milestone groups contain their related next steps,
-decisions, open questions, and change requests. Work that is not attached to a milestone appears as
-project-level work, while automations, findings, activity, and health/status context remain
-supporting sections.
+decisions, open questions, and change requests. Milestones are short checkpoints inside the
+project, not separate pages; the project right rail includes an Add milestone control for a title
+and one-sentence description. Work that is not attached to a milestone appears as project-level
+work, while automations, findings, activity, and health/status context remain supporting sections.
 
 Open questions and decisions are separate. An open question captures unresolved knowledge; a
 decision captures a commitment or approval with options and a recommendation. Change requests are
