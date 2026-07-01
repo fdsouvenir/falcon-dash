@@ -1,11 +1,12 @@
 export const WORK_ITEM_TYPES = [
-	'area',
 	'project',
-	'task',
+	'milestone',
+	'next_step',
+	'open_question',
 	'decision',
-	'routine',
-	'observation',
-	'change'
+	'automation',
+	'finding',
+	'change_request'
 ] as const;
 
 export type WorkItemType = (typeof WORK_ITEM_TYPES)[number];
@@ -28,6 +29,8 @@ export type WorkStatus = (typeof WORK_STATUSES)[number];
 
 export type WorkPriority = 'low' | 'normal' | 'high' | 'urgent';
 
+export type WorkCategoryKind = 'category' | 'subcategory';
+
 export interface WorkArea {
 	id: string;
 	title: string;
@@ -38,10 +41,23 @@ export interface WorkArea {
 	updated_at: number;
 }
 
+export interface WorkCategory {
+	id: string;
+	title: string;
+	description: string | null;
+	parent_category_id: string | null;
+	status: string;
+	kind: WorkCategoryKind;
+	created_at: number;
+	updated_at: number;
+}
+
 export interface WorkItem {
 	id: number;
 	type: WorkItemType;
 	area_id: string | null;
+	category_id?: string | null;
+	subcategory_id?: string | null;
 	parent_item_id: number | null;
 	title: string;
 	description: string | null;
@@ -56,6 +72,51 @@ export interface WorkItem {
 	scheduled_at: string | null;
 	stale_after: string | null;
 	result: string | null;
+	goal?: string | null;
+	definition_of_done?: string | null;
+	why_it_matters?: string | null;
+	scope?: string | null;
+	non_scope?: string | null;
+	health?: 'on_track' | 'at_risk' | 'blocked' | 'unknown' | null;
+	operator?: string | null;
+	start_date?: string | null;
+	target_date?: string | null;
+	actual_completed_date?: string | null;
+	current_next_step_id?: number | null;
+	last_meaningful_update_at?: number | null;
+	milestone_marker?: string | null;
+	next_step_action?: string | null;
+	question_text?: string | null;
+	answerer?: string | null;
+	blocked_item_id?: number | null;
+	proposed_answer?: string | null;
+	answer?: string | null;
+	answered_at?: number | null;
+	decision_question?: string | null;
+	options?: string[] | null;
+	recommended_option?: string | null;
+	consequence_of_no_decision?: string | null;
+	decision?: string | null;
+	decided_by?: string | null;
+	decided_at?: number | null;
+	change_scope?: string | null;
+	systems_touched?: string[] | null;
+	risk?: string | null;
+	rollback_notes?: string | null;
+	verification_plan?: string | null;
+	approval_state?: string | null;
+	execution_state?: string | null;
+	trigger_type?: 'cron' | 'heartbeat' | 'webhook' | 'manual' | null;
+	schedule?: string | null;
+	enabled?: number | null;
+	last_run_at?: number | null;
+	next_run_at?: number | null;
+	last_result?: string | null;
+	failure_count?: number | null;
+	generated_work_policy?: string | null;
+	backing_ref?: string | null;
+	finding_text?: string | null;
+	source_refs?: string[] | null;
 	legacy_project_id: number | null;
 	legacy_plan_id: number | null;
 	created_at: number;
@@ -85,11 +146,11 @@ export interface WorkQueue {
 	nextActions: WorkItem[];
 	needsOperator: WorkItem[];
 	waitingOnOperator: WorkItem[];
-	waitingOnFred: WorkItem[];
 	waitingOnAgent: WorkItem[];
 	waitingOnExternal: WorkItem[];
 	needsReview: WorkItem[];
-	scheduledRoutines: WorkItem[];
+	failedAutomations: WorkItem[];
+	scheduledAutomations: WorkItem[];
 	staleCleanup: WorkItem[];
 	blockedRisky: WorkItem[];
 }
@@ -114,7 +175,7 @@ export interface WorkMigrationPreview {
 		parent_legacy_id?: string;
 		area_id?: string;
 	}>;
-	observations: Array<{
+	findings: Array<{
 		legacy_type: string;
 		legacy_id: string;
 		title: string;

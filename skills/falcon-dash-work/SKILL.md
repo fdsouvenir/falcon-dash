@@ -17,20 +17,24 @@ archived migration input; there is no active PM API.
 
 ## Object Types
 
-- `area` — evergreen responsibility bucket
-- `project` — bounded outcome with a finish line
-- `task` — concrete next action
-- `decision` — approval/review/judgment point
-- `routine` — standing operator loop with cadence/run history
-- `observation` — captured event or finding
-- `change` — bounded approval/execution unit for code/config/migration/deploy/system work
+- `project` — bounded outcome with a finish line, health, timeline, and attached work
+- `milestone` — progress marker or checkpoint
+- `next_step` — concrete action, usually starting with a verb
+- `open_question` — unresolved knowledge with answerer, impact, and optional blocker
+- `decision` — unresolved commitment with options, recommendation, and no-decision consequence
+- `change_request` — controlled mutation of code, config, systems, data, auth, deployment, or automation
+- `finding` — captured fact, discovery, source-backed note, or evidence summary
+- `automation` — recurring or triggered work backed by cron, heartbeat, webhook, or manual runs
 
 Evidence is attached through evidence refs/provenance. It is not standalone work.
 
+Categories and subcategories are setup records, not Work item types. Use `/categories` to list or
+maintain them and `category_id`/`subcategory_id` item filters to group operational work.
+
 ## ID References
 
-Use object-type references in human/operator conversation: `Change 176`, `Project 4`,
-`Routine 12`, `Decision 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
+Use object-type references in human/operator conversation: `Change Request 176`, `Project 4`,
+`Automation 12`, `Decision 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
 all Work items as `W-{id}`. The `W-` prefix is reserved for generated context filenames where
 collision-proof file names are useful.
 
@@ -53,12 +57,10 @@ Returns actionability buckets:
 - `waitingOnAgent`
 - `waitingOnExternal`
 - `needsReview`
-- `scheduledRoutines`
+- `failedAutomations`
+- `scheduledAutomations`
 - `staleCleanup`
 - `blockedRisky`
-
-`waitingOnFred` is still returned as a legacy alias for older callers. Prefer the operator-focused
-bucket names in new code, docs, and generated context.
 
 ## Items
 
@@ -73,10 +75,23 @@ List filters:
 
 - `type`
 - `status`
-- `area_id`
+- `category_id`
+- `subcategory_id`
+- `area_id` (legacy/internal alias)
 - `parent_item_id`
 - `includeClosed=true`
 - `limit`
+
+## Categories
+
+```
+GET    /api/work/categories
+POST   /api/work/categories
+GET    /api/work/categories/{id}
+PATCH  /api/work/categories/{id}
+```
+
+Public fields are `id`, `title`, `description`, `kind`, `parent_category_id`, and `status`.
 
 Create example:
 
@@ -84,7 +99,7 @@ Create example:
 curl -X POST http://localhost:3000/api/work/items \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "task",
+    "type": "next_step",
     "title": "Validate migration fixture",
     "status": "ready",
     "owner": "agent",
@@ -112,5 +127,5 @@ GET /api/work/context
 Generated context files become Work-first once migration apply marks Work as source of truth:
 
 - `WORK.md` — Work Queue
-- `Work/W-{id}.md` — Work item details for project/change items
+- `Work/W-{id}.md` — Work item details for active Work items
 - `WORK-API.md` — Work API reference

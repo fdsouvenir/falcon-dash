@@ -25,11 +25,44 @@ async function createWorkItem(
 			owner: 'agent',
 			priority: 'normal',
 			actor: 'playwright',
+			...defaultTypedFields(body),
 			...body
 		}
 	});
 	expect(response.ok()).toBe(true);
 	return (await response.json()) as SeededWorkItem;
+}
+
+function defaultTypedFields(body: Record<string, unknown>): Record<string, unknown> {
+	if (body.type === 'decision') {
+		return {
+			decision_question: body.title,
+			options: ['Approve', 'Defer'],
+			recommended_option: body.next_action ?? 'Approve',
+			consequence_of_no_decision: 'Related work remains waiting.'
+		};
+	}
+	if (body.type === 'open_question') {
+		return {
+			question_text: body.title,
+			why_it_matters: 'The answer changes the next step.',
+			answerer: body.waiting_on ?? 'operator'
+		};
+	}
+	if (body.type === 'change_request') {
+		return {
+			change_scope: body.description ?? body.title,
+			risk: body.priority ?? 'normal',
+			verification_plan: body.next_action ?? 'Verify the change request.'
+		};
+	}
+	if (body.type === 'automation') {
+		return {
+			trigger_type: 'heartbeat',
+			schedule: body.scheduled_at
+		};
+	}
+	return {};
 }
 
 async function seedExecutiveOverview(request: APIRequestContext) {
@@ -56,7 +89,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 	items.push(question);
 
 	const blockedChange = await createWorkItem(request, {
-		type: 'change',
+		type: 'change_request',
 		parent_item_id: project.id,
 		title: `E2E unblock provider access ${stamp}`,
 		status: 'blocked',
@@ -68,7 +101,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 
 	items.push(
 		await createWorkItem(request, {
-			type: 'task',
+			type: 'next_step',
 			parent_item_id: project.id,
 			title: `E2E send stakeholder brief ${stamp}`,
 			status: 'ready',
@@ -79,7 +112,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 
 	items.push(
 		await createWorkItem(request, {
-			type: 'routine',
+			type: 'automation',
 			parent_item_id: project.id,
 			title: `E2E run readiness sweep ${stamp}`,
 			status: 'scheduled',
@@ -122,7 +155,7 @@ async function seedUrgentOverdueProject(request: APIRequestContext) {
 async function seedLongQuestion(request: APIRequestContext) {
 	const stamp = Date.now();
 	const question = await createWorkItem(request, {
-		type: 'decision',
+		type: 'open_question',
 		title: `E2E long question brief ${stamp}`,
 		status: 'needs_review',
 		waiting_on: 'operator',
@@ -294,6 +327,7 @@ test.describe('work overview executive status board', () => {
 		page,
 		baseURL
 	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
 		await page.goto(`${baseURL ?? ''}/settings`);
 		await page.getByRole('button', { name: 'Preferences' }).click();
 		await expect(page.getByText('Text size', { exact: true })).toBeVisible();
@@ -332,14 +366,21 @@ test.describe('work overview executive status board', () => {
 	test('renders type-aware primary filters on section pages', async ({ page, baseURL }) => {
 		const expectations = [
 			['projects', ['Blocked', 'Overdue', 'Needs decision', 'No next move', 'Stale']],
-			['changes', ['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']],
 			[
-				'decisions',
+				'change-requests',
+				['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']
+			],
+			[
+				'open-questions',
 				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Answered']
 			],
-			['tasks', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
-			['routines', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
-			['observations', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
+			[
+				'decisions',
+				['Needs decision', 'Needs review', 'Waiting on agent', 'High impact', 'Decided']
+			],
+			['next-steps', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
+			['automations', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
+			['findings', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
 		] as const;
 
 		for (const [section, labels] of expectations) {
@@ -356,6 +397,7 @@ test.describe('work overview executive status board', () => {
 		request,
 		baseURL
 	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
 		const seeded = await seedExecutiveOverview(request);
 		try {
 			await page.goto(`${baseURL ?? ''}/work`);
@@ -385,6 +427,7 @@ test.describe('work overview executive status board', () => {
 	}) => {
 		const seeded = await seedExecutiveOverview(request);
 		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
 			await page.goto(`${baseURL ?? ''}/work/projects`);
 
 			const row = page
@@ -523,7 +566,7 @@ test.describe('work overview executive status board', () => {
 	}) => {
 		const seeded = await seedLongQuestion(request);
 		try {
-			await page.goto(`${baseURL ?? ''}/work/decisions/${seeded.question.id}`);
+			await page.goto(`${baseURL ?? ''}/work/open-questions/${seeded.question.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
 			await expect(page.getByText('Question Brief', { exact: true })).toBeVisible();

@@ -58,10 +58,11 @@ describe('Work migration', () => {
 			preview.items.some((item) => item.type === 'project' && item.title === 'Falcon reset')
 		).toBe(true);
 		expect(
-			preview.items.some((item) => item.type === 'change' && item.title.includes('schema'))
+			preview.items.some((item) => item.type === 'change_request' && item.title.includes('schema'))
 		).toBe(true);
+		expect(preview.items.some((item) => item.type === 'open_question')).toBe(true);
 		expect(preview.items.some((item) => item.type === 'decision')).toBe(true);
-		expect(preview.items.some((item) => item.type === 'routine')).toBe(true);
+		expect(preview.items.some((item) => item.type === 'automation')).toBe(true);
 		expect(preview.counts.planVersions).toBe(1);
 		expect(preview.counts.planDependencies).toBe(1);
 		expect(preview.self_review.join('\n')).toContain('Self-review found no broken foreign-key');
@@ -76,8 +77,10 @@ describe('Work migration', () => {
 		expect(preview.counts.items).toBeGreaterThan(0);
 		expect(isWorkSourceOfTruth(db)).toBe(true);
 		expect(getWorkItemByLegacy('project', 1)?.type).toBe('project');
-		expect(getWorkItemByLegacy('plan', 1)?.type).toBe('change');
+		expect(getWorkItemByLegacy('plan', 1)?.type).toBe('change_request');
+		expect(getWorkItemByLegacy('plan', 4)?.type).toBe('open_question');
 		expect(listWorkQueue().needsReview.length).toBeGreaterThan(0);
+		expect(listWorkQueue().scheduledAutomations.length).toBeGreaterThan(0);
 		expect(db.prepare('SELECT COUNT(*) as count FROM work_relationships').get()).toMatchObject({
 			count: 1
 		});
@@ -117,7 +120,7 @@ describe('Work migration', () => {
 		applyWorkMigration(legacyDb, getWorkDb());
 
 		const item = createWorkItem({
-			type: 'task',
+			type: 'next_step',
 			title: 'Write Work-first context',
 			status: 'ready',
 			owner: 'agent',
@@ -126,10 +129,39 @@ describe('Work migration', () => {
 		});
 
 		expect(item.id).toBeGreaterThan(0);
-		expect(listWorkItems({ type: 'task' }).some((workItem) => workItem.title === item.title)).toBe(
-			true
-		);
+		expect(
+			listWorkItems({ type: 'next_step' }).some((workItem) => workItem.title === item.title)
+		).toBe(true);
 		expect(generateWorkContext().markdown).toContain('Write Work-first context');
+	});
+
+	it('rejects old public type names and incomplete controlled objects', () => {
+		expect(() =>
+			createWorkItem({
+				type: 'task',
+				title: 'Old task noun',
+				actor: 'agent'
+			} as never)
+		).toThrow('Invalid work type: task');
+
+		expect(() =>
+			createWorkItem({
+				type: 'change_request',
+				title: 'Incomplete change request',
+				actor: 'agent'
+			})
+		).toThrow('change_scope is required');
+
+		expect(() =>
+			createWorkItem({
+				type: 'decision',
+				title: 'Choose deployment path',
+				decision_question: 'Choose deployment path',
+				recommended_option: 'Ship',
+				consequence_of_no_decision: 'Deployment remains waiting.',
+				actor: 'agent'
+			})
+		).toThrow('decision options require at least two choices');
 	});
 
 	it('writes Work-first context from the separate Work DB', () => {
@@ -245,6 +277,10 @@ function seedLegacyPm(db: Database.Database): void {
 	db.prepare(
 		`INSERT INTO plans (project_id, title, description, status, created_by)
 		 VALUES (1, 'Heartbeat routine', 'Recurring operator sweep for stale work.', 'assigned', 'fred')`
+	).run();
+	db.prepare(
+		`INSERT INTO plans (project_id, title, description, status, created_by)
+		 VALUES (1, 'Which automation trigger should Work use?', 'Unknown whether cron or heartbeat should own the sweep.', 'needs_review', 'fred')`
 	).run();
 	db.prepare(
 		`INSERT INTO plan_versions (plan_id, version, description, result, status, created_by)

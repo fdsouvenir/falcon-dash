@@ -31,10 +31,11 @@ export const FALCON_DASH_MODULES: FalconDashModule[] = [
 		capabilities: [
 			'work queue',
 			'work items',
-			'changes',
+			'change requests',
+			'open questions',
 			'decisions',
-			'routines',
-			'observations',
+			'automations',
+			'findings',
 			'generated context'
 		]
 	},

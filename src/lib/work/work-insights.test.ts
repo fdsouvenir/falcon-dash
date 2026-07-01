@@ -68,7 +68,7 @@ describe('work insights', () => {
 	});
 
 	it('returns a blocked child as a literal blocker', () => {
-		const blocked = child(2, 'change', 'blocked');
+		const blocked = child(2, 'change_request', 'blocked');
 
 		expect(literalBlockersFor(item(), [blocked])).toEqual([blocked]);
 	});
@@ -81,13 +81,13 @@ describe('work insights', () => {
 
 	it('renders concrete open work counts without linked wording', () => {
 		const summary = projectOpenWork(item(), [
-			child(2, 'task', 'ready'),
-			child(3, 'task', 'in_progress'),
-			child(4, 'decision', 'needs_review'),
-			child(5, 'change', 'planning')
+			child(2, 'next_step', 'ready'),
+			child(3, 'next_step', 'in_progress'),
+			child(4, 'open_question', 'needs_review'),
+			child(5, 'change_request', 'planning')
 		]);
 
-		expect(summary).toBe('2 tasks · 1 question · 1 change');
+		expect(summary).toBe('2 next steps · 1 open question · 1 change request');
 		expect(summary).not.toMatch(/linked/i);
 	});
 
@@ -113,12 +113,12 @@ describe('work insights', () => {
 		const pulse = projectPortfolioPulse(
 			[
 				blocked,
-				item({ id: 11, type: 'task', parent_item_id: blocked.id, status: 'blocked' }),
+				item({ id: 11, type: 'next_step', parent_item_id: blocked.id, status: 'blocked' }),
 				overdue,
-				child(21, 'task', 'ready'),
+				child(21, 'next_step', 'ready'),
 				item({
 					id: 22,
-					type: 'task',
+					type: 'next_step',
 					parent_item_id: overdue.id,
 					status: 'ready',
 					due_date: '2026-06-12T12:00:00.000Z'
@@ -126,7 +126,7 @@ describe('work insights', () => {
 				decision,
 				item({
 					id: 31,
-					type: 'decision',
+					type: 'open_question',
 					parent_item_id: decision.id,
 					status: 'needs_review',
 					waiting_on: 'operator'
@@ -151,44 +151,44 @@ describe('work insights', () => {
 		const project = item({ next_action: null });
 
 		expect(projectHasNoNextMove(project, [])).toBe(true);
-		expect(projectHasNoNextMove(project, [child(2, 'task', 'ready')])).toBe(false);
+		expect(projectHasNoNextMove(project, [child(2, 'next_step', 'ready')])).toBe(false);
 		expect(projectHasNoNextMove(item({ next_action: 'Review' }), [])).toBe(false);
 	});
 
 	it('matches type-aware filters and ignores unknown focus values', () => {
 		const project = item({ id: 10, type: 'project' });
-		const blockedTask = item({
+		const blockedNextStep = item({
 			id: 11,
-			type: 'task',
+			type: 'next_step',
 			parent_item_id: project.id,
 			status: 'blocked'
 		});
 		const question = item({
 			id: 20,
-			type: 'decision',
+			type: 'open_question',
 			status: 'complete',
 			waiting_on: null
 		});
-		const task = item({
+		const nextStep = item({
 			id: 30,
-			type: 'task',
+			type: 'next_step',
 			status: 'ready',
 			due_date: '2026-06-25T14:00:00.000Z'
 		});
-		const observation = item({
+		const finding = item({
 			id: 40,
-			type: 'observation',
+			type: 'finding',
 			parent_item_id: null,
 			owner: 'agent-feed'
 		});
 
-		expect(matchesWorkFocus(project, 'blocked', [project, blockedTask], now)).toBe(true);
+		expect(matchesWorkFocus(project, 'blocked', [project, blockedNextStep], now)).toBe(true);
 		expect(matchesWorkFocus(question, 'answered', [question], now)).toBe(true);
-		expect(matchesWorkFocus(task, 'due-today', [task], now)).toBe(true);
-		expect(
-			matchesWorkFocus(observation, 'source', [observation], now, { source: 'agent-feed' })
-		).toBe(true);
-		expect(matchesWorkFocus(task, 'not-a-real-filter', [task], now)).toBe(true);
+		expect(matchesWorkFocus(nextStep, 'due-today', [nextStep], now)).toBe(true);
+		expect(matchesWorkFocus(finding, 'source', [finding], now, { source: 'agent-feed' })).toBe(
+			true
+		);
+		expect(matchesWorkFocus(nextStep, 'not-a-real-filter', [nextStep], now)).toBe(true);
 	});
 
 	it('sections long question markdown and collapses history', () => {

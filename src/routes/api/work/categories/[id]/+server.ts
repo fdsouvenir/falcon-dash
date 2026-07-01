@@ -1,13 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { getWorkItem, updateWorkItem, WorkError } from '$lib/server/work/index.js';
+import { getWorkCategory, upsertWorkCategory, WorkError } from '$lib/server/work/index.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
-		const id = Number(params.id);
-		const item = getWorkItem(id);
-		if (!item) throw new WorkError('WORK_NOT_FOUND', `Work item ${id} not found`);
-		return json(item);
+		const category = getWorkCategory(params.id);
+		if (!category) throw new WorkError('WORK_NOT_FOUND', `Category ${params.id} not found`);
+		return json(category);
 	} catch (err) {
 		return handleWorkError(err);
 	}
@@ -15,15 +14,18 @@ export const GET: RequestHandler = async ({ params }) => {
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	try {
-		const id = Number(params.id);
+		const current = getWorkCategory(params.id);
+		if (!current) throw new WorkError('WORK_NOT_FOUND', `Category ${params.id} not found`);
 		const body = await request.json();
-		const item = updateWorkItem(id, {
-			...body,
-			area_id: body.area_id ?? body.subcategory_id ?? body.category_id,
-			actor: body.actor ?? 'agent'
+		const category = upsertWorkCategory({
+			id: params.id,
+			title: body.title ?? current.title,
+			description: body.description ?? current.description,
+			parent_category_id: body.parent_category_id ?? current.parent_category_id,
+			status: body.status ?? current.status,
+			kind: body.kind ?? current.kind
 		});
-		if (!item) throw new WorkError('WORK_NOT_FOUND', `Work item ${id} not found`);
-		return json(item);
+		return json(category);
 	} catch (err) {
 		return handleWorkError(err);
 	}

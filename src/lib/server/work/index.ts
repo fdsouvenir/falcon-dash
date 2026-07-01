@@ -12,13 +12,16 @@ export {
 	addEvidenceRef,
 	createWorkItem,
 	getWorkArea,
+	getWorkCategory,
 	getWorkItem,
 	getWorkItemByLegacy,
 	listWorkAreas,
+	listWorkCategories,
 	listWorkItems,
 	listWorkQueue,
 	updateWorkItem,
-	upsertWorkArea
+	upsertWorkArea,
+	upsertWorkCategory
 } from './crud.js';
 export { applyWorkMigration, isWorkSourceOfTruth, previewWorkMigration } from './migration.js';
 export { generateWorkContext, generateWorkItemContext } from './context.js';
@@ -28,6 +31,8 @@ export { emitWorkEvent, getRecentWorkEvents, getWorkStateVersion, onWorkEvent } 
 export { getFalconDashModules, FALCON_DASH_MODULES } from './module.js';
 export type {
 	WorkArea,
+	WorkCategory,
+	WorkCategoryKind,
 	WorkContextResponse,
 	WorkEvidenceRef,
 	WorkItem,

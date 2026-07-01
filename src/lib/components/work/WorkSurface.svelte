@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import WorkSettings from '$lib/components/work/WorkSettings.svelte';
 	import {
 		clearWorkDataCache,
 		loadCachedWorkItem,
@@ -56,6 +57,7 @@
 		RefreshCw,
 		Save,
 		Search,
+		Settings,
 		X
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -146,15 +148,20 @@
 
 	const workListLimit = 300;
 
-	const visibleTypeConfigs: TypeConfig[] = typeConfigs.filter((config) => config.type !== 'area');
+	const visibleTypeConfigs: TypeConfig[] = typeConfigs;
 
+	const isSettings = $derived(mode === 'section' && section === 'settings');
 	const activeType = $derived(typeFromSection(section));
 	const activeConfig = $derived(configForType(activeType));
-	const title = $derived(mode === 'overview' ? 'Work' : activeConfig.title);
+	const title = $derived(
+		isSettings ? 'Work settings' : mode === 'overview' ? 'Work' : activeConfig.title
+	);
 	const description = $derived(
-		mode === 'overview'
-			? 'Active outcomes, blockers, reviews, and recent Work activity.'
-			: activeConfig.summary
+		isSettings
+			? 'Categories, subcategories, and Work setup.'
+			: mode === 'overview'
+				? 'Active outcomes, blockers, reviews, and recent Work activity.'
+				: activeConfig.summary
 	);
 
 	const openItems = $derived(items.filter((item) => openStatuses.has(item.status)));
@@ -169,11 +176,11 @@
 		focusDefinitionsForType(activeType).filter((definition) => !definition.primary)
 	);
 	const activeFocusDefinition = $derived(focusDefinitionForType(activeType, focusFilter));
-	const observationSourceOptions = $derived.by(() => {
+	const findingSourceOptions = $derived.by(() => {
 		const sources: string[] = [];
 		for (const item of typeItems) {
-			if (item.type !== 'observation') continue;
-			const source = observationSourceLabel(item);
+			if (item.type !== 'finding') continue;
+			const source = findingSourceLabel(item);
 			if (!sources.includes(source)) sources.push(source);
 		}
 		return sources.sort((a, b) => a.localeCompare(b));
@@ -209,9 +216,7 @@
 		return filteredItems[0] ?? null;
 	});
 
-	const needsOperator = $derived(
-		queue?.needsOperator ?? queue?.waitingOnOperator ?? queue?.waitingOnFred ?? []
-	);
+	const needsOperator = $derived(queue?.needsOperator ?? queue?.waitingOnOperator ?? []);
 	const needsYourCallItems = $derived.by(() =>
 		uniqueItems([...needsOperator, ...(queue?.needsReview ?? [])]).filter(isOpen)
 	);
@@ -251,28 +256,30 @@
 	const needsYourCallGroups = $derived.by<OverviewGroup[]>(() => {
 		return [
 			{
-				title: 'Questions',
-				description: 'Choices that need an answer before related work can move',
-				items: needsYourCallItems.filter((item) => item.type === 'decision'),
+				title: 'Questions and decisions',
+				description: 'Unknowns and commitments that need operator judgment',
+				items: needsYourCallItems.filter(
+					(item) => item.type === 'open_question' || item.type === 'decision'
+				),
 				empty: 'No open questions waiting on you'
 			},
 			{
 				title: 'Change requests',
 				description: 'Implementation or configuration work asking for review',
-				items: needsYourCallItems.filter((item) => item.type === 'change'),
+				items: needsYourCallItems.filter((item) => item.type === 'change_request'),
 				empty: 'No change requests waiting on you'
 			},
 			{
-				title: 'Observations to triage',
+				title: 'Findings to triage',
 				description: 'Captured findings that need operator judgment',
-				items: needsYourCallItems.filter((item) => item.type === 'observation'),
-				empty: 'No observations need triage'
+				items: needsYourCallItems.filter((item) => item.type === 'finding'),
+				empty: 'No findings need triage'
 			},
 			{
 				title: 'Other asks',
-				description: 'Tasks, routines, or projects waiting for operator input',
+				description: 'Next steps, automations, or projects waiting for operator input',
 				items: needsYourCallItems.filter(
-					(item) => !['decision', 'change', 'observation'].includes(item.type)
+					(item) => !['open_question', 'decision', 'change_request', 'finding'].includes(item.type)
 				),
 				empty: 'No other work is waiting on you'
 			}
@@ -312,12 +319,12 @@
 	);
 	const dueSoonItems = $derived.by(() =>
 		openItems
-			.filter((item) => item.type === 'task' && onTimeline(item.due_date, 14))
+			.filter((item) => item.type === 'next_step' && onTimeline(item.due_date, 14))
 			.sort((a, b) => dateValue(a.due_date) - dateValue(b.due_date))
 	);
 	const scheduledSoonItems = $derived.by(() =>
 		openItems
-			.filter((item) => item.type === 'routine' && onTimeline(item.scheduled_at, 14))
+			.filter((item) => item.type === 'automation' && onTimeline(item.scheduled_at, 14))
 			.sort((a, b) => dateValue(a.scheduled_at) - dateValue(b.scheduled_at))
 	);
 	const dueNextItems = $derived.by(() =>
@@ -385,7 +392,7 @@
 	});
 
 	$effect(() => {
-		if (mode !== 'section') return;
+		if (mode !== 'section' || isSettings) return;
 		const params = page.url.searchParams;
 		const nextSearch = params.get('q') ?? '';
 		const nextStatus = statusFilterFromParam(
@@ -411,6 +418,11 @@
 		error = null;
 		saveMessage = null;
 		try {
+			if (isSettings) {
+				items = [];
+				queue = null;
+				return;
+			}
 			if (mode === 'overview') {
 				const [loadedItems, loadedQueue] = await Promise.all([
 					loadItems(workItemsUrl({ limit: workListLimit })),
@@ -690,11 +702,12 @@
 	function typeBreakdown(source: WorkItem[], fallback: string): string {
 		if (source.length === 0) return fallback;
 		const typeOrder: Array<[WorkItemType, string, string]> = [
-			['decision', 'question', 'questions'],
-			['change', 'change request', 'change requests'],
-			['observation', 'observation', 'observations'],
-			['task', 'task', 'tasks'],
-			['routine', 'routine', 'routines'],
+			['open_question', 'open question', 'open questions'],
+			['decision', 'decision', 'decisions'],
+			['change_request', 'change request', 'change requests'],
+			['finding', 'finding', 'findings'],
+			['next_step', 'next step', 'next steps'],
+			['automation', 'automation', 'automations'],
 			['project', 'project', 'projects']
 		];
 		const parts = typeOrder
@@ -721,7 +734,7 @@
 	}
 
 	function itemTimelineDate(item: WorkItem): number {
-		if (item.type === 'routine') return dateValue(item.scheduled_at);
+		if (item.type === 'automation') return dateValue(item.scheduled_at);
 		return dateValue(item.due_date);
 	}
 
@@ -752,12 +765,12 @@
 	}
 
 	function timelineDateLabel(item: WorkItem): string {
-		const label = item.type === 'routine' ? 'Next run' : 'Due';
-		return `${label} ${formatDate(item.type === 'routine' ? item.scheduled_at : item.due_date)}`;
+		const label = item.type === 'automation' ? 'Next run' : 'Due';
+		return `${label} ${formatDate(item.type === 'automation' ? item.scheduled_at : item.due_date)}`;
 	}
 
 	function defaultStatusForType(type: WorkItemType): WorkStatus | 'open' | 'all' {
-		return type === 'observation' ? 'all' : 'open';
+		return type === 'finding' ? 'all' : 'open';
 	}
 
 	function statusFilterFromParam(
@@ -857,8 +870,8 @@
 		);
 	}
 
-	function observationSourceLabel(item: WorkItem): string {
-		return firstText(item.owner, item.area_id, 'Work');
+	function findingSourceLabel(item: WorkItem): string {
+		return firstText(item.owner, item.subcategory_id, item.category_id, 'Work');
 	}
 
 	function inspect(item: WorkItem) {
@@ -918,12 +931,12 @@
 
 	function sortForType(type: WorkItemType, source: WorkItem[]): WorkItem[] {
 		return [...source].sort((a, b) => {
-			if (type === 'observation') return b.last_activity_at - a.last_activity_at;
-			if (type === 'routine') {
+			if (type === 'finding') return b.last_activity_at - a.last_activity_at;
+			if (type === 'automation') {
 				const dateDiff = dateValue(a.scheduled_at) - dateValue(b.scheduled_at);
 				if (dateDiff !== 0) return dateDiff;
 			}
-			if (type === 'task') {
+			if (type === 'next_step') {
 				const dateDiff = dateValue(a.due_date) - dateValue(b.due_date);
 				if (dateDiff !== 0) return dateDiff;
 			}
@@ -942,28 +955,30 @@
 	}
 
 	function compactDetail(item: WorkItem): string {
-		if (item.type === 'decision') return firstText(item.next_action, item.body, item.description);
-		if (item.type === 'change') return firstText(item.next_action, item.description, item.body);
-		if (item.type === 'task') return firstText(item.next_action, item.description, item.body);
-		if (item.type === 'routine') return firstText(item.result, item.next_action, item.description);
-		if (item.type === 'observation')
-			return firstText(item.description, item.body, item.next_action);
+		if (item.type === 'open_question' || item.type === 'decision')
+			return firstText(item.next_action, item.body, item.description);
+		if (item.type === 'change_request')
+			return firstText(item.next_action, item.description, item.body);
+		if (item.type === 'next_step') return firstText(item.next_action, item.description, item.body);
+		if (item.type === 'automation')
+			return firstText(item.result, item.next_action, item.description);
+		if (item.type === 'finding') return firstText(item.description, item.body, item.next_action);
 		return firstText(item.next_action, item.description, item.body);
 	}
 
 	function detailLead(item: WorkItem): string {
 		if (item.type === 'project')
 			return firstText(item.description, item.body, 'No outcome narrative recorded yet.');
-		if (item.type === 'change')
+		if (item.type === 'change_request')
 			return firstText(item.description, item.body, 'No change scope recorded yet.');
-		if (item.type === 'decision')
+		if (item.type === 'open_question' || item.type === 'decision')
 			return firstText(item.body, item.description, 'No question context recorded yet.');
-		if (item.type === 'task')
+		if (item.type === 'next_step')
 			return firstText(item.next_action, item.description, 'No action text recorded yet.');
-		if (item.type === 'routine')
-			return firstText(item.description, item.body, 'No routine purpose recorded yet.');
-		if (item.type === 'observation')
-			return firstText(item.description, item.body, 'No observation text recorded yet.');
+		if (item.type === 'automation')
+			return firstText(item.description, item.body, 'No automation purpose recorded yet.');
+		if (item.type === 'finding')
+			return firstText(item.description, item.body, 'No finding text recorded yet.');
 		return compactDetail(item);
 	}
 
@@ -974,13 +989,13 @@
 				{ title: 'Next move', text: firstText(item.next_action, projectOperatorMove(item)) }
 			];
 		}
-		if (item.type === 'change') {
+		if (item.type === 'change_request') {
 			return [
 				{ title: 'Scope', text: firstText(item.description, item.body, 'No scope recorded yet.') },
 				{ title: 'Next action', text: firstText(item.next_action, 'No next action recorded yet.') }
 			];
 		}
-		if (item.type === 'decision') {
+		if (item.type === 'open_question' || item.type === 'decision') {
 			return [
 				{ title: 'Question', text: firstText(item.body, item.description, item.title) },
 				{
@@ -989,7 +1004,7 @@
 				}
 			];
 		}
-		if (item.type === 'task') {
+		if (item.type === 'next_step') {
 			return [
 				{ title: 'Action', text: firstText(item.next_action, item.description, item.title) },
 				{
@@ -998,13 +1013,13 @@
 				}
 			];
 		}
-		if (item.type === 'routine') {
+		if (item.type === 'automation') {
 			return [
-				{ title: 'Routine purpose', text: firstText(item.description, item.body, item.title) },
+				{ title: 'Automation purpose', text: firstText(item.description, item.body, item.title) },
 				{ title: 'Latest result', text: firstText(item.result, 'No latest result recorded yet.') }
 			];
 		}
-		if (item.type === 'observation') {
+		if (item.type === 'finding') {
 			return [
 				{ title: 'Finding', text: firstText(item.description, item.body, item.title) },
 				{ title: 'Triage note', text: firstText(item.next_action, 'No triage note recorded yet.') }
@@ -1054,7 +1069,7 @@
 				}
 			];
 		}
-		if (item.type === 'change') {
+		if (item.type === 'change_request') {
 			return [
 				{
 					label: 'Approval',
@@ -1066,7 +1081,7 @@
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
 		}
-		if (item.type === 'decision') {
+		if (item.type === 'open_question' || item.type === 'decision') {
 			return [
 				{
 					label: 'Impact',
@@ -1078,7 +1093,7 @@
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
 		}
-		if (item.type === 'task') {
+		if (item.type === 'next_step') {
 			return [
 				{ label: 'Due', value: formatDate(item.due_date) },
 				{ label: 'Parent', value: parent ? itemDisplayId(parent) : 'No parent' },
@@ -1086,7 +1101,7 @@
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
 		}
-		if (item.type === 'routine') {
+		if (item.type === 'automation') {
 			return [
 				{ label: 'Next run', value: formatDateTime(item.scheduled_at) },
 				{ label: 'Cadence', value: firstText(item.stale_after, 'Not set') },
@@ -1094,10 +1109,13 @@
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
 		}
-		if (item.type === 'observation') {
+		if (item.type === 'finding') {
 			return [
 				{ label: 'Captured', value: formatDateTime(item.created_at) },
-				{ label: 'Source', value: firstText(item.owner, item.area_id, 'Work') },
+				{
+					label: 'Source',
+					value: firstText(item.owner, item.subcategory_id, item.category_id, 'Work')
+				},
 				{ label: 'Parent', value: parent ? itemDisplayId(parent) : 'No parent' },
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
@@ -1161,7 +1179,7 @@
 		status: WorkStatus | 'open' | 'all',
 		type: WorkItemType
 	): boolean {
-		if (type === 'observation') return true;
+		if (type === 'finding') return true;
 		if (status === 'all') return true;
 		if (status === 'open') return false;
 		return !openStatuses.has(status);
@@ -1208,6 +1226,15 @@
 								{config.label}
 							</a>
 						{/each}
+						<a
+							href={resolve('/work/settings')}
+							aria-label="Work settings"
+							class="falcon-focus ml-auto inline-flex min-h-9 min-w-9 items-center justify-center rounded-md transition {isSettings
+								? 'bg-primary text-primary-foreground'
+								: 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'}"
+						>
+							<Settings class="h-4 w-4" />
+						</a>
 					</nav>
 				</section>
 
@@ -1514,9 +1541,11 @@
 							{/each}
 						</div>
 					</section>
+				{:else if isSettings}
+					<WorkSettings />
 				{:else if mode === 'detail'}
 					{#if selectedItem}
-						{#if selectedItem.type === 'decision'}
+						{#if selectedItem.type === 'open_question' || selectedItem.type === 'decision'}
 							<section
 								class="overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-1 shadow-[0_18px_44px_rgba(0,0,0,0.18)]"
 								data-testid="work-detail-page"
@@ -1993,7 +2022,12 @@
 												<div>
 													<p class="text-xs text-on-surface-variant">Owner/source</p>
 													<p class="mt-1 font-semibold text-on-surface">
-														{firstText(selectedItem.owner, selectedItem.area_id, 'Not set')}
+														{firstText(
+															selectedItem.owner,
+															selectedItem.subcategory_id,
+															selectedItem.category_id,
+															'Not set'
+														)}
 													</p>
 												</div>
 												<div>
@@ -2114,7 +2148,7 @@
 															</div>
 														</div>
 													{/if}
-													{#if activeType === 'observation' && observationSourceOptions.length}
+													{#if activeType === 'finding' && findingSourceOptions.length}
 														<label class="mt-3 block text-xs font-semibold text-on-surface-variant">
 															Source
 															<select
@@ -2128,7 +2162,7 @@
 																class="falcon-focus mt-1 min-h-10 w-full rounded-md border border-outline-variant/70 bg-surface-0 px-3 text-sm font-normal text-on-surface"
 															>
 																<option value="">Any source</option>
-																{#each observationSourceOptions as source (source)}
+																{#each findingSourceOptions as source (source)}
 																	<option value={source}>{source}</option>
 																{/each}
 															</select>
@@ -2275,7 +2309,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'change'}
+							{:else if activeType === 'change_request'}
 								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as change (change.id)}
 										<button
@@ -2330,7 +2364,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'decision'}
+							{:else if activeType === 'open_question' || activeType === 'decision'}
 								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
 									{#each filteredItems as question (question.id)}
 										<button
@@ -2386,7 +2420,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'task'}
+							{:else if activeType === 'next_step'}
 								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as task (task.id)}
 										<button
@@ -2438,7 +2472,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'routine'}
+							{:else if activeType === 'automation'}
 								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
 									{#each filteredItems as routine (routine.id)}
 										<button
@@ -2465,7 +2499,11 @@
 														</span>
 													</div>
 													<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-														{firstText(routine.description, routine.body, 'Routine scope not set')}
+														{firstText(
+															routine.description,
+															routine.body,
+															'Automation scope not set'
+														)}
 													</p>
 													<p class="mt-2 text-sm font-semibold text-on-surface">
 														Last result: {firstText(routine.result, 'No result recorded')}
@@ -2493,7 +2531,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'observation'}
+							{:else if activeType === 'finding'}
 								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as observation (observation.id)}
 										<button
@@ -2525,7 +2563,12 @@
 											<div>
 												<p class="text-xs text-on-surface-variant">Source</p>
 												<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
-													{firstText(observation.owner, observation.area_id, 'Work')}
+													{firstText(
+														observation.owner,
+														observation.subcategory_id,
+														observation.category_id,
+														'Work'
+													)}
 												</p>
 												<p class="mt-2 text-xs {statusTone(observation.status)}">
 													{formatStatus(observation.status)}
@@ -2576,7 +2619,7 @@
 										{selectedItem.title}
 									</h3>
 									<p class="mt-2 line-clamp-4 text-sm leading-6 text-on-surface-variant">
-										{selectedItem.type === 'decision'
+										{selectedItem.type === 'open_question' || selectedItem.type === 'decision'
 											? questionPrimaryAnswer(selectedItem)
 											: detailLead(selectedItem)}
 									</p>

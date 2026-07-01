@@ -15,7 +15,8 @@ redirects to `/work`.
   decisions needed, projects without a next move, stale projects, and the overall health mix.
 - Purpose-built overview sections for operator asks, blocked or waiting work, due-next work, and a
   single chronological recent activity log
-- Type-specific pages for projects, change requests, questions, tasks, routines, and observations
+- Type-specific pages for projects, milestones, next steps, open questions, decisions, change
+  requests, findings, and automations
 - Desktop type pages with the section title above fixed search/filter controls, a scrollable item
   list, and a quick inspector on the right. Single clicks select and highlight a row in place;
   double clicks open that item's standalone detail page.
@@ -24,7 +25,7 @@ redirects to `/work`.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
   reasons, literal blockers, related work, and read-only narrative fields. Question detail pages use
   a sectioned Question Brief so long agent-written Markdown plans remain scannable.
-- Observation feed for captured findings, events, and evidence
+- Findings feed for captured facts, events, and evidence
 - Work data generated from the new `~/.openclaw/data/falcon-dash/work.db` database
 
 ## Pages
@@ -33,11 +34,14 @@ redirects to `/work`.
 - `/` -- redirects to `/work`
 - `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
 - `/work/search?q=...` -- read-only search across existing Work records
-- `/work/projects`, `/work/changes`, `/work/decisions`, `/work/tasks`, `/work/routines`,
-  `/work/observations` -- type-specific lists optimized for each Work shape
+- `/work/projects`, `/work/milestones`, `/work/next-steps`, `/work/open-questions`,
+  `/work/decisions`, `/work/change-requests`, `/work/findings`, `/work/automations` --
+  type-specific lists optimized for each Work shape
+- `/work/settings` -- category and subcategory setup, opened from the Work settings gear
 - `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
-  portfolio filters such as `focus=blocked`; tasks use due filters such as `focus=due-this-week`;
-  questions use answer/review filters such as `focus=needs-answer`.
+  portfolio filters such as `focus=blocked`; next steps use due filters such as
+  `focus=due-this-week`; open questions and decisions use answer/review filters such as
+  `focus=needs-answer`.
 - `/work/{type}/{id}` -- routeable standalone detail page for one Work item
 
 The top Work search field navigates to `/work/search` and searches existing agent-managed Work
@@ -48,13 +52,13 @@ Desktop quick inspectors and detail pages expose lightweight state controls for 
 and waiting state. Narrative fields such as title, next action, notes, description, and results are
 shown as agent-managed record content rather than casual text editors.
 
-In UI copy, `/work/changes` is labeled **Change requests** because those items are implementation
-or configuration work that may need approval. `/work/decisions` is labeled **Questions** because
-those items are choices that need an answer before related work can move.
+Open questions and decisions are separate. An open question captures unresolved knowledge; a
+decision captures a commitment or approval with options and a recommendation. Change requests are
+reserved for controlled mutation of code, config, systems, data, auth, deployment, or automation.
 
-Areas remain part of the Work data model as evergreen grouping buckets, but they are not a primary
-operator tab. They can be maintained by agents or database tooling until the product needs an
-explicit area-management workflow.
+Categories and subcategories are setup records rather than front-and-center Work item lists. They
+are maintained from Work settings and can be used by agents through the Work API to group projects
+and related work.
 
 ## Agent Contract
 
@@ -65,7 +69,7 @@ Agents should use `/api/work/*` or generated context files:
 - `FALCON-DASH.md`
 - `Work/W-{id}.md`
 
-In normal conversation and UI copy, refer to items by object type and ID, such as `Change 176` or
-`Project 4`. The `W-` prefix is only for generated context filenames.
+In normal conversation and UI copy, refer to items by object type and ID, such as
+`Change Request 176` or `Project 4`. The `W-` prefix is only for generated context filenames.
 
 The former work interface is not part of active Falcon Dash.

@@ -177,23 +177,24 @@ Routeable Work surface for the `/work` module:
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
-- **Type pages** -- `/work/projects`, `/work/changes`, `/work/decisions`, `/work/tasks`,
-  `/work/routines`, and `/work/observations` use type-specific page anatomy instead of one generic
-  list row. Projects show outcomes, upcoming dates, operator moves, supporting work, and blockers;
-  change requests show scope, approval, and waiting state; questions show recommendation and impact;
-  tasks show parent and due state; routines show cadence, next run, and last result; observations
+- **Type pages** -- `/work/projects`, `/work/milestones`, `/work/next-steps`,
+  `/work/open-questions`, `/work/decisions`, `/work/change-requests`, `/work/findings`, and
+  `/work/automations` use type-specific page anatomy instead of one generic list row. Projects show
+  an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
+  blockers; open questions show unresolved knowledge and answer context; decisions show commitment
+  options and recommendations; change requests show scope, approval, risk, and verification state;
+  next steps show parent and due state; automations show trigger, next run, and last result; findings
   render as a feed. Section filters are type-aware and URL-backed through `q`, `status`, `focus`,
-  and observation `source` query params. Row clicks select the right-side quick inspector in place.
-  The inspector shows read-only item context, exposes only status/priority/waiting state controls,
-  and links to the full item page. The UI labels `change` as Change request and `decision` as Question to clarify
-  the operator-facing distinction.
+  and finding `source` query params. Row clicks select the right-side quick inspector in place. The
+  inspector shows read-only item context, exposes only status/priority/waiting state controls, and
+  links to the full item page.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
   not render the peer list; they show type-aware sections, health reasons, literal blockers, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Question details render as a Question Brief with Markdown sections and collapsed history
   or legacy material instead of one long paragraph.
-- **Areas** -- `area` remains a Work model type for grouping, but it is not shown as a primary
-  operator tab until an explicit area-management workflow exists
+- **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
+  categories and subcategories without making them primary Work tabs
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
   person-specific copy is hardcoded
 - **Refresh path** -- overview reloads `/api/work/items` and `/api/work/queue`; type and detail

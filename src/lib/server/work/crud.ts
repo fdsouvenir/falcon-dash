@@ -2,13 +2,26 @@ import { getWorkDb } from './database.js';
 import { emitWorkEvent } from './events.js';
 import type {
 	WorkArea,
+	WorkCategory,
+	WorkCategoryKind,
 	WorkItem,
 	WorkItemType,
-	WorkPriority,
 	WorkQueue,
 	WorkStatus
 } from './types.js';
 import { WORK_ITEM_TYPES, WORK_STATUSES } from './types.js';
+
+type CreateWorkItemInput = {
+	type: WorkItemType;
+	title: string;
+	approval_required?: boolean | number;
+	actor?: string;
+} & Partial<Omit<WorkItem, 'id' | 'type' | 'title' | 'approval_required'>>;
+
+type UpdateWorkItemInput = {
+	approval_required?: boolean | number;
+	actor?: string;
+} & Partial<Omit<WorkItem, 'id' | 'approval_required'>>;
 
 export class WorkError extends Error {
 	constructor(
@@ -43,9 +56,49 @@ export function listWorkAreas(): WorkArea[] {
 	return db.prepare('SELECT * FROM work_areas ORDER BY title ASC').all() as WorkArea[];
 }
 
+export function listWorkCategories(): WorkCategory[] {
+	return listWorkAreas().map(mapWorkCategory);
+}
+
 export function getWorkArea(id: string): WorkArea | undefined {
 	const db = getWorkDb();
 	return db.prepare('SELECT * FROM work_areas WHERE id = ?').get(id) as WorkArea | undefined;
+}
+
+export function getWorkCategory(id: string): WorkCategory | undefined {
+	const area = getWorkArea(id);
+	return area ? mapWorkCategory(area) : undefined;
+}
+
+export function upsertWorkCategory(data: {
+	id?: string;
+	title: string;
+	description?: string | null;
+	parent_category_id?: string | null;
+	status?: 'active' | 'paused' | 'archived';
+	kind?: WorkCategoryKind;
+}): WorkCategory {
+	const title = data.title.trim();
+	if (!title) throw new WorkError('WORK_CONSTRAINT', 'title is required');
+	const kind = data.kind ?? (data.parent_category_id ? 'subcategory' : 'category');
+	if (kind === 'subcategory' && !data.parent_category_id) {
+		throw new WorkError('WORK_CONSTRAINT', 'parent_category_id is required');
+	}
+	if (kind === 'category' && data.parent_category_id) {
+		throw new WorkError('WORK_CONSTRAINT', 'categories cannot have a parent_category_id');
+	}
+	if (data.parent_category_id && !getWorkArea(data.parent_category_id)) {
+		throw new WorkError('WORK_NOT_FOUND', `Category ${data.parent_category_id} not found`);
+	}
+	const id = data.id?.trim() || categoryIdFor(kind, title, data.parent_category_id);
+	const area = upsertWorkArea({
+		id,
+		title,
+		description: data.description ?? null,
+		parent_area_id: kind === 'subcategory' ? data.parent_category_id : null,
+		status: data.status ?? 'active'
+	});
+	return mapWorkCategory(area);
 }
 
 export function upsertWorkArea(data: {
@@ -84,6 +137,8 @@ export function listWorkItems(
 		type?: WorkItemType;
 		status?: WorkStatus;
 		area_id?: string;
+		category_id?: string;
+		subcategory_id?: string;
 		parent_item_id?: number | null;
 		includeClosed?: boolean;
 		limit?: number;
@@ -94,39 +149,56 @@ export function listWorkItems(
 	const values: unknown[] = [];
 
 	if (filters.type) {
-		conditions.push('type = ?');
+		conditions.push('wi.type = ?');
 		values.push(assertType(filters.type));
 	}
 	if (filters.status) {
-		conditions.push('status = ?');
+		conditions.push('wi.status = ?');
 		values.push(assertStatus(filters.status));
 	}
 	if (filters.area_id) {
-		conditions.push('area_id = ?');
+		conditions.push('wi.area_id = ?');
 		values.push(filters.area_id);
+	}
+	if (filters.subcategory_id) {
+		conditions.push('wi.area_id = ?');
+		values.push(filters.subcategory_id);
+	}
+	if (filters.category_id) {
+		conditions.push(
+			`wi.area_id IN (
+				SELECT id FROM work_areas WHERE id = ? OR parent_area_id = ?
+			)`
+		);
+		values.push(filters.category_id, filters.category_id);
 	}
 	if (filters.parent_item_id !== undefined) {
 		if (filters.parent_item_id === null) {
-			conditions.push('parent_item_id IS NULL');
+			conditions.push('wi.parent_item_id IS NULL');
 		} else {
-			conditions.push('parent_item_id = ?');
+			conditions.push('wi.parent_item_id = ?');
 			values.push(filters.parent_item_id);
 		}
 	}
+	conditions.push("wi.type NOT IN ('space','area')");
 	if (!filters.includeClosed) {
-		conditions.push("status NOT IN ('complete','cancelled','archived')");
+		conditions.push("wi.status NOT IN ('complete','cancelled','archived')");
 	}
 
 	const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 	const limit = Math.min(Math.max(filters.limit ?? 200, 1), 500);
 	return db
-		.prepare(`SELECT * FROM work_items ${where} ORDER BY last_activity_at DESC, id DESC LIMIT ?`)
-		.all(...values, limit) as WorkItem[];
+		.prepare(`${workItemSelect()} ${where} ORDER BY wi.last_activity_at DESC, wi.id DESC LIMIT ?`)
+		.all(...values, limit)
+		.map(mapWorkItem);
 }
 
 export function getWorkItem(id: number): WorkItem | undefined {
 	const db = getWorkDb();
-	return db.prepare('SELECT * FROM work_items WHERE id = ?').get(id) as WorkItem | undefined;
+	const row = db
+		.prepare(`${workItemSelect()} WHERE wi.id = ? AND wi.type NOT IN ('space','area')`)
+		.get(id);
+	return row ? mapWorkItem(row) : undefined;
 }
 
 export function getWorkItemByLegacy(
@@ -135,37 +207,17 @@ export function getWorkItemByLegacy(
 ): WorkItem | undefined {
 	const db = getWorkDb();
 	const column = legacyType === 'project' ? 'legacy_project_id' : 'legacy_plan_id';
-	return db.prepare(`SELECT * FROM work_items WHERE ${column} = ?`).get(legacyId) as
-		| WorkItem
-		| undefined;
+	const row = db.prepare(`${workItemSelect()} WHERE wi.${column} = ?`).get(legacyId);
+	return row ? mapWorkItem(row) : undefined;
 }
 
-export function createWorkItem(data: {
-	type: WorkItemType;
-	area_id?: string | null;
-	parent_item_id?: number | null;
-	title: string;
-	description?: string | null;
-	body?: string | null;
-	status?: WorkStatus;
-	owner?: string | null;
-	waiting_on?: string | null;
-	priority?: WorkPriority | null;
-	next_action?: string | null;
-	approval_required?: boolean;
-	due_date?: string | null;
-	scheduled_at?: string | null;
-	stale_after?: string | null;
-	result?: string | null;
-	legacy_project_id?: number | null;
-	legacy_plan_id?: number | null;
-	actor?: string;
-}): WorkItem {
+export function createWorkItem(data: CreateWorkItemInput): WorkItem {
 	if (!data.title.trim()) throw new WorkError('WORK_CONSTRAINT', 'title is required');
 	const db = getWorkDb();
 	const ts = now();
 	const type = assertType(data.type);
 	const status = assertStatus(data.status ?? defaultStatusForType(type));
+	validateTypedDetails(type, data);
 	const result = db
 		.prepare(
 			`INSERT INTO work_items (
@@ -186,7 +238,7 @@ export function createWorkItem(data: {
 			data.waiting_on ?? null,
 			data.priority ?? 'normal',
 			data.next_action ?? null,
-			data.approval_required ? 1 : 0,
+			toApprovalFlag(data.approval_required),
 			data.due_date ?? null,
 			data.scheduled_at ?? null,
 			data.stale_after ?? null,
@@ -198,38 +250,20 @@ export function createWorkItem(data: {
 			ts
 		);
 	const id = result.lastInsertRowid as number;
+	upsertTypedDetails(id, type, data);
 	logWorkActivity(id, data.actor ?? 'system', 'created', `Created ${type}`);
 	createWorkVersion(id, data.actor ?? 'system');
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
 	return getWorkItem(id)!;
 }
 
-export function updateWorkItem(
-	id: number,
-	data: Partial<{
-		type: WorkItemType;
-		area_id: string | null;
-		parent_item_id: number | null;
-		title: string;
-		description: string | null;
-		body: string | null;
-		status: WorkStatus;
-		owner: string | null;
-		waiting_on: string | null;
-		priority: WorkPriority | null;
-		next_action: string | null;
-		approval_required: boolean;
-		due_date: string | null;
-		scheduled_at: string | null;
-		stale_after: string | null;
-		result: string | null;
-		actor: string;
-	}>
-): WorkItem | undefined {
+export function updateWorkItem(id: number, data: UpdateWorkItemInput): WorkItem | undefined {
 	const current = getWorkItem(id);
 	if (!current) return undefined;
 	const db = getWorkDb();
 	const ts = now();
+	const nextType = assertType(data.type ?? current.type);
+	validateTypedDetails(nextType, { ...current, ...data, type: nextType }, Boolean(data.type));
 	const updates = ['updated_at = ?', 'last_activity_at = ?'];
 	const values: unknown[] = [ts, ts];
 
@@ -250,7 +284,7 @@ export function updateWorkItem(
 	if (data.priority !== undefined) set('priority', data.priority);
 	if (data.next_action !== undefined) set('next_action', data.next_action);
 	if (data.approval_required !== undefined)
-		set('approval_required', data.approval_required ? 1 : 0);
+		set('approval_required', toApprovalFlag(data.approval_required));
 	if (data.due_date !== undefined) set('due_date', data.due_date);
 	if (data.scheduled_at !== undefined) set('scheduled_at', data.scheduled_at);
 	if (data.stale_after !== undefined) set('stale_after', data.stale_after);
@@ -258,6 +292,7 @@ export function updateWorkItem(
 
 	values.push(id);
 	db.prepare(`UPDATE work_items SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	upsertTypedDetails(id, nextType, { ...current, ...data, type: nextType });
 	logWorkActivity(id, data.actor ?? 'system', 'updated', summarizeWorkUpdate(current, data));
 	createWorkVersion(id, data.actor ?? 'system');
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
@@ -281,15 +316,21 @@ export function listWorkQueue(): WorkQueue {
 
 	return {
 		nextActions: active.filter(
-			(i) => ['task', 'change'].includes(i.type) && ['ready', 'in_progress'].includes(i.status)
+			(i) =>
+				['next_step', 'change_request'].includes(i.type) &&
+				['ready', 'in_progress'].includes(i.status)
 		),
 		needsOperator,
 		waitingOnOperator: needsOperator,
-		waitingOnFred: needsOperator,
 		waitingOnAgent: active.filter((i) => isAgent(i) && i.status !== 'needs_review'),
 		waitingOnExternal,
 		needsReview: active.filter((i) => i.status === 'needs_review'),
-		scheduledRoutines: active.filter((i) => i.type === 'routine' || i.status === 'scheduled'),
+		failedAutomations: active.filter(
+			(i) =>
+				i.type === 'automation' &&
+				(i.status === 'blocked' || (i.failure_count ?? 0) > 0 || i.enabled === 0)
+		),
+		scheduledAutomations: active.filter((i) => i.type === 'automation' || i.status === 'scheduled'),
 		staleCleanup: active.filter((i) => Boolean(i.stale_after)),
 		blockedRisky: active.filter((i) => i.status === 'blocked' || i.priority === 'urgent')
 	};
@@ -341,6 +382,350 @@ export function addEvidenceRef(data: {
 	emitWorkEvent({ type: 'work.changed', entity: 'evidence', id: data.source_ref });
 }
 
+function workItemSelect(): string {
+	return `
+		SELECT
+			wi.*,
+			CASE
+				WHEN wa.parent_area_id IS NULL THEN wi.area_id
+				ELSE wa.parent_area_id
+			END AS category_id,
+			CASE
+				WHEN wa.parent_area_id IS NULL THEN NULL
+				ELSE wi.area_id
+			END AS subcategory_id,
+			p.goal, p.definition_of_done, p.why_it_matters, p.scope, p.non_scope, p.health,
+			p.operator, p.start_date, p.target_date, p.actual_completed_date,
+			p.current_next_step_id, p.last_meaningful_update_at,
+			m.marker AS milestone_marker,
+			ns.action AS next_step_action,
+			oq.question_text, oq.why_it_matters AS question_why_it_matters, oq.answerer,
+			oq.blocked_item_id, oq.proposed_answer, oq.answer, oq.answered_at,
+			d.decision_question, d.options_json, d.recommended_option,
+			d.consequence_of_no_decision, d.decision, d.decided_by, d.decided_at,
+			cr.scope AS change_scope, cr.systems_touched_json, cr.risk, cr.rollback_notes,
+			cr.verification_plan, cr.approval_state, cr.execution_state,
+			a.trigger_type, a.schedule, a.enabled, a.last_run_at, a.next_run_at, a.last_result,
+			a.failure_count, a.generated_work_policy, a.backing_ref,
+			f.finding_text, f.source_refs_json
+		FROM work_items wi
+		LEFT JOIN work_areas wa ON wa.id = wi.area_id
+		LEFT JOIN work_project_details p ON p.work_item_id = wi.id
+		LEFT JOIN work_milestone_details m ON m.work_item_id = wi.id
+		LEFT JOIN work_next_step_details ns ON ns.work_item_id = wi.id
+		LEFT JOIN work_open_question_details oq ON oq.work_item_id = wi.id
+		LEFT JOIN work_decision_details d ON d.work_item_id = wi.id
+		LEFT JOIN work_change_request_details cr ON cr.work_item_id = wi.id
+		LEFT JOIN work_automation_details a ON a.work_item_id = wi.id
+		LEFT JOIN work_finding_details f ON f.work_item_id = wi.id
+	`;
+}
+
+function mapWorkItem(row: unknown): WorkItem {
+	const item = row as WorkItem & {
+		options_json?: string | null;
+		systems_touched_json?: string | null;
+		source_refs_json?: string | null;
+		question_why_it_matters?: string | null;
+	};
+	if (item.question_why_it_matters && !item.why_it_matters) {
+		item.why_it_matters = item.question_why_it_matters;
+	}
+	item.options = parseJsonArray(item.options_json);
+	item.systems_touched = parseJsonArray(item.systems_touched_json);
+	item.source_refs = parseJsonArray(item.source_refs_json);
+	return item;
+}
+
+function validateTypedDetails(
+	type: WorkItemType,
+	data: CreateWorkItemInput | UpdateWorkItemInput,
+	allowPartial = false
+): void {
+	const migration = data.actor === 'migration' || data.actor === 'system';
+	if (migration) return;
+	if (type === 'open_question') {
+		requireText(data.question_text, 'question_text', allowPartial);
+		requireText(data.why_it_matters, 'why_it_matters', allowPartial);
+		requireText(data.answerer, 'answerer', allowPartial);
+	}
+	if (type === 'decision') {
+		requireText(data.decision_question ?? data.title, 'decision_question', allowPartial);
+		if (!allowPartial && normalizeArray(data.options).length < 2) {
+			throw new WorkError('WORK_CONSTRAINT', 'decision options require at least two choices');
+		}
+		requireText(data.recommended_option, 'recommended_option', allowPartial);
+		requireText(data.consequence_of_no_decision, 'consequence_of_no_decision', allowPartial);
+	}
+	if (type === 'change_request') {
+		requireText(data.change_scope ?? data.scope, 'change_scope', allowPartial);
+		requireText(data.risk, 'risk', allowPartial);
+		requireText(data.verification_plan, 'verification_plan', allowPartial);
+	}
+	if (type === 'automation') {
+		requireText(data.trigger_type, 'trigger_type', allowPartial);
+	}
+}
+
+function upsertTypedDetails(
+	id: number,
+	type: WorkItemType,
+	data: CreateWorkItemInput | UpdateWorkItemInput
+): void {
+	const db = getWorkDb();
+	if (type === 'project') {
+		db.prepare(
+			`INSERT INTO work_project_details
+			 (work_item_id, goal, definition_of_done, why_it_matters, scope, non_scope, health,
+			  operator, start_date, target_date, actual_completed_date, current_next_step_id,
+			  last_meaningful_update_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   goal = excluded.goal,
+			   definition_of_done = excluded.definition_of_done,
+			   why_it_matters = excluded.why_it_matters,
+			   scope = excluded.scope,
+			   non_scope = excluded.non_scope,
+			   health = excluded.health,
+			   operator = excluded.operator,
+			   start_date = excluded.start_date,
+			   target_date = excluded.target_date,
+			   actual_completed_date = excluded.actual_completed_date,
+			   current_next_step_id = excluded.current_next_step_id,
+			   last_meaningful_update_at = excluded.last_meaningful_update_at`
+		).run(
+			id,
+			firstText(data.goal, data.description, data.title),
+			firstText(data.definition_of_done, data.next_action, 'Complete the project outcome'),
+			data.why_it_matters ?? data.body ?? null,
+			data.scope ?? data.description ?? null,
+			data.non_scope ?? null,
+			data.health ?? 'unknown',
+			data.operator ?? data.owner ?? null,
+			data.start_date ?? null,
+			data.target_date ?? data.due_date ?? null,
+			data.actual_completed_date ?? null,
+			data.current_next_step_id ?? null,
+			data.last_meaningful_update_at ?? data.last_activity_at ?? null
+		);
+		return;
+	}
+	if (type === 'milestone') {
+		db.prepare(
+			`INSERT INTO work_milestone_details (work_item_id, marker, target_date, completed_at)
+			 VALUES (?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   marker = excluded.marker,
+			   target_date = excluded.target_date,
+			   completed_at = excluded.completed_at`
+		).run(
+			id,
+			data.milestone_marker ?? data.next_action ?? data.title ?? null,
+			data.target_date ?? data.due_date ?? null,
+			data.answered_at ?? null
+		);
+		return;
+	}
+	if (type === 'next_step') {
+		db.prepare(
+			`INSERT INTO work_next_step_details (work_item_id, action)
+			 VALUES (?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET action = excluded.action`
+		).run(id, data.next_step_action ?? data.next_action ?? data.title ?? null);
+		return;
+	}
+	if (type === 'open_question') {
+		db.prepare(
+			`INSERT INTO work_open_question_details
+			 (work_item_id, question_text, why_it_matters, answerer, blocked_item_id, proposed_answer,
+			  answer, answered_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   question_text = excluded.question_text,
+			   why_it_matters = excluded.why_it_matters,
+			   answerer = excluded.answerer,
+			   blocked_item_id = excluded.blocked_item_id,
+			   proposed_answer = excluded.proposed_answer,
+			   answer = excluded.answer,
+			   answered_at = excluded.answered_at`
+		).run(
+			id,
+			data.question_text ?? data.title,
+			data.why_it_matters ?? data.description ?? 'Clarifies related work.',
+			data.answerer ?? data.waiting_on ?? data.owner ?? 'operator',
+			data.blocked_item_id ?? data.parent_item_id ?? null,
+			data.proposed_answer ?? data.next_action ?? null,
+			data.answer ?? data.result ?? null,
+			data.answered_at ?? null
+		);
+		return;
+	}
+	if (type === 'decision') {
+		db.prepare(
+			`INSERT INTO work_decision_details
+			 (work_item_id, decision_question, options_json, recommended_option,
+			  consequence_of_no_decision, decision, decided_by, decided_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   decision_question = excluded.decision_question,
+			   options_json = excluded.options_json,
+			   recommended_option = excluded.recommended_option,
+			   consequence_of_no_decision = excluded.consequence_of_no_decision,
+			   decision = excluded.decision,
+			   decided_by = excluded.decided_by,
+			   decided_at = excluded.decided_at`
+		).run(
+			id,
+			data.decision_question ?? data.title,
+			JSON.stringify(
+				normalizeArray(data.options).length ? normalizeArray(data.options) : ['Approve', 'Defer']
+			),
+			data.recommended_option ?? data.next_action ?? 'Approve',
+			data.consequence_of_no_decision ?? data.description ?? 'Related work remains waiting.',
+			data.decision ?? data.result ?? null,
+			data.decided_by ?? data.owner ?? null,
+			data.decided_at ?? null
+		);
+		return;
+	}
+	if (type === 'change_request') {
+		db.prepare(
+			`INSERT INTO work_change_request_details
+			 (work_item_id, scope, systems_touched_json, risk, rollback_notes, verification_plan,
+			  approval_state, execution_state)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   scope = excluded.scope,
+			   systems_touched_json = excluded.systems_touched_json,
+			   risk = excluded.risk,
+			   rollback_notes = excluded.rollback_notes,
+			   verification_plan = excluded.verification_plan,
+			   approval_state = excluded.approval_state,
+			   execution_state = excluded.execution_state`
+		).run(
+			id,
+			data.change_scope ?? data.scope ?? data.description ?? data.title,
+			JSON.stringify(normalizeArray(data.systems_touched)),
+			data.risk ?? data.priority ?? 'normal',
+			data.rollback_notes ?? null,
+			data.verification_plan ?? data.next_action ?? 'Verify the requested change.',
+			data.approval_state ?? (toApprovalFlag(data.approval_required) ? 'required' : 'not_required'),
+			data.execution_state ?? data.status ?? 'planning'
+		);
+		return;
+	}
+	if (type === 'automation') {
+		db.prepare(
+			`INSERT INTO work_automation_details
+			 (work_item_id, trigger_type, schedule, enabled, last_run_at, next_run_at, last_result,
+			  failure_count, generated_work_policy, backing_ref)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   trigger_type = excluded.trigger_type,
+			   schedule = excluded.schedule,
+			   enabled = excluded.enabled,
+			   last_run_at = excluded.last_run_at,
+			   next_run_at = excluded.next_run_at,
+			   last_result = excluded.last_result,
+			   failure_count = excluded.failure_count,
+			   generated_work_policy = excluded.generated_work_policy,
+			   backing_ref = excluded.backing_ref`
+		).run(
+			id,
+			data.trigger_type ?? 'heartbeat',
+			data.schedule ?? data.stale_after ?? data.scheduled_at ?? null,
+			data.enabled ?? 1,
+			data.last_run_at ?? null,
+			data.next_run_at ?? null,
+			data.last_result ?? data.result ?? null,
+			data.failure_count ?? 0,
+			data.generated_work_policy ?? data.next_action ?? null,
+			data.backing_ref ?? null
+		);
+		return;
+	}
+	if (type === 'finding') {
+		db.prepare(
+			`INSERT INTO work_finding_details (work_item_id, finding_text, source_refs_json)
+			 VALUES (?, ?, ?)
+			 ON CONFLICT(work_item_id) DO UPDATE SET
+			   finding_text = excluded.finding_text,
+			   source_refs_json = excluded.source_refs_json`
+		).run(
+			id,
+			data.finding_text ?? data.description ?? data.body ?? data.title ?? null,
+			JSON.stringify(normalizeArray(data.source_refs))
+		);
+	}
+}
+
+function requireText(value: unknown, name: string, allowPartial: boolean): void {
+	if (allowPartial && value === undefined) return;
+	if (typeof value !== 'string' || value.trim().length === 0) {
+		throw new WorkError('WORK_CONSTRAINT', `${name} is required`);
+	}
+}
+
+function normalizeArray(value: unknown): string[] {
+	if (Array.isArray(value))
+		return value.filter((entry): entry is string => typeof entry === 'string');
+	if (typeof value === 'string' && value.trim()) return [value];
+	return [];
+}
+
+function parseJsonArray(value: string | null | undefined): string[] | null {
+	if (!value) return null;
+	try {
+		const parsed = JSON.parse(value) as unknown;
+		return Array.isArray(parsed)
+			? parsed.filter((entry): entry is string => typeof entry === 'string')
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+function toApprovalFlag(value: boolean | number | undefined): number {
+	return value === true || value === 1 ? 1 : 0;
+}
+
+function firstText(...values: Array<string | null | undefined>): string | null {
+	return values.find((value) => typeof value === 'string' && value.trim().length > 0) ?? null;
+}
+
+function mapWorkCategory(area: WorkArea): WorkCategory {
+	return {
+		id: area.id,
+		title: area.title,
+		description: area.description,
+		parent_category_id: area.parent_area_id,
+		status: area.status,
+		kind: area.parent_area_id ? 'subcategory' : 'category',
+		created_at: area.created_at,
+		updated_at: area.updated_at
+	};
+}
+
+function categoryIdFor(
+	kind: WorkCategoryKind,
+	title: string,
+	parentCategoryId: string | null | undefined
+): string {
+	const prefix = kind === 'category' ? 'category' : 'subcategory';
+	const parentPrefix = parentCategoryId ? `${slugify(parentCategoryId)}-` : '';
+	return `${prefix}:${parentPrefix}${slugify(title)}`;
+}
+
+function slugify(value: string): string {
+	const slug = value
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 80);
+	return slug || 'untitled';
+}
+
 function createWorkVersion(workItemId: number, actor: string): void {
 	const db = getWorkDb();
 	const item = getWorkItem(workItemId);
@@ -367,9 +752,9 @@ function createWorkVersion(workItemId: number, actor: string): void {
 }
 
 function defaultStatusForType(type: WorkItemType): WorkStatus {
-	if (type === 'decision') return 'needs_review';
-	if (type === 'routine') return 'scheduled';
-	if (type === 'observation') return 'complete';
+	if (type === 'open_question' || type === 'decision') return 'needs_review';
+	if (type === 'automation') return 'scheduled';
+	if (type === 'finding') return 'complete';
 	return 'backlog';
 }
 

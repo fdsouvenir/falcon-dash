@@ -118,20 +118,31 @@ Base URL: http://localhost:3000/api/work
 ## Items
 
 - GET /items
-- GET /items?type=change&status=in_progress
+- GET /items?type=change_request&status=in_progress
 - POST /items
 - GET /items/{id}
 - PATCH /items/{id}
 
-Item types: area, project, task, decision, routine, observation, change.
+Item types: project, milestone, next_step, open_question, decision, change_request, finding, automation.
+
+Categories and subcategories are setup records exposed through /categories, not Work item types.
+
+Item filters include type, status, category_id, subcategory_id, parent_item_id, includeClosed, and limit.
 
 Statuses: backlog, planning, ready, in_progress, waiting, needs_review, blocked, scheduled, complete, cancelled, archived.
+
+## Categories
+
+- GET /categories
+- POST /categories
+- GET /categories/{id}
+- PATCH /categories/{id}
 
 ## Queue
 
 - GET /queue
 
-Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOnExternal, needsReview, scheduledRoutines, staleCleanup, and blockedRisky buckets. The legacy waitingOnFred alias is still returned for older callers.
+Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOnExternal, needsReview, failedAutomations, scheduledAutomations, staleCleanup, and blockedRisky buckets.
 
 ## Context
 
