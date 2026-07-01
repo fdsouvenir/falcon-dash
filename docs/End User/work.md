@@ -53,13 +53,14 @@ shown as agent-managed record content rather than casual text editors.
 The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
 workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
 next step, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
-hover only, and double-clicking opens the full project page. The project page is a ledger-style
-operating brief: goal, definition of done, why it matters, scope, current next step, blockers, and
-waiting state lead into a project plan where milestone groups contain their related next steps,
-decisions, open questions, and change requests. Milestones are short checkpoints inside the
-project, not separate pages; the project right rail includes an Add milestone control for a title
-and one-sentence description. Work that is not attached to a milestone appears as project-level
-work, while automations, findings, activity, and health/status context remain supporting sections.
+hover only, and double-clicking opens the full project page. The project page starts with Project
+details for editable basics like status, priority, waiting state, and category; the right rail keeps
+the static operating brief close by without repeating those details. Current next step, blockers,
+and waiting state lead into a project plan where milestone groups contain their related next steps,
+decisions, open questions, and change requests. Milestones are short checkpoints inside the project,
+not separate pages; the project right rail includes an Add milestone control for a title and
+one-sentence description. Work that is not attached to a milestone appears as project-level work,
+while automations, findings, and activity remain supporting sections.
 
 Open questions and decisions are separate. An open question captures unresolved knowledge; a
 decision captures a commitment or approval with options and a recommendation. Change requests are

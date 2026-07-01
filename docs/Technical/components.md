@@ -191,15 +191,17 @@ Routeable Work surface for the `/work` module:
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
   not render the peer list; they show type-aware sections, health reasons, literal blockers, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
-  fields. Project details render as a ledger-style operating brief with a left section index,
-  compact header, schema-first brief, current next step, blocker/waiting state, and a project plan
-  that groups related next steps, decisions, open questions, and change requests under short
-  project-local milestones. Milestones are inert headings with a title and optional one-sentence
-  description; they are added from the project right rail and do not have standalone list or detail
-  pages. Work attached directly to the project appears in a project-level work group instead of being
-  mixed into the milestone structure. Automations, findings, activity, and the right health/status
-  rail remain supporting project context. Question details render as a Question Brief with Markdown
-  sections and collapsed history or legacy material instead of one long paragraph.
+  fields. Project details render as a ledger-style project page with a left section index, compact
+  header, a main Project details section for editable basics, current next step, blocker/waiting
+  state, and a project plan that groups related next steps, decisions, open questions, and change
+  requests under short project-local milestones. The static operating brief moves to the right rail
+  with milestone creation so status, health, priority, dates, and category are not repeated there.
+  Milestones are inert headings with a title and optional one-sentence description; they are added
+  from the project right rail and do not have standalone list or detail pages. Work attached
+  directly to the project appears in a project-level work group instead of being mixed into the
+  milestone structure. Automations, findings, and activity remain supporting project context.
+  Question details render as a Question Brief with Markdown sections and collapsed history or legacy
+  material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
   categories and subcategories as a read-only grouped directory with an explicit `Add category`
   action and a contextual drawer for category/subcategory creation and edits

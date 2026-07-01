@@ -83,6 +83,8 @@
 		status: WorkStatus;
 		owner: string;
 		waiting_on: string;
+		category_id: string;
+		subcategory_id: string;
 		priority: WorkPriority;
 		next_action: string;
 		due_date: string;
@@ -563,6 +565,8 @@
 			status: 'planning',
 			owner: '',
 			waiting_on: '',
+			category_id: '',
+			subcategory_id: '',
 			priority: 'normal',
 			next_action: '',
 			due_date: '',
@@ -581,6 +585,8 @@
 			status: item.status,
 			owner: item.owner ?? '',
 			waiting_on: item.waiting_on ?? '',
+			category_id: item.category_id ?? '',
+			subcategory_id: item.subcategory_id ?? '',
 			priority: item.priority ?? 'normal',
 			next_action: item.next_action ?? '',
 			due_date: item.due_date ?? '',
@@ -595,6 +601,9 @@
 		return {
 			status: value.status,
 			waiting_on: value.waiting_on || null,
+			category_id: value.category_id || null,
+			subcategory_id: value.subcategory_id || null,
+			area_id: value.subcategory_id || value.category_id || null,
 			priority: value.priority,
 			actor: 'operator'
 		};

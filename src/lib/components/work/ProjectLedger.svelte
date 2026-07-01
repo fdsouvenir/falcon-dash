@@ -14,17 +14,21 @@
 		statusTone,
 		waitingLabel,
 		workStatuses,
+		type WorkCategory,
 		type WorkItem,
 		type WorkItemType,
 		type WorkPriority,
 		type WorkStatus
 	} from '$lib/work/work-ui.js';
-	import { ArrowRight, Plus, Save } from '@lucide/svelte';
+	import { ArrowRight, Pencil, Plus, Save, X } from '@lucide/svelte';
+	import { onMount } from 'svelte';
 
 	type ProjectLedgerDraft = {
 		status: WorkStatus;
 		priority: WorkPriority;
 		waiting_on: string;
+		category_id: string;
+		subcategory_id: string;
 	};
 
 	type ProjectLedgerAnchor = {
@@ -67,6 +71,10 @@
 	let milestoneDescription = $state('');
 	let milestoneMessage = $state<string | null>(null);
 	let milestoneError = $state<string | null>(null);
+	let editingProject = $state(false);
+	let categories = $state<WorkCategory[]>([]);
+	let subcategories = $state<WorkCategory[]>([]);
+	let categoryError = $state<string | null>(null);
 
 	const waitingOptions = [
 		{ value: '', label: 'No blocker' },
@@ -77,7 +85,7 @@
 	];
 
 	const anchors: ProjectLedgerAnchor[] = [
-		{ id: 'project-brief', number: '01', label: 'Brief' },
+		{ id: 'project-details', number: '01', label: 'Details' },
 		{ id: 'project-current-work', number: '02', label: 'Current Work' },
 		{ id: 'project-plan', number: '03', label: 'Project Plan' },
 		{ id: 'project-signals', number: '04', label: 'Signals' },
@@ -165,6 +173,23 @@
 			.filter((value, index, source) => value.trim() && source.indexOf(value) === index)
 			.slice(0, 5)
 	);
+	const selectedCategory = $derived(
+		categories.find((category) => category.id === draft.category_id) ??
+			categories.find((category) => category.id === item.category_id) ??
+			null
+	);
+	const availableSubcategories = $derived(
+		subcategories.filter((subcategory) => subcategory.parent_category_id === draft.category_id)
+	);
+	const selectedSubcategory = $derived(
+		subcategories.find((subcategory) => subcategory.id === draft.subcategory_id) ??
+			subcategories.find((subcategory) => subcategory.id === item.subcategory_id) ??
+			null
+	);
+
+	onMount(() => {
+		void loadCategories();
+	});
 
 	function childrenOfType(type: WorkItemType): WorkItem[] {
 		return [...children]
@@ -273,6 +298,58 @@
 			: firstText(milestone.description, marker, null);
 	}
 
+	async function loadCategories() {
+		categoryError = null;
+		try {
+			const response = await fetch('/api/work/categories');
+			if (!response.ok) throw new Error(`Categories request failed: ${response.status}`);
+			const data = (await response.json()) as {
+				categories?: WorkCategory[];
+				subcategories?: WorkCategory[];
+			};
+			categories = data.categories ?? [];
+			subcategories = data.subcategories ?? [];
+		} catch (err) {
+			categoryError = err instanceof Error ? err.message : 'Unable to load categories';
+		}
+	}
+
+	function resetProjectDraft() {
+		draft.status = item.status;
+		draft.priority = item.priority ?? 'normal';
+		draft.waiting_on = item.waiting_on ?? '';
+		draft.category_id = item.category_id ?? '';
+		draft.subcategory_id = item.subcategory_id ?? '';
+	}
+
+	function cancelProjectEdit() {
+		resetProjectDraft();
+		editingProject = false;
+	}
+
+	function handleCategoryChange() {
+		if (
+			draft.subcategory_id &&
+			!subcategories.some(
+				(subcategory) =>
+					subcategory.id === draft.subcategory_id &&
+					subcategory.parent_category_id === draft.category_id
+			)
+		) {
+			draft.subcategory_id = '';
+		}
+	}
+
+	function categoryLabel(): string {
+		if (selectedSubcategory && selectedCategory)
+			return `${selectedCategory.title} / ${selectedSubcategory.title}`;
+		return firstText(selectedCategory?.title, item.subcategory_id, item.category_id, 'Not set');
+	}
+
+	function projectWaitingLabel(): string {
+		return item.waiting_on ? waitingLabel(item.waiting_on) : 'Nothing waiting';
+	}
+
 	async function createMilestone(event: SubmitEvent) {
 		event.preventDefault();
 		const title = milestoneTitle.trim();
@@ -346,7 +423,7 @@
 	data-testid="work-detail-page"
 >
 	<div
-		class="grid min-h-[calc(100dvh-7rem)] xl:grid-cols-[14rem_minmax(0,1fr)_19rem]"
+		class="grid min-h-[calc(100dvh-7rem)] xl:grid-cols-[14rem_minmax(0,1fr)_23rem]"
 		data-testid="project-ledger"
 	>
 		<aside class="hidden border-r border-outline-variant/55 bg-surface-0/45 p-4 xl:block">
@@ -411,49 +488,181 @@
 			</header>
 
 			<div class="space-y-8 px-4 py-5 sm:px-5">
-				<section id="project-brief" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-primary"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Operating brief</h3>
+				<section id="project-details" class="scroll-mt-20">
+					<div class="mb-3 flex items-center justify-between gap-3">
+						<div class="flex items-center gap-2">
+							<span class="h-2 w-2 rounded-full bg-primary"></span>
+							<h3 class="text-sm font-semibold text-on-surface">Project details</h3>
+						</div>
+						<button
+							type="button"
+							class="falcon-focus inline-flex min-h-8 items-center justify-center gap-2 rounded-md px-2.5 text-sm font-semibold text-primary transition hover:bg-surface-2"
+							onclick={() => {
+								resetProjectDraft();
+								editingProject = !editingProject;
+							}}
+						>
+							{#if editingProject}
+								<X class="h-4 w-4" />
+								Close
+							{:else}
+								<Pencil class="h-4 w-4" />
+								Edit
+							{/if}
+						</button>
 					</div>
-					<div
-						class="divide-y divide-outline-variant/45 rounded-lg border border-outline-variant/55 bg-surface-0/35"
-					>
-						<div class="grid gap-2 px-4 py-3 md:grid-cols-[11rem_minmax(0,1fr)]">
-							<p class="text-sm font-semibold text-on-surface-variant">Goal</p>
-							<p class="text-sm leading-6 text-on-surface">
-								{briefValue(
-									'goal',
-									firstText(item.description, item.body, 'No project goal recorded yet.')
-								)}
-							</p>
-						</div>
-						<div class="grid gap-2 px-4 py-3 md:grid-cols-[11rem_minmax(0,1fr)]">
-							<p class="text-sm font-semibold text-on-surface-variant">Definition of done</p>
-							<div class="text-sm leading-6 text-on-surface">
-								<MarkdownRenderer
-									content={briefValue('definition_of_done', 'No definition of done recorded yet.')}
-								/>
+					<div class="overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-0/35">
+						{#if editingProject}
+							<form class="p-4" onsubmit={onSave}>
+								<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+									<label class="grid gap-1 text-xs text-on-surface-variant">
+										Status
+										<select
+											bind:value={draft.status}
+											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+										>
+											{#each workStatuses as status (status)}
+												<option value={status}>{sentenceCase(formatStatus(status))}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="grid gap-1 text-xs text-on-surface-variant">
+										Priority
+										<select
+											bind:value={draft.priority}
+											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+										>
+											<option value="low">Low</option>
+											<option value="normal">Normal</option>
+											<option value="high">High</option>
+											<option value="urgent">Urgent</option>
+										</select>
+									</label>
+									<label class="grid gap-1 text-xs text-on-surface-variant">
+										Waiting for
+										<select
+											bind:value={draft.waiting_on}
+											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+										>
+											{#each waitingOptions as option (option.value)}
+												<option value={option.value}>{option.label}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="grid gap-1 text-xs text-on-surface-variant">
+										Category
+										<select
+											bind:value={draft.category_id}
+											onchange={handleCategoryChange}
+											aria-label="Category"
+											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+										>
+											<option value="">None</option>
+											{#each categories as category (category.id)}
+												<option value={category.id}>{category.title}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="grid gap-1 text-xs text-on-surface-variant md:col-span-2">
+										Subcategory
+										<select
+											bind:value={draft.subcategory_id}
+											disabled={!draft.category_id || availableSubcategories.length === 0}
+											aria-label="Subcategory"
+											class="falcon-focus min-h-10 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface disabled:opacity-60"
+										>
+											<option value="">None</option>
+											{#each availableSubcategories as subcategory (subcategory.id)}
+												<option value={subcategory.id}>{subcategory.title}</option>
+											{/each}
+										</select>
+									</label>
+								</div>
+								<div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+									{#if saveMessage}<span class="mr-auto text-xs text-status-active"
+											>{saveMessage}</span
+										>{/if}
+									{#if error}<span class="mr-auto text-xs text-status-danger">{error}</span>{/if}
+									<button
+										type="button"
+										class="falcon-focus inline-flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-2 hover:text-on-surface"
+										onclick={cancelProjectEdit}
+									>
+										Cancel
+									</button>
+									<button
+										type="submit"
+										disabled={saving}
+										class="falcon-focus inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+									>
+										<Save class="h-4 w-4" />
+										{saving ? 'Saving...' : 'Save changes'}
+									</button>
+								</div>
+								{#if categoryError}<p class="mt-3 text-xs text-status-warning">
+										{categoryError}
+									</p>{/if}
+							</form>
+						{:else}
+							<div
+								class="grid divide-y divide-outline-variant/35 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4"
+							>
+								<div class="p-4">
+									<p class="text-xs text-on-surface-variant">Status</p>
+									<p class="mt-1 font-semibold {statusTone(item.status)}">
+										{sentenceCase(formatStatus(item.status))}
+									</p>
+								</div>
+								<div class="p-4">
+									<p class="text-xs text-on-surface-variant">Priority</p>
+									<p class="mt-1 font-semibold {priorityTone(item.priority)}">
+										{sentenceCase(item.priority ?? 'normal')}
+									</p>
+								</div>
+								<div class="p-4">
+									<p class="text-xs text-on-surface-variant">Waiting for</p>
+									<p class="mt-1 font-semibold text-on-surface">{projectWaitingLabel()}</p>
+								</div>
+								<div class="p-4">
+									<p class="text-xs text-on-surface-variant">Category</p>
+									<p class="mt-1 font-semibold text-on-surface">{categoryLabel()}</p>
+								</div>
 							</div>
-						</div>
-						<div class="grid gap-2 px-4 py-3 md:grid-cols-[11rem_minmax(0,1fr)]">
-							<p class="text-sm font-semibold text-on-surface-variant">Why it matters</p>
-							<p class="text-sm leading-6 text-on-surface">
-								{briefValue('why_it_matters', 'No impact statement recorded yet.')}
-							</p>
-						</div>
-						<div class="grid gap-2 px-4 py-3 md:grid-cols-[11rem_minmax(0,1fr)]">
-							<p class="text-sm font-semibold text-on-surface-variant">Scope</p>
-							<p class="text-sm leading-6 text-on-surface">
-								{briefValue('scope', 'No in-scope boundary recorded yet.')}
-							</p>
-						</div>
-						<div class="grid gap-2 px-4 py-3 md:grid-cols-[11rem_minmax(0,1fr)]">
-							<p class="text-sm font-semibold text-on-surface-variant">Non-scope</p>
-							<p class="text-sm leading-6 text-on-surface">
-								{briefValue('non_scope', 'No explicit non-scope recorded yet.')}
-							</p>
-						</div>
+							<div
+								class="grid gap-3 border-t border-outline-variant/35 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem]"
+							>
+								<div>
+									<p class="text-xs text-on-surface-variant">Schedule</p>
+									<p class="mt-1 text-sm font-semibold text-on-surface">
+										{projectScheduleLabel()}
+									</p>
+								</div>
+								<div>
+									<p class="text-xs text-on-surface-variant">Last meaningful update</p>
+									<p class="mt-1 text-sm font-semibold text-on-surface">
+										{formatDateTime(item.last_meaningful_update_at ?? item.last_activity_at)}
+									</p>
+								</div>
+								<div>
+									<p class="text-xs text-on-surface-variant">Operator</p>
+									<p class="mt-1 text-sm font-semibold text-on-surface">
+										{firstText(item.operator, item.owner, 'Not set')}
+									</p>
+								</div>
+							</div>
+							{#if healthReasons.length}
+								<div class="grid gap-2 border-t border-outline-variant/35 p-4 md:grid-cols-2">
+									{#each healthReasons as reason (reason.key)}
+										<div class="rounded-md border border-outline-variant/40 bg-surface-1/45 p-3">
+											<p class="text-sm font-semibold {reason.tone}">{reason.label}</p>
+											<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+												{reason.detail}
+											</p>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{/if}
 					</div>
 				</section>
 
@@ -801,131 +1010,49 @@
 					{#if milestoneError}<p class="mt-2 text-xs text-status-danger">{milestoneError}</p>{/if}
 				</section>
 
-				<section>
-					<h3 class="text-sm font-semibold text-on-surface-variant">Health and status</h3>
-					<div class="mt-3 space-y-3 text-sm">
-						<div class="flex items-center justify-between gap-3">
-							<span class="text-on-surface-variant">Overall health</span>
-							<span class="font-semibold {health.tone}">{healthLabel()}</span>
-						</div>
-						<div class="flex items-center justify-between gap-3">
-							<span class="text-on-surface-variant">Schedule</span>
-							<span class="text-right font-semibold text-on-surface">{projectScheduleLabel()}</span>
-						</div>
-						<div class="flex items-center justify-between gap-3">
-							<span class="text-on-surface-variant">Priority</span>
-							<span class="font-semibold {priorityTone(item.priority)}">
-								{sentenceCase(item.priority ?? 'normal')}
-							</span>
-						</div>
-					</div>
-				</section>
-
-				<section class="border-t border-outline-variant/45 pt-4">
-					<h3 class="text-sm font-semibold text-on-surface-variant">Key dates</h3>
-					<div class="mt-3 space-y-3 text-sm">
+				<section
+					id="project-brief"
+					class="rounded-lg border border-outline-variant/45 bg-surface-0/35 p-4"
+				>
+					<h3 class="text-sm font-semibold text-on-surface">Operating brief</h3>
+					<div class="mt-4 space-y-4">
 						<div>
-							<p class="text-xs text-on-surface-variant">Started</p>
-							<p class="mt-1 font-semibold text-on-surface">{formatDate(item.start_date)}</p>
-						</div>
-						<div>
-							<p class="text-xs text-on-surface-variant">Target completion</p>
-							<p class="mt-1 font-semibold text-on-surface">
-								{formatDate(item.target_date ?? item.due_date)}
+							<p class="text-xs text-on-surface-variant">Goal</p>
+							<p class="mt-1 text-sm leading-6 text-on-surface">
+								{briefValue(
+									'goal',
+									firstText(item.description, item.body, 'No project goal recorded yet.')
+								)}
 							</p>
 						</div>
 						<div>
-							<p class="text-xs text-on-surface-variant">Last meaningful update</p>
-							<p class="mt-1 font-semibold text-on-surface">
-								{formatDateTime(item.last_meaningful_update_at ?? item.last_activity_at)}
-							</p>
+							<p class="text-xs text-on-surface-variant">Definition of done</p>
+							<div class="mt-1 text-sm leading-6 text-on-surface">
+								<MarkdownRenderer
+									content={briefValue('definition_of_done', 'No definition of done recorded yet.')}
+								/>
+							</div>
 						</div>
-					</div>
-				</section>
-
-				<section class="border-t border-outline-variant/45 pt-4">
-					<h3 class="text-sm font-semibold text-on-surface-variant">Ownership</h3>
-					<div class="mt-3 space-y-3 text-sm">
 						<div>
-							<p class="text-xs text-on-surface-variant">Operator</p>
-							<p class="mt-1 font-semibold text-on-surface">
-								{firstText(item.operator, item.owner, 'Not set')}
+							<p class="text-xs text-on-surface-variant">Why it matters</p>
+							<p class="mt-1 text-sm leading-6 text-on-surface">
+								{briefValue('why_it_matters', 'No impact statement recorded yet.')}
 							</p>
 						</div>
 						<div>
-							<p class="text-xs text-on-surface-variant">Category</p>
-							<p class="mt-1 font-semibold text-on-surface">
-								{firstText(item.subcategory_id, item.category_id, 'Not set')}
+							<p class="text-xs text-on-surface-variant">Scope</p>
+							<p class="mt-1 text-sm leading-6 text-on-surface">
+								{briefValue('scope', 'No in-scope boundary recorded yet.')}
+							</p>
+						</div>
+						<div>
+							<p class="text-xs text-on-surface-variant">Non-scope</p>
+							<p class="mt-1 text-sm leading-6 text-on-surface">
+								{briefValue('non_scope', 'No explicit non-scope recorded yet.')}
 							</p>
 						</div>
 					</div>
 				</section>
-
-				{#if healthReasons.length}
-					<section class="border-t border-outline-variant/45 pt-4">
-						<h3 class="text-sm font-semibold text-on-surface">Health reasons</h3>
-						<div class="mt-3 space-y-2">
-							{#each healthReasons as reason (reason.key)}
-								<div class="rounded-md border border-outline-variant/40 bg-surface-1/55 p-3">
-									<p class="text-sm font-semibold {reason.tone}">{reason.label}</p>
-									<p class="mt-1 text-xs leading-5 text-on-surface-variant">{reason.detail}</p>
-								</div>
-							{/each}
-						</div>
-					</section>
-				{/if}
-
-				<form class="space-y-3 border-t border-outline-variant/45 pt-4" onsubmit={onSave}>
-					<div class="flex items-center justify-between gap-3">
-						<h3 class="text-sm font-semibold text-on-surface">State controls</h3>
-						{#if saveMessage}<span class="text-xs text-status-active">{saveMessage}</span>{/if}
-					</div>
-					<label class="grid gap-1 text-xs text-on-surface-variant">
-						Status
-						<select
-							bind:value={draft.status}
-							class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-						>
-							{#each workStatuses as status (status)}
-								<option value={status}>{sentenceCase(formatStatus(status))}</option>
-							{/each}
-						</select>
-					</label>
-					<div class="grid grid-cols-2 gap-2">
-						<label class="grid gap-1 text-xs text-on-surface-variant">
-							Priority
-							<select
-								bind:value={draft.priority}
-								class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-							>
-								<option value="low">Low</option>
-								<option value="normal">Normal</option>
-								<option value="high">High</option>
-								<option value="urgent">Urgent</option>
-							</select>
-						</label>
-						<label class="grid gap-1 text-xs text-on-surface-variant">
-							Waiting on
-							<select
-								bind:value={draft.waiting_on}
-								class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-							>
-								{#each waitingOptions as option (option.value)}
-									<option value={option.value}>{option.label}</option>
-								{/each}
-							</select>
-						</label>
-					</div>
-					<button
-						type="submit"
-						disabled={saving}
-						class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-					>
-						<Save class="h-4 w-4" />
-						{saving ? 'Saving...' : 'Save state'}
-					</button>
-					{#if error}<p class="text-sm text-status-danger">{error}</p>{/if}
-				</form>
 			</div>
 		</aside>
 	</div>

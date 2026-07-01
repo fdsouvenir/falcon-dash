@@ -584,7 +584,19 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('project-ledger')).toBeVisible();
 			await expect(page.getByPlaceholder('Search projects...')).toHaveCount(0);
 			await expect(page.getByText('Project ledger', { exact: true })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project details' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Health and status' })).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'State controls' })).toHaveCount(0);
+			const projectDetails = page.locator('section').filter({
+				has: page.getByRole('heading', { name: 'Project details' })
+			});
+			await projectDetails.getByRole('button', { name: 'Edit' }).click();
+			await expect(page.getByLabel('Status')).toBeVisible();
+			await expect(page.getByLabel('Priority')).toBeVisible();
+			await expect(page.getByLabel('Waiting for')).toBeVisible();
+			await expect(page.getByLabel('Category', { exact: true })).toBeVisible();
+			await expect(page.getByLabel('Subcategory', { exact: true })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Current state' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
@@ -711,7 +723,7 @@ test.describe('work overview executive status board', () => {
 			await page.goto(`${baseURL ?? ''}/work/projects/${seeded.project.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Health reasons' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project details' })).toBeVisible();
 			await expect(page.getByText('Overdue').first()).toBeVisible();
 			await expect(page.getByText('Urgent').first()).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
