@@ -53,8 +53,9 @@ and waiting state. Narrative fields such as title, next action, notes, descripti
 shown as agent-managed record content rather than casual text editors.
 
 The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
-workspace. Project rows render as separate cards; selecting a row highlights it, and double-clicking
-opens the full project page.
+workspace. Project rows render as separate cards with a numbered title, description, and next move
+on the left, plus status, coming-up, open-work, blocker, and update columns on the right. Selecting
+a row highlights it, and double-clicking opens the full project page.
 
 Open questions and decisions are separate. An open question captures unresolved knowledge; a
 decision captures a commitment or approval with options and a recommendation. Change requests are

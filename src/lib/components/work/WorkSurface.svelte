@@ -2251,6 +2251,17 @@
 									class="grid min-h-0 flex-1 gap-3 overflow-y-auto bg-surface-0/35 p-3"
 									data-testid="project-list"
 								>
+									<div
+										class="hidden rounded-md border border-outline-variant/35 bg-surface-1/55 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(0,1fr)_8rem_13rem_12rem_6rem_8rem] xl:items-center xl:gap-4"
+										data-testid="project-list-columns"
+									>
+										<span>Project</span>
+										<span>Status</span>
+										<span>Coming up</span>
+										<span>Open work</span>
+										<span class="text-right">Blockers</span>
+										<span class="text-right">Updated</span>
+									</div>
 									{#each filteredItems as project (project.id)}
 										<button
 											type="button"
@@ -2262,19 +2273,14 @@
 												project
 											)}"
 										>
-											<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+											<div
+												class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_8rem_13rem_12rem_6rem_8rem] xl:items-center"
+											>
 												<div class="min-w-0">
-													<div class="flex flex-wrap items-center gap-2">
-														<span class="text-base font-semibold text-on-surface"
-															>{project.title}</span
-														>
-														<span class="falcon-chip px-2 py-0.5 text-xs">
-															{itemDisplayId(project)}
-														</span>
-														<span class="text-xs {statusTone(project.status)}"
-															>{formatStatus(project.status)}</span
-														>
-													</div>
+													<h3 class="truncate text-xl font-semibold leading-7 text-on-surface">
+														<span class="text-on-surface-variant">{project.id}.</span>
+														{project.title}
+													</h3>
 													<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
 														{firstText(
 															project.description,
@@ -2286,29 +2292,54 @@
 														Your next move: {projectOperatorMove(project)}
 													</p>
 												</div>
-												<div class="grid gap-2 sm:grid-cols-[1fr_1fr_7rem]">
-													<div class="falcon-subtle-panel px-3 py-3">
-														<p class="text-xs text-on-surface-variant">Coming up</p>
-														<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
-															{projectUpcoming(project)}
-														</p>
-													</div>
-													<div class="falcon-subtle-panel px-3 py-3">
-														<p class="text-xs text-on-surface-variant">Open work</p>
-														<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
-															{projectOpenWork(project)}
-														</p>
-													</div>
-													<div class="falcon-subtle-panel px-2 py-3">
-														<p
-															class="text-lg font-semibold {blockerCount(project)
-																? 'text-status-danger'
-																: 'text-status-muted'}"
-														>
-															{blockerCount(project)}
-														</p>
-														<p class="mt-1 text-[0.7rem] text-on-surface-variant">blockers</p>
-													</div>
+
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Status
+													</p>
+													<p class="mt-1 text-sm font-semibold {statusTone(project.status)}">
+														{sentenceCase(formatStatus(project.status))}
+													</p>
+												</div>
+
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Coming up
+													</p>
+													<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
+														{projectUpcoming(project)}
+													</p>
+												</div>
+
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Open work
+													</p>
+													<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
+														{projectOpenWork(project)}
+													</p>
+												</div>
+
+												<div class="xl:text-right">
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Blockers
+													</p>
+													<p
+														class="mt-1 text-lg font-semibold {blockerCount(project)
+															? 'text-status-danger'
+															: 'text-status-muted'}"
+													>
+														{blockerCount(project)}
+													</p>
+												</div>
+
+												<div class="xl:text-right">
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Updated
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface">
+														{formatDateTime(project.last_activity_at)}
+													</p>
 												</div>
 											</div>
 										</button>

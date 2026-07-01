@@ -532,11 +532,16 @@ test.describe('work overview executive status board', () => {
 			await page.goto(`${baseURL ?? ''}/work/projects`);
 
 			await expect(page.getByTestId('project-list')).toBeVisible();
+			await expect(page.getByTestId('project-list-columns')).toContainText('Status');
+			await expect(page.getByTestId('project-list-columns')).toContainText('Coming up');
+			await expect(page.getByTestId('project-list-columns')).toContainText('Open work');
 			const row = page
 				.getByTestId('work-section-row')
 				.filter({ hasText: seeded.project.title })
 				.first();
 			await expect(row).toBeVisible();
+			await expect(row).toContainText(`${seeded.project.id}.`);
+			await expect(row).not.toContainText(`Project ${seeded.project.id}`);
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
