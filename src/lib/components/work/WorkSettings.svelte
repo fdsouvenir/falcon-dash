@@ -96,12 +96,7 @@
 			subcategories = nextSubcategories;
 
 			if (!initialized) {
-				const firstCategory = nextCategories[0];
-				if (firstCategory) {
-					selectCategory(firstCategory);
-				} else {
-					openNewCategory();
-				}
+				openNewCategory();
 				initialized = true;
 			} else {
 				repairSelection(nextCategories, nextSubcategories);
@@ -142,6 +137,7 @@
 
 	function openNewCategory() {
 		drawerMode = 'new_category';
+		selectedCategoryId = '';
 		selectedSubcategoryId = '';
 		draft = emptyDraft();
 		saveMessage = null;
@@ -173,6 +169,22 @@
 		drawerMode = 'edit_subcategory';
 		draft = draftFromCategory(subcategory);
 		saveMessage = null;
+	}
+
+	function toggleCategory(category: WorkCategory) {
+		if (selectedCategoryId === category.id && !selectedSubcategoryId) {
+			openNewCategory();
+			return;
+		}
+		selectCategory(category);
+	}
+
+	function toggleSubcategory(category: WorkCategory, subcategory: WorkCategory) {
+		if (selectedSubcategoryId === subcategory.id) {
+			openNewSubcategory(category.id);
+			return;
+		}
+		selectSubcategory(category, subcategory);
 	}
 
 	async function submitDrawer(event: SubmitEvent) {
@@ -265,6 +277,32 @@
 		return 'border-outline-variant/55 bg-surface-2/65 text-on-surface-variant';
 	}
 
+	function categorySectionClass(category: WorkCategory): string {
+		const isSelectedCategory = selectedCategoryId === category.id && !selectedSubcategoryId;
+		const containsSelection = selectedCategoryId === category.id;
+		if (isSelectedCategory) {
+			return 'border-primary/45 bg-primary/10 shadow-[0_16px_34px_rgba(0,0,0,0.22),inset_0_0_0_1px_rgba(138,209,239,0.2)]';
+		}
+		if (containsSelection) {
+			return 'border-primary/25 bg-primary/5 shadow-[0_12px_28px_rgba(0,0,0,0.16)]';
+		}
+		return 'border-outline-variant/45 bg-surface-1 shadow-[0_10px_24px_rgba(0,0,0,0.12)]';
+	}
+
+	function categoryButtonClass(category: WorkCategory): string {
+		if (selectedCategoryId === category.id && !selectedSubcategoryId) {
+			return 'bg-primary/10 ring-1 ring-inset ring-primary/35';
+		}
+		return 'hover:bg-surface-2/60';
+	}
+
+	function subcategoryButtonClass(subcategory: WorkCategory): string {
+		if (selectedSubcategoryId === subcategory.id) {
+			return 'bg-primary/15 ring-1 ring-inset ring-primary/45 shadow-[0_8px_20px_rgba(0,0,0,0.18)]';
+		}
+		return 'bg-surface-0/45 hover:bg-surface-2/55';
+	}
+
 	function hasEditableSelection(): boolean {
 		return drawerMode === 'edit_category' || drawerMode === 'edit_subcategory';
 	}
@@ -345,25 +383,28 @@
 					<span class="text-xs text-on-surface-variant">Select a row, edit on the right</span>
 				</div>
 
-				<div class="divide-y divide-outline-variant/35" data-testid="work-settings-directory">
+				<div class="space-y-3 bg-surface-0/35 p-3" data-testid="work-settings-directory">
 					{#each categories as category (category.id)}
 						{@const children = childrenFor(category)}
 						<section
-							class="bg-surface-1/85 transition {selectedCategoryId === category.id
-								? 'shadow-[inset_3px_0_0_var(--primary)]'
-								: ''}"
+							class="overflow-hidden rounded-lg border transition {categorySectionClass(category)}"
 						>
-							<div class="px-4 py-4">
+							<div class="px-3 pt-3">
 								<button
 									type="button"
-									onclick={() => selectCategory(category)}
+									onclick={() => toggleCategory(category)}
 									aria-pressed={selectedCategoryId === category.id && !selectedSubcategoryId}
-									class="falcon-focus group min-w-0 rounded-md text-left transition hover:bg-surface-2/55"
+									class="falcon-focus group w-full min-w-0 rounded-md text-left transition {categoryButtonClass(
+										category
+									)}"
 									data-testid="work-settings-category-row"
 								>
 									<div class="flex min-w-0 items-start gap-3 p-2">
 										<span
-											class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-2 text-primary"
+											class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition {selectedCategoryId ===
+												category.id && !selectedSubcategoryId
+												? 'bg-primary text-primary-foreground'
+												: 'bg-surface-2 text-primary'}"
 										>
 											<Folder class="h-4 w-4" />
 										</span>
@@ -387,18 +428,17 @@
 								</button>
 							</div>
 
-							<div class="px-4 pb-4">
+							<div class="px-3 pb-3 pt-2">
 								{#if children.length > 0}
-									<div class="overflow-hidden rounded-lg bg-surface-0/55">
+									<div class="space-y-1.5 rounded-lg bg-surface-0/55 p-1.5">
 										{#each children as subcategory (subcategory.id)}
 											<button
 												type="button"
-												onclick={() => selectSubcategory(category, subcategory)}
+												onclick={() => toggleSubcategory(category, subcategory)}
 												aria-pressed={selectedSubcategoryId === subcategory.id}
-												class="falcon-focus group w-full border-t border-outline-variant/25 px-3 py-3 text-left first:border-t-0 transition hover:bg-surface-2/50 {selectedSubcategoryId ===
-												subcategory.id
-													? 'border-primary/35 bg-primary/10 shadow-[inset_3px_0_0_var(--primary)]'
-													: ''}"
+												class="falcon-focus group w-full rounded-md px-3 py-3 text-left transition {subcategoryButtonClass(
+													subcategory
+												)}"
 												data-testid="work-settings-subcategory-row"
 											>
 												<span class="flex min-w-0 items-center gap-3">

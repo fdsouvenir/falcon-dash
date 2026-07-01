@@ -458,20 +458,33 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
 			await expect(page.getByTestId('work-settings-drawer').getByLabel('Name')).toBeVisible();
 
-			await page.getByTestId('work-settings-directory').getByText(category.title).click();
+			const categoryRow = page
+				.getByTestId('work-settings-category-row')
+				.filter({ hasText: category.title });
+			await categoryRow.click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit category');
 			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await expect(categoryRow).toHaveAttribute('aria-pressed', 'true');
+			await categoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
+			await expect(categoryRow).toHaveAttribute('aria-pressed', 'false');
+			await categoryRow.click();
 			await page.getByRole('button', { name: 'Add subcategory to this category' }).click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
 			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
 			await expect(page.getByTestId('work-settings-drawer').getByLabel('Category')).toBeVisible();
 
-			await page.getByTestId('work-settings-directory').getByText(subcategory.title).click();
+			const subcategoryRow = page
+				.getByTestId('work-settings-subcategory-row')
+				.filter({ hasText: subcategory.title });
+			await subcategoryRow.click();
 			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit subcategory');
 			await expect(page.getByTestId('work-settings-drawer')).toContainText(subcategory.title);
-			await expect(
-				page.getByTestId('work-settings-subcategory-row').filter({ hasText: subcategory.title })
-			).toHaveAttribute('aria-pressed', 'true');
+			await expect(subcategoryRow).toHaveAttribute('aria-pressed', 'true');
+			await subcategoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await expect(subcategoryRow).toHaveAttribute('aria-pressed', 'false');
 		} finally {
 			await archiveWorkCategories(request, [subcategory, category]);
 		}
