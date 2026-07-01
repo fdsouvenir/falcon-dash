@@ -2248,11 +2248,11 @@
 
 							{#if activeType === 'project'}
 								<div
-									class="grid min-h-0 flex-1 gap-3 overflow-y-auto bg-surface-0/35 p-3"
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
 									data-testid="project-list"
 								>
 									<div
-										class="hidden rounded-md border border-outline-variant/35 bg-surface-1/55 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(0,1fr)_8rem_13rem_12rem_6rem_8rem] xl:items-center xl:gap-4"
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.35fr)_7rem_14rem_10rem_5rem_7rem] xl:items-center xl:gap-4"
 										data-testid="project-list-columns"
 									>
 										<span>Project</span>
@@ -2269,35 +2269,29 @@
 											ondblclick={() => handleSectionRowDoubleClick(project)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === project.id}
-											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
 												project
 											)}"
 										>
 											<div
-												class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_8rem_13rem_12rem_6rem_8rem] xl:items-center"
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_7rem_14rem_10rem_5rem_7rem] xl:items-center xl:gap-4"
 											>
 												<div class="min-w-0">
-													<h3 class="truncate text-xl font-semibold leading-7 text-on-surface">
+													<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
 														<span class="text-on-surface-variant">{project.id}.</span>
 														{project.title}
 													</h3>
-													<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-														{firstText(
-															project.description,
-															project.body,
-															'Outcome not written yet'
-														)}
-													</p>
-													<p class="mt-3 text-sm font-semibold text-on-surface">
-														Your next move: {projectOperatorMove(project)}
-													</p>
 												</div>
 
 												<div>
 													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
 														Status
 													</p>
-													<p class="mt-1 text-sm font-semibold {statusTone(project.status)}">
+													<p
+														class="mt-1 inline-flex rounded bg-surface-3/85 px-2 py-1 text-xs font-semibold xl:mt-0 {statusTone(
+															project.status
+														)}"
+													>
 														{sentenceCase(formatStatus(project.status))}
 													</p>
 												</div>
@@ -2306,7 +2300,7 @@
 													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
 														Coming up
 													</p>
-													<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
+													<p class="mt-1 truncate text-sm font-semibold text-on-surface xl:mt-0">
 														{projectUpcoming(project)}
 													</p>
 												</div>
@@ -2315,7 +2309,7 @@
 													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
 														Open work
 													</p>
-													<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
+													<p class="mt-1 truncate text-sm font-semibold text-on-surface xl:mt-0">
 														{projectOpenWork(project)}
 													</p>
 												</div>
@@ -2325,7 +2319,7 @@
 														Blockers
 													</p>
 													<p
-														class="mt-1 text-lg font-semibold {blockerCount(project)
+														class="mt-1 text-sm font-semibold xl:mt-0 {blockerCount(project)
 															? 'text-status-danger'
 															: 'text-status-muted'}"
 													>
@@ -2337,7 +2331,7 @@
 													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
 														Updated
 													</p>
-													<p class="mt-1 text-sm font-semibold text-on-surface">
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
 														{formatDateTime(project.last_activity_at)}
 													</p>
 												</div>

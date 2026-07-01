@@ -542,6 +542,7 @@ test.describe('work overview executive status board', () => {
 			await expect(row).toBeVisible();
 			await expect(row).toContainText(`${seeded.project.id}.`);
 			await expect(row).not.toContainText(`Project ${seeded.project.id}`);
+			await expect(row).not.toContainText('Your next move:');
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
