@@ -521,7 +521,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('uses project rows as selectable cards and opens detail on double click', async ({
+	test('uses project rows as hover-only cards and opens detail on double click', async ({
 		page,
 		request,
 		baseURL
@@ -547,7 +547,7 @@ test.describe('work overview executive status board', () => {
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
-			await expect(row).toHaveAttribute('aria-pressed', 'true');
+			await expect(row).not.toHaveAttribute('aria-pressed', 'true');
 			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
 			await expect(page.getByRole('link', { name: 'Open full page' })).toHaveCount(0);
 			await row.dblclick();
@@ -564,7 +564,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('keeps desktop project list stable when selecting a scrolled row', async ({
+	test('keeps desktop project list stable when clicking a scrolled row', async ({
 		page,
 		request,
 		baseURL
@@ -584,7 +584,7 @@ test.describe('work overview executive status board', () => {
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
-			await expect(row).toHaveAttribute('aria-pressed', 'true');
+			await expect(row).not.toHaveAttribute('aria-pressed', 'true');
 			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);

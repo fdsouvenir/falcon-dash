@@ -896,6 +896,11 @@
 		openDetail(item);
 	}
 
+	function handleProjectRowClick(item: WorkItem) {
+		if (showQuickPane) return;
+		openDetail(item);
+	}
+
 	function handleSectionRowDoubleClick(item: WorkItem) {
 		if (!showQuickPane) return;
 		openDetail(item);
@@ -2265,13 +2270,10 @@
 									{#each filteredItems as project (project.id)}
 										<button
 											type="button"
-											onclick={() => handleSectionRowClick(project)}
+											onclick={() => handleProjectRowClick(project)}
 											ondblclick={() => handleSectionRowDoubleClick(project)}
 											data-testid="work-section-row"
-											aria-pressed={selectedItem?.id === project.id}
-											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
-												project
-											)}"
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75"
 										>
 											<div
 												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_7rem_14rem_10rem_5rem_7rem] xl:items-center xl:gap-4"
