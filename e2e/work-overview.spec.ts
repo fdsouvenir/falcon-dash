@@ -129,6 +129,27 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 		})
 	);
 
+	const milestone = await createWorkItem(request, {
+		type: 'milestone',
+		parent_item_id: project.id,
+		title: `E2E launch readiness milestone ${stamp}`,
+		status: 'in_progress',
+		due_date: isoDaysFromNow(3),
+		next_action: 'Complete launch readiness'
+	});
+	items.push(milestone);
+
+	items.push(
+		await createWorkItem(request, {
+			type: 'next_step',
+			parent_item_id: milestone.id,
+			title: `E2E verify milestone checklist ${stamp}`,
+			status: 'ready',
+			due_date: isoDaysFromNow(2),
+			next_action: 'Verify each launch readiness item'
+		})
+	);
+
 	items.push(
 		await createWorkItem(request, {
 			type: 'automation',
@@ -140,7 +161,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 		})
 	);
 
-	return { project, question, blockedChange, items };
+	return { project, question, blockedChange, milestone, items };
 }
 
 async function seedUrgentOverdueProject(request: APIRequestContext) {
@@ -549,9 +570,13 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByText('Project ledger', { exact: true })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Current state' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Decisions and commitments' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Controlled changes' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
+			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
+			await expect(page.getByTestId('project-plan')).toContainText(
+				`E2E verify milestone checklist`
+			);
+			await expect(page.getByTestId('project-plan')).toContainText('Project-level work');
 			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
 			await expect(
 				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()

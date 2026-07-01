@@ -33,6 +33,14 @@
 		label: string;
 	};
 
+	type ProjectPlanGroup = {
+		id: string;
+		title: string;
+		description: string;
+		milestone: WorkItem | null;
+		work: WorkItem[];
+	};
+
 	let {
 		item,
 		items,
@@ -62,16 +70,28 @@
 	const anchors: ProjectLedgerAnchor[] = [
 		{ id: 'project-brief', number: '01', label: 'Brief' },
 		{ id: 'project-current-work', number: '02', label: 'Current Work' },
-		{ id: 'project-decisions', number: '03', label: 'Decisions' },
-		{ id: 'project-questions', number: '04', label: 'Questions' },
-		{ id: 'project-changes', number: '05', label: 'Changes' },
-		{ id: 'project-milestones', number: '06', label: 'Milestones' },
-		{ id: 'project-automations', number: '07', label: 'Automations' },
-		{ id: 'project-findings', number: '08', label: 'Findings' },
-		{ id: 'project-activity', number: '09', label: 'Activity' }
+		{ id: 'project-plan', number: '03', label: 'Project Plan' },
+		{ id: 'project-signals', number: '04', label: 'Signals' },
+		{ id: 'project-activity', number: '05', label: 'Activity' }
 	];
 
-	const children = $derived(items.filter((candidate) => candidate.parent_item_id === item.id));
+	const planWorkTypes: WorkItemType[] = [
+		'next_step',
+		'change_request',
+		'decision',
+		'open_question'
+	];
+
+	const directChildren = $derived(
+		items.filter((candidate) => candidate.parent_item_id === item.id)
+	);
+	const milestones = $derived(sortProjectItems(directChildren.filter(isMilestone)));
+	const milestoneChildren = $derived(
+		items.filter((candidate) =>
+			milestones.some((milestone) => candidate.parent_item_id === milestone.id)
+		)
+	);
+	const children = $derived(uniqueItems([...directChildren, ...milestoneChildren]));
 	const health = $derived(projectHealth(item, children));
 	const healthReasons = $derived(riskFlagsFor(item, children));
 	const blockers = $derived(literalBlockersFor(item, children));
@@ -93,12 +113,37 @@
 			null
 		);
 	});
-	const decisions = $derived(childrenOfType('decision'));
-	const questions = $derived(childrenOfType('open_question'));
-	const changes = $derived(childrenOfType('change_request'));
-	const milestones = $derived(childrenOfType('milestone'));
 	const automations = $derived(childrenOfType('automation'));
 	const findings = $derived(childrenOfType('finding'));
+	const projectLevelWork = $derived(
+		sortProjectItems(directChildren.filter((candidate) => planWorkTypes.includes(candidate.type)))
+	);
+	const projectPlanGroups = $derived.by<ProjectPlanGroup[]>(() => {
+		const groups: ProjectPlanGroup[] = milestones.map((milestone) => ({
+			id: `milestone-${milestone.id}`,
+			title: milestone.title,
+			description: itemPrimaryText(milestone),
+			milestone,
+			work: sortProjectItems(
+				children.filter(
+					(candidate) =>
+						candidate.parent_item_id === milestone.id && planWorkTypes.includes(candidate.type)
+				)
+			)
+		}));
+		if (projectLevelWork.length || groups.length === 0) {
+			groups.push({
+				id: 'project-level-work',
+				title: 'Project-level work',
+				description: groups.length
+					? 'Work attached directly to the project instead of a milestone.'
+					: 'Work attached to the project before milestone structure exists.',
+				milestone: null,
+				work: projectLevelWork
+			});
+		}
+		return groups;
+	});
 	const recentActivity = $derived(
 		[...children].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 8)
 	);
@@ -169,6 +214,28 @@
 			candidate.body,
 			candidate.title
 		);
+	}
+
+	function sortProjectItems(source: WorkItem[]): WorkItem[] {
+		return [...source].sort(
+			(a, b) =>
+				statusRank(a.status) - statusRank(b.status) ||
+				timelineValue(a) - timelineValue(b) ||
+				b.last_activity_at - a.last_activity_at
+		);
+	}
+
+	function uniqueItems(source: WorkItem[]): WorkItem[] {
+		const seen: number[] = [];
+		return source.filter((candidate) => {
+			if (seen.includes(candidate.id)) return false;
+			seen.push(candidate.id);
+			return true;
+		});
+	}
+
+	function isMilestone(candidate: WorkItem): boolean {
+		return candidate.type === 'milestone';
 	}
 
 	function itemPrimaryText(candidate: WorkItem): string {
@@ -420,151 +487,98 @@
 					</div>
 				</section>
 
-				<section id="project-decisions" class="scroll-mt-20">
+				<section id="project-plan" class="scroll-mt-20" data-testid="project-plan">
 					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-active"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Decisions and commitments</h3>
+						<span class="h-2 w-2 rounded-full bg-status-info"></span>
+						<h3 class="text-sm font-semibold text-on-surface">Project plan</h3>
 					</div>
-					<div class="space-y-2">
-						{#each decisions as decision (decision.id)}
-							<a
-								href={resolve(routeFor(decision))}
-								class="grid gap-3 rounded-md border border-outline-variant/45 bg-surface-0/35 p-4 transition hover:bg-surface-2/55 md:grid-cols-[minmax(0,1fr)_8rem]"
+					<div class="space-y-4">
+						{#each projectPlanGroups as group (group.id)}
+							<div
+								class="overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-0/35"
+								data-testid="project-plan-group"
 							>
-								<div class="min-w-0">
-									<p class="text-base font-semibold text-on-surface">{decision.title}</p>
-									<p class="mt-2 text-sm leading-6 text-on-surface-variant">
-										{itemPrimaryText(decision)}
-									</p>
-									{#if decision.consequence_of_no_decision}
-										<p class="mt-2 text-xs text-status-warning">
-											No decision: {decision.consequence_of_no_decision}
+								<div
+									class="grid gap-3 border-b border-outline-variant/45 bg-surface-1/45 px-4 py-3 md:grid-cols-[minmax(0,1fr)_9rem]"
+								>
+									<div class="min-w-0">
+										<div class="flex flex-wrap items-center gap-2">
+											{#if group.milestone}
+												<a
+													href={resolve(routeFor(group.milestone))}
+													class="falcon-focus text-base font-semibold text-on-surface transition hover:text-primary"
+												>
+													{group.title}
+												</a>
+												<span class="text-xs {statusTone(group.milestone.status)}">
+													{formatStatus(group.milestone.status)}
+												</span>
+											{:else}
+												<p class="text-base font-semibold text-on-surface">{group.title}</p>
+											{/if}
+										</div>
+										<p class="mt-1 text-sm leading-6 text-on-surface-variant">
+											{group.description}
+										</p>
+									</div>
+									{#if group.milestone}
+										<p class="text-xs font-semibold text-on-surface-variant md:text-right">
+											{dateLabel(group.milestone)}
 										</p>
 									{/if}
 								</div>
-								<div class="text-xs md:text-right">
-									<p class={statusTone(decision.status)}>{formatStatus(decision.status)}</p>
-									<p class="mt-2 text-on-surface-variant">
-										{formatDateTime(decision.last_activity_at)}
-									</p>
+								<div class="divide-y divide-outline-variant/35">
+									{#each group.work as work (work.id)}
+										<a
+											href={resolve(routeFor(work))}
+											class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/55 md:grid-cols-[8rem_minmax(0,1fr)_8rem]"
+										>
+											<div class="flex flex-wrap items-center gap-2 md:block">
+												<p class="text-xs font-semibold text-on-surface-variant">
+													{typeLabel(work)}
+												</p>
+												<p class="mt-0 text-xs {statusTone(work.status)} md:mt-2">
+													{formatStatus(work.status)}
+												</p>
+											</div>
+											<div class="min-w-0">
+												<p class="text-sm font-semibold text-on-surface">{work.title}</p>
+												<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+													{itemPrimaryText(work)}
+												</p>
+												{#if work.type === 'decision' && work.consequence_of_no_decision}
+													<p class="mt-1 text-xs text-status-warning">
+														No decision: {work.consequence_of_no_decision}
+													</p>
+												{/if}
+												{#if work.type === 'open_question'}
+													<p class="mt-1 text-xs text-on-surface-variant">
+														Can answer: {firstText(work.answerer, work.owner, 'Not set')}
+													</p>
+												{/if}
+											</div>
+											<p class="text-xs text-on-surface-variant md:text-right">
+												{dateLabel(work)}
+											</p>
+										</a>
+									{:else}
+										<p class="px-4 py-3 text-sm text-on-surface-variant">
+											No work is attached here yet.
+										</p>
+									{/each}
 								</div>
-							</a>
+							</div>
 						{:else}
 							<p
 								class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant"
 							>
-								No decisions are attached to this project.
+								No project plan has been captured yet.
 							</p>
 						{/each}
 					</div>
 				</section>
 
-				<section id="project-questions" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-warning"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Open questions</h3>
-					</div>
-					<div class="space-y-2">
-						{#each questions as question (question.id)}
-							<a
-								href={resolve(routeFor(question))}
-								class="block rounded-md border border-outline-variant/45 bg-surface-0/35 p-4 transition hover:bg-surface-2/55"
-							>
-								<div class="flex flex-wrap items-center justify-between gap-3">
-									<p class="text-base font-semibold text-on-surface">{question.title}</p>
-									<span class="text-xs {statusTone(question.status)}">
-										{formatStatus(question.status)}
-									</span>
-								</div>
-								<p class="mt-2 text-sm leading-6 text-on-surface-variant">
-									{itemPrimaryText(question)}
-								</p>
-								<p class="mt-2 text-xs text-on-surface-variant">
-									Can answer: {firstText(question.answerer, question.owner, 'Not set')}
-								</p>
-							</a>
-						{:else}
-							<p
-								class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant"
-							>
-								No open questions are attached to this project.
-							</p>
-						{/each}
-					</div>
-				</section>
-
-				<section id="project-changes" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-purple"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Controlled changes</h3>
-					</div>
-					<div class="space-y-2">
-						{#each changes as change (change.id)}
-							<a
-								href={resolve(routeFor(change))}
-								class="grid gap-3 rounded-md border border-outline-variant/45 bg-surface-0/35 p-4 transition hover:bg-surface-2/55 md:grid-cols-[minmax(0,1fr)_10rem]"
-							>
-								<div class="min-w-0">
-									<div class="flex flex-wrap items-center gap-2">
-										<span class="falcon-chip px-2 py-0.5 text-xs">{itemDisplayId(change)}</span>
-										<p class="text-base font-semibold text-on-surface">{change.title}</p>
-									</div>
-									<p class="mt-2 text-sm leading-6 text-on-surface-variant">
-										{itemPrimaryText(change)}
-									</p>
-								</div>
-								<div class="text-xs md:text-right">
-									<p class={statusTone(change.status)}>{formatStatus(change.status)}</p>
-									<p class="mt-2 text-on-surface-variant">
-										Approval {firstText(
-											change.approval_state,
-											change.approval_required ? 'required' : 'not required'
-										)}
-									</p>
-								</div>
-							</a>
-						{:else}
-							<p
-								class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant"
-							>
-								No controlled changes are attached to this project.
-							</p>
-						{/each}
-					</div>
-				</section>
-
-				<section id="project-milestones" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-info"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Milestones</h3>
-					</div>
-					<div
-						class="divide-y divide-outline-variant/35 rounded-lg border border-outline-variant/45 bg-surface-0/35"
-					>
-						{#each milestones as milestone (milestone.id)}
-							<a
-								href={resolve(routeFor(milestone))}
-								class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/55 md:grid-cols-[minmax(0,1fr)_8rem]"
-							>
-								<div>
-									<p class="text-sm font-semibold text-on-surface">{milestone.title}</p>
-									<p class="mt-1 text-xs text-on-surface-variant">
-										{firstText(milestone.milestone_marker, compactDetail(milestone))}
-									</p>
-								</div>
-								<p class="text-xs text-on-surface-variant md:text-right">
-									{dateLabel(milestone)}
-								</p>
-							</a>
-						{:else}
-							<p class="px-4 py-3 text-sm text-on-surface-variant">
-								No milestones are attached to this project.
-							</p>
-						{/each}
-					</div>
-				</section>
-
-				<section id="project-automations" class="scroll-mt-20">
+				<section id="project-signals" class="scroll-mt-20">
 					<div class="mb-3 flex items-center gap-2">
 						<span class="h-2 w-2 rounded-full bg-status-active"></span>
 						<h3 class="text-sm font-semibold text-on-surface">Automations</h3>

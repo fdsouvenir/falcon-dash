@@ -192,10 +192,12 @@ Routeable Work surface for the `/work` module:
   not render the peer list; they show type-aware sections, health reasons, literal blockers, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Project details render as a ledger-style operating brief with a left section index,
-  compact header, schema-first brief, current next step, blocker/waiting state, decisions, open
-  questions, controlled changes, milestones, automations, findings, activity, and a right
-  health/status rail. Question details render as a Question Brief with Markdown sections and
-  collapsed history or legacy material instead of one long paragraph.
+  compact header, schema-first brief, current next step, blocker/waiting state, and a project plan
+  that groups related next steps, decisions, open questions, and change requests under their
+  milestone. Work attached directly to the project appears in a project-level work group instead of
+  being mixed into the milestone structure. Automations, findings, activity, and the right
+  health/status rail remain supporting project context. Question details render as a Question Brief
+  with Markdown sections and collapsed history or legacy material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
   categories and subcategories as a read-only grouped directory with an explicit `Add category`
   action and a contextual drawer for category/subcategory creation and edits

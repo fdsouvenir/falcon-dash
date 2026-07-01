@@ -482,7 +482,17 @@
 	}
 
 	async function ensureItemContext(item: WorkItem) {
-		const requests = [loadItems(workItemsUrl({ parent_item_id: item.id, limit: workListLimit }))];
+		const directChildren = await loadItems(
+			workItemsUrl({ parent_item_id: item.id, limit: workListLimit })
+		);
+		const requests = [Promise.resolve(directChildren)];
+		if (item.type === 'project') {
+			for (const milestone of directChildren.filter((child) => child.type === 'milestone')) {
+				requests.push(
+					loadItems(workItemsUrl({ parent_item_id: milestone.id, limit: workListLimit }))
+				);
+			}
+		}
 		if (item.parent_item_id) {
 			requests.push(
 				loadItems(workItemsUrl({ parent_item_id: item.parent_item_id, limit: workListLimit }))
