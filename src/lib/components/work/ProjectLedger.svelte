@@ -990,8 +990,8 @@
 										{formatDateTime(entry.occurred_at)}
 									</span>
 								</div>
-								<p class="mt-1 text-sm font-semibold text-on-surface">{entry.summary}</p>
-								<p class="mt-0.5 text-xs text-on-surface-variant">{changeTitle(entry)}</p>
+								<p class="mt-1 text-sm font-semibold text-on-surface">{changeTitle(entry)}</p>
+								<p class="mt-0.5 text-xs text-on-surface-variant">{entry.summary}</p>
 								{#if entry.changes.length}
 									<div class="mt-2 flex flex-wrap gap-2">
 										{#each entry.changes.slice(0, 3) as change (change.field)}

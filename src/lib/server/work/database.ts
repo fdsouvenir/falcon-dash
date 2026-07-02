@@ -404,7 +404,7 @@ function backfillWorkChangeLog(db: Database.Database): void {
 		  END,
 		  wi.parent_item_id,
 		  wi.area_id,
-		  'Existing Work item',
+		  'Added to Work history',
 		  '[]',
 		  json_object('backfilled', 1, 'status', wi.status, 'priority', wi.priority)
 		FROM work_items wi

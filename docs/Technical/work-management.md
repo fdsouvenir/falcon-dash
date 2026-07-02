@@ -96,7 +96,7 @@ Work UI does not expose `/work/milestones` as a standalone list or detail surfac
 its project/category/parent scope at the time of the event, a human summary, and structured
 `changes` entries with field labels plus before/after values. Project and overview activity feeds
 read this change log instead of inferring activity from `last_activity_at`; existing databases get
-baseline backfilled “Existing Work item” events so feeds remain populated without inventing old
+baseline backfilled “Added to Work history” events so feeds remain populated without inventing old
 field-level diffs.
 
 `GET /api/work/queue` returns actionability buckets:

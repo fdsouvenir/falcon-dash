@@ -446,7 +446,7 @@
 				const [loadedItems, loadedQueue, loadedChangeLog] = await Promise.all([
 					loadItems(workItemsUrl({ limit: workListLimit })),
 					loadQueue(),
-					loadChangeLog(workChangeLogUrl({ limit: 14 }))
+					loadChangeLog(workChangeLogUrl({ limit: 24 }))
 				]);
 				items = loadedItems;
 				queue = loadedQueue;
@@ -1288,7 +1288,7 @@
 
 	async function refreshVisibleChangeLog(item: WorkItem): Promise<void> {
 		if (mode === 'overview') {
-			changeLog = await loadChangeLog(workChangeLogUrl({ limit: 14 }));
+			changeLog = await loadChangeLog(workChangeLogUrl({ limit: 24 }));
 			return;
 		}
 		if (mode === 'detail') {
@@ -1582,7 +1582,7 @@
 						</div>
 						<div class="divide-y divide-outline-variant/30" data-testid="recent-activity-list">
 							{#if changeLog.length}
-								{#each changeLog.slice(0, 12) as entry (entry.id)}
+								{#each changeLog.slice(0, 18) as entry (entry.id)}
 									{@const href = routeForChange(entry)}
 									<svelte:element
 										this={href ? 'a' : 'div'}
@@ -1599,10 +1599,10 @@
 													>{changeActionLabel(entry.action)}</span
 												>
 											</div>
-											<p class="mt-1 text-sm font-semibold text-on-surface">{entry.summary}</p>
-											<p class="mt-0.5 truncate text-xs text-on-surface-variant">
+											<p class="mt-1 truncate text-sm font-semibold text-on-surface">
 												{changeTitle(entry)}
 											</p>
+											<p class="mt-0.5 text-xs text-on-surface-variant">{entry.summary}</p>
 										</div>
 										<div class="text-xs text-on-surface-variant md:text-right">
 											{entry.source}
