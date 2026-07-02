@@ -53,18 +53,17 @@ shown as agent-managed record content rather than casual text editors.
 The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
 workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
 next step, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
-hover only, and double-clicking opens the full project page. The project page starts with Project
-details for editable basics like status, priority, waiting state, and category; the right rail keeps
-the static operating brief close by without repeating those details. Current next step, blockers,
-and waiting state lead into a project plan where milestone groups contain their related next steps,
-decisions, open questions, and change requests. The project list keeps blockers lightweight with
-labels such as "2 holding up"; the project detail explains each active blocker as a relationship:
-what is stuck, what is blocking it, why, and the next unblock move. The same blocker context appears
-inline under the affected milestone or work row so it is visible where the stuck work lives.
-Milestones are short checkpoints inside the project, not separate pages; the project right rail
-includes an Add milestone control for a title and one-sentence description. Work that is not
-attached to a milestone appears as project-level work, while automations, findings, and activity
-remain supporting sections.
+hover only, and double-clicking opens the full project page. The project page starts with compact
+Current Work: editable basics like status, priority, waiting state, and category, the current next
+step, small risk chips, and any active blocker relationships. The right rail keeps the static
+operating brief close by without repeating those details. The project list keeps blockers
+lightweight with labels such as "2 holding up"; the project detail uses the same wording and
+explains each active blocker as a relationship: what is stuck, what is blocking it, why, and the
+next unblock move. The same blocker context appears inline under the affected milestone or work row
+so it is visible where the stuck work lives. Milestones are short checkpoints inside the project,
+not separate pages; the project right rail includes an Add milestone control for a title and
+one-sentence description. Work that is not attached to a milestone appears as project-level work,
+while automations, findings, and activity remain supporting sections.
 
 Activity is a Work change log, not a loose list of recently touched records. Overview activity shows
 recent Work changes across the module, and project activity filters that same log to the project so

@@ -62,13 +62,14 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 - In dense project columns, center narrow numeric counts such as blockers with a small metric
   anchor; reserve right alignment for date/time values.
 - Project detail pages should use the project ledger pattern: low header chrome, left section index
-  on desktop, a main Project details section for editable status/priority/waiting/category basics,
-  current state, milestone-contained project plan, and a right rail for static operating brief
-  context plus lightweight project-local milestone creation. Do not repeat status, health,
-  priority, dates, or category in the right rail. Do not render milestones, next steps, decisions,
-  questions, and change requests as unrelated type lists inside a project page. Milestones are not
-  standalone browse/detail records in the UI; show them only as short headings inside a project plan,
-  with project-page creation limited to a title and one-sentence description.
+  on desktop, a compact Current Work section for editable status/priority/waiting/category basics,
+  current next step, risk chips, and active blocker relationships, a milestone-contained project
+  plan, and a right rail for static operating brief context plus lightweight project-local
+  milestone creation. Do not repeat status, health, priority, dates, or category in the right rail.
+  Do not render milestones, next steps, decisions, questions, and change requests as unrelated type
+  lists inside a project page. Milestones are not standalone browse/detail records in the UI; show
+  them only as short headings inside a project plan, with project-page creation limited to a title
+  and one-sentence description.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

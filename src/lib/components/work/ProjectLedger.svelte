@@ -94,11 +94,10 @@
 	];
 
 	const baseAnchors: ProjectLedgerAnchor[] = [
-		{ id: 'project-details', number: '01', label: 'Details' },
-		{ id: 'project-current-work', number: '02', label: 'Current Work' },
-		{ id: 'project-plan', number: '03', label: 'Project Plan' },
-		{ id: 'project-signals', number: '04', label: 'Signals' },
-		{ id: 'project-activity', number: '05', label: 'Activity' }
+		{ id: 'project-current-work', number: '01', label: 'Current Work' },
+		{ id: 'project-plan', number: '02', label: 'Project Plan' },
+		{ id: 'project-signals', number: '03', label: 'Signals' },
+		{ id: 'project-activity', number: '04', label: 'Activity' }
 	];
 
 	const planWorkTypes: WorkItemType[] = [
@@ -127,6 +126,11 @@
 		[...blockerLinks]
 			.filter((link) => link.status === 'active')
 			.sort((a, b) => b.updated_at - a.updated_at || b.id - a.id)
+	);
+	const visibleHealthReasons = $derived(
+		healthReasons.filter(
+			(reason) => !(activeBlockerLinks.length > 0 && reason.key === 'blocked-related')
+		)
 	);
 	const currentNextStep = $derived.by(() => {
 		if (item.current_next_step_id) {
@@ -281,6 +285,20 @@
 		if (link.blocker_source === 'person') return 'Person';
 		if (link.blocker_source === 'system') return 'System';
 		return 'External';
+	}
+
+	function blockerCountLabel(): string {
+		const count = activeBlockerLinks.length;
+		return count ? `${count} holding up` : 'Clear';
+	}
+
+	function riskDetailLabel(reason: { key: string; detail: string }): string {
+		if (reason.key === 'needs-decision-related') {
+			const match = reason.detail.match(/^(\d+)/);
+			return match ? `${match[1]} need operator review` : 'Needs operator review';
+		}
+		if (reason.key === 'blocked-related') return blockerCountLabel();
+		return reason.detail;
 	}
 
 	function canNavigateToItem(type: WorkItemType | null, id: number | null): boolean {
@@ -583,11 +601,11 @@
 			</header>
 
 			<div class="space-y-8 px-4 py-5 sm:px-5">
-				<section id="project-details" class="scroll-mt-20">
+				<section id="project-current-work" class="scroll-mt-20">
 					<div class="mb-3 flex items-center justify-between gap-3">
 						<div class="flex items-center gap-2">
 							<span class="h-2 w-2 rounded-full bg-primary"></span>
-							<h3 class="text-sm font-semibold text-on-surface">Project details</h3>
+							<h3 class="text-sm font-semibold text-on-surface">Current Work</h3>
 						</div>
 						<button
 							type="button"
@@ -699,191 +717,209 @@
 									</p>{/if}
 							</form>
 						{:else}
-							<div
-								class="grid divide-y divide-outline-variant/35 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4"
-							>
-								<div class="p-4">
+							<div class="grid gap-x-4 gap-y-3 p-3 sm:grid-cols-2 xl:grid-cols-4">
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Status</p>
-									<p class="mt-1 font-semibold {statusTone(item.status)}">
+									<p class="mt-0.5 truncate text-sm font-semibold {statusTone(item.status)}">
 										{sentenceCase(formatStatus(item.status))}
 									</p>
 								</div>
-								<div class="p-4">
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Priority</p>
-									<p class="mt-1 font-semibold {priorityTone(item.priority)}">
+									<p class="mt-0.5 truncate text-sm font-semibold {priorityTone(item.priority)}">
 										{sentenceCase(item.priority ?? 'normal')}
 									</p>
 								</div>
-								<div class="p-4">
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Waiting for</p>
-									<p class="mt-1 font-semibold text-on-surface">{projectWaitingLabel()}</p>
+									<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
+										{projectWaitingLabel()}
+									</p>
 								</div>
-								<div class="p-4">
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Category</p>
-									<p class="mt-1 font-semibold text-on-surface">{categoryLabel()}</p>
+									<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
+										{categoryLabel()}
+									</p>
 								</div>
-							</div>
-							<div
-								class="grid gap-3 border-t border-outline-variant/35 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem]"
-							>
-								<div>
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Schedule</p>
-									<p class="mt-1 text-sm font-semibold text-on-surface">
+									<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
 										{projectScheduleLabel()}
 									</p>
 								</div>
-								<div>
-									<p class="text-xs text-on-surface-variant">Last meaningful update</p>
-									<p class="mt-1 text-sm font-semibold text-on-surface">
+								<div class="min-w-0">
+									<p class="text-xs text-on-surface-variant">Last update</p>
+									<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
 										{formatDateTime(item.last_meaningful_update_at ?? item.last_activity_at)}
 									</p>
 								</div>
-								<div>
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Operator</p>
-									<p class="mt-1 text-sm font-semibold text-on-surface">
+									<p class="mt-0.5 truncate text-sm font-semibold text-on-surface">
 										{firstText(item.operator, item.owner, 'Not set')}
 									</p>
 								</div>
 							</div>
-							{#if healthReasons.length}
-								<div class="grid gap-2 border-t border-outline-variant/35 p-4 md:grid-cols-2">
-									{#each healthReasons as reason (reason.key)}
-										<div class="rounded-md border border-outline-variant/40 bg-surface-1/45 p-3">
-											<p class="text-sm font-semibold {reason.tone}">{reason.label}</p>
-											<p class="mt-1 text-xs leading-5 text-on-surface-variant">
-												{reason.detail}
-											</p>
-										</div>
-									{/each}
-								</div>
-							{/if}
-						{/if}
-					</div>
-				</section>
-
-				<section id="project-current-work" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-warning"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Current state</h3>
-					</div>
-					<div class="overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-0/35">
-						<div class="border-b border-outline-variant/45 p-4">
-							<p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-								Current next step
-							</p>
-							{#if currentNextStep}
-								<a
-									href={resolve(routeFor(currentNextStep))}
-									class="falcon-focus mt-2 block rounded-md border border-primary/25 bg-primary-container/10 p-3 transition hover:border-primary/45 hover:bg-primary-container/15"
-								>
-									<div class="flex flex-wrap items-center justify-between gap-3">
-										<p class="text-base font-semibold text-on-surface">{currentNextStep.title}</p>
-										<span class="text-xs {statusTone(currentNextStep.status)}">
-											{formatStatus(currentNextStep.status)}
-										</span>
-									</div>
-									<p class="mt-2 text-sm leading-6 text-on-surface-variant">
-										{itemPrimaryText(currentNextStep)}
-									</p>
-									<p class="mt-2 text-xs text-on-surface-variant">
-										{dateLabel(currentNextStep)}
-									</p>
-								</a>
-							{:else}
-								<p class="mt-2 text-sm text-on-surface-variant">No current next step is linked.</p>
-							{/if}
-						</div>
-						{#if activeBlockerLinks.length}
-							<div
-								class="border-t border-outline-variant/45 p-4"
-								data-testid="project-blocker-panel"
-							>
-								<div class="flex flex-wrap items-center justify-between gap-3">
-									<h4 class="text-sm font-semibold text-status-danger">What's holding this up</h4>
-									<span
-										class="rounded-md border border-status-danger/35 px-2 py-1 text-xs font-semibold text-status-danger"
-									>
-										{activeBlockerLinks.length} holding up
-									</span>
-								</div>
-								<div class="mt-3 space-y-2">
-									{#each activeBlockerLinks as link (link.id)}
-										{@const blockedHref = canNavigateToItem(
-											link.blocked_item_type,
-											link.blocked_item_id
-										)}
-										{@const blockerHref = canNavigateToItem(
-											link.blocker_item_type,
-											link.blocker_item_id
-										)}
-										<div
-											class="grid gap-3 rounded-md border border-status-danger/25 bg-status-danger-bg/30 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,0.8fr)]"
-											data-testid="project-blocker-row"
+							<div class="border-t border-outline-variant/35 px-3 py-2">
+								<div class="flex flex-wrap gap-2">
+									{#if activeBlockerLinks.length}
+										<span
+											class="inline-flex min-h-7 items-center rounded-md border border-status-danger/35 bg-status-danger-bg/25 px-2 text-xs font-semibold text-status-danger"
 										>
-											<div class="min-w-0">
-												<p
-													class="text-xs font-semibold uppercase tracking-[0.14em] text-status-danger"
-												>
-													Stuck
-												</p>
-												{#if blockedHref}
-													<button
-														type="button"
-														onclick={() =>
-															navigateToItem(link.blocked_item_type, link.blocked_item_id)}
-														class="falcon-focus mt-1 block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary"
-													>
-														{blockedItemLabel(link)}
-													</button>
-												{:else}
-													<p class="mt-1 truncate text-sm font-semibold text-on-surface">
-														{blockedItemLabel(link)}
-													</p>
-												{/if}
-												{#if link.reason}
-													<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-														{link.reason}
-													</p>
-												{/if}
-											</div>
-											<div class="min-w-0">
-												<p
-													class="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
-												>
-													Blocked by
-												</p>
-												{#if blockerHref}
-													<button
-														type="button"
-														onclick={() =>
-															navigateToItem(link.blocker_item_type, link.blocker_item_id)}
-														class="falcon-focus mt-1 block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary"
-													>
-														{blockerSourceLabel(link)}
-													</button>
-												{:else}
-													<p class="mt-1 truncate text-sm font-semibold text-on-surface">
-														{blockerSourceLabel(link)}
-													</p>
-												{/if}
-												<p class="mt-1 text-xs text-on-surface-variant">
-													{blockerSourceKind(link)}
-												</p>
-											</div>
-											<div class="min-w-0">
-												<p
-													class="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
-												>
-													Unblock move
-												</p>
-												<p class="mt-1 line-clamp-3 text-sm leading-5 text-on-surface">
-													{firstText(link.unblock_action, 'Clarify the next unblock step.')}
-												</p>
-											</div>
-										</div>
+											{blockerCountLabel()}
+										</span>
+									{/if}
+									{#each visibleHealthReasons as reason (reason.key)}
+										<span
+											class="inline-flex min-h-7 min-w-0 items-center gap-1 rounded-md border border-outline-variant/45 bg-surface-1/55 px-2 text-xs"
+										>
+											<span class="font-semibold {reason.tone}">{reason.label}</span>
+											<span class="truncate text-on-surface-variant">{riskDetailLabel(reason)}</span
+											>
+										</span>
+									{:else}
+										{#if !activeBlockerLinks.length}
+											<span class="text-xs text-on-surface-variant"
+												>No active blockers or risk flags.</span
+											>
+										{/if}
 									{/each}
 								</div>
 							</div>
+							<div class="border-t border-outline-variant/35 p-3">
+								{#if currentNextStep}
+									<a
+										href={resolve(routeFor(currentNextStep))}
+										class="falcon-focus grid gap-2 rounded-md border border-primary/25 bg-primary-container/10 p-2.5 transition hover:border-primary/45 hover:bg-primary-container/15 md:grid-cols-[9rem_minmax(0,1fr)_9rem]"
+									>
+										<div class="flex flex-wrap items-center gap-2 md:block">
+											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+												Current next step
+											</p>
+											<p class="text-xs {statusTone(currentNextStep.status)} md:mt-1">
+												{formatStatus(currentNextStep.status)}
+											</p>
+										</div>
+										<div class="min-w-0">
+											<p class="truncate text-sm font-semibold text-on-surface">
+												{currentNextStep.title}
+											</p>
+											<p class="mt-0.5 line-clamp-1 text-xs leading-5 text-on-surface-variant">
+												{itemPrimaryText(currentNextStep)}
+											</p>
+										</div>
+										<p class="text-xs font-semibold text-on-surface-variant md:text-right">
+											{dateLabel(currentNextStep)}
+										</p>
+									</a>
+								{:else}
+									<p
+										class="rounded-md border border-outline-variant/35 bg-surface-1/40 px-3 py-2 text-sm text-on-surface-variant"
+									>
+										No current next step is linked.
+									</p>
+								{/if}
+							</div>
+							{#if activeBlockerLinks.length}
+								<div
+									class="border-t border-outline-variant/45 p-3"
+									data-testid="project-blocker-panel"
+								>
+									<div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+										<h4 class="text-sm font-semibold text-status-danger">Holding up</h4>
+										<span
+											class="rounded-md border border-status-danger/35 px-2 py-1 text-xs font-semibold text-status-danger"
+										>
+											{blockerCountLabel()}
+										</span>
+									</div>
+									<div class="overflow-hidden rounded-md border border-status-danger/25">
+										<div
+											class="hidden grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(10rem,0.9fr)] gap-3 border-b border-status-danger/20 bg-status-danger-bg/20 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant md:grid"
+										>
+											<span class="text-status-danger">Stuck</span>
+											<span>Blocked by</span>
+											<span>Unblock move</span>
+										</div>
+										{#each activeBlockerLinks as link (link.id)}
+											{@const blockedHref = canNavigateToItem(
+												link.blocked_item_type,
+												link.blocked_item_id
+											)}
+											{@const blockerHref = canNavigateToItem(
+												link.blocker_item_type,
+												link.blocker_item_id
+											)}
+											<div
+												class="grid gap-2 border-b border-status-danger/20 bg-status-danger-bg/15 px-2.5 py-2 last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(10rem,0.9fr)] md:gap-3"
+												data-testid="project-blocker-row"
+											>
+												<div class="min-w-0">
+													<p
+														class="text-xs font-semibold uppercase tracking-[0.12em] text-status-danger md:hidden"
+													>
+														Stuck
+													</p>
+													{#if blockedHref}
+														<button
+															type="button"
+															onclick={() =>
+																navigateToItem(link.blocked_item_type, link.blocked_item_id)}
+															class="falcon-focus block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary md:mt-0"
+														>
+															{blockedItemLabel(link)}
+														</button>
+													{:else}
+														<p class="truncate text-sm font-semibold text-on-surface">
+															{blockedItemLabel(link)}
+														</p>
+													{/if}
+													{#if link.reason}
+														<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+															{link.reason}
+														</p>
+													{/if}
+												</div>
+												<div class="min-w-0">
+													<p
+														class="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant md:hidden"
+													>
+														Blocked by
+													</p>
+													{#if blockerHref}
+														<button
+															type="button"
+															onclick={() =>
+																navigateToItem(link.blocker_item_type, link.blocker_item_id)}
+															class="falcon-focus block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary md:mt-0"
+														>
+															{blockerSourceLabel(link)}
+														</button>
+													{:else}
+														<p class="truncate text-sm font-semibold text-on-surface">
+															{blockerSourceLabel(link)}
+														</p>
+													{/if}
+													<p class="mt-0.5 text-xs text-on-surface-variant">
+														{blockerSourceKind(link)}
+													</p>
+												</div>
+												<div class="min-w-0">
+													<p
+														class="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant md:hidden"
+													>
+														Unblock move
+													</p>
+													<p class="line-clamp-2 text-sm leading-5 text-on-surface md:mt-0">
+														{firstText(link.unblock_action, 'Clarify the next unblock step.')}
+													</p>
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				</section>
