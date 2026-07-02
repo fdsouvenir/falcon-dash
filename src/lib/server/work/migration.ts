@@ -395,7 +395,7 @@ function classifyPlan(plan: LegacyPlan): WorkItemType {
 	) {
 		return 'change_request';
 	}
-	return 'next_step';
+	return 'task';
 }
 
 function mapProjectStatus(status: string): WorkStatus {
@@ -570,7 +570,7 @@ function buildSelfReview(
 					[
 						'project',
 						'change_request',
-						'next_step',
+						'task',
 						'open_question',
 						'decision',
 						'automation',

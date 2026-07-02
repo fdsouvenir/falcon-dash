@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import Database from 'better-sqlite3';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -85,7 +86,7 @@ describe('Work category CRUD', () => {
 			area_id: category.id
 		});
 		const subcategoryItem = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Pay assessment',
 			area_id: subcategory.id
 		});
@@ -104,6 +105,86 @@ describe('Work category CRUD', () => {
 });
 
 describe('Work change log', () => {
+	it('migrates existing next_step Work rows to tasks in place', () => {
+		const dbPath = process.env.FALCON_DASH_WORK_DATABASE_PATH!;
+		closeWorkDb();
+		rmSync(dbPath, { force: true });
+		const oldDb = new Database(dbPath);
+		oldDb.exec(`
+			CREATE TABLE work_areas (
+			  id TEXT PRIMARY KEY,
+			  title TEXT NOT NULL,
+			  description TEXT,
+			  parent_area_id TEXT,
+			  status TEXT NOT NULL DEFAULT 'active',
+			  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+			  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+			);
+			CREATE TABLE work_items (
+			  id INTEGER PRIMARY KEY AUTOINCREMENT,
+			  type TEXT NOT NULL CHECK(type IN ('project','milestone','next_step','open_question','decision','automation','finding','change_request')),
+			  area_id TEXT,
+			  parent_item_id INTEGER,
+			  title TEXT NOT NULL,
+			  description TEXT,
+			  body TEXT,
+			  status TEXT NOT NULL DEFAULT 'backlog',
+			  owner TEXT,
+			  waiting_on TEXT,
+			  priority TEXT,
+			  next_action TEXT,
+			  approval_required INTEGER NOT NULL DEFAULT 0,
+			  due_date TEXT,
+			  scheduled_at TEXT,
+			  stale_after TEXT,
+			  result TEXT,
+			  legacy_project_id INTEGER,
+			  legacy_plan_id INTEGER,
+			  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+			  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+			  last_activity_at INTEGER NOT NULL DEFAULT (unixepoch())
+			);
+			CREATE TABLE work_project_details (
+			  work_item_id INTEGER PRIMARY KEY,
+			  goal TEXT,
+			  definition_of_done TEXT,
+			  why_it_matters TEXT,
+			  scope TEXT,
+			  non_scope TEXT,
+			  health TEXT,
+			  operator TEXT,
+			  start_date TEXT,
+			  target_date TEXT,
+			  actual_completed_date TEXT,
+			  current_next_step_id INTEGER,
+			  last_meaningful_update_at INTEGER
+			);
+			CREATE TABLE work_next_step_details (
+			  work_item_id INTEGER PRIMARY KEY,
+			  action TEXT
+			);
+			INSERT INTO work_items (id, type, title, status, parent_item_id, priority, created_at, updated_at, last_activity_at)
+			VALUES
+			  (1, 'project', 'Existing project', 'in_progress', NULL, 'normal', 1, 1, 1),
+			  (2, 'next_step', 'Existing task', 'ready', 1, 'normal', 1, 1, 1);
+			INSERT INTO work_project_details (work_item_id, current_next_step_id)
+			VALUES (1, 2);
+			INSERT INTO work_next_step_details (work_item_id, action)
+			VALUES (2, 'Do the existing task');
+		`);
+		oldDb.close();
+
+		resetWorkSchemaForTests();
+
+		expect(getWorkItem(2)).toMatchObject({
+			type: 'task',
+			task_action: 'Do the existing task'
+		});
+		expect(getWorkItem(1)).toMatchObject({
+			current_next_item_id: 2
+		});
+	});
+
 	it('records project-scoped changes for child Work items', () => {
 		const project = createWorkItem({
 			type: 'project',
@@ -115,7 +196,7 @@ describe('Work change log', () => {
 			parent_item_id: project.id
 		});
 		const nextStep = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Compare assessment options',
 			parent_item_id: milestone.id,
 			status: 'ready'
@@ -129,7 +210,7 @@ describe('Work change log', () => {
 
 		const projectLog = listWorkChangeLog({ project_id: project.id });
 		const update = projectLog.find(
-			(entry) => entry.entity_type === 'next_step' && entry.entity_id === String(nextStep.id)
+			(entry) => entry.entity_type === 'task' && entry.entity_id === String(nextStep.id)
 		);
 		expect(update).toMatchObject({
 			action: 'updated',
@@ -187,6 +268,61 @@ describe('Work change log', () => {
 		);
 	});
 
+	it('validates project current next item pointers', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Client launch'
+		});
+		const task = createWorkItem({
+			type: 'task',
+			parent_item_id: project.id,
+			title: 'Send launch brief',
+			status: 'ready'
+		});
+		const otherProject = createWorkItem({
+			type: 'project',
+			title: 'Other launch'
+		});
+		const otherTask = createWorkItem({
+			type: 'task',
+			parent_item_id: otherProject.id,
+			title: 'Unrelated task',
+			status: 'ready'
+		});
+
+		expect(updateWorkItem(project.id, { current_next_item_id: task.id })).toMatchObject({
+			current_next_item_id: task.id
+		});
+		expect(() => updateWorkItem(project.id, { current_next_item_id: otherTask.id })).toThrow(
+			/current_next_item_id must belong to the project/
+		);
+		expect(() => updateWorkItem(project.id, { current_next_item_id: otherProject.id })).toThrow(
+			/current_next_item_id must point to a task/
+		);
+	});
+
+	it('prevents tasks from becoming nested mini-projects', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Operator handoff'
+		});
+		const task = createWorkItem({
+			type: 'task',
+			parent_item_id: project.id,
+			title: 'Call Maya',
+			status: 'ready'
+		});
+
+		expect(() =>
+			createWorkItem({
+				type: 'task',
+				parent_item_id: task.id,
+				title: 'Ask about launch order',
+				status: 'ready'
+			})
+		).toThrow(/tasks cannot have child tasks/);
+	});
+
 	it('records category deletion as a directory change with unassignment metadata', () => {
 		const category = upsertWorkCategory({
 			kind: 'category',
@@ -224,7 +360,7 @@ describe('Work blocker links', () => {
 			title: 'Lake trip'
 		});
 		const nextStep = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Confirm pet care',
 			parent_item_id: project.id
 		});
@@ -315,7 +451,7 @@ describe('Work blocker links', () => {
 			title: 'Client launch'
 		});
 		const step = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Wait for DNS update',
 			parent_item_id: project.id,
 			status: 'waiting',
@@ -349,7 +485,7 @@ describe('Work blocker links', () => {
 
 	it('rejects invalid blocker link shapes', () => {
 		const item = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Pick a lender'
 		});
 

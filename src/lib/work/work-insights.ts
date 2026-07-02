@@ -58,7 +58,7 @@ export type ProjectPortfolioPulse = {
 };
 
 const openWorkTypes: Array<[WorkItemType, string, string]> = [
-	['next_step', 'next step', 'next steps'],
+	['task', 'task', 'tasks'],
 	['open_question', 'open question', 'open questions'],
 	['decision', 'decision', 'decisions'],
 	['change_request', 'change request', 'change requests'],
@@ -95,11 +95,10 @@ const healthLabels: ProjectHealthLabel[] = [
 ];
 
 const actionableChildTypes = new Set<WorkItemType>([
-	'next_step',
+	'task',
 	'open_question',
 	'decision',
-	'change_request',
-	'automation'
+	'change_request'
 ]);
 
 export const workFocusDefinitions: WorkFocusDefinition[] = [
@@ -267,46 +266,46 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 		statusMode: 'all'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'due-today',
 		label: 'Due today',
 		primary: true,
-		description: 'Next steps due today or earlier'
+		description: 'Tasks due today or earlier'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'due-this-week',
 		label: 'Due this week',
 		primary: true,
-		description: 'Next steps due in the next 7 days'
+		description: 'Tasks due in the next 7 days'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'overdue',
 		label: 'Overdue',
 		primary: true,
-		description: 'Next steps past their due date'
+		description: 'Tasks past their due date'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'blocked',
 		label: 'Blocked',
 		primary: true,
-		description: 'Next steps marked blocked'
+		description: 'Tasks marked blocked'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'waiting',
 		label: 'Waiting',
 		primary: true,
-		description: 'Next steps waiting on someone or something'
+		description: 'Tasks waiting on someone or something'
 	},
 	{
-		type: 'next_step',
+		type: 'task',
 		key: 'no-parent',
 		label: 'No parent',
 		primary: false,
-		description: 'Next steps not attached to a parent project or change request'
+		description: 'Tasks not attached to a parent project or change request'
 	},
 	{
 		type: 'automation',
@@ -482,7 +481,7 @@ export function matchesWorkFocus(
 	if (item.type === 'change_request') return matchesChangeFocus(item, definition.key, now);
 	if (item.type === 'open_question' || item.type === 'decision')
 		return matchesDecisionFocus(item, definition.key);
-	if (item.type === 'next_step') return matchesNextStepFocus(item, definition.key, now);
+	if (item.type === 'task') return matchesTaskFocus(item, definition.key, now);
 	if (item.type === 'automation') return matchesAutomationFocus(item, definition.key, now);
 	if (item.type === 'finding') return matchesFindingFocus(item, definition.key, now, options);
 	return true;
@@ -588,7 +587,8 @@ export function projectHealth(
 	children: WorkItem[],
 	now = Date.now()
 ): ProjectHealth {
-	if (project.status === 'blocked' || children.some((child) => child.status === 'blocked')) {
+	const currentNext = projectCurrentNextItem(project, children);
+	if (currentNext && currentNextBlocked(currentNext)) {
 		return { label: 'Blocked', tone: 'text-status-danger', rank: 0 };
 	}
 	if (isItemOverdue(project, now) || children.some((child) => isItemOverdue(child, now))) {
@@ -636,12 +636,13 @@ export function projectOpenWork(project: WorkItem, children: WorkItem[]): string
 			return `${count} ${count === 1 ? singular : plural}`;
 		})
 		.filter(Boolean);
-	return parts.length ? parts.join(' · ') : 'No tracked next steps';
+	return parts.length ? parts.join(' · ') : 'No tracked tasks';
 }
 
 export function projectNextMove(project: WorkItem, children: WorkItem[]): string {
-	const blockers = literalBlockersFor(project, children);
-	if (blockers[0]) return `Clear: ${blockers[0].title}`;
+	const currentNext = projectCurrentNextItem(project, children);
+	if (currentNext && currentNextBlocked(currentNext)) return `Clear: ${currentNext.title}`;
+	if (currentNext) return currentNext.title;
 
 	const decision = children.find(
 		(child) =>
@@ -655,15 +656,24 @@ export function projectNextMove(project: WorkItem, children: WorkItem[]): string
 	const dated = projectUpcomingItem(project, children);
 	if (dated && dated.id !== project.id) return `Move next dated work: ${dated.title}`;
 
-	const nextStep = children.find(
-		(child) => openStatuses.has(child.status) && child.type === 'next_step'
+	return firstText(project.next_action, 'No operator action set');
+}
+
+export function projectCurrentNextItem(project: WorkItem, children: WorkItem[]): WorkItem | null {
+	if (project.current_next_item_id) {
+		const linked = children.find((child) => child.id === project.current_next_item_id);
+		if (linked && openStatuses.has(linked.status) && actionableChildTypes.has(linked.type)) {
+			return linked;
+		}
+	}
+	const actionable = children.filter(
+		(child) => openStatuses.has(child.status) && actionableChildTypes.has(child.type)
 	);
-	return firstText(
-		project.next_action,
-		nextStep?.next_action,
-		nextStep?.title,
-		'No operator action set'
-	);
+	return actionable.find((child) => !currentNextBlocked(child)) ?? actionable[0] ?? null;
+}
+
+export function currentNextBlocked(item: WorkItem): boolean {
+	return item.status === 'blocked' || item.status === 'waiting';
 }
 
 export function projectUpcomingItem(project: WorkItem, children: WorkItem[]): WorkItem | null {
@@ -700,9 +710,7 @@ export function isProjectStale(project: WorkItem, children: WorkItem[], now = Da
 export function projectHasNoNextMove(project: WorkItem, children: WorkItem[]): boolean {
 	if (!openStatuses.has(project.status)) return false;
 	if (project.next_action?.trim()) return false;
-	return !children.some(
-		(child) => openStatuses.has(child.status) && actionableChildTypes.has(child.type)
-	);
+	return !projectCurrentNextItem(project, children);
 }
 
 export function matchesProjectFocus(
@@ -715,7 +723,8 @@ export function matchesProjectFocus(
 	const children = projectChildren(project, items);
 	const health = projectHealth(project, children, now);
 	if (focus === 'blocked') {
-		return project.status === 'blocked' || children.some((child) => child.status === 'blocked');
+		const currentNext = projectCurrentNextItem(project, children);
+		return Boolean(currentNext && currentNextBlocked(currentNext));
 	}
 	if (focus === 'overdue') {
 		return isItemOverdue(project, now) || children.some((child) => isItemOverdue(child, now));
@@ -826,7 +835,7 @@ function matchesDecisionFocus(item: WorkItem, focus: string): boolean {
 	return true;
 }
 
-function matchesNextStepFocus(item: WorkItem, focus: string, now: number): boolean {
+function matchesTaskFocus(item: WorkItem, focus: string, now: number): boolean {
 	if (focus === 'due-today') {
 		const value = dateValue(item.due_date);
 		return value !== Number.MAX_SAFE_INTEGER && value < startOfDay(now) + 24 * 60 * 60 * 1000;

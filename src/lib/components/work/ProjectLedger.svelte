@@ -100,12 +100,7 @@
 		{ id: 'project-activity', number: '04', label: 'Activity' }
 	];
 
-	const planWorkTypes: WorkItemType[] = [
-		'next_step',
-		'change_request',
-		'decision',
-		'open_question'
-	];
+	const planWorkTypes: WorkItemType[] = ['task', 'change_request', 'decision', 'open_question'];
 
 	const directChildren = $derived(
 		items.filter((candidate) => candidate.parent_item_id === item.id)
@@ -126,14 +121,15 @@
 			.filter((link) => link.status === 'active')
 			.sort((a, b) => b.updated_at - a.updated_at || b.id - a.id)
 	);
-	const currentNextStep = $derived.by(() => {
-		if (item.current_next_step_id) {
-			const linked = children.find((candidate) => candidate.id === item.current_next_step_id);
+	const currentNextItem = $derived.by(() => {
+		if (item.current_next_item_id) {
+			const linked = children.find((candidate) => candidate.id === item.current_next_item_id);
 			if (linked) return linked;
 		}
 		return (
-			childrenOfType('next_step').filter((candidate) => openStatuses.has(candidate.status))[0] ??
-			null
+			projectWorkChildren.filter(
+				(candidate) => planWorkTypes.includes(candidate.type) && openStatuses.has(candidate.status)
+			)[0] ?? null
 		);
 	});
 	const automations = $derived(childrenOfType('automation'));
@@ -328,7 +324,7 @@
 		return [
 			'project',
 			'milestone',
-			'next_step',
+			'task',
 			'open_question',
 			'decision',
 			'automation',
@@ -339,7 +335,7 @@
 
 	function compactDetail(candidate: WorkItem): string {
 		return firstText(
-			candidate.next_step_action,
+			candidate.task_action,
 			candidate.question_text,
 			candidate.decision_question,
 			candidate.change_scope,
@@ -742,36 +738,36 @@
 								</div>
 							</div>
 							<div class="border-t border-outline-variant/35 p-3">
-								{#if currentNextStep}
+								{#if currentNextItem}
 									<a
-										href={resolve(routeFor(currentNextStep))}
+										href={resolve(routeFor(currentNextItem))}
 										class="falcon-focus grid gap-2 rounded-md border border-primary/25 bg-primary-container/10 p-2.5 transition hover:border-primary/45 hover:bg-primary-container/15 md:grid-cols-[9rem_minmax(0,1fr)_9rem]"
 									>
 										<div class="flex flex-wrap items-center gap-2 md:block">
 											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-												Current next step
+												Next up
 											</p>
-											<p class="text-xs {statusTone(currentNextStep.status)} md:mt-1">
-												{formatStatus(currentNextStep.status)}
+											<p class="text-xs {statusTone(currentNextItem.status)} md:mt-1">
+												{formatStatus(currentNextItem.status)}
 											</p>
 										</div>
 										<div class="min-w-0">
 											<p class="truncate text-sm font-semibold text-on-surface">
-												{currentNextStep.title}
+												{currentNextItem.title}
 											</p>
 											<p class="mt-0.5 line-clamp-1 text-xs leading-5 text-on-surface-variant">
-												{itemPrimaryText(currentNextStep)}
+												{itemPrimaryText(currentNextItem)}
 											</p>
 										</div>
 										<p class="text-xs font-semibold text-on-surface-variant md:text-right">
-											{dateLabel(currentNextStep)}
+											{dateLabel(currentNextItem)}
 										</p>
 									</a>
 								{:else}
 									<p
 										class="rounded-md border border-outline-variant/35 bg-surface-1/40 px-3 py-2 text-sm text-on-surface-variant"
 									>
-										No current next step is linked.
+										No next up item is linked.
 									</p>
 								{/if}
 							</div>

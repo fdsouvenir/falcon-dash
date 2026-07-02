@@ -19,7 +19,7 @@ Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost
 
 These are non-optional operating rules:
 
-- **Every piece of work maps to Work.** Use the right object type: Area, Project, Milestone, Next Step, Open Question, Decision, Change Request, Finding, or Automation.
+- **Every piece of work maps to Work.** Use the right object type: Area, Project, Milestone, Task, Open Question, Decision, Change Request, Finding, or Automation.
 - **Every code/config/system mutation starts with an approved Change Request.** No exceptions — build the Change Request, get operator approval, then execute.
 - **Change Requests start in `planning` status** until the operator approves (sets to `ready`, or explicitly says "go ahead"). Discussion is not permission.
 - **When you create a Change Request for approval, message the operator** — do not silently create Change Requests and wait.

@@ -21,9 +21,11 @@
 		matchesWorkFocus,
 		parseQuestionSections,
 		projectHealth as deriveProjectHealth,
+		projectCurrentNextItem,
 		projectNextMove,
 		projectOpenWork as deriveProjectOpenWork,
 		projectUpcomingItem as deriveProjectUpcomingItem,
+		currentNextBlocked,
 		riskFlagsFor,
 		type ProjectHealth,
 		type QuestionBriefSection,
@@ -299,7 +301,7 @@
 			},
 			{
 				title: 'Other asks',
-				description: 'Next steps, automations, or projects waiting for operator input',
+				description: 'Tasks, automations, or projects waiting for operator input',
 				items: needsYourCallItems.filter(
 					(item) => !['open_question', 'decision', 'change_request', 'finding'].includes(item.type)
 				),
@@ -340,7 +342,7 @@
 	);
 	const dueSoonItems = $derived.by(() =>
 		openItems
-			.filter((item) => item.type === 'next_step' && onTimeline(item.due_date, 14))
+			.filter((item) => item.type === 'task' && onTimeline(item.due_date, 14))
 			.sort((a, b) => dateValue(a.due_date) - dateValue(b.due_date))
 	);
 	const scheduledSoonItems = $derived.by(() =>
@@ -731,7 +733,7 @@
 	}
 
 	function blockerCount(item: WorkItem): number {
-		if (item.type === 'project') return projectBlockerLinks(item).length;
+		if (item.type === 'project') return projectCurrentBlockerLinks(item).length;
 		return blockersFor(item).length;
 	}
 
@@ -741,9 +743,27 @@
 		);
 	}
 
+	function projectCurrentItem(project: WorkItem): WorkItem | null {
+		return projectCurrentNextItem(project, childrenFor(project));
+	}
+
+	function projectCurrentBlockerLinks(project: WorkItem): WorkBlockerLink[] {
+		const current = projectCurrentItem(project);
+		if (!current) return [];
+		return projectBlockerLinks(project).filter((link) => link.blocked_item_id === current.id);
+	}
+
+	function projectLaterBlockerLinks(project: WorkItem): WorkBlockerLink[] {
+		const current = projectCurrentItem(project);
+		return projectBlockerLinks(project).filter((link) => link.blocked_item_id !== current?.id);
+	}
+
 	function blockerCountLabel(project: WorkItem): string {
-		const count = blockerCount(project);
-		return count ? `${count} holding up` : 'Clear';
+		const current = projectCurrentItem(project);
+		const currentCount = projectCurrentBlockerLinks(project).length;
+		if ((current && currentNextBlocked(current)) || currentCount) return 'Next up blocked';
+		const laterCount = projectLaterBlockerLinks(project).length;
+		return laterCount ? `${laterCount} later holding up` : 'Clear';
 	}
 
 	function firstText(...values: Array<string | number | null | undefined>): string {
@@ -818,7 +838,7 @@
 			['decision', 'decision', 'decisions'],
 			['change_request', 'change request', 'change requests'],
 			['finding', 'finding', 'findings'],
-			['next_step', 'next step', 'next steps'],
+			['task', 'task', 'tasks'],
 			['automation', 'automation', 'automations'],
 			['project', 'project', 'projects']
 		];
@@ -1053,7 +1073,7 @@
 				const dateDiff = dateValue(a.scheduled_at) - dateValue(b.scheduled_at);
 				if (dateDiff !== 0) return dateDiff;
 			}
-			if (type === 'next_step') {
+			if (type === 'task') {
 				const dateDiff = dateValue(a.due_date) - dateValue(b.due_date);
 				if (dateDiff !== 0) return dateDiff;
 			}
@@ -1076,7 +1096,7 @@
 			return firstText(item.next_action, item.body, item.description);
 		if (item.type === 'change_request')
 			return firstText(item.next_action, item.description, item.body);
-		if (item.type === 'next_step') return firstText(item.next_action, item.description, item.body);
+		if (item.type === 'task') return firstText(item.next_action, item.description, item.body);
 		if (item.type === 'automation')
 			return firstText(item.result, item.next_action, item.description);
 		if (item.type === 'finding') return firstText(item.description, item.body, item.next_action);
@@ -1090,8 +1110,8 @@
 			return firstText(item.description, item.body, 'No change scope recorded yet.');
 		if (item.type === 'open_question' || item.type === 'decision')
 			return firstText(item.body, item.description, 'No question context recorded yet.');
-		if (item.type === 'next_step')
-			return firstText(item.next_action, item.description, 'No action text recorded yet.');
+		if (item.type === 'task')
+			return firstText(item.next_action, item.description, 'No task detail recorded yet.');
 		if (item.type === 'automation')
 			return firstText(item.description, item.body, 'No automation purpose recorded yet.');
 		if (item.type === 'finding')
@@ -1121,9 +1141,9 @@
 				}
 			];
 		}
-		if (item.type === 'next_step') {
+		if (item.type === 'task') {
 			return [
-				{ title: 'Action', text: firstText(item.next_action, item.description, item.title) },
+				{ title: 'Task', text: firstText(item.next_action, item.description, item.title) },
 				{
 					title: 'Context',
 					text: firstText(item.body, item.description, 'No added context recorded yet.')
@@ -1210,7 +1230,7 @@
 				{ label: 'Updated', value: formatDateTime(item.last_activity_at) }
 			];
 		}
-		if (item.type === 'next_step') {
+		if (item.type === 'task') {
 			return [
 				{ label: 'Due', value: formatDate(item.due_date) },
 				{ label: 'Parent', value: parent ? itemDisplayId(parent) : 'No parent' },
@@ -2464,7 +2484,7 @@
 														<span
 															class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
 														>
-															<span class="shrink-0 text-primary">Next step:</span>
+															<span class="shrink-0 text-primary">Next up:</span>
 															<span class="truncate">{projectOperatorMove(project)}</span>
 														</span>
 													</div>
@@ -2641,7 +2661,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'next_step'}
+							{:else if activeType === 'task'}
 								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
 									{#each filteredItems as task (task.id)}
 										<button

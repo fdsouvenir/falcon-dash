@@ -19,7 +19,7 @@ archived migration input; there is no active PM API.
 
 - `project` — bounded outcome with a finish line, health, timeline, and attached work
 - `milestone` — progress marker or checkpoint
-- `next_step` — concrete action, usually starting with a verb
+- `task` — concrete action, usually starting with a verb
 - `open_question` — unresolved knowledge with answerer, impact, and optional blocker
 - `decision` — unresolved commitment with options, recommendation, and no-decision consequence
 - `change_request` — controlled mutation of code, config, systems, data, auth, deployment, or automation
@@ -31,6 +31,11 @@ Evidence is attached through evidence refs/provenance. It is not standalone work
 Blocker relationships are explicit Work links. They show what item is stuck, whether the blocker is
 another Work item or an external person/system/source, why it is blocked, and the next unblock
 move. Links clarify status; they do not replace the item's `blocked` or `waiting` status.
+
+Projects use `current_next_item_id` for the visible "Next up" item. It points at an active task,
+open question, decision, or change request in the project. A project is blocked only when that
+pointed item is blocked/waiting or actively blocked; later blocked tasks are shown in the project
+plan without making the whole project blocked. Tasks do not have child tasks.
 
 Categories and subcategories are setup records, not Work item types. Use `/categories` to list or
 maintain them and `category_id`/`subcategory_id` item filters to group operational work.
@@ -86,6 +91,10 @@ List filters:
 - `parent_item_id`
 - `includeClosed=true`
 - `limit`
+
+Project pointer field:
+
+- `current_next_item_id`
 
 ## Categories
 
@@ -155,7 +164,7 @@ Create example:
 curl -X POST http://localhost:3000/api/work/items \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "next_step",
+    "type": "task",
     "title": "Validate migration fixture",
     "status": "ready",
     "owner": "agent",

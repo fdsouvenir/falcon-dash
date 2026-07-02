@@ -21,7 +21,7 @@ on disk only as static migration input and is opened read-only through
 - `project` — bounded outcome with goal, health, timeline, and attached work
 - `milestone` — short project-local progress checkpoint; milestones are created and shown inside
   a project rather than browsed as standalone Work pages
-- `next_step` — concrete action, usually starting with a verb
+- `task` — concrete action, usually starting with a verb
 - `open_question` — unresolved knowledge with answerer, impact, and optional blocker
 - `decision` — unresolved commitment with options, recommendation, and no-decision consequence
 - `change_request` — controlled mutation of code, config, systems, data, auth, deployment, or automation
@@ -35,6 +35,13 @@ Blocker links are Work-owned relationship records in `work_blocker_links`. They 
 Work item to either another Work item or an external person/system/source, with a reason, unblock
 move, status, and timestamps. These links add visible relationship context without replacing the
 blocked or waiting statuses on Work items.
+
+Projects expose the current actionable move through `current_next_item_id`, a pointer to an active
+task, open question, decision, or change request in that project. A project is treated as blocked
+only when that pointed item is blocked/waiting or has an active blocker link; later blocked tasks
+remain visible in the plan without making the whole project blocked. Tasks do not own child tasks
+or next-step records; work that needs sequencing should become a project or be split into project
+tasks.
 
 Categories and subcategories organize Work without being Work items. They live in `work_areas`
 internally and are exposed through `/api/work/categories` using the user-facing
@@ -157,7 +164,7 @@ Mapping rules:
 - category -> Work category record
 - subcategory -> child Work subcategory record
 - project -> Work `project`
-- plan -> Work `change_request`, `next_step`, `open_question`, `decision`, or `automation` based on status/title/body classifier
+- plan -> Work `change_request`, `task`, `open_question`, `decision`, or `automation` based on status/title/body classifier
 - plan dependency -> Work `depends_on` relationship
 - plan version -> preserved in the migrated Work item body
 - activity -> Work `finding` plus evidence ref

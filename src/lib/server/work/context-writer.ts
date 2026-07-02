@@ -123,7 +123,9 @@ Base URL: http://localhost:3000/api/work
 - GET /items/{id}
 - PATCH /items/{id}
 
-Item types: project, milestone, next_step, open_question, decision, change_request, finding, automation.
+Item types: project, milestone, task, open_question, decision, change_request, finding, automation.
+
+Projects expose their current "Next up" item through current_next_item_id. It points at an active task, open question, decision, or change request inside the project. next_step is not a public Work type.
 
 Categories and subcategories are setup records exposed through /categories, not Work item types.
 Deleting a category or subcategory removes it from the directory and unassigns linked Work items.
@@ -150,7 +152,7 @@ Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOn
 
 - GET /change-log
 - GET /change-log?project_id={id}
-- GET /change-log?entity_type=next_step&entity_id={id}
+- GET /change-log?entity_type=task&entity_id={id}
 
 Returns Work mutation events with the changed entity, project/category/parent scope at the time of the event, a human summary, and structured field deltas in changes.
 

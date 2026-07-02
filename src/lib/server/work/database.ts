@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS work_areas (
 
 CREATE TABLE IF NOT EXISTS work_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT NOT NULL CHECK(type IN ('project','milestone','next_step','open_question','decision','automation','finding','change_request')),
+  type TEXT NOT NULL CHECK(type IN ('project','milestone','task','open_question','decision','automation','finding','change_request')),
   area_id TEXT REFERENCES work_areas(id),
   parent_item_id INTEGER REFERENCES work_items(id),
   title TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS work_project_details (
   start_date TEXT,
   target_date TEXT,
   actual_completed_date TEXT,
-  current_next_step_id INTEGER REFERENCES work_items(id),
+  current_next_item_id INTEGER REFERENCES work_items(id),
   last_meaningful_update_at INTEGER
 );
 
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS work_milestone_details (
   completed_at INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS work_next_step_details (
+CREATE TABLE IF NOT EXISTS work_task_details (
   work_item_id INTEGER PRIMARY KEY REFERENCES work_items(id) ON DELETE CASCADE,
   action TEXT
 );
@@ -285,6 +285,9 @@ export function getLegacyPmDbPath(): string {
 
 export function ensureWorkSchema(db: Database.Database = getWorkDb()): void {
 	migrateWorkItemsToV2(db);
+	migrateWorkItemsToTaskModel(db);
+	migrateProjectDetailsToCurrentNextItem(db);
+	migrateNextStepDetailsToTaskDetails(db);
 	db.exec(WORK_SCHEMA);
 	backfillV2Details(db);
 	backfillWorkBlockerLinks(db);
@@ -304,7 +307,7 @@ function migrateWorkItemsToV2(db: Database.Database): void {
 		ALTER TABLE work_items RENAME TO work_items_v1;
 		CREATE TABLE work_items (
 		  id INTEGER PRIMARY KEY AUTOINCREMENT,
-		  type TEXT NOT NULL CHECK(type IN ('project','milestone','next_step','open_question','decision','automation','finding','change_request')),
+		  type TEXT NOT NULL CHECK(type IN ('project','milestone','task','open_question','decision','automation','finding','change_request')),
 		  area_id TEXT REFERENCES work_areas(id),
 		  parent_item_id INTEGER REFERENCES work_items(id),
 		  title TEXT NOT NULL,
@@ -334,7 +337,7 @@ function migrateWorkItemsToV2(db: Database.Database): void {
 		SELECT
 		  id,
 		  CASE
-		    WHEN type = 'task' THEN 'next_step'
+		    WHEN type = 'task' THEN 'task'
 		    WHEN type = 'routine' THEN 'automation'
 		    WHEN type = 'observation' THEN 'finding'
 		    WHEN type = 'change' THEN 'change_request'
@@ -363,6 +366,124 @@ function migrateWorkItemsToV2(db: Database.Database): void {
 	`);
 }
 
+function migrateWorkItemsToTaskModel(db: Database.Database): void {
+	const table = db
+		.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='work_items'")
+		.get() as { sql?: string } | undefined;
+	if (!table?.sql) return;
+	if (table.sql.includes("'task'") && !table.sql.includes("'next_step'")) return;
+
+	db.exec(`
+		PRAGMA foreign_keys = OFF;
+		PRAGMA legacy_alter_table = ON;
+		ALTER TABLE work_items RENAME TO work_items_before_task_model;
+		CREATE TABLE work_items (
+		  id INTEGER PRIMARY KEY AUTOINCREMENT,
+		  type TEXT NOT NULL CHECK(type IN ('project','milestone','task','open_question','decision','automation','finding','change_request')),
+		  area_id TEXT REFERENCES work_areas(id),
+		  parent_item_id INTEGER REFERENCES work_items(id),
+		  title TEXT NOT NULL,
+		  description TEXT,
+		  body TEXT,
+		  status TEXT NOT NULL DEFAULT 'backlog' CHECK(status IN ('backlog','planning','ready','in_progress','waiting','needs_review','blocked','scheduled','complete','cancelled','archived')),
+		  owner TEXT,
+		  waiting_on TEXT,
+		  priority TEXT CHECK(priority IN ('low','normal','high','urgent')),
+		  next_action TEXT,
+		  approval_required INTEGER NOT NULL DEFAULT 0,
+		  due_date TEXT,
+		  scheduled_at TEXT,
+		  stale_after TEXT,
+		  result TEXT,
+		  legacy_project_id INTEGER,
+		  legacy_plan_id INTEGER,
+		  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+		  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+		  last_activity_at INTEGER NOT NULL DEFAULT (unixepoch())
+		);
+		INSERT INTO work_items (
+		  id, type, area_id, parent_item_id, title, description, body, status, owner, waiting_on,
+		  priority, next_action, approval_required, due_date, scheduled_at, stale_after, result,
+		  legacy_project_id, legacy_plan_id, created_at, updated_at, last_activity_at
+		)
+		SELECT
+		  id,
+		  CASE WHEN type = 'next_step' THEN 'task' ELSE type END,
+		  area_id, parent_item_id, title, description, body, status, owner, waiting_on,
+		  priority, next_action, approval_required, due_date, scheduled_at, stale_after, result,
+		  legacy_project_id, legacy_plan_id, created_at, updated_at, last_activity_at
+		FROM work_items_before_task_model;
+		DROP TABLE work_items_before_task_model;
+		PRAGMA legacy_alter_table = OFF;
+		PRAGMA foreign_keys = ON;
+	`);
+}
+
+function migrateProjectDetailsToCurrentNextItem(db: Database.Database): void {
+	const table = db
+		.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='work_project_details'")
+		.get() as { sql?: string } | undefined;
+	if (!table?.sql || table.sql.includes('current_next_item_id')) return;
+	const columns = db.prepare('PRAGMA table_info(work_project_details)').all() as Array<{
+		name: string;
+	}>;
+	const hasNonScope = columns.some((column) => column.name === 'non_scope');
+	const nonScopeSelect = hasNonScope ? 'non_scope' : 'NULL AS non_scope';
+
+	db.exec(`
+		PRAGMA foreign_keys = OFF;
+		PRAGMA legacy_alter_table = ON;
+		ALTER TABLE work_project_details RENAME TO work_project_details_before_task_model;
+		CREATE TABLE work_project_details (
+		  work_item_id INTEGER PRIMARY KEY REFERENCES work_items(id) ON DELETE CASCADE,
+		  goal TEXT,
+		  definition_of_done TEXT,
+		  why_it_matters TEXT,
+		  scope TEXT,
+		  non_scope TEXT,
+		  health TEXT CHECK(health IN ('on_track','at_risk','blocked','unknown')),
+		  operator TEXT,
+		  start_date TEXT,
+		  target_date TEXT,
+		  actual_completed_date TEXT,
+		  current_next_item_id INTEGER REFERENCES work_items(id),
+		  last_meaningful_update_at INTEGER
+		);
+		INSERT INTO work_project_details (
+		  work_item_id, goal, definition_of_done, why_it_matters, scope, non_scope, health,
+		  operator, start_date, target_date, actual_completed_date, current_next_item_id,
+		  last_meaningful_update_at
+		)
+		SELECT
+		  work_item_id, goal, definition_of_done, why_it_matters, scope, ${nonScopeSelect}, health,
+		  operator, start_date, target_date, actual_completed_date, current_next_step_id,
+		  last_meaningful_update_at
+		FROM work_project_details_before_task_model;
+		DROP TABLE work_project_details_before_task_model;
+		PRAGMA legacy_alter_table = OFF;
+		PRAGMA foreign_keys = ON;
+	`);
+}
+
+function migrateNextStepDetailsToTaskDetails(db: Database.Database): void {
+	const oldTable = db
+		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='work_next_step_details'")
+		.get();
+	if (!oldTable) return;
+	const newTable = db
+		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='work_task_details'")
+		.get();
+	if (!newTable) {
+		db.exec('ALTER TABLE work_next_step_details RENAME TO work_task_details');
+		return;
+	}
+	db.exec(`
+		INSERT OR IGNORE INTO work_task_details (work_item_id, action)
+		SELECT work_item_id, action FROM work_next_step_details;
+		DROP TABLE work_next_step_details;
+	`);
+}
+
 function backfillV2Details(db: Database.Database): void {
 	const hasItems = db
 		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='work_items'")
@@ -370,15 +491,15 @@ function backfillV2Details(db: Database.Database): void {
 	if (!hasItems) return;
 	db.exec(`
 		INSERT OR IGNORE INTO work_project_details
-		  (work_item_id, goal, definition_of_done, why_it_matters, scope, health, target_date, current_next_step_id, last_meaningful_update_at)
+		  (work_item_id, goal, definition_of_done, why_it_matters, scope, health, target_date, current_next_item_id, last_meaningful_update_at)
 		SELECT id, coalesce(description, title), coalesce(next_action, 'Complete the project outcome'), body, description, 'unknown', due_date, null, last_activity_at
 		FROM work_items WHERE type = 'project';
 
 		INSERT OR IGNORE INTO work_milestone_details (work_item_id, marker, target_date)
 		SELECT id, coalesce(next_action, title), due_date FROM work_items WHERE type = 'milestone';
 
-		INSERT OR IGNORE INTO work_next_step_details (work_item_id, action)
-		SELECT id, coalesce(next_action, title) FROM work_items WHERE type = 'next_step';
+		INSERT OR IGNORE INTO work_task_details (work_item_id, action)
+		SELECT id, coalesce(next_action, title) FROM work_items WHERE type = 'task';
 
 		INSERT OR IGNORE INTO work_open_question_details
 		  (work_item_id, question_text, why_it_matters, answerer, blocked_item_id, proposed_answer, answer, answered_at)

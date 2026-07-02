@@ -120,7 +120,7 @@ describe('Work migration', () => {
 		applyWorkMigration(legacyDb, getWorkDb());
 
 		const item = createWorkItem({
-			type: 'next_step',
+			type: 'task',
 			title: 'Write Work-first context',
 			status: 'ready',
 			owner: 'agent',
@@ -129,20 +129,20 @@ describe('Work migration', () => {
 		});
 
 		expect(item.id).toBeGreaterThan(0);
-		expect(
-			listWorkItems({ type: 'next_step' }).some((workItem) => workItem.title === item.title)
-		).toBe(true);
+		expect(listWorkItems({ type: 'task' }).some((workItem) => workItem.title === item.title)).toBe(
+			true
+		);
 		expect(generateWorkContext().markdown).toContain('Write Work-first context');
 	});
 
 	it('rejects old public type names and incomplete controlled objects', () => {
 		expect(() =>
 			createWorkItem({
-				type: 'task',
-				title: 'Old task noun',
+				type: 'next_step',
+				title: 'Old next step noun',
 				actor: 'agent'
 			} as never)
-		).toThrow('Invalid work type: task');
+		).toThrow('Invalid work type: next_step');
 
 		expect(() =>
 			createWorkItem({

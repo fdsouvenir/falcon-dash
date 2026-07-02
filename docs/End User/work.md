@@ -14,7 +14,7 @@ redirects to `/work`.
 - Purpose-built overview sections for due-next work, operator asks, blocked or waiting work, and a
   single chronological recent activity log. The due-next section appears before the ask/risk
   sections so near-term action is visible first.
-- Type-specific pages for projects, next steps, open questions, decisions, change requests,
+- Type-specific pages for projects, tasks, open questions, decisions, change requests,
   findings, and automations
 - Desktop type pages with the section title above fixed search/filter controls, a scrollable item
   list, and a quick inspector on the right. Single clicks select and highlight a row in place;
@@ -33,12 +33,12 @@ redirects to `/work`.
 - `/` -- redirects to `/work`
 - `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
 - `/work/search?q=...` -- read-only search across existing Work records
-- `/work/projects`, `/work/next-steps`, `/work/open-questions`, `/work/decisions`,
+- `/work/projects`, `/work/tasks`, `/work/open-questions`, `/work/decisions`,
   `/work/change-requests`, `/work/findings`, `/work/automations` -- type-specific lists optimized
   for each standalone Work shape
 - `/work/settings` -- category and subcategory setup, opened from the Work settings gear
 - `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
-  project filters such as `focus=blocked`; next steps use due filters such as `focus=due-this-week`;
+  project filters such as `focus=blocked`; tasks use due filters such as `focus=due-this-week`;
   open questions and decisions use answer/review filters such as `focus=needs-answer`.
 - `/work/{type}/{id}` -- routeable standalone detail page for one Work item
 
@@ -52,14 +52,14 @@ shown as agent-managed record content rather than casual text editors.
 
 The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
 workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
-next step, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
+next up, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
 hover only, and double-clicking opens the full project page. The project page starts with compact
 Project Status: editable basics like status, health, priority, waiting state, and category, the
-current next step, and any active blocker relationships. The pinned right rail keeps milestone
+current next up item, and any active blocker relationships. The pinned right rail keeps milestone
 creation and the static operating brief close by without repeating those details. The project list keeps blockers
-lightweight with labels such as "2 holding up"; the project detail uses the same wording and
-explains each active blocker as a relationship: what is stuck, what is blocking it, why, and the
-next unblock move. Project Plan presents milestones on a continuous rail with due dates and nested
+lightweight with labels such as "Next up blocked" or "2 later holding up"; the project detail uses
+the same wording and explains each active blocker as a relationship: what is stuck, what is
+blocking it, why, and the next unblock move. Project Plan presents milestones on a continuous rail with due dates and nested
 work rows, not as a separate milestone list plus unrelated tasks. The same blocker context appears
 inline under the affected milestone or work row so it is visible where the stuck work lives.
 Milestones are short checkpoints inside the project, not separate pages; the project right rail

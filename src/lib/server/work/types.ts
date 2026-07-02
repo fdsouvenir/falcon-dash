@@ -1,7 +1,7 @@
 export const WORK_ITEM_TYPES = [
 	'project',
 	'milestone',
-	'next_step',
+	'task',
 	'open_question',
 	'decision',
 	'automation',
@@ -125,10 +125,10 @@ export interface WorkItem {
 	start_date?: string | null;
 	target_date?: string | null;
 	actual_completed_date?: string | null;
-	current_next_step_id?: number | null;
+	current_next_item_id?: number | null;
 	last_meaningful_update_at?: number | null;
 	milestone_marker?: string | null;
-	next_step_action?: string | null;
+	task_action?: string | null;
 	question_text?: string | null;
 	answerer?: string | null;
 	blocked_item_id?: number | null;

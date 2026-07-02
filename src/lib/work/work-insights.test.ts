@@ -51,6 +51,25 @@ describe('work insights', () => {
 		expect(health.label).toBe('Needs attention');
 	});
 
+	it('does not mark a project blocked when only later task work is blocked', () => {
+		const project = item({ current_next_item_id: 2 });
+		const health = projectHealth(
+			project,
+			[child(2, 'task', 'ready'), child(3, 'task', 'blocked')],
+			now
+		);
+
+		expect(health.label).not.toBe('Blocked');
+		expect(
+			matchesWorkFocus(
+				project,
+				'blocked',
+				[project, child(2, 'task', 'ready'), child(3, 'task', 'blocked')],
+				now
+			)
+		).toBe(false);
+	});
+
 	it('marks an overdue project as overdue before decision attention', () => {
 		const health = projectHealth(
 			item({ due_date: '2026-06-12T12:00:00.000Z' }),
@@ -81,13 +100,13 @@ describe('work insights', () => {
 
 	it('renders concrete open work counts without linked wording', () => {
 		const summary = projectOpenWork(item(), [
-			child(2, 'next_step', 'ready'),
-			child(3, 'next_step', 'in_progress'),
+			child(2, 'task', 'ready'),
+			child(3, 'task', 'in_progress'),
 			child(4, 'open_question', 'needs_review'),
 			child(5, 'change_request', 'planning')
 		]);
 
-		expect(summary).toBe('2 next steps · 1 open question · 1 change request');
+		expect(summary).toBe('2 tasks · 1 open question · 1 change request');
 		expect(summary).not.toMatch(/linked/i);
 	});
 
@@ -113,12 +132,12 @@ describe('work insights', () => {
 		const pulse = projectPortfolioPulse(
 			[
 				blocked,
-				item({ id: 11, type: 'next_step', parent_item_id: blocked.id, status: 'blocked' }),
+				item({ id: 11, type: 'task', parent_item_id: blocked.id, status: 'blocked' }),
 				overdue,
-				child(21, 'next_step', 'ready'),
+				child(21, 'task', 'ready'),
 				item({
 					id: 22,
-					type: 'next_step',
+					type: 'task',
 					parent_item_id: overdue.id,
 					status: 'ready',
 					due_date: '2026-06-12T12:00:00.000Z'
@@ -151,7 +170,7 @@ describe('work insights', () => {
 		const project = item({ next_action: null });
 
 		expect(projectHasNoNextMove(project, [])).toBe(true);
-		expect(projectHasNoNextMove(project, [child(2, 'next_step', 'ready')])).toBe(false);
+		expect(projectHasNoNextMove(project, [child(2, 'task', 'ready')])).toBe(false);
 		expect(projectHasNoNextMove(item({ next_action: 'Review' }), [])).toBe(false);
 	});
 
@@ -159,7 +178,7 @@ describe('work insights', () => {
 		const project = item({ id: 10, type: 'project' });
 		const blockedNextStep = item({
 			id: 11,
-			type: 'next_step',
+			type: 'task',
 			parent_item_id: project.id,
 			status: 'blocked'
 		});
@@ -171,7 +190,7 @@ describe('work insights', () => {
 		});
 		const nextStep = item({
 			id: 30,
-			type: 'next_step',
+			type: 'task',
 			status: 'ready',
 			due_date: '2026-06-25T14:00:00.000Z'
 		});

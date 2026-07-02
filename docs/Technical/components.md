@@ -178,13 +178,13 @@ Routeable Work surface for the `/work` module:
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
-- **Type pages** -- `/work/projects`, `/work/next-steps`, `/work/open-questions`,
+- **Type pages** -- `/work/projects`, `/work/tasks`, `/work/open-questions`,
   `/work/decisions`, `/work/change-requests`, `/work/findings`, and `/work/automations` use
   type-specific page anatomy instead of one generic list row. Projects show
   an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
   blockers; open questions show unresolved knowledge and answer context; decisions show commitment
   options and recommendations; change requests show scope, approval, risk, and verification state;
-  next steps show parent and due state; automations show trigger, next run, and last result; findings
+  tasks show parent and due state; automations show trigger, next run, and last result; findings
   render as a feed. Section filters are type-aware and URL-backed through `q`, `status`, `focus`,
   and finding `source` query params. Row clicks select the right-side quick inspector in place. The
   inspector shows read-only item context, exposes only status/priority/waiting state controls, and
@@ -194,7 +194,7 @@ Routeable Work surface for the `/work` module:
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Project detail pages render as a ledger-style page with a left section index, compact
   header with last update in the upper-right, and a Project Status section that combines editable
-  basics, health, current next step, and active blocker relationships. The blocker panel is hidden
+  basics, health, current next up, and active blocker relationships. The blocker panel is hidden
   when there are no active blocker links; when present, each dense row reads as stuck item,
   blocked-by source, reason, and unblock move using the same "holding up" wording as the project
   list. Project Plan renders a continuous milestone rail with due chips and nested work rows;

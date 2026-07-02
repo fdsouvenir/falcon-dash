@@ -84,7 +84,7 @@ function defaultTypedFields(body: Record<string, unknown>): Record<string, unkno
 	if (body.type === 'open_question') {
 		return {
 			question_text: body.title,
-			why_it_matters: 'The answer changes the next step.',
+			why_it_matters: 'The answer changes the next up.',
 			answerer: body.waiting_on ?? 'operator'
 		};
 	}
@@ -140,7 +140,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 
 	items.push(
 		await createWorkItem(request, {
-			type: 'next_step',
+			type: 'task',
 			parent_item_id: project.id,
 			title: `E2E send stakeholder brief ${stamp}`,
 			status: 'ready',
@@ -161,7 +161,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 
 	items.push(
 		await createWorkItem(request, {
-			type: 'next_step',
+			type: 'task',
 			parent_item_id: milestone.id,
 			title: `E2E verify milestone checklist ${stamp}`,
 			status: 'ready',
@@ -472,7 +472,7 @@ test.describe('work overview executive status board', () => {
 			next_action: 'Review blocker links'
 		});
 		const nextStep = await createWorkItem(request, {
-			type: 'next_step',
+			type: 'task',
 			parent_item_id: project.id,
 			title: `E2E blocker API step ${Date.now()}`,
 			status: 'ready',
@@ -588,7 +588,7 @@ test.describe('work overview executive status board', () => {
 				'Add subcategory'
 			);
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 projects');
-			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 next steps');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 tasks');
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 waiting');
 			await expect(page.getByTestId('work-settings-directory')).not.toContainText('Active');
 			await expect(page.getByTestId('work-settings-drawer')).not.toContainText('Archive');
@@ -679,8 +679,8 @@ test.describe('work overview executive status board', () => {
 			await expect(row).toContainText(`${seeded.project.id}.`);
 			await expect(row).not.toContainText(`Project ${seeded.project.id}`);
 			await expect(row).toContainText('A seeded outcome for overview workflow checks.');
-			await expect(row).toContainText(`Next step: Clear: ${seeded.blockedChange.title}`);
-			await expect(row).toContainText('1 holding up');
+			await expect(row).toContainText('Next up:');
+			await expect(row).toContainText('1 later holding up');
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');

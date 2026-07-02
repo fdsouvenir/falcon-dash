@@ -82,6 +82,17 @@ function now(): number {
 	return Math.floor(Date.now() / 1000);
 }
 
+const openStatusesForValidation = new Set<WorkStatus>([
+	'backlog',
+	'planning',
+	'ready',
+	'in_progress',
+	'waiting',
+	'needs_review',
+	'blocked',
+	'scheduled'
+]);
+
 function assertType(type: string): WorkItemType {
 	if (!WORK_ITEM_TYPES.includes(type as WorkItemType)) {
 		throw new WorkError('WORK_CONSTRAINT', `Invalid work type: ${type}`);
@@ -110,6 +121,11 @@ function assertBlockerStatus(status: string): WorkBlockerStatus {
 		throw new WorkError('WORK_CONSTRAINT', `Invalid blocker status: ${status}`);
 	}
 	return status as WorkBlockerStatus;
+}
+
+function currentNextItemId(data: CreateWorkItemInput | UpdateWorkItemInput): number | null {
+	const legacy = data as typeof data & { current_next_step_id?: number | null };
+	return data.current_next_item_id ?? legacy.current_next_step_id ?? null;
 }
 
 export function listWorkAreas(): WorkArea[] {
@@ -469,8 +485,7 @@ export function listWorkQueue(): WorkQueue {
 	return {
 		nextActions: active.filter(
 			(i) =>
-				['next_step', 'change_request'].includes(i.type) &&
-				['ready', 'in_progress'].includes(i.status)
+				['task', 'change_request'].includes(i.type) && ['ready', 'in_progress'].includes(i.status)
 		),
 		needsOperator,
 		waitingOnOperator: needsOperator,
@@ -812,9 +827,9 @@ function workItemSelect(): string {
 			END AS subcategory_id,
 			p.goal, p.definition_of_done, p.why_it_matters, p.scope, p.non_scope, p.health,
 			p.operator, p.start_date, p.target_date, p.actual_completed_date,
-			p.current_next_step_id, p.last_meaningful_update_at,
+			p.current_next_item_id, p.last_meaningful_update_at,
 			m.marker AS milestone_marker,
-			ns.action AS next_step_action,
+			td.action AS task_action,
 			oq.question_text, oq.why_it_matters AS question_why_it_matters, oq.answerer,
 			oq.blocked_item_id, oq.proposed_answer, oq.answer, oq.answered_at,
 			d.decision_question, d.options_json, d.recommended_option,
@@ -828,7 +843,7 @@ function workItemSelect(): string {
 		LEFT JOIN work_areas wa ON wa.id = wi.area_id
 		LEFT JOIN work_project_details p ON p.work_item_id = wi.id
 		LEFT JOIN work_milestone_details m ON m.work_item_id = wi.id
-		LEFT JOIN work_next_step_details ns ON ns.work_item_id = wi.id
+		LEFT JOIN work_task_details td ON td.work_item_id = wi.id
 		LEFT JOIN work_open_question_details oq ON oq.work_item_id = wi.id
 		LEFT JOIN work_decision_details d ON d.work_item_id = wi.id
 		LEFT JOIN work_change_request_details cr ON cr.work_item_id = wi.id
@@ -896,6 +911,15 @@ function validateTypedDetails(
 ): void {
 	const migration = data.actor === 'migration' || data.actor === 'system';
 	if (migration) return;
+	if (type === 'task' && data.parent_item_id) {
+		const parent = getWorkItem(data.parent_item_id);
+		if (parent?.type === 'task') {
+			throw new WorkError('WORK_CONSTRAINT', 'tasks cannot have child tasks');
+		}
+	}
+	if (type === 'project') {
+		validateProjectCurrentNextItem(currentNextItemId(data), data);
+	}
 	if (type === 'open_question') {
 		requireText(data.question_text, 'question_text', allowPartial);
 		requireText(data.why_it_matters, 'why_it_matters', allowPartial);
@@ -929,7 +953,7 @@ function upsertTypedDetails(
 		db.prepare(
 			`INSERT INTO work_project_details
 			 (work_item_id, goal, definition_of_done, why_it_matters, scope, non_scope, health,
-			  operator, start_date, target_date, actual_completed_date, current_next_step_id,
+			  operator, start_date, target_date, actual_completed_date, current_next_item_id,
 			  last_meaningful_update_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			 ON CONFLICT(work_item_id) DO UPDATE SET
@@ -943,7 +967,7 @@ function upsertTypedDetails(
 			   start_date = excluded.start_date,
 			   target_date = excluded.target_date,
 			   actual_completed_date = excluded.actual_completed_date,
-			   current_next_step_id = excluded.current_next_step_id,
+			   current_next_item_id = excluded.current_next_item_id,
 			   last_meaningful_update_at = excluded.last_meaningful_update_at`
 		).run(
 			id,
@@ -957,7 +981,7 @@ function upsertTypedDetails(
 			data.start_date ?? null,
 			data.target_date ?? data.due_date ?? null,
 			data.actual_completed_date ?? null,
-			data.current_next_step_id ?? null,
+			currentNextItemId(data),
 			data.last_meaningful_update_at ?? data.last_activity_at ?? null
 		);
 		return;
@@ -978,12 +1002,12 @@ function upsertTypedDetails(
 		);
 		return;
 	}
-	if (type === 'next_step') {
+	if (type === 'task') {
 		db.prepare(
-			`INSERT INTO work_next_step_details (work_item_id, action)
+			`INSERT INTO work_task_details (work_item_id, action)
 			 VALUES (?, ?)
 			 ON CONFLICT(work_item_id) DO UPDATE SET action = excluded.action`
-		).run(id, data.next_step_action ?? data.next_action ?? data.title ?? null);
+		).run(id, data.task_action ?? data.next_action ?? data.title ?? null);
 		return;
 	}
 	if (type === 'open_question') {
@@ -1226,9 +1250,9 @@ const itemChangeFields: Array<[keyof WorkItem, string]> = [
 	['start_date', 'Start date'],
 	['target_date', 'Target date'],
 	['actual_completed_date', 'Completed date'],
-	['current_next_step_id', 'Current next step'],
+	['current_next_item_id', 'Current next item'],
 	['milestone_marker', 'Milestone marker'],
-	['next_step_action', 'Action'],
+	['task_action', 'Action'],
 	['question_text', 'Question'],
 	['answerer', 'Can answer'],
 	['blocked_item_id', 'Blocked item'],
@@ -1429,6 +1453,35 @@ function projectIdForItem(item: WorkItem): number | null {
 	return null;
 }
 
+function validateProjectCurrentNextItem(
+	nextItemId: number | null,
+	data: CreateWorkItemInput | UpdateWorkItemInput
+): void {
+	if (!nextItemId) return;
+	const target = getWorkItem(nextItemId);
+	if (!target) throw new WorkError('WORK_NOT_FOUND', `Work item ${nextItemId} not found`);
+	const allowedTargets: WorkItemType[] = ['task', 'open_question', 'decision', 'change_request'];
+	if (!allowedTargets.includes(target.type)) {
+		throw new WorkError(
+			'WORK_CONSTRAINT',
+			'current_next_item_id must point to a task, open question, decision, or change request'
+		);
+	}
+	if (!openStatusesForValidation.has(target.status)) {
+		throw new WorkError('WORK_CONSTRAINT', 'current_next_item_id must point to active work');
+	}
+	const projectId = (data as Partial<WorkItem>).id;
+	if (!projectId) {
+		throw new WorkError(
+			'WORK_CONSTRAINT',
+			'current_next_item_id can only be set after the project exists'
+		);
+	}
+	if (projectId && projectIdForItem(target) !== projectId) {
+		throw new WorkError('WORK_CONSTRAINT', 'current_next_item_id must belong to the project');
+	}
+}
+
 function actionForItemChanges(
 	before: WorkItem,
 	after: WorkItem,
@@ -1566,7 +1619,7 @@ function syncWaitingBlockerLink(item: WorkItem): void {
 			item.status === 'blocked'
 				? 'This work is marked blocked.'
 				: `This work is waiting on ${waitingOn}.`,
-		unblock_action: firstText(item.next_action, item.next_step_action, item.title),
+		unblock_action: firstText(item.next_action, item.task_action, item.title),
 		actor: 'system',
 		source: 'system'
 	});

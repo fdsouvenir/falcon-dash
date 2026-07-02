@@ -53,7 +53,7 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
 - Settings routes inside feature surfaces should highlight their settings affordance, not the
   nearest content tab; create actions for settings editors should stay with the sticky editor.
 - Project browsing should prioritize a searchable full-width list of structured multi-line project
-  rows: keep the numbered title, short blurb, and next step contained in the project column while
+  rows: keep the numbered title, short blurb, and next up contained in the project column while
   status, coming-up, open-work, blocker, and updated values stay aligned as scannable columns.
 - Desktop project rows should use hover-only emphasis, not persistent selected-row highlighting;
   opening the full page is a double-click action.
@@ -63,13 +63,13 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   anchor; reserve right alignment for date/time values.
 - Project detail pages should use the project ledger pattern: low header chrome with last update in
   the upper-right, left section index on desktop, a compact Project Status section for editable
-  status/health/priority/waiting/category basics, current next step, and active blocker
+  status/health/priority/waiting/category basics, current next up, and active blocker
   relationships, a milestone-contained project plan, and a pinned right rail for static operating
   brief context plus lightweight project-local milestone creation. The project plan should use a
   continuous milestone rail with nested work rows and in-context due dates; avoid a separate
   global date bar unless the page becomes a true timeline/Gantt surface. Do not repeat status,
   health, priority, dates, or category in the right rail.
-  Do not render milestones, next steps, decisions, questions, and change requests as unrelated type
+  Do not render milestones, tasks, decisions, questions, and change requests as unrelated type
   lists inside a project page. Milestones are not standalone browse/detail records in the UI; show
   them only as short headings inside a project plan, with project-page creation limited to a title
   and one-sentence description.

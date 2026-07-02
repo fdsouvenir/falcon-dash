@@ -1,7 +1,7 @@
 export const workTypes = [
 	'project',
 	'milestone',
-	'next_step',
+	'task',
 	'open_question',
 	'decision',
 	'change_request',
@@ -107,10 +107,10 @@ export interface WorkItem {
 	start_date?: string | null;
 	target_date?: string | null;
 	actual_completed_date?: string | null;
-	current_next_step_id?: number | null;
+	current_next_item_id?: number | null;
 	last_meaningful_update_at?: number | null;
 	milestone_marker?: string | null;
-	next_step_action?: string | null;
+	task_action?: string | null;
 	question_text?: string | null;
 	answerer?: string | null;
 	blocked_item_id?: number | null;
@@ -227,16 +227,16 @@ export const typeConfigs: TypeConfig[] = [
 		tone: 'text-status-info'
 	},
 	{
-		type: 'next_step',
-		path: 'next-steps',
-		label: 'Next steps',
-		singular: 'Next step',
-		title: 'Next steps',
-		summary: 'Concrete actions with owner, due state, waiting state, and parent context.',
-		primaryLabel: 'Action',
+		type: 'task',
+		path: 'tasks',
+		label: 'Tasks',
+		singular: 'Task',
+		title: 'Tasks',
+		summary: 'Specific executable work with owner, due state, waiting state, and parent context.',
+		primaryLabel: 'Task',
 		secondaryLabel: 'Parent',
 		tertiaryLabel: 'Due',
-		empty: 'No next steps match this view.',
+		empty: 'No tasks match this view.',
 		tone: 'text-status-active'
 	},
 	{
@@ -331,8 +331,10 @@ export function configForType(type: WorkItemType): TypeConfig {
 
 export function typeFromSection(section: string | undefined): WorkItemType {
 	const legacySectionAliases: Record<string, WorkItemType> = {
-		tasks: 'next_step',
-		task: 'next_step',
+		tasks: 'task',
+		task: 'task',
+		'next-steps': 'task',
+		'next-step': 'task',
 		routines: 'automation',
 		routine: 'automation',
 		observations: 'finding',

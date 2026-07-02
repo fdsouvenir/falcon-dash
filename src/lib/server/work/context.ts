@@ -10,7 +10,7 @@ export function generateWorkContext(): WorkContextResponse {
 	let markdown = '# Work Queue\n\n';
 	markdown += `> Generated: ${new Date(generated_at * 1000).toISOString()}\n\n`;
 	markdown +=
-		'Falcon Dash Work is the agent-facing source of truth. Use Work v2 nouns: Project, Milestone, Next Step, Open Question, Decision, Change Request, Finding, and Automation.\n\n';
+		'Falcon Dash Work is the agent-facing source of truth. Use Work v2 nouns: Project, Milestone, Task, Open Question, Decision, Change Request, Finding, and Automation. “Next up” is a project pointer to the current actionable item, not a standalone work type.\n\n';
 
 	markdown += renderCaptureSummary(counts);
 
@@ -118,7 +118,7 @@ function renderCaptureSummary(counts: Record<string, number>): string {
 	const parts = [
 		countPart(counts.project, 'Project'),
 		countPart(counts.milestone, 'Milestone'),
-		countPart(counts.next_step, 'Next Step'),
+		countPart(counts.task, 'Task'),
 		countPart(counts.open_question, 'Open Question'),
 		countPart(counts.decision, 'Decision'),
 		countPart(counts.change_request, 'Change Request'),
