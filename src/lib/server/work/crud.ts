@@ -841,14 +841,14 @@ function workItemSelect(): string {
 			f.finding_text, f.source_refs_json
 		FROM work_items wi
 		LEFT JOIN work_areas wa ON wa.id = wi.area_id
-		LEFT JOIN work_project_details p ON p.work_item_id = wi.id
-		LEFT JOIN work_milestone_details m ON m.work_item_id = wi.id
-		LEFT JOIN work_task_details td ON td.work_item_id = wi.id
-		LEFT JOIN work_open_question_details oq ON oq.work_item_id = wi.id
-		LEFT JOIN work_decision_details d ON d.work_item_id = wi.id
-		LEFT JOIN work_change_request_details cr ON cr.work_item_id = wi.id
-		LEFT JOIN work_automation_details a ON a.work_item_id = wi.id
-		LEFT JOIN work_finding_details f ON f.work_item_id = wi.id
+		LEFT JOIN work_project_details p ON p.work_item_id = wi.id AND wi.type = 'project'
+		LEFT JOIN work_milestone_details m ON m.work_item_id = wi.id AND wi.type = 'milestone'
+		LEFT JOIN work_task_details td ON td.work_item_id = wi.id AND wi.type = 'task'
+		LEFT JOIN work_open_question_details oq ON oq.work_item_id = wi.id AND wi.type = 'open_question'
+		LEFT JOIN work_decision_details d ON d.work_item_id = wi.id AND wi.type = 'decision'
+		LEFT JOIN work_change_request_details cr ON cr.work_item_id = wi.id AND wi.type = 'change_request'
+		LEFT JOIN work_automation_details a ON a.work_item_id = wi.id AND wi.type = 'automation'
+		LEFT JOIN work_finding_details f ON f.work_item_id = wi.id AND wi.type = 'finding'
 		`;
 }
 

@@ -154,6 +154,15 @@ The default context directory is:
 
 Override it with `FALCON_DASH_WORK_CONTEXT_DIR`.
 
+For local UI review, `npm run seed:work` seeds the running dev server with stable `Dev:` Work
+records across projects, tasks, questions, decisions, change requests, automations, findings, and
+the Personal/Work/Condo category tree. Run `npm run seed:work -- --force` to archive and recreate
+only those `Dev:` records.
+
+Work item reads join only the detail table that matches the row's `type`. This prevents stale
+type-detail rows left behind by old local development data from leaking project fields onto tasks
+or other item types.
+
 ## Migration
 
 Migration reads the archived PM database as an external read-only source and writes into the Work

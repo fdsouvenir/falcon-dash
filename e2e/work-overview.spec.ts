@@ -434,7 +434,7 @@ test.describe('work overview executive status board', () => {
 				'decisions',
 				['Needs decision', 'Needs review', 'Waiting on agent', 'High impact', 'Decided']
 			],
-			['next-steps', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
+			['tasks', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
 			['automations', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
 			['findings', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
 		] as const;
