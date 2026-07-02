@@ -761,32 +761,26 @@
 									</p>
 								</div>
 							</div>
-							<div class="border-t border-outline-variant/35 px-3 py-2">
-								<div class="flex flex-wrap gap-2">
-									{#if activeBlockerLinks.length}
-										<span
-											class="inline-flex min-h-7 items-center rounded-md border border-status-danger/35 bg-status-danger-bg/25 px-2 text-xs font-semibold text-status-danger"
-										>
-											{blockerCountLabel()}
-										</span>
-									{/if}
-									{#each visibleHealthReasons as reason (reason.key)}
-										<span
-											class="inline-flex min-h-7 min-w-0 items-center gap-1 rounded-md border border-outline-variant/45 bg-surface-1/55 px-2 text-xs"
-										>
-											<span class="font-semibold {reason.tone}">{reason.label}</span>
-											<span class="truncate text-on-surface-variant">{riskDetailLabel(reason)}</span
+							{#if visibleHealthReasons.length || !activeBlockerLinks.length}
+								<div class="border-t border-outline-variant/35 px-3 py-2">
+									<div class="flex flex-wrap gap-2">
+										{#each visibleHealthReasons as reason (reason.key)}
+											<span
+												class="inline-flex min-h-7 min-w-0 items-center gap-1 rounded-md border border-outline-variant/45 bg-surface-1/55 px-2 text-xs"
 											>
-										</span>
-									{:else}
-										{#if !activeBlockerLinks.length}
+												<span class="font-semibold {reason.tone}">{reason.label}</span>
+												<span class="truncate text-on-surface-variant"
+													>{riskDetailLabel(reason)}</span
+												>
+											</span>
+										{:else}
 											<span class="text-xs text-on-surface-variant"
 												>No active blockers or risk flags.</span
 											>
-										{/if}
-									{/each}
+										{/each}
+									</div>
 								</div>
-							</div>
+							{/if}
 							<div class="border-t border-outline-variant/35 p-3">
 								{#if currentNextStep}
 									<a

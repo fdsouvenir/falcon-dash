@@ -699,9 +699,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Health and status' })).toHaveCount(0);
 			await expect(page.getByRole('heading', { name: 'State controls' })).toHaveCount(0);
-			const currentWork = page.locator('section').filter({
-				has: page.getByRole('heading', { name: 'Current Work' })
-			});
+			const currentWork = page.locator('#project-current-work');
 			await currentWork.getByRole('button', { name: 'Edit' }).click();
 			await expect(page.getByLabel('Status')).toBeVisible();
 			await expect(page.getByLabel('Priority')).toBeVisible();
@@ -710,6 +708,8 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByLabel('Subcategory', { exact: true })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Current state' })).toHaveCount(0);
 			await currentWork.getByRole('button', { name: 'Close' }).click();
+			await expect(currentWork).toContainText('Needs decision');
+			await expect(currentWork).toContainText('need operator review');
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
