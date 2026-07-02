@@ -32,8 +32,7 @@ export const FALCON_DASH_MODULES: FalconDashModule[] = [
 			'work queue',
 			'work items',
 			'change requests',
-			'open questions',
-			'decisions',
+			'needs resolution',
 			'automations',
 			'findings',
 			'generated context'

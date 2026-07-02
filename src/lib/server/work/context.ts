@@ -15,7 +15,7 @@ export function generateWorkContext(): WorkContextResponse {
 	markdown += renderCaptureSummary(counts);
 
 	markdown += renderBucket('Next Actions', queue.nextActions);
-	markdown += renderBucket('Operator Decisions and Questions', queue.needsOperator);
+	markdown += renderBucket('Needs Resolution', queue.needsOperator);
 	markdown += renderBucket('Waiting on Agent', queue.waitingOnAgent);
 	markdown += renderBucket('Waiting on External / System', queue.waitingOnExternal);
 	markdown += renderBucket('Change Requests Needing Review', queue.needsReview);
@@ -119,8 +119,7 @@ function renderCaptureSummary(counts: Record<string, number>): string {
 		countPart(counts.project, 'Project'),
 		countPart(counts.milestone, 'Milestone'),
 		countPart(counts.task, 'Task'),
-		countPart(counts.open_question, 'Open Question'),
-		countPart(counts.decision, 'Decision'),
+		countPart((counts.open_question ?? 0) + (counts.decision ?? 0), 'Resolution'),
 		countPart(counts.change_request, 'Change Request'),
 		countPart(counts.finding, 'Finding'),
 		countPart(counts.automation, 'Automation')

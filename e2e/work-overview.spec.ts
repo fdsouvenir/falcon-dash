@@ -421,18 +421,14 @@ test.describe('work overview executive status board', () => {
 
 	test('renders type-aware primary filters on section pages', async ({ page, baseURL }) => {
 		const expectations = [
-			['projects', ['Blocked', 'Overdue', 'Needs decision', 'No next move', 'Stale']],
+			['projects', ['Blocked', 'Overdue', 'Needs resolution', 'No next move', 'Stale']],
 			[
 				'change-requests',
 				['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']
 			],
 			[
-				'open-questions',
-				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Answered']
-			],
-			[
-				'decisions',
-				['Needs decision', 'Needs review', 'Waiting on agent', 'High impact', 'Decided']
+				'needs-resolution',
+				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Resolved']
 			],
 			['tasks', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
 			['automations', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
@@ -651,7 +647,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-search-results')).toContainText(seeded.question.title);
 
 			await page.getByTestId('work-search-results').getByText(seeded.question.title).click();
-			await expect(page).toHaveURL(new RegExp(`/work/decisions/${seeded.question.id}$`));
+			await expect(page).toHaveURL(new RegExp(`/work/needs-resolution/${seeded.question.id}$`));
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -708,7 +704,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByLabel('Subcategory', { exact: true })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Current state' })).toHaveCount(0);
 			await currentWork.getByRole('button', { name: 'Close' }).click();
-			await expect(currentWork).not.toContainText('Needs decision');
+			await expect(currentWork).not.toContainText('Needs resolution');
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
@@ -867,10 +863,10 @@ test.describe('work overview executive status board', () => {
 	}) => {
 		const seeded = await seedLongQuestion(request);
 		try {
-			await page.goto(`${baseURL ?? ''}/work/open-questions/${seeded.question.id}`);
+			await page.goto(`${baseURL ?? ''}/work/needs-resolution/${seeded.question.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByText('Question Brief', { exact: true })).toBeVisible();
+			await expect(page.getByText('Resolution brief', { exact: true })).toBeVisible();
 			await expect(page.getByTestId('question-primary-answer')).toContainText(
 				'Approve the safe internal workspace setup path'
 			);

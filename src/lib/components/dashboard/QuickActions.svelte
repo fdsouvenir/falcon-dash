@@ -18,7 +18,7 @@
 		},
 		{
 			label: 'Work',
-			description: 'Track operator work and decisions',
+			description: 'Track operator work and resolutions',
 			href: '/work',
 			icon: 'projects',
 			color: 'text-status-info'

@@ -199,6 +199,22 @@ export interface TypeConfig {
 	tone: string;
 }
 
+export const resolutionTypes: WorkItemType[] = ['open_question', 'decision'];
+
+export const resolutionConfig: TypeConfig = {
+	type: 'open_question',
+	path: 'needs-resolution',
+	label: 'Needs resolution',
+	singular: 'Resolution',
+	title: 'Needs resolution',
+	summary: 'Questions to answer and choices to make, grouped as one resolution queue.',
+	primaryLabel: 'Resolution',
+	secondaryLabel: 'Owner',
+	tertiaryLabel: 'Impact',
+	empty: 'No items need resolution in this view.',
+	tone: 'text-status-warning'
+};
+
 export const typeConfigs: TypeConfig[] = [
 	{
 		type: 'project',
@@ -310,6 +326,16 @@ export const standaloneTypeConfigs: TypeConfig[] = typeConfigs.filter(
 	(config) => config.type !== 'milestone'
 );
 
+export const navigationTypeConfigs: TypeConfig[] = [
+	...standaloneTypeConfigs.filter(
+		(config) => config.type !== 'open_question' && config.type !== 'decision'
+	),
+	resolutionConfig
+].sort((a, b) => {
+	const order = ['project', 'task', 'open_question', 'change_request', 'automation', 'finding'];
+	return order.indexOf(a.type) - order.indexOf(b.type);
+});
+
 export function isStandaloneWorkType(type: WorkItemType): boolean {
 	return type !== 'milestone';
 }
@@ -341,6 +367,10 @@ export function typeFromSection(section: string | undefined): WorkItemType {
 		observation: 'finding',
 		changes: 'change_request',
 		change: 'change_request',
+		'needs-resolution': 'open_question',
+		'need-resolution': 'open_question',
+		resolutions: 'open_question',
+		resolution: 'open_question',
 		questions: 'open_question',
 		question: 'open_question',
 		spaces: 'project',
@@ -353,6 +383,7 @@ export function typeFromSection(section: string | undefined): WorkItemType {
 }
 
 export function pathForType(type: WorkItemType): string {
+	if (resolutionTypes.includes(type)) return resolutionConfig.path;
 	return configForType(type).path;
 }
 

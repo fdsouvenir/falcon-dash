@@ -28,6 +28,10 @@ archived migration input; there is no active PM API.
 
 Evidence is attached through evidence refs/provenance. It is not standalone work.
 
+In user-facing Work UI, open questions and decisions appear together as Needs Resolution. Keep
+using the specific API type that matches the record: `open_question` for missing knowledge and
+`decision` for a commitment or approval.
+
 Blocker relationships are explicit Work links. They show what item is stuck, whether the blocker is
 another Work item or an external person/system/source, why it is blocked, and the next unblock
 move. Links clarify status; they do not replace the item's `blocked` or `waiting` status.

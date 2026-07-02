@@ -125,6 +125,9 @@ Base URL: http://localhost:3000/api/work
 
 Item types: project, milestone, task, open_question, decision, change_request, finding, automation.
 
+The Work UI presents open_question and decision together as Needs Resolution. Use open_question for
+missing knowledge and decision for commitments or approvals.
+
 Projects expose their current "Next up" item through current_next_item_id. It points at an active task, open question, decision, or change request inside the project. next_step is not a public Work type.
 
 Categories and subcategories are setup records exposed through /categories, not Work item types.

@@ -15,7 +15,6 @@
 		loadCachedWorkQueue
 	} from '$lib/work/work-data-cache.js';
 	import {
-		focusDefinitionForType,
 		focusDefinitionsForType,
 		literalBlockersFor,
 		matchesWorkFocus,
@@ -38,11 +37,13 @@
 		formatStatus,
 		itemDisplayId,
 		isStandaloneWorkType,
+		navigationTypeConfigs,
 		openStatuses,
 		pathForType,
 		priorityTone,
+		resolutionConfig,
+		resolutionTypes,
 		sentenceCase,
-		standaloneTypeConfigs,
 		statusTone,
 		typeFromSection,
 		waitingLabel,
@@ -163,11 +164,12 @@
 
 	const workListLimit = 300;
 
-	const visibleTypeConfigs: TypeConfig[] = standaloneTypeConfigs;
-
 	const isSettings = $derived(mode === 'section' && section === 'settings');
+	const isResolutionSection = $derived(
+		section === resolutionConfig.path || section === 'open-questions' || section === 'decisions'
+	);
 	const activeType = $derived(typeFromSection(section));
-	const activeConfig = $derived(configForType(activeType));
+	const activeConfig = $derived(isResolutionSection ? resolutionConfig : configForType(activeType));
 	const title = $derived(
 		isSettings ? 'Work settings' : mode === 'overview' ? 'Work' : activeConfig.title
 	);
@@ -182,20 +184,24 @@
 	const openItems = $derived(
 		items.filter((item) => isStandaloneWorkType(item.type) && openStatuses.has(item.status))
 	);
-	const typeItems = $derived(items.filter((item) => item.type === activeType));
+	const visibleTypeConfigs: TypeConfig[] = navigationTypeConfigs;
+
+	const typeItems = $derived(
+		items.filter((item) =>
+			isResolutionSection ? resolutionTypes.includes(item.type) : item.type === activeType
+		)
+	);
 	const recentItems = $derived(
 		items
 			.filter((item) => isStandaloneWorkType(item.type))
 			.sort((a, b) => b.last_activity_at - a.last_activity_at)
 			.slice(0, 14)
 	);
-	const primaryFocusDefinitions = $derived(
-		focusDefinitionsForType(activeType, { primaryOnly: true })
-	);
+	const primaryFocusDefinitions = $derived(sectionFocusDefinitions(true));
 	const secondaryFocusDefinitions = $derived(
-		focusDefinitionsForType(activeType).filter((definition) => !definition.primary)
+		sectionFocusDefinitions(false).filter((definition) => !definition.primary)
 	);
-	const activeFocusDefinition = $derived(focusDefinitionForType(activeType, focusFilter));
+	const activeFocusDefinition = $derived(sectionFocusDefinition(focusFilter));
 	const findingSourceOptions = $derived.by(() => {
 		const sources: string[] = [];
 		for (const item of typeItems) {
@@ -208,7 +214,7 @@
 	const filteredItems = $derived.by(() => {
 		const source = mode === 'overview' ? items : typeItems;
 		const query = search.trim().toLowerCase();
-		return sortForType(activeType, source).filter((item) => {
+		return sortForSection(source).filter((item) => {
 			const matchesSearch =
 				!query ||
 				item.title.toLowerCase().includes(query) ||
@@ -228,7 +234,10 @@
 		if (mode === 'detail') return items.find((item) => item.id === id) ?? null;
 		const selected = items.find((item) => item.id === selectedId);
 		if (
-			selected?.type === activeType &&
+			selected &&
+			(isResolutionSection
+				? resolutionTypes.includes(selected.type)
+				: selected.type === activeType) &&
 			filteredItems.some((candidate) => candidate.id === selected.id)
 		) {
 			return selected;
@@ -280,12 +289,12 @@
 	const needsYourCallGroups = $derived.by<OverviewGroup[]>(() => {
 		return [
 			{
-				title: 'Questions and decisions',
-				description: 'Unknowns and commitments that need operator judgment',
+				title: 'Needs resolution',
+				description: 'Questions to answer and choices to make',
 				items: needsYourCallItems.filter(
 					(item) => item.type === 'open_question' || item.type === 'decision'
 				),
-				empty: 'No open questions waiting on you'
+				empty: 'Nothing needs resolution'
 			},
 			{
 				title: 'Change requests',
@@ -422,7 +431,7 @@
 			params.get('status'),
 			defaultStatusForType(activeType)
 		);
-		const nextFocus = focusDefinitionForType(activeType, params.get('focus'))?.key ?? '';
+		const nextFocus = sectionFocusDefinition(params.get('focus'))?.key ?? '';
 		const nextSource = params.get('source') ?? '';
 		if (search !== nextSearch) search = nextSearch;
 		if (statusFilter !== nextStatus) statusFilter = nextStatus;
@@ -481,21 +490,35 @@
 				defaultStatusForType(activeType)
 			);
 			const includeClosed = statusNeedsClosedRecords(routeStatus, activeType);
-			const loadedItems = await loadItems(
-				activeType === 'project'
-					? workItemsUrl({ includeClosed, limit: workListLimit })
-					: workItemsUrl({ type: activeType, includeClosed, limit: workListLimit })
-			);
+			const loadedItems = isResolutionSection
+				? (
+						await Promise.all(
+							resolutionTypes.map((type) =>
+								loadItems(workItemsUrl({ type, includeClosed, limit: workListLimit }))
+							)
+						)
+					).flat()
+				: await loadItems(
+						activeType === 'project'
+							? workItemsUrl({ includeClosed, limit: workListLimit })
+							: workItemsUrl({ type: activeType, includeClosed, limit: workListLimit })
+					);
 			items =
 				activeType === 'project'
 					? loadedItems
 					: mergeItems(
-							items.filter((item) => item.type !== activeType),
+							items.filter((item) =>
+								isResolutionSection
+									? !resolutionTypes.includes(item.type)
+									: item.type !== activeType
+							),
 							loadedItems
 						);
 			blockerLinks =
 				activeType === 'project' ? await loadBlockers(workBlockersUrl({ limit: 500 })) : [];
-			const loadedTypeItems = loadedItems.filter((item) => item.type === activeType);
+			const loadedTypeItems = loadedItems.filter((item) =>
+				isResolutionSection ? resolutionTypes.includes(item.type) : item.type === activeType
+			);
 			selectedId = id ?? loadedTypeItems[0]?.id ?? null;
 			const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
 			if (selected) await ensureItemContext(selected);
@@ -834,20 +857,20 @@
 	function typeBreakdown(source: WorkItem[], fallback: string): string {
 		if (source.length === 0) return fallback;
 		const typeOrder: Array<[WorkItemType, string, string]> = [
-			['open_question', 'open question', 'open questions'],
-			['decision', 'decision', 'decisions'],
 			['change_request', 'change request', 'change requests'],
 			['finding', 'finding', 'findings'],
 			['task', 'task', 'tasks'],
 			['automation', 'automation', 'automations'],
 			['project', 'project', 'projects']
 		];
-		const parts = typeOrder
-			.map(([type, singular, plural]) => {
+		const resolutionCount = source.filter((item) => resolutionTypes.includes(item.type)).length;
+		const parts = [
+			resolutionCount ? pluralize(resolutionCount, 'resolution') : null,
+			...typeOrder.map(([type, singular, plural]) => {
 				const count = source.filter((item) => item.type === type).length;
 				return count ? pluralize(count, singular, plural) : null;
 			})
-			.filter(Boolean);
+		].filter(Boolean);
 		return parts.join(' · ');
 	}
 
@@ -899,6 +922,31 @@
 	function timelineDateLabel(item: WorkItem): string {
 		const label = item.type === 'automation' ? 'Next run' : 'Due';
 		return `${label} ${formatDate(item.type === 'automation' ? item.scheduled_at : item.due_date)}`;
+	}
+
+	function sectionFocusDefinitions(primaryOnly: boolean) {
+		if (!isResolutionSection) return focusDefinitionsForType(activeType, { primaryOnly });
+		const definitions = focusDefinitionsForType('open_question', { primaryOnly }).map(
+			(definition) => ({
+				...definition,
+				type: 'open_question' as WorkItemType,
+				label: definition.key === 'answered' ? 'Resolved' : definition.label
+			})
+		);
+		for (const definition of focusDefinitionsForType('decision', { primaryOnly })) {
+			if (definitions.some((candidate) => candidate.key === definition.key)) continue;
+			definitions.push({
+				...definition,
+				type: 'open_question' as WorkItemType,
+				label: definition.key === 'answered' ? 'Resolved' : definition.label
+			});
+		}
+		return definitions;
+	}
+
+	function sectionFocusDefinition(focus: string | null | undefined) {
+		if (!focus) return null;
+		return sectionFocusDefinitions(false).find((definition) => definition.key === focus) ?? null;
 	}
 
 	function defaultStatusForType(type: WorkItemType): WorkStatus | 'open' | 'all' {
@@ -961,7 +1009,7 @@
 
 	function toggleFocusFilter(key: string) {
 		const nextFocus = focusFilter === key ? '' : key;
-		const definition = focusDefinitionForType(activeType, nextFocus);
+		const definition = sectionFocusDefinition(nextFocus);
 		focusFilter = nextFocus;
 		if (!nextFocus) {
 			sourceFilter = '';
@@ -1085,6 +1133,16 @@
 		});
 	}
 
+	function sortForSection(source: WorkItem[]): WorkItem[] {
+		if (!isResolutionSection) return sortForType(activeType, source);
+		return [...source].sort(
+			(a, b) =>
+				statusRank(a.status) - statusRank(b.status) ||
+				priorityRank(a.priority) - priorityRank(b.priority) ||
+				b.last_activity_at - a.last_activity_at
+		);
+	}
+
 	function dateValue(value: string | null | undefined): number {
 		if (!value) return Number.MAX_SAFE_INTEGER;
 		const parsed = new Date(value).valueOf();
@@ -1109,7 +1167,7 @@
 		if (item.type === 'change_request')
 			return firstText(item.description, item.body, 'No change scope recorded yet.');
 		if (item.type === 'open_question' || item.type === 'decision')
-			return firstText(item.body, item.description, 'No question context recorded yet.');
+			return firstText(item.body, item.description, 'No resolution context recorded yet.');
 		if (item.type === 'task')
 			return firstText(item.next_action, item.description, 'No task detail recorded yet.');
 		if (item.type === 'automation')
@@ -1134,7 +1192,7 @@
 		}
 		if (item.type === 'open_question' || item.type === 'decision') {
 			return [
-				{ title: 'Question', text: firstText(item.body, item.description, item.title) },
+				{ title: 'Resolution needed', text: firstText(item.body, item.description, item.title) },
 				{
 					title: 'Recommendation',
 					text: firstText(item.next_action, 'No recommendation recorded yet.')
@@ -1166,7 +1224,7 @@
 	}
 
 	function questionMarkdownContent(item: WorkItem): string {
-		return firstText(item.body, item.description, 'No question context recorded yet.');
+		return firstText(item.body, item.description, 'No resolution context recorded yet.');
 	}
 
 	function questionSections(item: WorkItem): QuestionBriefSection[] {
@@ -1185,7 +1243,7 @@
 	}
 
 	function questionCategoryLabel(category: QuestionBriefSection['category']): string {
-		if (category === 'decision') return 'Decision';
+		if (category === 'decision') return 'Resolution';
 		if (category === 'risks') return 'Risks';
 		if (category === 'approval') return 'Approval';
 		if (category === 'history') return 'History';
@@ -1423,8 +1481,8 @@
 						{#each visibleTypeConfigs as config (config.type)}
 							<a
 								href={resolve(`/work/${config.path}`)}
-								class="falcon-focus rounded-md px-3 py-1.5 text-sm font-semibold transition {activeType ===
-									config.type &&
+								class="falcon-focus rounded-md px-3 py-1.5 text-sm font-semibold transition {activeConfig.path ===
+									config.path &&
 								mode !== 'overview' &&
 								!isSettings
 									? 'bg-primary text-primary-foreground'
@@ -1585,7 +1643,7 @@
 									</div>
 								{:else}
 									<p class="p-4 text-sm text-on-surface-variant">
-										Nothing currently needs your decision.
+										Nothing currently needs resolution.
 									</p>
 								{/each}
 							</div>
@@ -1749,7 +1807,7 @@
 										class="falcon-focus inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-surface-2"
 									>
 										<ArrowRight class="h-4 w-4 rotate-180" />
-										Back to questions
+										Back to needs resolution
 									</a>
 									<div class="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem] xl:items-start">
 										<div class="min-w-0">
@@ -1767,7 +1825,7 @@
 											<p
 												class="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary"
 											>
-												Question Brief
+												Resolution brief
 											</p>
 											<h2
 												class="mt-2 max-w-5xl text-3xl font-semibold leading-tight text-on-surface sm:text-4xl"
@@ -1854,7 +1912,7 @@
 											data-testid="question-primary-answer"
 										>
 											<p class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-												What needs your answer
+												What needs resolution
 											</p>
 											<div class="mt-3 text-sm leading-6 text-on-surface">
 												<MarkdownRenderer content={questionPrimaryAnswer(selectedItem)} />
@@ -1886,9 +1944,9 @@
 											data-testid="question-brief-sections"
 										>
 											<div class="border-b border-outline-variant/35 px-4 py-3">
-												<h3 class="text-sm font-semibold text-on-surface">Question context</h3>
+												<h3 class="text-sm font-semibold text-on-surface">Resolution context</h3>
 												<p class="mt-1 text-xs text-on-surface-variant">
-													Long agent notes are split into sections so the decision is easier to
+													Long agent notes are split into sections so the resolution is easier to
 													scan.
 												</p>
 											</div>
@@ -2605,7 +2663,7 @@
 										<p class="p-4 text-sm text-on-surface-variant">{activeConfig.empty}</p>
 									{/each}
 								</div>
-							{:else if activeType === 'open_question' || activeType === 'decision'}
+							{:else if isResolutionSection || activeType === 'open_question' || activeType === 'decision'}
 								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
 									{#each filteredItems as question (question.id)}
 										<button
@@ -2632,7 +2690,7 @@
 														</span>
 													</div>
 													<p class="mt-2 text-xs font-semibold text-on-surface-variant">
-														Recommended answer
+														Recommended resolution
 													</p>
 													<p class="mt-1 line-clamp-2 text-sm leading-6 text-on-surface">
 														{firstText(question.next_action, 'No recommendation recorded')}

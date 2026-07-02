@@ -92,10 +92,10 @@ describe('work insights', () => {
 		expect(literalBlockersFor(item(), [blocked])).toEqual([blocked]);
 	});
 
-	it('marks child questions as needing a decision', () => {
+	it('marks child questions as needing resolution', () => {
 		const health = projectHealth(item(), [child(2, 'decision', 'needs_review')], now);
 
-		expect(health.label).toBe('Needs decision');
+		expect(health.label).toBe('Needs resolution');
 	});
 
 	it('renders concrete open work counts without linked wording', () => {

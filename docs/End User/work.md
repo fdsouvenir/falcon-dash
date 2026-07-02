@@ -2,8 +2,8 @@
 
 Work is Falcon Dash's operator queue and agent-facing source of truth.
 
-Use `/work` for an executive status board across active projects, operator decisions, blocked or
-waiting work, near-term dates, and recent activity. Falcon Dash opens to Work by default; `/`
+Use `/work` for an executive status board across active projects, items needing resolution,
+blocked or waiting work, near-term dates, and recent activity. Falcon Dash opens to Work by default; `/`
 redirects to `/work`.
 
 ## What It Shows
@@ -14,8 +14,9 @@ redirects to `/work`.
 - Purpose-built overview sections for due-next work, operator asks, blocked or waiting work, and a
   single chronological recent activity log. The due-next section appears before the ask/risk
   sections so near-term action is visible first.
-- Type-specific pages for projects, tasks, open questions, decisions, change requests,
-  findings, and automations
+- Type-specific pages for projects, tasks, needs resolution, change requests, findings, and
+  automations. Needs resolution combines open questions and decisions in one list while preserving
+  their underlying Work shapes.
 - Desktop type pages with the section title above fixed search/filter controls, a scrollable item
   list, and a quick inspector on the right. Single clicks select and highlight a row in place;
   double clicks open that item's standalone detail page.
@@ -23,7 +24,7 @@ redirects to `/work`.
   directly.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
   reasons, blocker context, related work, and read-only narrative fields. Question detail pages use
-  a sectioned Question Brief so long agent-written Markdown plans remain scannable.
+  a sectioned Resolution brief so long agent-written Markdown plans remain scannable.
 - Findings feed for captured facts, events, and evidence
 - Work data generated from the new `~/.openclaw/data/falcon-dash/work.db` database
 
@@ -33,13 +34,13 @@ redirects to `/work`.
 - `/` -- redirects to `/work`
 - `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
 - `/work/search?q=...` -- read-only search across existing Work records
-- `/work/projects`, `/work/tasks`, `/work/open-questions`, `/work/decisions`,
-  `/work/change-requests`, `/work/findings`, `/work/automations` -- type-specific lists optimized
-  for each standalone Work shape
+- `/work/projects`, `/work/tasks`, `/work/needs-resolution`, `/work/change-requests`,
+  `/work/findings`, `/work/automations` -- type-specific lists optimized for each standalone Work
+  shape. `/work/open-questions` and `/work/decisions` redirect to `/work/needs-resolution`.
 - `/work/settings` -- category and subcategory setup, opened from the Work settings gear
 - `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
   project filters such as `focus=blocked`; tasks use due filters such as `focus=due-this-week`;
-  open questions and decisions use answer/review filters such as `focus=needs-answer`.
+  needs resolution uses answer/review filters such as `focus=needs-answer`.
 - `/work/{type}/{id}` -- routeable standalone detail page for one Work item
 
 The top Work search field navigates to `/work/search` and searches existing agent-managed Work
@@ -72,9 +73,11 @@ recent Work changes across the module, and project activity filters that same lo
 the feed can say what changed, which object changed, and which fields moved when structured deltas
 are available.
 
-Open questions and decisions are separate. An open question captures unresolved knowledge; a
-decision captures a commitment or approval with options and a recommendation. Change requests are
-reserved for controlled mutation of code, config, systems, data, auth, deployment, or automation.
+Needs Resolution is the visible queue for unresolved knowledge and unresolved commitments. Open
+questions still capture knowledge that must be answered; decisions still capture a commitment or
+approval with options and a recommendation. The UI groups them because both are things the operator
+needs to resolve. Change requests are reserved for controlled mutation of code, config, systems,
+data, auth, deployment, or automation.
 
 Categories and subcategories are setup records rather than front-and-center Work item lists. Work
 settings presents them as a grouped directory where rows are selected for editing in the right-side

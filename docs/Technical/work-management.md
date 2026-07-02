@@ -31,6 +31,10 @@ on disk only as static migration input and is opened read-only through
 Evidence is attached as provenance through `work_evidence_refs`. Findings may summarize evidence,
 but evidence refs remain provenance rather than standalone work.
 
+The UI presents `open_question` and `decision` together as Needs Resolution. They remain separate
+API/storage types because unanswered knowledge and unmade commitments validate and route
+differently, but the operator sees one queue for things that need to be resolved.
+
 Blocker links are Work-owned relationship records in `work_blocker_links`. They connect the stuck
 Work item to either another Work item or an external person/system/source, with a reason, unblock
 move, status, and timestamps. These links add visible relationship context without replacing the

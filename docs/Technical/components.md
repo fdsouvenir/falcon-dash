@@ -178,15 +178,15 @@ Routeable Work surface for the `/work` module:
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
-- **Type pages** -- `/work/projects`, `/work/tasks`, `/work/open-questions`,
-  `/work/decisions`, `/work/change-requests`, `/work/findings`, and `/work/automations` use
-  type-specific page anatomy instead of one generic list row. Projects show
+- **Type pages** -- `/work/projects`, `/work/tasks`, `/work/needs-resolution`,
+  `/work/change-requests`, `/work/findings`, and `/work/automations` use
+  type-specific page anatomy instead of one generic list row. `/work/open-questions` and
+  `/work/decisions` redirect into `/work/needs-resolution`. Projects show
   an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
-  blockers; open questions show unresolved knowledge and answer context; decisions show commitment
-  options and recommendations; change requests show scope, approval, risk, and verification state;
-  tasks show parent and due state; automations show trigger, next run, and last result; findings
-  render as a feed. Section filters are type-aware and URL-backed through `q`, `status`, `focus`,
-  and finding `source` query params. Row clicks select the right-side quick inspector in place. The
+  blockers; needs resolution shows both unresolved knowledge and commitment choices in one queue;
+  change requests show scope, approval, risk, and verification state; tasks show parent and due
+  state; automations show trigger, next run, and last result; findings render as a feed. Section
+  filters are type-aware and URL-backed through `q`, `status`, `focus`, and finding `source` query params. Row clicks select the right-side quick inspector in place. The
   inspector shows read-only item context, exposes only status/priority/waiting state controls, and
   links to the full item page.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
@@ -208,8 +208,8 @@ Routeable Work surface for the `/work` module:
   supporting sections such as Automations and Findings/evidence render only when attached content
   exists. Project activity renders project-scoped change-log rows so operators can see what object
   changed and the structured field deltas behind the summary.
-  Question details render as a Question Brief with Markdown sections and collapsed history or legacy
-  material instead of one long paragraph.
+  Needs Resolution details render as a Resolution brief with Markdown sections and collapsed
+  history or legacy material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
   categories and subcategories as a read-only grouped directory with an explicit `Add category`
   action and a contextual drawer for category/subcategory creation and edits

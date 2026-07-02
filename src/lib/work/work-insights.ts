@@ -3,7 +3,7 @@ import { openStatuses, type WorkItem, type WorkItemType, type WorkStatus } from 
 export type ProjectHealthLabel =
 	| 'Blocked'
 	| 'Overdue'
-	| 'Needs decision'
+	| 'Needs resolution'
 	| 'Needs attention'
 	| 'No date'
 	| 'On track';
@@ -88,7 +88,7 @@ const defaultCollapsedTitles = [
 const healthLabels: ProjectHealthLabel[] = [
 	'Blocked',
 	'Overdue',
-	'Needs decision',
+	'Needs resolution',
 	'Needs attention',
 	'No date',
 	'On track'
@@ -119,7 +119,7 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 	{
 		type: 'project',
 		key: 'needs-decision',
-		label: 'Needs decision',
+		label: 'Needs resolution',
 		primary: true,
 		description: 'Projects waiting on operator review or an open question'
 	},
@@ -232,7 +232,7 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 	{
 		type: 'decision',
 		key: 'needs-answer',
-		label: 'Needs decision',
+		label: 'Needs answer',
 		primary: true,
 		description: 'Commitments waiting on operator input'
 	},
@@ -424,7 +424,7 @@ export function projectPortfolioPulse(
 		],
 		[
 			'needs-decision',
-			'Needs decision',
+			'Needs resolution',
 			`${basePath}?focus=needs-decision`,
 			'text-status-warning',
 			'Waiting on operator judgment'
@@ -565,7 +565,7 @@ export function riskFlagsFor(
 	if (needsDecision.length > 0) {
 		flags.push({
 			key: 'needs-decision-related',
-			label: 'Needs decision',
+			label: 'Needs resolution',
 			detail: `${needsDecision.length} related ${needsDecision.length === 1 ? 'item needs' : 'items need'} operator review.`,
 			tone: 'text-status-warning'
 		});
@@ -605,7 +605,7 @@ export function projectHealth(
 					child.waiting_on === 'operator' ||
 					(['open_question', 'decision'].includes(child.type) && child.status !== 'complete'))
 		);
-	if (needsDecision) return { label: 'Needs decision', tone: 'text-status-warning', rank: 2 };
+	if (needsDecision) return { label: 'Needs resolution', tone: 'text-status-warning', rank: 2 };
 
 	const needsAttention =
 		project.priority === 'urgent' ||
@@ -897,7 +897,7 @@ function projectChildren(project: WorkItem, items: WorkItem[]): WorkItem[] {
 
 function projectHealthTone(label: ProjectHealthLabel): string {
 	if (label === 'Blocked' || label === 'Overdue') return 'text-status-danger';
-	if (label === 'Needs decision' || label === 'Needs attention') return 'text-status-warning';
+	if (label === 'Needs resolution' || label === 'Needs attention') return 'text-status-warning';
 	if (label === 'On track') return 'text-status-active';
 	return 'text-on-surface-variant';
 }
