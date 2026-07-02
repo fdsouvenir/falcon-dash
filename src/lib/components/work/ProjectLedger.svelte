@@ -89,7 +89,7 @@
 		{ value: 'system', label: 'System' }
 	];
 
-	const anchors: ProjectLedgerAnchor[] = [
+	const baseAnchors: ProjectLedgerAnchor[] = [
 		{ id: 'project-details', number: '01', label: 'Details' },
 		{ id: 'project-current-work', number: '02', label: 'Current Work' },
 		{ id: 'project-plan', number: '03', label: 'Project Plan' },
@@ -175,6 +175,11 @@
 			.flatMap((finding) => finding.source_refs ?? [])
 			.filter((value, index, source) => value.trim() && source.indexOf(value) === index)
 			.slice(0, 5)
+	);
+	const hasAutomations = $derived(automations.length > 0);
+	const hasFindingsOrEvidence = $derived(findings.length > 0 || evidenceLabels.length > 0);
+	const visibleAnchors = $derived(
+		baseAnchors.filter((anchor) => anchor.id !== 'project-signals' || hasAutomations)
 	);
 	const selectedCategory = $derived(
 		categories.find((category) => category.id === draft.category_id) ??
@@ -481,7 +486,7 @@
 			<p class="text-xs font-semibold uppercase text-on-surface-variant">Project ledger</p>
 			<p class="mt-2 text-lg font-semibold text-on-surface">{itemDisplayId(item)}</p>
 			<nav class="mt-5 space-y-1" aria-label="Project ledger sections">
-				{#each anchors as anchor (anchor.id)}
+				{#each visibleAnchors as anchor (anchor.id)}
 					<a
 						href={`#${anchor.id}`}
 						class="falcon-focus flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-2 hover:text-on-surface"
@@ -889,86 +894,84 @@
 					</div>
 				</section>
 
-				<section id="project-signals" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-status-active"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Automations</h3>
-					</div>
-					<div class="grid gap-2 md:grid-cols-2">
-						{#each automations as automation (automation.id)}
-							<a
-								href={resolve(routeFor(automation))}
-								class="rounded-md border border-outline-variant/45 bg-surface-0/35 p-4 transition hover:bg-surface-2/55"
-							>
-								<div class="flex items-center justify-between gap-3">
-									<p class="text-sm font-semibold text-on-surface">{automation.title}</p>
-									<span
-										class="text-xs {automation.enabled
-											? 'text-status-active'
-											: 'text-status-muted'}"
-									>
-										{automation.enabled ? 'Enabled' : 'Paused'}
-									</span>
-								</div>
-								<p class="mt-2 text-sm text-on-surface-variant">
-									{itemPrimaryText(automation)}
-								</p>
-								<p class="mt-2 text-xs text-on-surface-variant">
-									{firstText(automation.trigger_type, 'manual')} · {dateLabel(automation)}
-								</p>
-							</a>
-						{:else}
-							<p
-								class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant md:col-span-2"
-							>
-								No automations are attached to this project.
-							</p>
-						{/each}
-					</div>
-				</section>
-
-				<section id="project-findings" class="scroll-mt-20">
-					<div class="mb-3 flex items-center gap-2">
-						<span class="h-2 w-2 rounded-full bg-on-surface-variant"></span>
-						<h3 class="text-sm font-semibold text-on-surface">Findings and evidence</h3>
-					</div>
-					<div
-						class="divide-y divide-outline-variant/35 rounded-lg border border-outline-variant/45 bg-surface-0/35"
-					>
-						{#each findings as finding (finding.id)}
-							<a
-								href={resolve(routeFor(finding))}
-								class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/55 md:grid-cols-[7rem_minmax(0,1fr)_9rem]"
-							>
-								<p class="text-xs text-on-surface-variant">{formatDateTime(finding.created_at)}</p>
-								<div class="min-w-0">
-									<p class="text-sm font-semibold text-on-surface">{finding.title}</p>
-									<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-										{itemPrimaryText(finding)}
-									</p>
-								</div>
-								<p class="text-xs text-on-surface-variant md:text-right">
-									{firstText(finding.source_refs?.[0], finding.owner, 'Work')}
-								</p>
-							</a>
-						{:else}
-							<p class="px-4 py-3 text-sm text-on-surface-variant">
-								No findings are attached to this project.
-							</p>
-						{/each}
-					</div>
-					{#if evidenceLabels.length}
-						<div class="mt-3 flex flex-wrap gap-2">
-							{#each evidenceLabels as evidence (evidence)}
-								<span
-									class="rounded-md border border-outline-variant/50 bg-surface-0/35 px-2 py-1 text-xs font-semibold text-on-surface-variant"
+				{#if hasAutomations}
+					<section id="project-signals" class="scroll-mt-20">
+						<div class="mb-3 flex items-center gap-2">
+							<span class="h-2 w-2 rounded-full bg-status-active"></span>
+							<h3 class="text-sm font-semibold text-on-surface">Automations</h3>
+						</div>
+						<div class="grid gap-2 md:grid-cols-2">
+							{#each automations as automation (automation.id)}
+								<a
+									href={resolve(routeFor(automation))}
+									class="rounded-md border border-outline-variant/45 bg-surface-0/35 p-4 transition hover:bg-surface-2/55"
 								>
-									{evidence}
-								</span>
+									<div class="flex items-center justify-between gap-3">
+										<p class="text-sm font-semibold text-on-surface">{automation.title}</p>
+										<span
+											class="text-xs {automation.enabled
+												? 'text-status-active'
+												: 'text-status-muted'}"
+										>
+											{automation.enabled ? 'Enabled' : 'Paused'}
+										</span>
+									</div>
+									<p class="mt-2 text-sm text-on-surface-variant">
+										{itemPrimaryText(automation)}
+									</p>
+									<p class="mt-2 text-xs text-on-surface-variant">
+										{firstText(automation.trigger_type, 'manual')} · {dateLabel(automation)}
+									</p>
+								</a>
 							{/each}
 						</div>
-					{/if}
-				</section>
+					</section>
+				{/if}
+
+				{#if hasFindingsOrEvidence}
+					<section id="project-findings" class="scroll-mt-20">
+						<div class="mb-3 flex items-center gap-2">
+							<span class="h-2 w-2 rounded-full bg-on-surface-variant"></span>
+							<h3 class="text-sm font-semibold text-on-surface">Findings and evidence</h3>
+						</div>
+						{#if findings.length}
+							<div
+								class="divide-y divide-outline-variant/35 rounded-lg border border-outline-variant/45 bg-surface-0/35"
+							>
+								{#each findings as finding (finding.id)}
+									<a
+										href={resolve(routeFor(finding))}
+										class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/55 md:grid-cols-[7rem_minmax(0,1fr)_9rem]"
+									>
+										<p class="text-xs text-on-surface-variant">
+											{formatDateTime(finding.created_at)}
+										</p>
+										<div class="min-w-0">
+											<p class="text-sm font-semibold text-on-surface">{finding.title}</p>
+											<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+												{itemPrimaryText(finding)}
+											</p>
+										</div>
+										<p class="text-xs text-on-surface-variant md:text-right">
+											{firstText(finding.source_refs?.[0], finding.owner, 'Work')}
+										</p>
+									</a>
+								{/each}
+							</div>
+						{/if}
+						{#if evidenceLabels.length}
+							<div class="mt-3 flex flex-wrap gap-2">
+								{#each evidenceLabels as evidence (evidence)}
+									<span
+										class="rounded-md border border-outline-variant/50 bg-surface-0/35 px-2 py-1 text-xs font-semibold text-on-surface-variant"
+									>
+										{evidence}
+									</span>
+								{/each}
+							</div>
+						{/if}
+					</section>
+				{/if}
 
 				<section id="project-activity" class="scroll-mt-20">
 					<div class="mb-3 flex items-center gap-2">

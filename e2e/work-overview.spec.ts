@@ -728,6 +728,9 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByText('Urgent').first()).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
 			await expect(page.getByText('No active blockers.')).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Automations' })).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'Findings and evidence' })).toHaveCount(0);
 			await expect(page.getByRole('link').filter({ hasText: seeded.project.title })).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
@@ -771,7 +774,9 @@ test.describe('work overview executive status board', () => {
 
 			await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
 			await expect(page.getByTestId('recent-activity-list')).toHaveCount(1);
-			await expect(page.getByTestId('recent-activity-list')).toContainText(seeded.question.title);
+			await expect(page.getByTestId('recent-activity-list')).toContainText(/E2E /);
+			await expect(page.getByTestId('recent-activity-list')).toContainText(/\b(Created|Updated)\b/);
+			await expect(page.getByText(/existing work item/i)).toHaveCount(0);
 			await expect(page.getByText(/\blinked\b/i)).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);

@@ -200,9 +200,10 @@ Routeable Work surface for the `/work` module:
   Milestones are inert headings with a title and optional one-sentence description; they are added
   from the project right rail and do not have standalone list or detail pages. Work attached
   directly to the project appears in a project-level work group instead of being mixed into the
-  milestone structure. Automations and findings remain supporting project context. Project activity
-  renders project-scoped change-log rows so operators can see what object changed and the structured
-  field deltas behind the summary.
+  milestone structure. Project Plan remains visible even before much structure exists, while
+  supporting sections such as Automations and Findings/evidence render only when attached content
+  exists. Project activity renders project-scoped change-log rows so operators can see what object
+  changed and the structured field deltas behind the summary.
   Question details render as a Question Brief with Markdown sections and collapsed history or legacy
   material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
