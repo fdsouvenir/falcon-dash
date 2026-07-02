@@ -120,7 +120,7 @@ pages. Section list rows follow a breakpoint-specific contract:
   full header stays fixed in the list frame while only the row list scrolls.
 - At desktop sizes, the quick inspector is a fixed rail directly under the Work header with no
   independent scrollport. Its identity summary stays above a combined state-and-facts block, while
-  the details route action stays pinned to the bottom.
+  the details route action stays directly below that block.
 
 ## Chat components
 

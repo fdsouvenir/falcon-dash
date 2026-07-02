@@ -3216,7 +3216,7 @@
 										</p>
 									</div>
 									<form
-										class="min-h-0 flex-1 space-y-3 p-4"
+										class="space-y-3 p-4"
 										onsubmit={saveSelected}
 										data-testid="work-quick-state"
 									>
@@ -3295,7 +3295,7 @@
 											<p class="text-sm text-status-danger">{error}</p>
 										{/if}
 									</form>
-									<div class="mt-auto border-t border-outline-variant/60 p-4">
+									<div class="px-4 pb-4">
 										<a
 											href={resolve(routeFor(selectedItem))}
 											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"

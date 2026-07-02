@@ -819,6 +819,9 @@ test.describe('work overview executive status board', () => {
 			const openFullPage = page.getByRole('link', { name: 'Open details' });
 			const openFullPageBox = await openFullPage.boundingBox();
 			expect(openFullPageBox?.y ?? 0).toBeGreaterThan(stateBox?.y ?? 0);
+			expect(openFullPageBox?.y ?? 0).toBeLessThan(
+				(stateBox?.y ?? 0) + (stateBox?.height ?? 0) + 40
+			);
 			await taskRow.click();
 			await expect(taskRow).not.toHaveAttribute('aria-pressed', 'true');
 			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
