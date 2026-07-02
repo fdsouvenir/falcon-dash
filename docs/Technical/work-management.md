@@ -66,6 +66,12 @@ API and debug contexts may use raw `id` fields. Avoid using `W-{id}` as a blanke
 objects; the `W-` prefix is reserved for generated context filenames where collision-proof file
 names are useful.
 
+When `ORIGIN` is configured with a public dashboard FQDN, generated agent instructions should link
+specific Work objects inline, such as `[Project 4]({public-origin}/work/projects/4)`. Do not use
+`localhost`, `127.0.0.1`, or relative paths for operator-facing object links. If no public origin is
+available, generated guidance omits public URLs and agents should use plain references such as
+`Project 4`.
+
 ## Server Modules
 
 Work server code lives in `src/lib/server/work/`:
@@ -160,6 +166,12 @@ The default context directory is:
 ```
 
 Override it with `FALCON_DASH_WORK_CONTEXT_DIR`.
+
+`ORIGIN` is the source of truth for public operator links. When set to a public origin, the writer
+normalizes trailing slashes, writes `Public dashboard URL: {ORIGIN}` into `FALCON-DASH.md`, writes
+public object URLs into `Work/W-{id}.md`, and teaches `WORK-API.md` to use inline Markdown links in
+operator-facing messages. Local origins such as `localhost` and `127.0.0.1` are ignored for public
+object links; missing or local origins produce plain object references only.
 
 For local UI review, `npm run seed:work` seeds the running dev server with stable `Dev:` Work
 records across projects, tasks, Needs Resolution variants, change requests, automations, findings, and

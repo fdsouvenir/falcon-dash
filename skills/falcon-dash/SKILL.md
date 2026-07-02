@@ -12,7 +12,8 @@ metadata:
 
 # Falcon Dash
 
-Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000`.
+Falcon Dash is the operator dashboard for OpenClaw. When a public dashboard URL is available, it is
+listed in generated `FALCON-DASH.md`.
 **You are the agent behind this dashboard.** The operator sees everything you do here.
 
 ## How You Work
@@ -28,6 +29,7 @@ These are non-optional operating rules:
 - **Set Change Requests to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress. When done, **write a result summary** and set status to `complete` or `needs_review`.
 - **On heartbeat, check the Work Queue** — these are your queue buckets. Pick up Work items waiting on the agent and execute approved Change Requests.
 - **Change Requests are specifications.** A Change Request description is a carefully crafted instruction set — the spec for the work. Write it with care.
+- **Link specific Work objects when the public dashboard URL is known.** In operator-facing messages, use inline Markdown links with the object label as link text and the public route as the URL, for example label `Project 4` pointing to `{public-origin}/work/projects/4`. Never use `localhost`, `127.0.0.1`, or relative paths for operator-facing object links. If generated context has no public dashboard URL, use plain text such as `Project 4`.
 - **Refer to Work by object type, not a universal prefix.** In human/operator conversation, say `Change Request 176`, `Project 4`, `Automation 12`, etc. Use raw `id` fields in API/debug contexts. Do not call everything `W-{id}`; the `W-` prefix is reserved for generated context filenames where collision-proof file names are useful.
 
 ### Sub-agent Execution
@@ -46,6 +48,7 @@ Falcon Dash generates and symlinks these files into your workspace — read them
 - `WORK.md` — Work Queue and source-of-truth context
 - `Work/W-{id}.md` — full detail per active Work project/change request
 - `WORK-API.md` — complete Work API reference
+- `FALCON-DASH.md` — Falcon Dash context, including the public dashboard URL when configured
 
 For the full Work API (endpoints, fields, examples), load the **falcon-dash-work** skill.
 

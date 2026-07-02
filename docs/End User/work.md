@@ -99,5 +99,9 @@ Agents should use `/api/work/*` or generated context files:
 
 In normal conversation and UI copy, refer to items by object type and ID, such as
 `Change Request 176` or `Project 4`. The `W-` prefix is only for generated context filenames.
+When generated `FALCON-DASH.md` includes a public dashboard URL, agents should turn specific
+object references into inline Markdown links such as `[Project 4]({public-origin}/work/projects/4)`.
+If no public URL is configured, agents should keep those references as plain text and never use
+`localhost`, `127.0.0.1`, or relative paths in operator-facing object links.
 
 The former work interface is not part of active Falcon Dash.

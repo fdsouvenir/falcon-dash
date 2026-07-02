@@ -10,7 +10,8 @@ metadata:
 
 # Falcon Dash Work API
 
-Base URL: `http://localhost:3000/api/work`
+Base URL: `/api/work`, or `{public-origin}/api/work` when generated `FALCON-DASH.md` lists a
+public dashboard URL.
 
 Work is the agent-facing source of truth for Falcon Dash. Old PM data may exist on disk only as
 archived migration input; there is no active PM API.
@@ -48,10 +49,19 @@ Deleting a category or subcategory removes that directory entry and unassigns li
 
 ## ID References
 
-Use object-type references in human/operator conversation: `Change Request 176`, `Project 4`,
-`Automation 12`, `Needs Resolution 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
-all Work items as `W-{id}`. The `W-` prefix is reserved for generated context filenames where
-collision-proof file names are useful.
+Use inline Markdown links for specific Work objects in human/operator conversation when generated
+`FALCON-DASH.md` lists a public dashboard URL. Use the object reference as link text and the public
+route as the URL: `Project 4` points to `{public-origin}/work/projects/4`, `Task 12` points to
+`{public-origin}/work/tasks/12`, `Needs Resolution 9` points to
+`{public-origin}/work/needs-resolution/9`, and `Change Request 176` points to
+`{public-origin}/work/change-requests/176`.
+
+Never use `localhost`, `127.0.0.1`, or relative paths for operator-facing object links. If no
+public origin is available, use plain object-type references: `Change Request 176`, `Project 4`,
+`Automation 12`, `Needs Resolution 9`, etc.
+
+Use raw `id` values in API/debug contexts. Do not prefix all Work items as `W-{id}`. The `W-`
+prefix is reserved for generated context filenames where collision-proof file names are useful.
 
 ## Statuses
 
@@ -160,7 +170,7 @@ summary, and structured `changes` entries with field labels plus before/after va
 Create example:
 
 ```bash
-curl -X POST http://localhost:3000/api/work/items \
+curl -X POST "{public-origin}/api/work/items" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "task",

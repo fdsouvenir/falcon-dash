@@ -1,6 +1,10 @@
 import { listWorkQueue, listWorkItems } from './crud.js';
 import type { WorkContextResponse, WorkItem } from './types.js';
 
+export interface WorkContextOptions {
+	publicOrigin?: string | null;
+}
+
 export function generateWorkContext(): WorkContextResponse {
 	const generated_at = Math.floor(Date.now() / 1000);
 	const queue = listWorkQueue();
@@ -10,7 +14,7 @@ export function generateWorkContext(): WorkContextResponse {
 	let markdown = '# Work Queue\n\n';
 	markdown += `> Generated: ${new Date(generated_at * 1000).toISOString()}\n\n`;
 	markdown +=
-		'Falcon Dash Work is the agent-facing source of truth. Use Work v2 nouns: Project, Milestone, Task, Open Question, Decision, Change Request, Finding, and Automation. “Next up” is a project pointer to the current actionable item, not a standalone work type.\n\n';
+		'Falcon Dash Work is the agent-facing source of truth. Use Work nouns: Project, project-local Milestone, Task, Needs Resolution, Change Request, Finding, and Automation. “Next up” is a project pointer to the current actionable item, not a standalone work type.\n\n';
 
 	markdown += renderCaptureSummary(counts);
 
@@ -45,9 +49,11 @@ export function generateWorkContext(): WorkContextResponse {
 	};
 }
 
-export function generateWorkItemContext(item: WorkItem): string {
+export function generateWorkItemContext(item: WorkItem, options: WorkContextOptions = {}): string {
 	let markdown = `# W-${item.id}: ${item.title}\n\n`;
 	markdown += `**Type:** ${item.type} | **Status:** ${item.status} | **Priority:** ${item.priority ?? 'normal'}\n`;
+	const publicUrl = workItemPublicUrl(item, options.publicOrigin);
+	if (publicUrl) markdown += `**Public URL:** ${publicUrl}\n`;
 	if (item.owner || item.waiting_on) {
 		markdown += `**Owner:** ${item.owner ?? '-'} | **Waiting on:** ${item.waiting_on ?? '-'}\n`;
 	}
@@ -112,6 +118,29 @@ export function generateWorkItemContext(item: WorkItem): string {
 	}
 	if (item.result) markdown += `\n## Result\n\n${item.result}\n`;
 	return markdown;
+}
+
+export function workItemPublicUrl(item: WorkItem, publicOrigin?: string | null): string | null {
+	if (!publicOrigin) return null;
+	const route = workItemRoute(item);
+	return route ? `${publicOrigin}${route}` : null;
+}
+
+function workItemRoute(item: WorkItem): string | null {
+	if (item.type === 'milestone') {
+		return item.parent_item_id ? `/work/projects/${item.parent_item_id}` : null;
+	}
+	return `/work/${pathForType(item.type)}/${item.id}`;
+}
+
+function pathForType(type: WorkItem['type']): string {
+	if (type === 'project') return 'projects';
+	if (type === 'task') return 'tasks';
+	if (type === 'open_question' || type === 'decision') return 'needs-resolution';
+	if (type === 'change_request') return 'change-requests';
+	if (type === 'finding') return 'findings';
+	if (type === 'automation') return 'automations';
+	return 'projects';
 }
 
 function renderCaptureSummary(counts: Record<string, number>): string {

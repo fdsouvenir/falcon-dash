@@ -36,14 +36,15 @@ export function generateAndWriteContext(): ContextGenerationResult {
 	const timestamp = Math.floor(Date.now() / 1000);
 	const contextDir = getWorkContextDir();
 	const projectsDir = join(contextDir, 'Work');
+	const publicOrigin = getPublicDashboardOrigin();
 	let filesWritten = 0;
 
 	mkdirSync(projectsDir, { recursive: true });
 
 	const workContext = generateWorkContext();
 	writeFileSync(join(contextDir, 'WORK.md'), workContext.markdown);
-	writeFileSync(join(contextDir, 'WORK-API.md'), generateWorkApiDoc());
-	writeFileSync(join(contextDir, 'FALCON-DASH.md'), generateFalconDashContext());
+	writeFileSync(join(contextDir, 'WORK-API.md'), generateWorkApiDoc(publicOrigin));
+	writeFileSync(join(contextDir, 'FALCON-DASH.md'), generateFalconDashContext(publicOrigin));
 	filesWritten += 3;
 
 	const activeItems = listWorkItems({ limit: 500 });
@@ -51,7 +52,7 @@ export function generateAndWriteContext(): ContextGenerationResult {
 	for (const item of activeItems) {
 		const filename = `W-${item.id}.md`;
 		activeFilenames.add(filename);
-		writeFileSync(join(projectsDir, filename), generateWorkItemContext(item));
+		writeFileSync(join(projectsDir, filename), generateWorkItemContext(item, { publicOrigin }));
 		filesWritten += 1;
 	}
 
@@ -79,6 +80,21 @@ export function generateAndWriteContext(): ContextGenerationResult {
 	return { filesWritten, timestamp, contextDir };
 }
 
+export function getPublicDashboardOrigin(): string | null {
+	const rawOrigin = (process.env.ORIGIN ?? env.ORIGIN)?.trim();
+	if (!rawOrigin) return null;
+	const normalized = rawOrigin.replace(/\/+$/, '');
+	try {
+		const url = new URL(normalized);
+		if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1') {
+			return null;
+		}
+		return `${url.protocol}//${url.host}`;
+	} catch {
+		return null;
+	}
+}
+
 function ensureSymlink(linkPath: string, targetPath: string): void {
 	mkdirSync(dirname(linkPath), { recursive: true });
 	try {
@@ -94,7 +110,8 @@ function ensureSymlink(linkPath: string, targetPath: string): void {
 	}
 }
 
-function generateFalconDashContext(): string {
+export function generateFalconDashContext(publicOrigin = getPublicDashboardOrigin()): string {
+	const publicOriginLine = publicOrigin ? `- Public dashboard URL: ${publicOrigin}\n` : '';
 	return `# Falcon Dash
 
 Falcon Dash is the OpenClaw operator dashboard plugin. The active work system is the Work module.
@@ -105,15 +122,24 @@ Falcon Dash is the OpenClaw operator dashboard plugin. The active work system is
 - Context: ${getWorkContextDir()}
 - Primary queue: WORK.md
 - API reference: WORK-API.md
+${publicOriginLine}
+## Operator References
+
+${objectLinkGuidance(publicOrigin)}
 
 Archived PM data is not part of the active Falcon Dash contract. If an old source database exists on disk, treat it only as migration source material.
 `;
 }
 
-function generateWorkApiDoc(): string {
+export function generateWorkApiDoc(publicOrigin = getPublicDashboardOrigin()): string {
+	const publicBaseUrl = publicOrigin ? `${publicOrigin}/api/work` : '/api/work';
 	return `# Falcon Dash Work API
 
-Base URL: http://localhost:3000/api/work
+Base URL: ${publicBaseUrl}
+
+## Operator References
+
+${objectLinkGuidance(publicOrigin)}
 
 ## Items
 
@@ -175,4 +201,11 @@ Returns the generated Work markdown plus queue stats.
 
 Migration reads the old PM database as an external, read-only source and writes to the new Work database. The old PM database remains untouched on disk.
 `;
+}
+
+function objectLinkGuidance(publicOrigin: string | null): string {
+	if (!publicOrigin) {
+		return 'No public dashboard URL is configured. In operator-facing messages, use plain object references such as `Project 4`, `Task 12`, or `Needs Resolution 9`; do not use localhost, 127.0.0.1, or relative paths.\n';
+	}
+	return `Use inline Markdown links for specific Falcon Dash objects in operator-facing messages. Examples: [Project 4](${publicOrigin}/work/projects/4), [Task 12](${publicOrigin}/work/tasks/12), [Needs Resolution 9](${publicOrigin}/work/needs-resolution/9), [Change Request 176](${publicOrigin}/work/change-requests/176), [Finding 22](${publicOrigin}/work/findings/22), and [Automation 31](${publicOrigin}/work/automations/31). Milestones link to their parent project; categories and subcategories link to ${publicOrigin}/work/settings. Do not use localhost, 127.0.0.1, or relative paths for operator-facing object references.\n`;
 }

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import Database from 'better-sqlite3';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -44,6 +44,7 @@ afterEach(() => {
 	delete process.env.FALCON_DASH_WORK_CONTEXT_DIR;
 	delete process.env.FALCON_DASH_ARCHIVED_WORK_SOURCE_DATABASE_PATH;
 	delete process.env.FALCON_DASH_WORK_SKIP_WORKSPACE_SYMLINKS;
+	delete process.env.ORIGIN;
 	rmSync(tempDir, { recursive: true, force: true });
 });
 
@@ -174,6 +175,92 @@ describe('Work migration', () => {
 		expect(generateWorkContext().markdown).toContain(
 			'Falcon Dash Work is the agent-facing source of truth'
 		);
+	});
+
+	it('writes public dashboard links when ORIGIN is configured', () => {
+		process.env.ORIGIN = 'https://falcon.example.com/';
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Linked project',
+			status: 'in_progress',
+			actor: 'agent'
+		});
+		const task = createWorkItem({
+			type: 'task',
+			title: 'Linked task',
+			parent_item_id: project.id,
+			status: 'ready',
+			actor: 'agent'
+		});
+		const milestone = createWorkItem({
+			type: 'milestone',
+			title: 'Linked milestone',
+			parent_item_id: project.id,
+			status: 'in_progress',
+			actor: 'agent'
+		});
+
+		const result = generateAndWriteContext();
+		const falconDashContext = readFileSync(join(result.contextDir, 'FALCON-DASH.md'), 'utf8');
+		const workApiDoc = readFileSync(join(result.contextDir, 'WORK-API.md'), 'utf8');
+		const projectDoc = readFileSync(join(result.contextDir, 'Work', `W-${project.id}.md`), 'utf8');
+		const taskDoc = readFileSync(join(result.contextDir, 'Work', `W-${task.id}.md`), 'utf8');
+		const milestoneDoc = readFileSync(
+			join(result.contextDir, 'Work', `W-${milestone.id}.md`),
+			'utf8'
+		);
+
+		expect(falconDashContext).toContain('Public dashboard URL: https://falcon.example.com');
+		expect(workApiDoc).toContain('Base URL: https://falcon.example.com/api/work');
+		expect(workApiDoc).toContain('[Project 4](https://falcon.example.com/work/projects/4)');
+		expect(projectDoc).toContain(
+			`**Public URL:** https://falcon.example.com/work/projects/${project.id}`
+		);
+		expect(taskDoc).toContain(`**Public URL:** https://falcon.example.com/work/tasks/${task.id}`);
+		expect(milestoneDoc).toContain(
+			`**Public URL:** https://falcon.example.com/work/projects/${project.id}`
+		);
+		expect(falconDashContext).not.toContain('https://falcon.example.com//');
+		expect(workApiDoc).not.toContain('https://falcon.example.com//');
+	});
+
+	it('omits public object links when ORIGIN is missing', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Plain project',
+			status: 'ready',
+			actor: 'agent'
+		});
+
+		const result = generateAndWriteContext();
+		const falconDashContext = readFileSync(join(result.contextDir, 'FALCON-DASH.md'), 'utf8');
+		const workApiDoc = readFileSync(join(result.contextDir, 'WORK-API.md'), 'utf8');
+		const projectDoc = readFileSync(join(result.contextDir, 'Work', `W-${project.id}.md`), 'utf8');
+
+		expect(falconDashContext).not.toContain('Public dashboard URL');
+		expect(workApiDoc).toContain('Base URL: /api/work');
+		expect(workApiDoc).toContain('use plain object references');
+		expect(projectDoc).not.toContain('Public URL');
+		expect(falconDashContext).not.toContain('http://localhost');
+		expect(workApiDoc).not.toContain('http://localhost');
+	});
+
+	it('does not use local origins for public operator links', () => {
+		process.env.ORIGIN = 'http://localhost:3000';
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Local project',
+			status: 'ready',
+			actor: 'agent'
+		});
+
+		const result = generateAndWriteContext();
+		const workApiDoc = readFileSync(join(result.contextDir, 'WORK-API.md'), 'utf8');
+		const projectDoc = readFileSync(join(result.contextDir, 'Work', `W-${project.id}.md`), 'utf8');
+
+		expect(workApiDoc).toContain('Base URL: /api/work');
+		expect(projectDoc).not.toContain('Public URL');
+		expect(workApiDoc).not.toContain('http://localhost:3000');
 	});
 });
 
