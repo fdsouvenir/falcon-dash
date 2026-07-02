@@ -59,11 +59,13 @@ current next step, and any active blocker relationships. The pinned right rail k
 creation and the static operating brief close by without repeating those details. The project list keeps blockers
 lightweight with labels such as "2 holding up"; the project detail uses the same wording and
 explains each active blocker as a relationship: what is stuck, what is blocking it, why, and the
-next unblock move. The same blocker context appears inline under the affected milestone or work row
-so it is visible where the stuck work lives. Milestones are short checkpoints inside the project,
-not separate pages; the project right rail includes an Add milestone control for a title and
-one-sentence description. Work that is not attached to a milestone appears as project-level work,
-while automations, findings, and activity remain supporting sections.
+next unblock move. Project Plan presents milestones as sequenced phase blocks with due dates and
+nested work rows, not as a separate milestone list plus unrelated tasks. The same blocker context
+appears inline under the affected milestone or work row so it is visible where the stuck work lives.
+Milestones are short checkpoints inside the project, not separate pages; the project right rail
+includes an Add milestone control for a title and one-sentence description. Work that is not
+attached to a milestone appears as project-level work, while automations, findings, and activity
+remain supporting sections.
 
 Activity is a Work change log, not a loose list of recently touched records. Overview activity shows
 recent Work changes across the module, and project activity filters that same log to the project so

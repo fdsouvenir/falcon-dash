@@ -883,26 +883,45 @@
 						<span class="h-2 w-2 rounded-full bg-status-info"></span>
 						<h3 class="text-sm font-semibold text-on-surface">Project plan</h3>
 					</div>
-					<div class="space-y-4">
-						{#each projectPlanGroups as group (group.id)}
-							<div
-								class="overflow-hidden rounded-lg border border-outline-variant/55 bg-surface-0/35"
-								data-testid="project-plan-group"
-							>
-								<div class="border-b border-outline-variant/45 bg-surface-1/45 px-4 py-3">
-									<div class="min-w-0">
-										<div class="flex flex-wrap items-center gap-2">
-											{#if group.milestone}
-												<p class="text-base font-semibold text-on-surface">{group.title}</p>
-											{:else}
-												<p class="text-base font-semibold text-on-surface">{group.title}</p>
-											{/if}
+					{#if projectPlanGroups.length}
+						<div
+							class="grid gap-3 rounded-lg border border-outline-variant/55 bg-surface-0/35 p-3 lg:grid-cols-2 2xl:grid-cols-3"
+						>
+							{#each projectPlanGroups as group, index (group.id)}
+								<article
+									class="min-w-0 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-1/45"
+									data-testid="project-plan-group"
+								>
+									<div class="border-b border-outline-variant/40 bg-surface-2/35 px-3 py-3">
+										<div class="flex items-start gap-3">
+											<div
+												class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-status-info/35 bg-status-info-bg/25 font-mono text-xs font-semibold text-status-info"
+											>
+												{String(index + 1).padStart(2, '0')}
+											</div>
+											<div class="min-w-0 flex-1">
+												<div class="flex flex-wrap items-center justify-between gap-2">
+													<p class="text-xs font-semibold text-on-surface-variant">
+														{group.milestone ? 'Milestone' : 'Project-level'}
+													</p>
+													{#if group.milestone}
+														<span
+															class="rounded-md border border-outline-variant/45 px-2 py-1 text-xs font-semibold text-on-surface-variant"
+														>
+															{dateLabel(group.milestone)}
+														</span>
+													{/if}
+												</div>
+												<p class="mt-1 text-base font-semibold leading-6 text-on-surface">
+													{group.title}
+												</p>
+												{#if group.description}
+													<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+														{group.description}
+													</p>
+												{/if}
+											</div>
 										</div>
-										{#if group.description}
-											<p class="mt-1 text-sm leading-6 text-on-surface-variant">
-												{group.description}
-											</p>
-										{/if}
 										{#if group.milestone && blockerLinksForItem(group.milestone.id).length}
 											<div class="mt-3 space-y-2" data-testid="project-plan-blockers">
 												{#each blockerLinksForItem(group.milestone.id) as link (link.id)}
@@ -927,23 +946,30 @@
 											</div>
 										{/if}
 									</div>
-								</div>
-								<div class="divide-y divide-outline-variant/35">
-									{#each group.work as work (work.id)}
-										<a
-											href={resolve(routeFor(work))}
-											class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/55 md:grid-cols-[8rem_minmax(0,1fr)_8rem]"
-										>
-											<div class="flex flex-wrap items-center gap-2 md:block">
-												<p class="text-xs font-semibold text-on-surface-variant">
-													{typeLabel(work)}
-												</p>
-												<p class="mt-0 text-xs {statusTone(work.status)} md:mt-2">
-													{formatStatus(work.status)}
-												</p>
-											</div>
-											<div class="min-w-0">
-												<p class="text-sm font-semibold text-on-surface">{work.title}</p>
+									<div class="divide-y divide-outline-variant/35">
+										{#each group.work as work (work.id)}
+											<a
+												href={resolve(routeFor(work))}
+												class="block px-3 py-3 transition hover:bg-surface-2/55"
+											>
+												<div class="flex min-w-0 flex-wrap items-start justify-between gap-3">
+													<div class="min-w-0 flex-1">
+														<div class="flex flex-wrap items-center gap-2">
+															<span class="text-xs font-semibold text-on-surface-variant">
+																{typeLabel(work)}
+															</span>
+															<span class="text-xs {statusTone(work.status)}">
+																{formatStatus(work.status)}
+															</span>
+														</div>
+														<p class="mt-1 text-sm font-semibold leading-5 text-on-surface">
+															{work.title}
+														</p>
+													</div>
+													<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+														{dateLabel(work)}
+													</span>
+												</div>
 												<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
 													{itemPrimaryText(work)}
 												</p>
@@ -980,26 +1006,23 @@
 														{/each}
 													</div>
 												{/if}
-											</div>
-											<p class="text-xs text-on-surface-variant md:text-right">
-												{dateLabel(work)}
+											</a>
+										{:else}
+											<p class="px-3 py-3 text-sm text-on-surface-variant">
+												No work is attached here yet.
 											</p>
-										</a>
-									{:else}
-										<p class="px-4 py-3 text-sm text-on-surface-variant">
-											No work is attached here yet.
-										</p>
-									{/each}
-								</div>
-							</div>
-						{:else}
-							<p
-								class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant"
-							>
-								No project plan has been captured yet.
-							</p>
-						{/each}
-					</div>
+										{/each}
+									</div>
+								</article>
+							{/each}
+						</div>
+					{:else}
+						<p
+							class="rounded-md border border-outline-variant/45 bg-surface-0/25 p-4 text-sm text-on-surface-variant"
+						>
+							No project plan has been captured yet.
+						</p>
+					{/if}
 				</section>
 
 				{#if hasAutomations}
