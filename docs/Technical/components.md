@@ -117,8 +117,10 @@ pages. Section list rows follow a breakpoint-specific contract:
 - Below `xl`, rows skip quick inspection and single-tap directly into the standalone detail route.
 - The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
   line above search, type-specific primary filter chips, compact More filters, and refresh. That
-  full header stays fixed in the list frame while only the row list scrolls. The inspector remains
-  visible and internally scrollable.
+  full header stays fixed in the list frame while only the row list scrolls.
+- At desktop sizes, the quick inspector is a fixed rail directly under the Work header with no
+  independent scrollport. Its identity summary stays above a combined state-and-facts block, while
+  the full-page route action stays pinned to the bottom.
 
 ## Chat components
 

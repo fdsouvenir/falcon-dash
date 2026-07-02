@@ -3193,7 +3193,8 @@
 
 						{#if showQuickPane && activeType !== 'project'}
 							<aside
-								class="falcon-soft-panel sticky top-[4.75rem] flex h-[calc(100dvh-6.25rem)] flex-col overflow-y-auto"
+								class="falcon-soft-panel sticky top-[4.75rem] flex h-full min-h-0 flex-col overflow-hidden"
+								data-testid="work-quick-panel"
 							>
 								{#if selectedItem}
 									<div class="border-b border-outline-variant/60 p-4">
@@ -3213,72 +3214,74 @@
 												? questionPrimaryAnswer(selectedItem)
 												: detailLead(selectedItem)}
 										</p>
-										<a
-											href={resolve(routeFor(selectedItem))}
-											class="falcon-focus mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-										>
-											Open full page <ArrowRight class="h-4 w-4" />
-										</a>
-									</div>
-									<div class="grid grid-cols-2 gap-2 border-b border-outline-variant/50 p-4">
-										{#each quickFacts(selectedItem).slice(0, 4) as fact (fact.label)}
-											<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
-												<p class="text-xs text-on-surface-variant">{fact.label}</p>
-												<p
-													class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
-														''}"
-												>
-													{fact.value}
-												</p>
-											</div>
-										{/each}
 									</div>
 									<form
-										class="space-y-4 p-4"
+										class="min-h-0 flex-1 space-y-3 p-4"
 										onsubmit={saveSelected}
 										data-testid="work-quick-state"
 									>
 										<div>
-											<h4 class="text-sm font-semibold text-on-surface">Quick state</h4>
+											<h4 class="text-sm font-semibold text-on-surface">State</h4>
 											<p class="mt-1 text-xs leading-5 text-on-surface-variant">
 												Update lightweight state only. Narrative fields stay agent-managed.
 											</p>
 										</div>
-										<label class="grid gap-1 text-xs text-on-surface-variant">
-											Status
-											<select
-												bind:value={draft.status}
-												class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-											>
-												{#each workStatuses as status (status)}
-													<option value={status}>{sentenceCase(formatStatus(status))}</option>
-												{/each}
-											</select>
-										</label>
-										<div class="grid grid-cols-2 gap-2">
+										<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
 											<label class="grid gap-1 text-xs text-on-surface-variant">
-												Priority
+												Status
 												<select
-													bind:value={draft.priority}
+													bind:value={draft.status}
 													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
 												>
-													<option value="low">Low</option>
-													<option value="normal">Normal</option>
-													<option value="high">High</option>
-													<option value="urgent">Urgent</option>
-												</select>
-											</label>
-											<label class="grid gap-1 text-xs text-on-surface-variant">
-												Waiting on
-												<select
-													bind:value={draft.waiting_on}
-													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-												>
-													{#each waitingOptions as option (option.value)}
-														<option value={option.value}>{option.label}</option>
+													{#each workStatuses as status (status)}
+														<option value={status}>{sentenceCase(formatStatus(status))}</option>
 													{/each}
 												</select>
 											</label>
+											<div class="mt-3 grid grid-cols-2 gap-2">
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Priority
+													<select
+														bind:value={draft.priority}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														<option value="low">Low</option>
+														<option value="normal">Normal</option>
+														<option value="high">High</option>
+														<option value="urgent">Urgent</option>
+													</select>
+												</label>
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Waiting on
+													<select
+														bind:value={draft.waiting_on}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														{#each waitingOptions as option (option.value)}
+															<option value={option.value}>{option.label}</option>
+														{/each}
+													</select>
+												</label>
+											</div>
+											<div
+												class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-outline-variant/40 pt-3"
+											>
+												{#each quickFacts(selectedItem).slice(0, 4) as fact (fact.label)}
+													<div class="min-w-0">
+														<p
+															class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-on-surface-variant"
+														>
+															{fact.label}
+														</p>
+														<p
+															class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
+																''}"
+														>
+															{fact.value}
+														</p>
+													</div>
+												{/each}
+											</div>
 										</div>
 										<button
 											type="submit"
@@ -3295,6 +3298,14 @@
 											<p class="text-sm text-status-danger">{error}</p>
 										{/if}
 									</form>
+									<div class="mt-auto border-t border-outline-variant/60 p-4">
+										<a
+											href={resolve(routeFor(selectedItem))}
+											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+										>
+											Open full page <ArrowRight class="h-4 w-4" />
+										</a>
+									</div>
 								{:else}
 									<div class="flex min-h-full flex-col justify-center p-5">
 										<p class="text-sm font-semibold text-on-surface">No item selected</p>

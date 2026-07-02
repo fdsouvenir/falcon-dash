@@ -18,9 +18,11 @@ redirects to `/work`.
   automations. Needs resolution combines open questions and decisions in one list while preserving
   their underlying Work shapes.
 - Desktop type pages with the section title above fixed search/filter controls, type-specific
-  structured rows, a scrollable item list, and a fixed quick inspector on the right. Single clicks
-  select and highlight a row in place; clicking it again clears selection; double clicks open that
-  item's standalone detail page.
+  structured rows, a scrollable item list, and a fixed quick inspector on the right. The inspector
+  stays directly under the Work header without its own scroll bar, keeps state controls and quick
+  facts together, and places the full-page action at the bottom. Single clicks select and highlight
+  a row in place; clicking it again clears selection; double clicks open that item's standalone
+  detail page.
 - Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page
   directly.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
