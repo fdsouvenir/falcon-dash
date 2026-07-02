@@ -197,7 +197,7 @@ Routeable Work surface for the `/work` module:
   basics, health, current next step, and active blocker relationships. The blocker panel is hidden
   when there are no active blocker links; when present, each dense row reads as stuck item,
   blocked-by source, reason, and unblock move using the same "holding up" wording as the project
-  list. Project Plan renders sequenced milestone phase blocks with due chips and nested work rows;
+  list. Project Plan renders a continuous milestone rail with due chips and nested work rows;
   matching blocked-by chips also render inline under the affected milestone or work row. The static
   operating brief moves to the pinned right rail with milestone creation so status, health,
   priority, dates, and category are not repeated there. Milestones are inert headings with a title and optional

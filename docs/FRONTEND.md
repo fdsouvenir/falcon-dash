@@ -65,8 +65,8 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   the upper-right, left section index on desktop, a compact Project Status section for editable
   status/health/priority/waiting/category basics, current next step, and active blocker
   relationships, a milestone-contained project plan, and a pinned right rail for static operating
-  brief context plus lightweight project-local milestone creation. The project plan should use
-  sequenced milestone phase blocks with nested work rows and in-context due dates; avoid a separate
+  brief context plus lightweight project-local milestone creation. The project plan should use a
+  continuous milestone rail with nested work rows and in-context due dates; avoid a separate
   global date bar unless the page becomes a true timeline/Gantt surface. Do not repeat status,
   health, priority, dates, or category in the right rail.
   Do not render milestones, next steps, decisions, questions, and change requests as unrelated type

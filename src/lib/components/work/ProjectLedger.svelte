@@ -884,108 +884,56 @@
 						<h3 class="text-sm font-semibold text-on-surface">Project plan</h3>
 					</div>
 					{#if projectPlanGroups.length}
-						<div
-							class="grid gap-3 rounded-lg border border-outline-variant/55 bg-surface-0/35 p-3 lg:grid-cols-2 2xl:grid-cols-3"
-						>
-							{#each projectPlanGroups as group, index (group.id)}
-								<article
-									class="min-w-0 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-1/45"
-									data-testid="project-plan-group"
-								>
-									<div class="border-b border-outline-variant/40 bg-surface-2/35 px-3 py-3">
-										<div class="flex items-start gap-3">
-											<div
-												class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-status-info/35 bg-status-info-bg/25 font-mono text-xs font-semibold text-status-info"
-											>
-												{String(index + 1).padStart(2, '0')}
-											</div>
-											<div class="min-w-0 flex-1">
-												<div class="flex flex-wrap items-center justify-between gap-2">
-													<p class="text-xs font-semibold text-on-surface-variant">
-														{group.milestone ? 'Milestone' : 'Project-level'}
-													</p>
+						<div class="rounded-lg border border-outline-variant/55 bg-surface-0/35 p-3">
+							<div
+								class="relative space-y-3 pl-7 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-outline-variant/55"
+							>
+								{#each projectPlanGroups as group, index (group.id)}
+									<article class="relative" data-testid="project-plan-group">
+										<div
+											class="absolute -left-7 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-status-info/45 bg-surface-0"
+											aria-hidden="true"
+										>
+											<span class="h-2.5 w-2.5 rounded-full bg-status-info"></span>
+										</div>
+										<div
+											class="min-w-0 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-1/45"
+										>
+											<div class="border-b border-outline-variant/40 bg-surface-2/35 px-3 py-3">
+												<div class="flex min-w-0 items-start justify-between gap-3">
+													<div class="min-w-0">
+														<div class="flex flex-wrap items-center gap-2">
+															<span
+																class="rounded-md border border-status-info/35 bg-status-info-bg/20 px-1.5 py-0.5 font-mono text-[0.68rem] font-semibold text-status-info"
+															>
+																{String(index + 1).padStart(2, '0')}
+															</span>
+															<span class="text-xs font-semibold text-on-surface-variant">
+																{group.milestone ? 'Milestone' : 'Project-level'}
+															</span>
+															<p class="text-base font-semibold leading-6 text-on-surface">
+																{group.title}
+															</p>
+														</div>
+														{#if group.description}
+															<p
+																class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant"
+															>
+																{group.description}
+															</p>
+														{/if}
+													</div>
 													{#if group.milestone}
 														<span
-															class="rounded-md border border-outline-variant/45 px-2 py-1 text-xs font-semibold text-on-surface-variant"
+															class="shrink-0 rounded-md border border-outline-variant/45 px-2 py-1 text-xs font-semibold text-on-surface-variant"
 														>
 															{dateLabel(group.milestone)}
 														</span>
 													{/if}
 												</div>
-												<p class="mt-1 text-base font-semibold leading-6 text-on-surface">
-													{group.title}
-												</p>
-												{#if group.description}
-													<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-														{group.description}
-													</p>
-												{/if}
-											</div>
-										</div>
-										{#if group.milestone && blockerLinksForItem(group.milestone.id).length}
-											<div class="mt-3 space-y-2" data-testid="project-plan-blockers">
-												{#each blockerLinksForItem(group.milestone.id) as link (link.id)}
-													<div
-														class="rounded-md border border-status-danger/25 bg-status-danger-bg/25 px-3 py-2 text-xs"
-														data-testid="project-plan-blocker"
-													>
-														<p class="font-semibold text-status-danger">
-															Blocked by {blockerSourceLabel(link)}
-														</p>
-														<p class="mt-1 text-on-surface-variant">
-															{firstText(link.reason, 'No blocker reason recorded.')}
-														</p>
-														<p class="mt-1 text-on-surface">
-															Unblock: {firstText(
-																link.unblock_action,
-																'Clarify the next unblock step.'
-															)}
-														</p>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</div>
-									<div class="divide-y divide-outline-variant/35">
-										{#each group.work as work (work.id)}
-											<a
-												href={resolve(routeFor(work))}
-												class="block px-3 py-3 transition hover:bg-surface-2/55"
-											>
-												<div class="flex min-w-0 flex-wrap items-start justify-between gap-3">
-													<div class="min-w-0 flex-1">
-														<div class="flex flex-wrap items-center gap-2">
-															<span class="text-xs font-semibold text-on-surface-variant">
-																{typeLabel(work)}
-															</span>
-															<span class="text-xs {statusTone(work.status)}">
-																{formatStatus(work.status)}
-															</span>
-														</div>
-														<p class="mt-1 text-sm font-semibold leading-5 text-on-surface">
-															{work.title}
-														</p>
-													</div>
-													<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
-														{dateLabel(work)}
-													</span>
-												</div>
-												<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-													{itemPrimaryText(work)}
-												</p>
-												{#if work.type === 'decision' && work.consequence_of_no_decision}
-													<p class="mt-1 text-xs text-status-warning">
-														No decision: {work.consequence_of_no_decision}
-													</p>
-												{/if}
-												{#if work.type === 'open_question'}
-													<p class="mt-1 text-xs text-on-surface-variant">
-														Can answer: {firstText(work.answerer, work.owner, 'Not set')}
-													</p>
-												{/if}
-												{#if blockerLinksForItem(work.id).length}
+												{#if group.milestone && blockerLinksForItem(group.milestone.id).length}
 													<div class="mt-3 space-y-2" data-testid="project-plan-blockers">
-														{#each blockerLinksForItem(work.id) as link (link.id)}
+														{#each blockerLinksForItem(group.milestone.id) as link (link.id)}
 															<div
 																class="rounded-md border border-status-danger/25 bg-status-danger-bg/25 px-3 py-2 text-xs"
 																data-testid="project-plan-blocker"
@@ -1006,15 +954,82 @@
 														{/each}
 													</div>
 												{/if}
-											</a>
-										{:else}
-											<p class="px-3 py-3 text-sm text-on-surface-variant">
-												No work is attached here yet.
-											</p>
-										{/each}
-									</div>
-								</article>
-							{/each}
+											</div>
+											<div class="space-y-2 p-3">
+												{#each group.work as work (work.id)}
+													<a
+														href={resolve(routeFor(work))}
+														class="block rounded-md border border-outline-variant/40 bg-surface-0/35 px-3 py-2 transition hover:border-outline-variant/70 hover:bg-surface-2/55"
+													>
+														<div class="flex min-w-0 flex-wrap items-center justify-between gap-3">
+															<div class="min-w-0 flex-1">
+																<div class="flex flex-wrap items-center gap-2">
+																	<span class="text-xs font-semibold text-on-surface-variant">
+																		{typeLabel(work)}
+																	</span>
+																	<span class="text-xs {statusTone(work.status)}">
+																		{formatStatus(work.status)}
+																	</span>
+																	<p
+																		class="min-w-0 text-sm font-semibold leading-5 text-on-surface"
+																	>
+																		{work.title}
+																	</p>
+																</div>
+															</div>
+															<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+																{dateLabel(work)}
+															</span>
+														</div>
+														<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+															{itemPrimaryText(work)}
+														</p>
+														{#if work.type === 'decision' && work.consequence_of_no_decision}
+															<p class="mt-1 text-xs text-status-warning">
+																No decision: {work.consequence_of_no_decision}
+															</p>
+														{/if}
+														{#if work.type === 'open_question'}
+															<p class="mt-1 text-xs text-on-surface-variant">
+																Can answer: {firstText(work.answerer, work.owner, 'Not set')}
+															</p>
+														{/if}
+														{#if blockerLinksForItem(work.id).length}
+															<div class="mt-2 space-y-2" data-testid="project-plan-blockers">
+																{#each blockerLinksForItem(work.id) as link (link.id)}
+																	<div
+																		class="rounded-md border border-status-danger/25 bg-status-danger-bg/25 px-3 py-2 text-xs"
+																		data-testid="project-plan-blocker"
+																	>
+																		<p class="font-semibold text-status-danger">
+																			Blocked by {blockerSourceLabel(link)}
+																		</p>
+																		<p class="mt-1 text-on-surface-variant">
+																			{firstText(link.reason, 'No blocker reason recorded.')}
+																		</p>
+																		<p class="mt-1 text-on-surface">
+																			Unblock: {firstText(
+																				link.unblock_action,
+																				'Clarify the next unblock step.'
+																			)}
+																		</p>
+																	</div>
+																{/each}
+															</div>
+														{/if}
+													</a>
+												{:else}
+													<p
+														class="rounded-md border border-outline-variant/35 bg-surface-0/30 px-3 py-3 text-sm text-on-surface-variant"
+													>
+														No work is attached here yet.
+													</p>
+												{/each}
+											</div>
+										</div>
+									</article>
+								{/each}
+							</div>
 						</div>
 					{:else}
 						<p
