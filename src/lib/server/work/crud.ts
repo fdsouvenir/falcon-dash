@@ -2,6 +2,9 @@ import { getWorkDb } from './database.js';
 import { emitWorkEvent } from './events.js';
 import type {
 	WorkArea,
+	WorkBlockerLink,
+	WorkBlockerSource,
+	WorkBlockerStatus,
 	WorkCategory,
 	WorkCategoryDeleteResult,
 	WorkCategoryKind,
@@ -45,6 +48,26 @@ type WorkChangeLogInput = {
 	metadata?: Record<string, unknown>;
 };
 
+type CreateWorkBlockerLinkInput = {
+	project_id?: number | null;
+	blocked_item_id: number;
+	blocker_source: WorkBlockerSource;
+	blocker_item_id?: number | null;
+	external_label?: string | null;
+	reason?: string | null;
+	unblock_action?: string | null;
+	status?: WorkBlockerStatus;
+	actor?: string;
+	source?: string;
+};
+
+type UpdateWorkBlockerLinkInput = Partial<
+	Pick<WorkBlockerLink, 'external_label' | 'reason' | 'unblock_action' | 'status' | 'project_id'>
+> & {
+	actor?: string;
+	source?: string;
+};
+
 export class WorkError extends Error {
 	constructor(
 		public code: 'WORK_NOT_FOUND' | 'WORK_CONSTRAINT' | 'WORK_DUPLICATE',
@@ -71,6 +94,22 @@ function assertStatus(status: string): WorkStatus {
 		throw new WorkError('WORK_CONSTRAINT', `Invalid work status: ${status}`);
 	}
 	return status as WorkStatus;
+}
+
+function assertBlockerSource(source: string): WorkBlockerSource {
+	const sources: WorkBlockerSource[] = ['work_item', 'person', 'system', 'external'];
+	if (!sources.includes(source as WorkBlockerSource)) {
+		throw new WorkError('WORK_CONSTRAINT', `Invalid blocker source: ${source}`);
+	}
+	return source as WorkBlockerSource;
+}
+
+function assertBlockerStatus(status: string): WorkBlockerStatus {
+	const statuses: WorkBlockerStatus[] = ['active', 'resolved'];
+	if (!statuses.includes(status as WorkBlockerStatus)) {
+		throw new WorkError('WORK_CONSTRAINT', `Invalid blocker status: ${status}`);
+	}
+	return status as WorkBlockerStatus;
 }
 
 export function listWorkAreas(): WorkArea[] {
@@ -353,6 +392,7 @@ export function createWorkItem(data: CreateWorkItemInput): WorkItem {
 	createWorkVersion(id, data.actor ?? 'system');
 	const created = getWorkItem(id)!;
 	recordWorkItemChange(created, 'created', data.actor ?? 'system', data.source, `Created ${type}`);
+	syncImplicitBlockerLinksForItem(created);
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
 	return created;
 }
@@ -406,6 +446,7 @@ export function updateWorkItem(id: number, data: UpdateWorkItemInput): WorkItem 
 		summarizeChangeLog(changes, 'Updated'),
 		changes
 	);
+	syncImplicitBlockerLinksForItem(updated);
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
 	return updated;
 }
@@ -445,6 +486,177 @@ export function listWorkQueue(): WorkQueue {
 		staleCleanup: active.filter((i) => Boolean(i.stale_after)),
 		blockedRisky: active.filter((i) => i.status === 'blocked' || i.priority === 'urgent')
 	};
+}
+
+export function listWorkBlockerLinks(
+	filters: {
+		project_id?: number;
+		blocked_item_id?: number;
+		blocker_item_id?: number;
+		status?: WorkBlockerStatus | 'all';
+		limit?: number;
+	} = {}
+): WorkBlockerLink[] {
+	const db = getWorkDb();
+	const conditions: string[] = [];
+	const values: unknown[] = [];
+
+	if (filters.project_id !== undefined) {
+		conditions.push('bl.project_id = ?');
+		values.push(filters.project_id);
+	}
+	if (filters.blocked_item_id !== undefined) {
+		conditions.push('bl.blocked_item_id = ?');
+		values.push(filters.blocked_item_id);
+	}
+	if (filters.blocker_item_id !== undefined) {
+		conditions.push('bl.blocker_item_id = ?');
+		values.push(filters.blocker_item_id);
+	}
+	if (filters.status !== 'all') {
+		conditions.push('bl.status = ?');
+		values.push(filters.status ?? 'active');
+	}
+
+	const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+	const limit = Math.min(Math.max(filters.limit ?? 100, 1), 500);
+	return db
+		.prepare(
+			`${workBlockerSelect()} ${where} ORDER BY bl.status ASC, bl.updated_at DESC, bl.id DESC LIMIT ?`
+		)
+		.all(...values, limit)
+		.map(mapWorkBlockerLink);
+}
+
+export function getWorkBlockerLink(id: number): WorkBlockerLink | undefined {
+	const db = getWorkDb();
+	const row = db.prepare(`${workBlockerSelect()} WHERE bl.id = ?`).get(id);
+	return row ? mapWorkBlockerLink(row) : undefined;
+}
+
+export function createWorkBlockerLink(data: CreateWorkBlockerLinkInput): WorkBlockerLink {
+	const db = getWorkDb();
+	const blockedItem = getWorkItem(data.blocked_item_id);
+	if (!blockedItem) {
+		throw new WorkError('WORK_NOT_FOUND', `Blocked Work item ${data.blocked_item_id} not found`);
+	}
+	const blockerSource = assertBlockerSource(data.blocker_source);
+	let blockerItem: WorkItem | undefined;
+	let externalLabel = data.external_label?.trim() || null;
+	if (blockerSource === 'work_item') {
+		if (!data.blocker_item_id) {
+			throw new WorkError('WORK_CONSTRAINT', 'blocker_item_id is required for work_item blockers');
+		}
+		if (data.blocker_item_id === data.blocked_item_id) {
+			throw new WorkError('WORK_CONSTRAINT', 'blocked_item_id cannot block itself');
+		}
+		blockerItem = getWorkItem(data.blocker_item_id);
+		if (!blockerItem) {
+			throw new WorkError('WORK_NOT_FOUND', `Blocker Work item ${data.blocker_item_id} not found`);
+		}
+		externalLabel = null;
+	} else if (!externalLabel) {
+		throw new WorkError('WORK_CONSTRAINT', 'external_label is required for external blockers');
+	}
+
+	const status = assertBlockerStatus(data.status ?? 'active');
+	const projectId = resolveBlockerProjectId(data.project_id, blockedItem);
+	assertNoActiveBlockerDuplicate({
+		blocked_item_id: blockedItem.id,
+		blocker_source: blockerSource,
+		blocker_item_id: blockerItem?.id ?? null,
+		external_label: externalLabel,
+		status
+	});
+	const ts = now();
+	const result = db
+		.prepare(
+			`INSERT INTO work_blocker_links
+			 (project_id, blocked_item_id, blocker_source, blocker_item_id, external_label, reason,
+			  unblock_action, status, created_at, updated_at, resolved_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			projectId,
+			blockedItem.id,
+			blockerSource,
+			blockerItem?.id ?? null,
+			externalLabel,
+			trimOrNull(data.reason),
+			trimOrNull(data.unblock_action),
+			status,
+			ts,
+			ts,
+			status === 'resolved' ? ts : null
+		);
+	const link = getWorkBlockerLink(result.lastInsertRowid as number)!;
+	recordBlockerChange(link, 'created', data.actor ?? 'agent', data.source, 'Created blocker link');
+	emitWorkEvent({ type: 'work.changed', entity: 'blocker', id: link.id });
+	return link;
+}
+
+export function updateWorkBlockerLink(
+	id: number,
+	data: UpdateWorkBlockerLinkInput
+): WorkBlockerLink | undefined {
+	const current = getWorkBlockerLink(id);
+	if (!current) return undefined;
+	const db = getWorkDb();
+	const updates = ['updated_at = ?'];
+	const values: unknown[] = [now()];
+
+	function set(column: string, value: unknown): void {
+		updates.push(`${column} = ?`);
+		values.push(value);
+	}
+
+	if (data.project_id !== undefined) {
+		const blockedItem = getWorkItem(current.blocked_item_id);
+		if (!blockedItem) throw new WorkError('WORK_NOT_FOUND', 'Blocked Work item not found');
+		set('project_id', resolveBlockerProjectId(data.project_id, blockedItem));
+	}
+	if (data.external_label !== undefined) {
+		if (current.blocker_source === 'work_item') {
+			throw new WorkError('WORK_CONSTRAINT', 'work_item blockers cannot set external_label');
+		}
+		const label = data.external_label?.trim() || null;
+		if (!label) throw new WorkError('WORK_CONSTRAINT', 'external_label is required');
+		set('external_label', label);
+	}
+	if (data.reason !== undefined) set('reason', trimOrNull(data.reason));
+	if (data.unblock_action !== undefined) set('unblock_action', trimOrNull(data.unblock_action));
+	if (data.status !== undefined) {
+		const status = assertBlockerStatus(data.status);
+		set('status', status);
+		set('resolved_at', status === 'resolved' ? (current.resolved_at ?? now()) : null);
+	}
+
+	values.push(id);
+	db.prepare(`UPDATE work_blocker_links SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+	const updated = getWorkBlockerLink(id);
+	if (!updated) return undefined;
+	recordBlockerChange(
+		updated,
+		'updated',
+		data.actor ?? 'agent',
+		data.source,
+		updated.status === 'resolved' ? 'Resolved blocker link' : 'Updated blocker link',
+		diffWorkRecords(current, updated, blockerChangeFields)
+	);
+	emitWorkEvent({ type: 'work.changed', entity: 'blocker', id });
+	return updated;
+}
+
+export function deleteWorkBlockerLink(id: number): WorkBlockerLink | undefined {
+	const current = getWorkBlockerLink(id);
+	if (!current) return undefined;
+	const db = getWorkDb();
+	db.prepare('DELETE FROM work_blocker_links WHERE id = ?').run(id);
+	recordBlockerChange(current, 'deleted', 'agent', 'api', 'Deleted blocker link', [
+		{ field: 'exists', label: 'Exists', from: true, to: false }
+	]);
+	emitWorkEvent({ type: 'work.changed', entity: 'blocker', id });
+	return current;
 }
 
 export function logWorkActivity(
@@ -622,6 +834,20 @@ function workItemSelect(): string {
 		LEFT JOIN work_change_request_details cr ON cr.work_item_id = wi.id
 		LEFT JOIN work_automation_details a ON a.work_item_id = wi.id
 		LEFT JOIN work_finding_details f ON f.work_item_id = wi.id
+		`;
+}
+
+function workBlockerSelect(): string {
+	return `
+		SELECT
+			bl.*,
+			blocked.title AS blocked_item_title,
+			blocked.type AS blocked_item_type,
+			blocker.title AS blocker_item_title,
+			blocker.type AS blocker_item_type
+		FROM work_blocker_links bl
+		LEFT JOIN work_items blocked ON blocked.id = bl.blocked_item_id
+		LEFT JOIN work_items blocker ON blocker.id = bl.blocker_item_id
 	`;
 }
 
@@ -639,6 +865,28 @@ function mapWorkItem(row: unknown): WorkItem {
 	item.systems_touched = parseJsonArray(item.systems_touched_json);
 	item.source_refs = parseJsonArray(item.source_refs_json);
 	return item;
+}
+
+function mapWorkBlockerLink(row: unknown): WorkBlockerLink {
+	const link = row as WorkBlockerLink;
+	return {
+		id: link.id,
+		project_id: link.project_id,
+		blocked_item_id: link.blocked_item_id,
+		blocked_item_title: link.blocked_item_title,
+		blocked_item_type: link.blocked_item_type,
+		blocker_source: link.blocker_source,
+		blocker_item_id: link.blocker_item_id,
+		blocker_item_title: link.blocker_item_title,
+		blocker_item_type: link.blocker_item_type,
+		external_label: link.external_label,
+		reason: link.reason,
+		unblock_action: link.unblock_action,
+		status: link.status,
+		created_at: link.created_at,
+		updated_at: link.updated_at,
+		resolved_at: link.resolved_at
+	};
 }
 
 function validateTypedDetails(
@@ -1014,6 +1262,18 @@ const itemChangeFields: Array<[keyof WorkItem, string]> = [
 	['source_refs', 'Sources']
 ];
 
+const blockerChangeFields: Array<[keyof WorkBlockerLink, string]> = [
+	['project_id', 'Project'],
+	['blocked_item_id', 'Blocked item'],
+	['blocker_source', 'Blocker source'],
+	['blocker_item_id', 'Blocker item'],
+	['external_label', 'External blocker'],
+	['reason', 'Reason'],
+	['unblock_action', 'Unblock action'],
+	['status', 'Status'],
+	['resolved_at', 'Resolved at']
+];
+
 function diffWorkRecords<T extends object>(
 	before: T,
 	after: T,
@@ -1070,6 +1330,91 @@ function recordWorkItemChange(
 			...metadata
 		}
 	});
+}
+
+function recordBlockerChange(
+	link: WorkBlockerLink,
+	action: WorkChangeAction,
+	actor: string,
+	source: string | undefined,
+	summary: string,
+	changes: WorkChange[] = []
+): void {
+	recordWorkChangeLog({
+		actor,
+		source,
+		entity_type: 'blocker',
+		entity_id: link.id,
+		entity_title: blockerLinkTitle(link),
+		action,
+		project_id: link.project_id,
+		parent_item_id: link.blocked_item_id,
+		summary,
+		changes,
+		metadata: {
+			blocked_item_id: link.blocked_item_id,
+			blocker_source: link.blocker_source,
+			blocker_item_id: link.blocker_item_id,
+			external_label: link.external_label,
+			status: link.status
+		}
+	});
+}
+
+function blockerLinkTitle(link: WorkBlockerLink): string {
+	const blocked = link.blocked_item_title ?? `Work item ${link.blocked_item_id}`;
+	const blocker =
+		link.blocker_source === 'work_item'
+			? (link.blocker_item_title ?? `Work item ${link.blocker_item_id}`)
+			: (link.external_label ?? link.blocker_source);
+	return `${blocked} blocked by ${blocker}`;
+}
+
+function resolveBlockerProjectId(
+	projectId: number | null | undefined,
+	blockedItem: WorkItem
+): number | null {
+	if (projectId !== undefined) {
+		if (projectId === null) return null;
+		const project = getWorkItem(projectId);
+		if (!project || project.type !== 'project') {
+			throw new WorkError('WORK_NOT_FOUND', `Project ${projectId} not found`);
+		}
+		return project.id;
+	}
+	return projectIdForItem(blockedItem);
+}
+
+function assertNoActiveBlockerDuplicate(data: {
+	blocked_item_id: number;
+	blocker_source: WorkBlockerSource;
+	blocker_item_id: number | null;
+	external_label: string | null;
+	status: WorkBlockerStatus;
+}): void {
+	if (data.status !== 'active') return;
+	const db = getWorkDb();
+	const existing =
+		data.blocker_source === 'work_item'
+			? db
+					.prepare(
+						`SELECT id FROM work_blocker_links
+						 WHERE blocked_item_id = ?
+						   AND blocker_source = 'work_item'
+						   AND blocker_item_id = ?
+						   AND status = 'active'`
+					)
+					.get(data.blocked_item_id, data.blocker_item_id)
+			: db
+					.prepare(
+						`SELECT id FROM work_blocker_links
+						 WHERE blocked_item_id = ?
+						   AND blocker_source = ?
+						   AND external_label = ?
+						   AND status = 'active'`
+					)
+					.get(data.blocked_item_id, data.blocker_source, data.external_label);
+	if (existing) throw new WorkError('WORK_DUPLICATE', 'Active blocker link already exists');
 }
 
 function projectIdForItem(item: WorkItem): number | null {
@@ -1145,6 +1490,114 @@ function toApprovalFlag(value: boolean | number | undefined): number {
 
 function firstText(...values: Array<string | null | undefined>): string | null {
 	return values.find((value) => typeof value === 'string' && value.trim().length > 0) ?? null;
+}
+
+function trimOrNull(value: string | null | undefined): string | null {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	return trimmed ? trimmed : null;
+}
+
+function syncImplicitBlockerLinksForItem(item: WorkItem): void {
+	syncOpenQuestionBlockerLink(item);
+	syncWaitingBlockerLink(item);
+}
+
+function syncOpenQuestionBlockerLink(item: WorkItem): void {
+	if (item.type !== 'open_question') return;
+	const activeLinks = listWorkBlockerLinks({
+		blocker_item_id: item.id,
+		status: 'active',
+		limit: 50
+	}).filter((link) => link.blocker_source === 'work_item');
+	const shouldLink =
+		item.blocked_item_id !== null &&
+		item.blocked_item_id !== undefined &&
+		item.blocked_item_id !== item.id &&
+		!isClosedStatus(item.status);
+	for (const link of activeLinks) {
+		if (!shouldLink || link.blocked_item_id !== item.blocked_item_id) {
+			updateWorkBlockerLink(link.id, { status: 'resolved', actor: 'system', source: 'system' });
+		}
+	}
+	if (!shouldLink) return;
+	tryCreateImplicitBlockerLink({
+		blocked_item_id: item.blocked_item_id!,
+		blocker_source: 'work_item',
+		blocker_item_id: item.id,
+		reason: firstText(item.why_it_matters, item.description, item.title),
+		unblock_action: firstText(
+			item.proposed_answer,
+			item.next_action,
+			item.question_text,
+			item.title
+		),
+		actor: 'system',
+		source: 'system'
+	});
+}
+
+function syncWaitingBlockerLink(item: WorkItem): void {
+	const activeExternalLinks = listWorkBlockerLinks({
+		blocked_item_id: item.id,
+		status: 'active',
+		limit: 50
+	}).filter((link) => link.blocker_source !== 'work_item');
+	const waitingOn = trimOrNull(item.waiting_on);
+	const shouldLink = ['blocked', 'waiting'].includes(item.status) && Boolean(waitingOn);
+	if (!shouldLink) {
+		for (const link of activeExternalLinks) {
+			updateWorkBlockerLink(link.id, { status: 'resolved', actor: 'system', source: 'system' });
+		}
+		return;
+	}
+	const blockerSource = sourceForWaitingOn(waitingOn!);
+	const externalLabel = labelForWaitingOn(waitingOn!);
+	for (const link of activeExternalLinks) {
+		if (link.blocker_source !== blockerSource || link.external_label !== externalLabel) {
+			updateWorkBlockerLink(link.id, { status: 'resolved', actor: 'system', source: 'system' });
+		}
+	}
+	tryCreateImplicitBlockerLink({
+		blocked_item_id: item.id,
+		blocker_source: blockerSource,
+		external_label: externalLabel,
+		reason:
+			item.status === 'blocked'
+				? 'This work is marked blocked.'
+				: `This work is waiting on ${waitingOn}.`,
+		unblock_action: firstText(item.next_action, item.next_step_action, item.title),
+		actor: 'system',
+		source: 'system'
+	});
+}
+
+function tryCreateImplicitBlockerLink(data: CreateWorkBlockerLinkInput): void {
+	try {
+		createWorkBlockerLink(data);
+	} catch (err) {
+		if (err instanceof WorkError && err.code === 'WORK_DUPLICATE') return;
+		throw err;
+	}
+}
+
+function isClosedStatus(status: WorkStatus): boolean {
+	return status === 'complete' || status === 'cancelled' || status === 'archived';
+}
+
+function sourceForWaitingOn(value: string): WorkBlockerSource {
+	if (value === 'system') return 'system';
+	if (value === 'external') return 'external';
+	return 'person';
+}
+
+function labelForWaitingOn(value: string): string {
+	if (value === 'operator' || value === 'me') return 'Operator';
+	if (value === 'agent') return 'Agent';
+	if (value === 'fred') return 'Fred';
+	if (value === 'system') return 'System';
+	if (value === 'external') return 'External party';
+	return value;
 }
 
 function mapWorkCategory(area: WorkArea): WorkCategory {

@@ -130,6 +130,26 @@ CREATE TABLE IF NOT EXISTS work_relationships (
   CHECK (from_item_id != to_item_id)
 );
 
+CREATE TABLE IF NOT EXISTS work_blocker_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER REFERENCES work_items(id) ON DELETE CASCADE,
+  blocked_item_id INTEGER NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+  blocker_source TEXT NOT NULL CHECK(blocker_source IN ('work_item','person','system','external')),
+  blocker_item_id INTEGER REFERENCES work_items(id) ON DELETE CASCADE,
+  external_label TEXT,
+  reason TEXT,
+  unblock_action TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','resolved')),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  resolved_at INTEGER,
+  CHECK (blocked_item_id != blocker_item_id),
+  CHECK (
+    (blocker_source = 'work_item' AND blocker_item_id IS NOT NULL) OR
+    (blocker_source != 'work_item' AND external_label IS NOT NULL)
+  )
+);
+
 CREATE TABLE IF NOT EXISTS work_observations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
@@ -225,6 +245,15 @@ CREATE INDEX IF NOT EXISTS idx_work_items_activity ON work_items(last_activity_a
 CREATE INDEX IF NOT EXISTS idx_work_evidence_item ON work_evidence_refs(work_item_id);
 CREATE INDEX IF NOT EXISTS idx_work_evidence_observation ON work_evidence_refs(observation_id);
 CREATE INDEX IF NOT EXISTS idx_work_activity_item ON work_activity(work_item_id);
+CREATE INDEX IF NOT EXISTS idx_work_blocker_links_project ON work_blocker_links(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_work_blocker_links_blocked ON work_blocker_links(blocked_item_id, status);
+CREATE INDEX IF NOT EXISTS idx_work_blocker_links_blocker ON work_blocker_links(blocker_item_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_work_blocker_links_unique_item
+  ON work_blocker_links(blocked_item_id, blocker_item_id)
+  WHERE status = 'active' AND blocker_source = 'work_item';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_work_blocker_links_unique_external
+  ON work_blocker_links(blocked_item_id, blocker_source, external_label)
+  WHERE status = 'active' AND blocker_source != 'work_item';
 CREATE INDEX IF NOT EXISTS idx_work_change_log_project ON work_change_log(project_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_work_change_log_entity ON work_change_log(entity_type, entity_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_work_change_log_area ON work_change_log(area_id, occurred_at);
@@ -258,6 +287,7 @@ export function ensureWorkSchema(db: Database.Database = getWorkDb()): void {
 	migrateWorkItemsToV2(db);
 	db.exec(WORK_SCHEMA);
 	backfillV2Details(db);
+	backfillWorkBlockerLinks(db);
 	backfillWorkChangeLog(db);
 	initialized = true;
 }
@@ -375,6 +405,85 @@ function backfillV2Details(db: Database.Database): void {
 
 		INSERT OR IGNORE INTO work_finding_details (work_item_id, finding_text, source_refs_json)
 		SELECT id, coalesce(description, body, title), '[]' FROM work_items WHERE type = 'finding';
+		`);
+}
+
+function backfillWorkBlockerLinks(db: Database.Database): void {
+	const hasLinks = db
+		.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='work_blocker_links'")
+		.get();
+	if (!hasLinks) return;
+
+	db.exec(`
+		INSERT OR IGNORE INTO work_blocker_links
+		  (project_id, blocked_item_id, blocker_source, blocker_item_id, external_label, reason,
+		   unblock_action, status, created_at, updated_at, resolved_at)
+		SELECT
+		  CASE
+		    WHEN blocked.type = 'project' THEN blocked.id
+		    WHEN blocked_parent.type = 'project' THEN blocked_parent.id
+		    WHEN blocked_grandparent.type = 'project' THEN blocked_grandparent.id
+		    ELSE NULL
+		  END,
+		  oq.blocked_item_id,
+		  'work_item',
+		  wi.id,
+		  NULL,
+		  coalesce(oq.why_it_matters, wi.description, wi.title),
+		  coalesce(oq.proposed_answer, wi.next_action, oq.question_text),
+		  CASE WHEN wi.status IN ('complete','cancelled','archived') THEN 'resolved' ELSE 'active' END,
+		  wi.created_at,
+		  wi.updated_at,
+		  CASE WHEN wi.status IN ('complete','cancelled','archived') THEN coalesce(oq.answered_at, wi.updated_at) ELSE NULL END
+		FROM work_open_question_details oq
+		INNER JOIN work_items wi ON wi.id = oq.work_item_id
+		INNER JOIN work_items blocked ON blocked.id = oq.blocked_item_id
+		LEFT JOIN work_items blocked_parent ON blocked_parent.id = blocked.parent_item_id
+		LEFT JOIN work_items blocked_grandparent ON blocked_grandparent.id = blocked_parent.parent_item_id
+		WHERE oq.blocked_item_id IS NOT NULL
+		  AND oq.blocked_item_id != wi.id;
+
+		INSERT OR IGNORE INTO work_blocker_links
+		  (project_id, blocked_item_id, blocker_source, blocker_item_id, external_label, reason,
+		   unblock_action, status, created_at, updated_at, resolved_at)
+		SELECT
+		  CASE
+		    WHEN wi.type = 'project' THEN wi.id
+		    WHEN parent.type = 'project' THEN parent.id
+		    WHEN grandparent.type = 'project' THEN grandparent.id
+		    ELSE NULL
+		  END,
+		  wi.id,
+		  CASE
+		    WHEN wi.waiting_on = 'system' THEN 'system'
+		    WHEN wi.waiting_on = 'external' THEN 'external'
+		    ELSE 'person'
+		  END,
+		  NULL,
+		  CASE
+		    WHEN wi.waiting_on = 'operator' THEN 'Operator'
+		    WHEN wi.waiting_on = 'agent' THEN 'Agent'
+		    WHEN wi.waiting_on = 'fred' THEN 'Fred'
+		    WHEN wi.waiting_on = 'me' THEN 'Operator'
+		    WHEN wi.waiting_on = 'system' THEN 'System'
+		    WHEN wi.waiting_on = 'external' THEN 'External party'
+		    ELSE wi.waiting_on
+		  END,
+		  CASE
+		    WHEN wi.status = 'blocked' THEN 'This work is marked blocked.'
+		    ELSE 'This work is waiting on ' || wi.waiting_on || '.'
+		  END,
+		  coalesce(wi.next_action, wi.title),
+		  CASE WHEN wi.status IN ('complete','cancelled','archived') THEN 'resolved' ELSE 'active' END,
+		  wi.created_at,
+		  wi.updated_at,
+		  CASE WHEN wi.status IN ('complete','cancelled','archived') THEN wi.updated_at ELSE NULL END
+		FROM work_items wi
+		LEFT JOIN work_items parent ON parent.id = wi.parent_item_id
+		LEFT JOIN work_items grandparent ON grandparent.id = parent.parent_item_id
+		WHERE wi.status IN ('blocked','waiting')
+		  AND wi.waiting_on IS NOT NULL
+		  AND trim(wi.waiting_on) != '';
 	`);
 }
 

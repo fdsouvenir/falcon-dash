@@ -10,18 +10,23 @@ export {
 export {
 	WorkError,
 	addEvidenceRef,
+	createWorkBlockerLink,
 	createWorkItem,
+	deleteWorkBlockerLink,
 	deleteWorkCategory,
+	getWorkBlockerLink,
 	getWorkArea,
 	getWorkCategory,
 	getWorkItem,
 	getWorkItemByLegacy,
 	listWorkAreas,
+	listWorkBlockerLinks,
 	listWorkChangeLog,
 	listWorkCategories,
 	listWorkItems,
 	listWorkQueue,
 	recordWorkChangeLog,
+	updateWorkBlockerLink,
 	updateWorkItem,
 	upsertWorkArea,
 	upsertWorkCategory
@@ -34,6 +39,9 @@ export { emitWorkEvent, getRecentWorkEvents, getWorkStateVersion, onWorkEvent } 
 export { getFalconDashModules, FALCON_DASH_MODULES } from './module.js';
 export type {
 	WorkArea,
+	WorkBlockerLink,
+	WorkBlockerSource,
+	WorkBlockerStatus,
 	WorkCategory,
 	WorkCategoryDeleteResult,
 	WorkCategoryKind,

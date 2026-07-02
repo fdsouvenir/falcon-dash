@@ -6,12 +6,16 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	closeWorkDb,
+	createWorkBlockerLink,
 	createWorkItem,
+	deleteWorkBlockerLink,
 	deleteWorkCategory,
 	getWorkItem,
+	listWorkBlockerLinks,
 	listWorkChangeLog,
 	listWorkCategories,
 	resetWorkSchemaForTests,
+	updateWorkBlockerLink,
 	updateWorkItem,
 	upsertWorkCategory
 } from './index.js';
@@ -210,5 +214,156 @@ describe('Work change log', () => {
 			})
 		});
 		expect(getWorkItem(item.id)?.area_id).toBeNull();
+	});
+});
+
+describe('Work blocker links', () => {
+	it('creates, resolves, and deletes an explicit external blocker link', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Lake trip'
+		});
+		const nextStep = createWorkItem({
+			type: 'next_step',
+			title: 'Confirm pet care',
+			parent_item_id: project.id
+		});
+
+		const blocker = createWorkBlockerLink({
+			blocked_item_id: nextStep.id,
+			blocker_source: 'person',
+			external_label: 'Jamie',
+			reason: 'Dog care is not confirmed.',
+			unblock_action: 'Ask Jamie for Friday confirmation.',
+			actor: 'agent'
+		});
+
+		expect(blocker).toMatchObject({
+			project_id: project.id,
+			blocked_item_id: nextStep.id,
+			blocker_source: 'person',
+			external_label: 'Jamie',
+			blocked_item_title: 'Confirm pet care',
+			status: 'active'
+		});
+		expect(() =>
+			createWorkBlockerLink({
+				blocked_item_id: nextStep.id,
+				blocker_source: 'person',
+				external_label: 'Jamie'
+			})
+		).toThrow(/already exists/);
+
+		const resolved = updateWorkBlockerLink(blocker.id, { status: 'resolved', actor: 'operator' });
+		expect(resolved).toMatchObject({ status: 'resolved' });
+		expect(resolved?.resolved_at).toBeTruthy();
+		expect(listWorkBlockerLinks({ project_id: project.id })).toHaveLength(0);
+		expect(listWorkBlockerLinks({ project_id: project.id, status: 'all' })).toHaveLength(1);
+
+		expect(deleteWorkBlockerLink(blocker.id)?.id).toBe(blocker.id);
+		expect(listWorkBlockerLinks({ project_id: project.id, status: 'all' })).toHaveLength(0);
+	});
+
+	it('creates a Work-item blocker link from an open question blocked_item_id', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Condo repair'
+		});
+		const milestone = createWorkItem({
+			type: 'milestone',
+			title: 'Vendor selected',
+			parent_item_id: project.id
+		});
+		const question = createWorkItem({
+			type: 'open_question',
+			title: 'Can the plumber come Friday?',
+			parent_item_id: milestone.id,
+			blocked_item_id: milestone.id,
+			question_text: 'Can the plumber come Friday?',
+			why_it_matters: 'The vendor date gates the repair milestone.',
+			answerer: 'external',
+			status: 'waiting',
+			waiting_on: 'external'
+		});
+
+		const blockers = listWorkBlockerLinks({ project_id: project.id });
+		expect(blockers).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					blocked_item_id: milestone.id,
+					blocker_source: 'work_item',
+					blocker_item_id: question.id,
+					reason: 'The vendor date gates the repair milestone.',
+					status: 'active'
+				}),
+				expect.objectContaining({
+					blocked_item_id: question.id,
+					blocker_source: 'external',
+					external_label: 'External party',
+					status: 'active'
+				})
+			])
+		);
+
+		resetWorkSchemaForTests();
+		expect(listWorkBlockerLinks({ project_id: project.id })).toHaveLength(2);
+	});
+
+	it('resolves implicit waiting blocker links when the item is no longer waiting', () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Client launch'
+		});
+		const step = createWorkItem({
+			type: 'next_step',
+			title: 'Wait for DNS update',
+			parent_item_id: project.id,
+			status: 'waiting',
+			waiting_on: 'system',
+			next_action: 'Confirm DNS propagation'
+		});
+
+		expect(listWorkBlockerLinks({ project_id: project.id })).toEqual([
+			expect.objectContaining({
+				blocked_item_id: step.id,
+				blocker_source: 'system',
+				external_label: 'System',
+				unblock_action: 'Confirm DNS propagation',
+				status: 'active'
+			})
+		]);
+
+		updateWorkItem(step.id, {
+			status: 'ready',
+			waiting_on: null
+		});
+
+		expect(listWorkBlockerLinks({ project_id: project.id })).toHaveLength(0);
+		expect(listWorkBlockerLinks({ project_id: project.id, status: 'all' })).toEqual([
+			expect.objectContaining({
+				blocked_item_id: step.id,
+				status: 'resolved'
+			})
+		]);
+	});
+
+	it('rejects invalid blocker link shapes', () => {
+		const item = createWorkItem({
+			type: 'next_step',
+			title: 'Pick a lender'
+		});
+
+		expect(() =>
+			createWorkBlockerLink({
+				blocked_item_id: item.id,
+				blocker_source: 'work_item'
+			})
+		).toThrow(/blocker_item_id is required/);
+		expect(() =>
+			createWorkBlockerLink({
+				blocked_item_id: item.id,
+				blocker_source: 'external'
+			})
+		).toThrow(/external_label is required/);
 	});
 });
