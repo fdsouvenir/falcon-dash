@@ -31,6 +31,11 @@ on disk only as static migration input and is opened read-only through
 Evidence is attached as provenance through `work_evidence_refs`. Findings may summarize evidence,
 but evidence refs remain provenance rather than standalone work.
 
+Blocker links are Work-owned relationship records in `work_blocker_links`. They connect the stuck
+Work item to either another Work item or an external person/system/source, with a reason, unblock
+move, status, and timestamps. These links add visible relationship context without replacing the
+blocked or waiting statuses on Work items.
+
 Categories and subcategories organize Work without being Work items. They live in `work_areas`
 internally and are exposed through `/api/work/categories` using the user-facing
 `category`/`subcategory` vocabulary. The Work UI keeps this setup in `/work/settings` behind the
@@ -75,6 +80,11 @@ POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
 DELETE /api/work/categories/{id}
+GET    /api/work/blockers
+POST   /api/work/blockers
+GET    /api/work/blockers/{id}
+PATCH  /api/work/blockers/{id}
+DELETE /api/work/blockers/{id}
 GET    /api/work/change-log
 GET    /api/work/context
 GET    /api/work/migration/preview
@@ -98,6 +108,14 @@ its project/category/parent scope at the time of the event, a human summary, and
 read this change log instead of inferring activity from `last_activity_at`; existing databases get
 baseline backfilled “Added to Work history” events so feeds remain populated without inventing old
 field-level diffs.
+
+`GET /api/work/blockers` returns explicit blocker relationships and supports `project_id`,
+`blocked_item_id`, `blocker_item_id`, `state=active|resolved|all`, and `limit`. `POST` creates a
+link with `blocked_item_id`, `blocker_source`, and either `blocker_item_id` for `work_item`
+blockers or `external_label` for `person`, `system`, and `external` blockers. `PATCH` updates
+reason, unblock action, label, status, and project scope; `DELETE` removes the link. Work backfills
+links from `open_question.blocked_item_id` and from blocked/waiting items with `waiting_on`, while
+preventing duplicate active relationships.
 
 `GET /api/work/queue` returns actionability buckets:
 

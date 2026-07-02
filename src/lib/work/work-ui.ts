@@ -26,7 +26,12 @@ export const workStatuses = [
 export type WorkItemType = (typeof workTypes)[number];
 export type WorkStatus = (typeof workStatuses)[number];
 export type WorkPriority = 'low' | 'normal' | 'high' | 'urgent';
-export type WorkChangeEntityType = WorkItemType | 'category' | 'subcategory' | 'evidence';
+export type WorkChangeEntityType =
+	| WorkItemType
+	| 'category'
+	| 'subcategory'
+	| 'evidence'
+	| 'blocker';
 export type WorkChangeAction =
 	| 'created'
 	| 'updated'
@@ -142,6 +147,29 @@ export interface WorkItem {
 	created_at: number;
 	updated_at: number;
 	last_activity_at: number;
+}
+
+export type WorkBlockerSource = 'work_item' | 'person' | 'system' | 'external';
+
+export type WorkBlockerStatus = 'active' | 'resolved';
+
+export interface WorkBlockerLink {
+	id: number;
+	project_id: number | null;
+	blocked_item_id: number;
+	blocked_item_title: string | null;
+	blocked_item_type: WorkItemType | null;
+	blocker_source: WorkBlockerSource;
+	blocker_item_id: number | null;
+	blocker_item_title: string | null;
+	blocker_item_type: WorkItemType | null;
+	external_label: string | null;
+	reason: string | null;
+	unblock_action: string | null;
+	status: WorkBlockerStatus;
+	created_at: number;
+	updated_at: number;
+	resolved_at: number | null;
 }
 
 export interface WorkQueue {

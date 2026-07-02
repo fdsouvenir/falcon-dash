@@ -28,6 +28,10 @@ archived migration input; there is no active PM API.
 
 Evidence is attached through evidence refs/provenance. It is not standalone work.
 
+Blocker relationships are explicit Work links. They show what item is stuck, whether the blocker is
+another Work item or an external person/system/source, why it is blocked, and the next unblock
+move. Links clarify status; they do not replace the item's `blocked` or `waiting` status.
+
 Categories and subcategories are setup records, not Work item types. Use `/categories` to list or
 maintain them and `category_id`/`subcategory_id` item filters to group operational work.
 Deleting a category or subcategory removes that directory entry and unassigns linked Work items.
@@ -91,10 +95,42 @@ POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
 DELETE /api/work/categories/{id}
+GET    /api/work/blockers
+POST   /api/work/blockers
+GET    /api/work/blockers/{id}
+PATCH  /api/work/blockers/{id}
+DELETE /api/work/blockers/{id}
 GET    /api/work/change-log
 ```
 
 Public fields are `id`, `title`, `description`, `kind`, and `parent_category_id`.
+
+## Blockers
+
+```
+GET    /api/work/blockers
+POST   /api/work/blockers
+GET    /api/work/blockers/{id}
+PATCH  /api/work/blockers/{id}
+DELETE /api/work/blockers/{id}
+```
+
+List filters:
+
+- `project_id`
+- `blocked_item_id`
+- `blocker_item_id`
+- `state=active|resolved|all`
+- `limit`
+
+Create fields:
+
+- `blocked_item_id`
+- `blocker_source`: `work_item`, `person`, `system`, or `external`
+- `blocker_item_id` for Work-item blockers
+- `external_label` for person/system/external blockers
+- `reason`
+- `unblock_action`
 
 ## Change Log
 

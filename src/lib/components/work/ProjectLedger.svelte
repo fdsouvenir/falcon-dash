@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
-	import { literalBlockersFor, projectHealth, riskFlagsFor } from '$lib/work/work-insights.js';
+	import { projectHealth, riskFlagsFor } from '$lib/work/work-insights.js';
 	import {
 		formatDate,
 		formatDateTime,
@@ -14,6 +15,7 @@
 		statusTone,
 		waitingLabel,
 		workStatuses,
+		type WorkBlockerLink,
 		type WorkCategory,
 		type WorkChange,
 		type WorkChangeEntityType,
@@ -52,6 +54,7 @@
 		item,
 		items,
 		activity = [],
+		blockerLinks = [],
 		draft = $bindable(),
 		saving,
 		saveMessage,
@@ -62,6 +65,7 @@
 		item: WorkItem;
 		items: WorkItem[];
 		activity?: WorkChangeLogEntry[];
+		blockerLinks?: WorkBlockerLink[];
 		draft: ProjectLedgerDraft;
 		saving: boolean;
 		saveMessage: string | null;
@@ -119,14 +123,10 @@
 	);
 	const health = $derived(projectHealth(item, projectWorkChildren));
 	const healthReasons = $derived(riskFlagsFor(item, projectWorkChildren));
-	const blockers = $derived(literalBlockersFor(item, projectWorkChildren));
-	const waitingItems = $derived(
-		projectWorkChildren
-			.filter((candidate) => openStatuses.has(candidate.status) && Boolean(candidate.waiting_on))
-			.sort(
-				(a, b) =>
-					statusRank(a.status) - statusRank(b.status) || b.last_activity_at - a.last_activity_at
-			)
+	const activeBlockerLinks = $derived(
+		[...blockerLinks]
+			.filter((link) => link.status === 'active')
+			.sort((a, b) => b.updated_at - a.updated_at || b.id - a.id)
 	);
 	const currentNextStep = $derived.by(() => {
 		if (item.current_next_step_id) {
@@ -257,6 +257,45 @@
 
 	function typeLabel(candidate: WorkItem): string {
 		return sentenceCase(candidate.type);
+	}
+
+	function blockerLinksForItem(itemId: number): WorkBlockerLink[] {
+		return activeBlockerLinks.filter((link) => link.blocked_item_id === itemId);
+	}
+
+	function blockerSourceLabel(link: WorkBlockerLink): string {
+		if (link.blocker_source === 'work_item') {
+			return firstText(link.blocker_item_title, `Work item ${link.blocker_item_id}`);
+		}
+		return firstText(link.external_label, sentenceCase(link.blocker_source));
+	}
+
+	function blockedItemLabel(link: WorkBlockerLink): string {
+		return firstText(link.blocked_item_title, `Work item ${link.blocked_item_id}`);
+	}
+
+	function blockerSourceKind(link: WorkBlockerLink): string {
+		if (link.blocker_source === 'work_item') {
+			return link.blocker_item_type ? sentenceCase(link.blocker_item_type) : 'Work item';
+		}
+		if (link.blocker_source === 'person') return 'Person';
+		if (link.blocker_source === 'system') return 'System';
+		return 'External';
+	}
+
+	function canNavigateToItem(type: WorkItemType | null, id: number | null): boolean {
+		return Boolean(type && id);
+	}
+
+	function navigateToItem(type: WorkItemType | null, id: number | null): void {
+		if (!type || !id) return;
+		if (type === 'milestone') {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic target uses resolved current project route plus an in-page hash.
+			void goto(`${resolve(routeFor(item))}#project-plan`);
+			return;
+		}
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- dynamic Work item target is built from the resolved Work base path.
+		void goto(`${resolve('/work')}/${pathForType(type)}/${id}`);
 	}
 
 	function changeEntityLabel(entry: WorkChangeLogEntry): string {
@@ -754,65 +793,98 @@
 								<p class="mt-2 text-sm text-on-surface-variant">No current next step is linked.</p>
 							{/if}
 						</div>
-						<div
-							class="grid divide-y divide-outline-variant/45 lg:grid-cols-2 lg:divide-x lg:divide-y-0"
-						>
-							<div class="p-4">
-								<div class="flex items-center justify-between gap-3">
-									<h4 class="text-sm font-semibold text-status-danger">Blockers</h4>
+						{#if activeBlockerLinks.length}
+							<div
+								class="border-t border-outline-variant/45 p-4"
+								data-testid="project-blocker-panel"
+							>
+								<div class="flex flex-wrap items-center justify-between gap-3">
+									<h4 class="text-sm font-semibold text-status-danger">What's holding this up</h4>
 									<span
 										class="rounded-md border border-status-danger/35 px-2 py-1 text-xs font-semibold text-status-danger"
 									>
-										{blockers.length} active
+										{activeBlockerLinks.length} holding up
 									</span>
 								</div>
 								<div class="mt-3 space-y-2">
-									{#each blockers as blocker (blocker.id)}
-										<a
-											href={resolve(routeFor(blocker))}
-											class="block rounded-md border border-status-danger/25 bg-status-danger-bg/35 p-3 transition hover:bg-status-danger-bg/60"
+									{#each activeBlockerLinks as link (link.id)}
+										{@const blockedHref = canNavigateToItem(
+											link.blocked_item_type,
+											link.blocked_item_id
+										)}
+										{@const blockerHref = canNavigateToItem(
+											link.blocker_item_type,
+											link.blocker_item_id
+										)}
+										<div
+											class="grid gap-3 rounded-md border border-status-danger/25 bg-status-danger-bg/30 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,0.8fr)]"
+											data-testid="project-blocker-row"
 										>
-											<p class="text-sm font-semibold text-on-surface">{blocker.title}</p>
-											<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-												{compactDetail(blocker)}
-											</p>
-										</a>
-									{:else}
-										<p class="text-sm text-on-surface-variant">No active blockers.</p>
-									{/each}
-								</div>
-							</div>
-							<div class="p-4">
-								<div class="flex items-center justify-between gap-3">
-									<h4 class="text-sm font-semibold text-status-warning">Waiting state</h4>
-									<span
-										class="rounded-md border border-status-warning/35 px-2 py-1 text-xs font-semibold text-status-warning"
-									>
-										{waitingItems.length} waiting
-									</span>
-								</div>
-								<div class="mt-3 space-y-2">
-									{#each waitingItems as waitingItem (waitingItem.id)}
-										<a
-											href={resolve(routeFor(waitingItem))}
-											class="block rounded-md border border-outline-variant/45 bg-surface-1/55 p-3 transition hover:bg-surface-2/70"
-										>
-											<div class="flex items-center justify-between gap-3">
-												<p class="text-sm font-semibold text-on-surface">{waitingItem.title}</p>
-												<span class="shrink-0 text-xs text-status-warning">
-													{waitingLabel(waitingItem.waiting_on)}
-												</span>
+											<div class="min-w-0">
+												<p
+													class="text-xs font-semibold uppercase tracking-[0.14em] text-status-danger"
+												>
+													Stuck
+												</p>
+												{#if blockedHref}
+													<button
+														type="button"
+														onclick={() =>
+															navigateToItem(link.blocked_item_type, link.blocked_item_id)}
+														class="falcon-focus mt-1 block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary"
+													>
+														{blockedItemLabel(link)}
+													</button>
+												{:else}
+													<p class="mt-1 truncate text-sm font-semibold text-on-surface">
+														{blockedItemLabel(link)}
+													</p>
+												{/if}
+												{#if link.reason}
+													<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+														{link.reason}
+													</p>
+												{/if}
 											</div>
-											<p class="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
-												{itemPrimaryText(waitingItem)}
-											</p>
-										</a>
-									{:else}
-										<p class="text-sm text-on-surface-variant">Nothing is marked waiting.</p>
+											<div class="min-w-0">
+												<p
+													class="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
+												>
+													Blocked by
+												</p>
+												{#if blockerHref}
+													<button
+														type="button"
+														onclick={() =>
+															navigateToItem(link.blocker_item_type, link.blocker_item_id)}
+														class="falcon-focus mt-1 block max-w-full truncate text-left text-sm font-semibold text-on-surface hover:text-primary"
+													>
+														{blockerSourceLabel(link)}
+													</button>
+												{:else}
+													<p class="mt-1 truncate text-sm font-semibold text-on-surface">
+														{blockerSourceLabel(link)}
+													</p>
+												{/if}
+												<p class="mt-1 text-xs text-on-surface-variant">
+													{blockerSourceKind(link)}
+												</p>
+											</div>
+											<div class="min-w-0">
+												<p
+													class="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
+												>
+													Unblock move
+												</p>
+												<p class="mt-1 line-clamp-3 text-sm leading-5 text-on-surface">
+													{firstText(link.unblock_action, 'Clarify the next unblock step.')}
+												</p>
+											</div>
+										</div>
 									{/each}
 								</div>
 							</div>
-						</div>
+						{/if}
 					</div>
 				</section>
 
@@ -840,6 +912,29 @@
 											<p class="mt-1 text-sm leading-6 text-on-surface-variant">
 												{group.description}
 											</p>
+										{/if}
+										{#if group.milestone && blockerLinksForItem(group.milestone.id).length}
+											<div class="mt-3 space-y-2" data-testid="project-plan-blockers">
+												{#each blockerLinksForItem(group.milestone.id) as link (link.id)}
+													<div
+														class="rounded-md border border-status-danger/25 bg-status-danger-bg/25 px-3 py-2 text-xs"
+														data-testid="project-plan-blocker"
+													>
+														<p class="font-semibold text-status-danger">
+															Blocked by {blockerSourceLabel(link)}
+														</p>
+														<p class="mt-1 text-on-surface-variant">
+															{firstText(link.reason, 'No blocker reason recorded.')}
+														</p>
+														<p class="mt-1 text-on-surface">
+															Unblock: {firstText(
+																link.unblock_action,
+																'Clarify the next unblock step.'
+															)}
+														</p>
+													</div>
+												{/each}
+											</div>
 										{/if}
 									</div>
 								</div>
@@ -871,6 +966,29 @@
 													<p class="mt-1 text-xs text-on-surface-variant">
 														Can answer: {firstText(work.answerer, work.owner, 'Not set')}
 													</p>
+												{/if}
+												{#if blockerLinksForItem(work.id).length}
+													<div class="mt-3 space-y-2" data-testid="project-plan-blockers">
+														{#each blockerLinksForItem(work.id) as link (link.id)}
+															<div
+																class="rounded-md border border-status-danger/25 bg-status-danger-bg/25 px-3 py-2 text-xs"
+																data-testid="project-plan-blocker"
+															>
+																<p class="font-semibold text-status-danger">
+																	Blocked by {blockerSourceLabel(link)}
+																</p>
+																<p class="mt-1 text-on-surface-variant">
+																	{firstText(link.reason, 'No blocker reason recorded.')}
+																</p>
+																<p class="mt-1 text-on-surface">
+																	Unblock: {firstText(
+																		link.unblock_action,
+																		'Clarify the next unblock step.'
+																	)}
+																</p>
+															</div>
+														{/each}
+													</div>
 												{/if}
 											</div>
 											<p class="text-xs text-on-surface-variant md:text-right">

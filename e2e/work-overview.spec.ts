@@ -12,6 +12,12 @@ type SeededWorkCategory = {
 	title: string;
 };
 
+type SeededWorkBlocker = {
+	id: number;
+	status: 'active' | 'resolved';
+	external_label: string | null;
+};
+
 const packageVersion = JSON.parse(
 	readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
 ) as { version: string };
@@ -50,6 +56,20 @@ async function createWorkCategory(
 	});
 	expect(response.ok()).toBe(true);
 	return (await response.json()) as SeededWorkCategory;
+}
+
+async function createWorkBlocker(
+	request: APIRequestContext,
+	body: Record<string, unknown>
+): Promise<SeededWorkBlocker> {
+	const response = await request.post('/api/work/blockers', {
+		data: {
+			actor: 'playwright',
+			...body
+		}
+	});
+	expect(response.ok()).toBe(true);
+	return (await response.json()) as SeededWorkBlocker;
 }
 
 function defaultTypedFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -444,6 +464,95 @@ test.describe('work overview executive status board', () => {
 		await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
 	});
 
+	test('supports Work blocker API CRUD and relationship filters', async ({ request }) => {
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E blocker API project ${Date.now()}`,
+			status: 'in_progress',
+			next_action: 'Review blocker links'
+		});
+		const nextStep = await createWorkItem(request, {
+			type: 'next_step',
+			parent_item_id: project.id,
+			title: `E2E blocker API step ${Date.now()}`,
+			status: 'ready',
+			next_action: 'Ask Jamie for the missing file'
+		});
+		let blocker: SeededWorkBlocker | null = null;
+
+		try {
+			blocker = await createWorkBlocker(request, {
+				blocked_item_id: nextStep.id,
+				blocker_source: 'person',
+				external_label: 'Jamie',
+				reason: 'Jamie has the source file.',
+				unblock_action: 'Ask Jamie to upload the file.'
+			});
+
+			const projectLinks = await request.get(
+				`/api/work/blockers?project_id=${project.id}&state=active`
+			);
+			expect(projectLinks.ok()).toBe(true);
+			const projectJson = await projectLinks.json();
+			expect(projectJson.blockers).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						id: blocker.id,
+						blocked_item_id: nextStep.id,
+						blocker_source: 'person',
+						external_label: 'Jamie',
+						status: 'active'
+					})
+				])
+			);
+
+			const duplicate = await request.post('/api/work/blockers', {
+				data: {
+					actor: 'playwright',
+					blocked_item_id: nextStep.id,
+					blocker_source: 'person',
+					external_label: 'Jamie'
+				}
+			});
+			expect(duplicate.status()).toBe(409);
+
+			const invalid = await request.post('/api/work/blockers', {
+				data: {
+					actor: 'playwright',
+					blocked_item_id: nextStep.id,
+					blocker_source: 'work_item'
+				}
+			});
+			expect(invalid.status()).toBe(400);
+
+			const resolved = await request.patch(`/api/work/blockers/${blocker.id}`, {
+				data: { actor: 'playwright', status: 'resolved' }
+			});
+			expect(resolved.ok()).toBe(true);
+			blocker = (await resolved.json()) as SeededWorkBlocker;
+			expect(blocker.status).toBe('resolved');
+
+			const activeLinks = await request.get(
+				`/api/work/blockers?blocked_item_id=${nextStep.id}&state=active`
+			);
+			expect((await activeLinks.json()).blockers).toHaveLength(0);
+
+			const allLinks = await request.get(
+				`/api/work/blockers?blocked_item_id=${nextStep.id}&state=all`
+			);
+			expect((await allLinks.json()).blockers).toEqual(
+				expect.arrayContaining([expect.objectContaining({ id: blocker.id, status: 'resolved' })])
+			);
+
+			const deleted = await request.delete(`/api/work/blockers/${blocker.id}`);
+			expect(deleted.ok()).toBe(true);
+			blocker = null;
+		} finally {
+			if (blocker) await request.delete(`/api/work/blockers/${blocker.id}`);
+			await archiveWorkItems(request, [nextStep, project]);
+		}
+	});
+
 	test('renders settings as a grouped directory with top-level category creation', async ({
 		page,
 		request,
@@ -571,6 +680,7 @@ test.describe('work overview executive status board', () => {
 			await expect(row).not.toContainText(`Project ${seeded.project.id}`);
 			await expect(row).toContainText('A seeded outcome for overview workflow checks.');
 			await expect(row).toContainText(`Next step: Clear: ${seeded.blockedChange.title}`);
+			await expect(row).toContainText('1 holding up');
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
@@ -628,10 +738,21 @@ test.describe('work overview executive status board', () => {
 			);
 			expect(createdMilestone).toBeTruthy();
 			seeded.items.push(createdMilestone);
-			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
-			await expect(
-				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()
-			).toBeVisible();
+			await expect(page.getByTestId('project-blocker-panel')).toBeVisible();
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				seeded.blockedChange.title
+			);
+			await expect(page.getByTestId('project-blocker-panel')).toContainText('External party');
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				'This work is marked blocked.'
+			);
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				'Wait for provider support'
+			);
+			await expect(page.getByTestId('project-plan')).toContainText('Blocked by External party');
+			await expect(page.getByTestId('project-plan')).toContainText(
+				'Unblock: Wait for provider support'
+			);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -726,8 +847,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByRole('heading', { name: 'Project details' })).toBeVisible();
 			await expect(page.getByText('Overdue').first()).toBeVisible();
 			await expect(page.getByText('Urgent').first()).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
-			await expect(page.getByText('No active blockers.')).toBeVisible();
+			await expect(page.getByTestId('project-blocker-panel')).toHaveCount(0);
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toHaveCount(0);
 			await expect(page.getByRole('heading', { name: 'Findings and evidence' })).toHaveCount(0);

@@ -190,17 +190,20 @@ Routeable Work surface for the `/work` module:
   inspector shows read-only item context, exposes only status/priority/waiting state controls, and
   links to the full item page.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
-  not render the peer list; they show type-aware sections, health reasons, literal blockers, related
+  not render the peer list; they show type-aware sections, health reasons, blocker context, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Project details render as a ledger-style project page with a left section index, compact
-  header, a main Project details section for editable basics, current next step, blocker/waiting
-  state, and a project plan that groups related next steps, decisions, open questions, and change
-  requests under short project-local milestones. The static operating brief moves to the right rail
-  with milestone creation so status, health, priority, dates, and category are not repeated there.
-  Milestones are inert headings with a title and optional one-sentence description; they are added
-  from the project right rail and do not have standalone list or detail pages. Work attached
-  directly to the project appears in a project-level work group instead of being mixed into the
-  milestone structure. Project Plan remains visible even before much structure exists, while
+  header, a main Project details section for editable basics, current next step, active blocker
+  relationships, and a project plan that groups related next steps, decisions, open questions, and
+  change requests under short project-local milestones. The blocker panel is hidden when there are
+  no active blocker links; when present, each row reads as stuck item, blocked-by source, reason,
+  and unblock move. Matching blocked-by chips also render inline under the affected milestone or
+  work row inside Project Plan. The static operating brief moves to the right rail with milestone
+  creation so status, health, priority, dates, and category are not repeated there. Milestones are
+  inert headings with a title and optional one-sentence description; they are added from the
+  project right rail and do not have standalone list or detail pages. Work attached directly to the
+  project appears in a project-level work group instead of being mixed into the milestone
+  structure. Project Plan remains visible even before much structure exists, while
   supporting sections such as Automations and Findings/evidence render only when attached content
   exists. Project activity renders project-scoped change-log rows so operators can see what object
   changed and the structured field deltas behind the summary.

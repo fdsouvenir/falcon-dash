@@ -22,7 +22,7 @@ redirects to `/work`.
 - Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page
   directly.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
-  reasons, literal blockers, related work, and read-only narrative fields. Question detail pages use
+  reasons, blocker context, related work, and read-only narrative fields. Question detail pages use
   a sectioned Question Brief so long agent-written Markdown plans remain scannable.
 - Findings feed for captured facts, events, and evidence
 - Work data generated from the new `~/.openclaw/data/falcon-dash/work.db` database
@@ -57,10 +57,14 @@ hover only, and double-clicking opens the full project page. The project page st
 details for editable basics like status, priority, waiting state, and category; the right rail keeps
 the static operating brief close by without repeating those details. Current next step, blockers,
 and waiting state lead into a project plan where milestone groups contain their related next steps,
-decisions, open questions, and change requests. Milestones are short checkpoints inside the project,
-not separate pages; the project right rail includes an Add milestone control for a title and
-one-sentence description. Work that is not attached to a milestone appears as project-level work,
-while automations, findings, and activity remain supporting sections.
+decisions, open questions, and change requests. The project list keeps blockers lightweight with
+labels such as "2 holding up"; the project detail explains each active blocker as a relationship:
+what is stuck, what is blocking it, why, and the next unblock move. The same blocker context appears
+inline under the affected milestone or work row so it is visible where the stuck work lives.
+Milestones are short checkpoints inside the project, not separate pages; the project right rail
+includes an Add milestone control for a title and one-sentence description. Work that is not
+attached to a milestone appears as project-level work, while automations, findings, and activity
+remain supporting sections.
 
 Activity is a Work change log, not a loose list of recently touched records. Overview activity shows
 recent Work changes across the module, and project activity filters that same log to the project so

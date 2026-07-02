@@ -8,6 +8,7 @@
 	import WorkSettings from '$lib/components/work/WorkSettings.svelte';
 	import {
 		clearWorkDataCache,
+		loadCachedWorkBlockers,
 		loadCachedWorkChangeLog,
 		loadCachedWorkItem,
 		loadCachedWorkItems,
@@ -46,6 +47,7 @@
 		workStatuses,
 		workTypes,
 		type TypeConfig,
+		type WorkBlockerLink,
 		type WorkChangeEntityType,
 		type WorkChangeLogEntry,
 		type WorkItem,
@@ -146,6 +148,7 @@
 	let error = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
 	let items = $state<WorkItem[]>([]);
+	let blockerLinks = $state<WorkBlockerLink[]>([]);
 	let changeLog = $state<WorkChangeLogEntry[]>([]);
 	let queue = $state<WorkQueue | null>(null);
 	let search = $state('');
@@ -438,19 +441,22 @@
 		try {
 			if (isSettings) {
 				items = [];
+				blockerLinks = [];
 				changeLog = [];
 				queue = null;
 				return;
 			}
 			if (mode === 'overview') {
-				const [loadedItems, loadedQueue, loadedChangeLog] = await Promise.all([
+				const [loadedItems, loadedQueue, loadedChangeLog, loadedBlockers] = await Promise.all([
 					loadItems(workItemsUrl({ limit: workListLimit })),
 					loadQueue(),
-					loadChangeLog(workChangeLogUrl({ limit: 24 }))
+					loadChangeLog(workChangeLogUrl({ limit: 24 })),
+					loadBlockers(workBlockersUrl({ limit: 500 }))
 				]);
 				items = loadedItems;
 				queue = loadedQueue;
 				changeLog = loadedChangeLog;
+				blockerLinks = loadedBlockers;
 				selectedId = id ?? queue?.nextActions[0]?.id ?? items[0]?.id ?? null;
 				return;
 			}
@@ -461,6 +467,10 @@
 				selectedId = item.id;
 				await ensureItemContext(item);
 				changeLog = await loadChangeLog(changeLogUrlForItem(item));
+				blockerLinks =
+					item.type === 'project'
+						? await loadBlockers(workBlockersUrl({ project_id: item.id }))
+						: [];
 				return;
 			}
 
@@ -481,6 +491,8 @@
 							items.filter((item) => item.type !== activeType),
 							loadedItems
 						);
+			blockerLinks =
+				activeType === 'project' ? await loadBlockers(workBlockersUrl({ limit: 500 })) : [];
 			const loadedTypeItems = loadedItems.filter((item) => item.type === activeType);
 			selectedId = id ?? loadedTypeItems[0]?.id ?? null;
 			const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
@@ -507,6 +519,10 @@
 
 	async function loadChangeLog(url: string): Promise<WorkChangeLogEntry[]> {
 		return loadCachedWorkChangeLog(url);
+	}
+
+	async function loadBlockers(url: string): Promise<WorkBlockerLink[]> {
+		return loadCachedWorkBlockers(url);
 	}
 
 	async function ensureItemContext(item: WorkItem) {
@@ -561,6 +577,7 @@
 			clearWorkDataCache(updated.id);
 			if (mode === 'overview') queue = await loadQueue();
 			await refreshVisibleChangeLog(updated);
+			await refreshVisibleBlockers(updated);
 			saveMessage = 'Saved';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to save Work item';
@@ -573,6 +590,7 @@
 		items = mergeItems(items, [item]);
 		clearWorkDataCache(item.id);
 		void refreshVisibleChangeLog(selectedItem ?? item);
+		void refreshVisibleBlockers(selectedItem ?? item);
 	}
 
 	function emptyDraft(): Draft {
@@ -713,7 +731,19 @@
 	}
 
 	function blockerCount(item: WorkItem): number {
+		if (item.type === 'project') return projectBlockerLinks(item).length;
 		return blockersFor(item).length;
+	}
+
+	function projectBlockerLinks(project: WorkItem): WorkBlockerLink[] {
+		return blockerLinks.filter(
+			(link) => link.status === 'active' && link.project_id === project.id
+		);
+	}
+
+	function blockerCountLabel(project: WorkItem): string {
+		const count = blockerCount(project);
+		return count ? `${count} holding up` : 'Clear';
 	}
 
 	function firstText(...values: Array<string | number | null | undefined>): string {
@@ -1151,7 +1181,7 @@
 				{ label: 'Open work', value: projectOpenWork(item) },
 				{
 					label: 'Blockers',
-					value: `${blockerCount(item)}`,
+					value: blockerCountLabel(item),
 					tone: blockerCount(item) ? 'text-status-danger' : 'text-status-muted'
 				}
 			];
@@ -1281,6 +1311,28 @@
 		return `/api/work/change-log?${params.toString()}`;
 	}
 
+	function workBlockersUrl({
+		project_id,
+		blocked_item_id,
+		blocker_item_id,
+		state = 'active',
+		limit = 100
+	}: {
+		project_id?: number;
+		blocked_item_id?: number;
+		blocker_item_id?: number;
+		state?: 'active' | 'resolved' | 'all';
+		limit?: number;
+	}): string {
+		const params = new SvelteURLSearchParams();
+		if (project_id !== undefined) params.set('project_id', String(project_id));
+		if (blocked_item_id !== undefined) params.set('blocked_item_id', String(blocked_item_id));
+		if (blocker_item_id !== undefined) params.set('blocker_item_id', String(blocker_item_id));
+		params.set('state', state);
+		params.set('limit', String(limit));
+		return `/api/work/blockers?${params.toString()}`;
+	}
+
 	function changeLogUrlForItem(item: WorkItem): string {
 		if (item.type === 'project') return workChangeLogUrl({ project_id: item.id, limit: 24 });
 		return workChangeLogUrl({ entity_type: item.type, entity_id: item.id, limit: 24 });
@@ -1294,6 +1346,18 @@
 		if (mode === 'detail') {
 			changeLog = await loadChangeLog(changeLogUrlForItem(item));
 		}
+	}
+
+	async function refreshVisibleBlockers(item: WorkItem): Promise<void> {
+		if (mode === 'detail' && item.type === 'project') {
+			blockerLinks = await loadBlockers(workBlockersUrl({ project_id: item.id }));
+			return;
+		}
+		if (mode === 'overview' || activeType === 'project') {
+			blockerLinks = await loadBlockers(workBlockersUrl({ limit: 500 }));
+			return;
+		}
+		blockerLinks = [];
 	}
 
 	function statusNeedsClosedRecords(
@@ -1646,6 +1710,7 @@
 								item={selectedItem}
 								{items}
 								activity={changeLog}
+								blockerLinks={projectBlockerLinks(selectedItem)}
 								bind:draft
 								{saving}
 								{saveMessage}
@@ -2441,13 +2506,13 @@
 														Blockers
 													</p>
 													<p
-														class="mt-1 inline-flex min-w-7 justify-center rounded bg-surface-3/80 px-2 py-1 text-sm font-semibold xl:mt-0 {blockerCount(
+														class="mt-1 inline-flex min-w-[5.5rem] justify-center rounded bg-surface-3/80 px-2 py-1 text-xs font-semibold xl:mt-0 {blockerCount(
 															project
 														)
 															? 'text-status-danger'
 															: 'text-status-muted'}"
 													>
-														{blockerCount(project)}
+														{blockerCountLabel(project)}
 													</p>
 												</div>
 
