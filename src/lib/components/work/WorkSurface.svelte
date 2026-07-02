@@ -61,7 +61,6 @@
 	} from '$lib/work/work-ui.js';
 	import {
 		ArrowRight,
-		CalendarClock,
 		CheckCircle2,
 		Clock,
 		RefreshCw,
@@ -161,6 +160,8 @@
 	let selectedId = $state<number | null>(null);
 	let draft = $state<Draft>(emptyDraft());
 	let showQuickPane = $state(false);
+	let lastLoadKey = '';
+	let loadGeneration = 0;
 
 	const workListLimit = 300;
 
@@ -242,7 +243,8 @@
 		) {
 			return selected;
 		}
-		return filteredItems[0] ?? null;
+		if (mode === 'overview') return filteredItems[0] ?? null;
+		return null;
 	});
 
 	const needsOperator = $derived(
@@ -441,11 +443,18 @@
 
 	onMount(() => {
 		const cleanupQuickPaneQuery = setupQuickPaneQuery();
-		void loadWork();
 		return cleanupQuickPaneQuery;
 	});
 
+	$effect(() => {
+		const key = `${mode}:${section ?? ''}:${id ?? ''}:${page.url.search}`;
+		if (lastLoadKey === key) return;
+		lastLoadKey = key;
+		void loadWork();
+	});
+
 	async function loadWork() {
+		const generation = ++loadGeneration;
 		loading = true;
 		error = null;
 		saveMessage = null;
@@ -464,6 +473,7 @@
 					loadChangeLog(workChangeLogUrl({ limit: 24 })),
 					loadBlockers(workBlockersUrl({ limit: 500 }))
 				]);
+				if (generation !== loadGeneration) return;
 				items = loadedItems;
 				queue = loadedQueue;
 				changeLog = loadedChangeLog;
@@ -474,14 +484,18 @@
 
 			if (mode === 'detail' && id) {
 				const item = await loadItem(id);
+				if (generation !== loadGeneration) return;
 				items = mergeItems(items, [item]);
 				selectedId = item.id;
 				await ensureItemContext(item);
+				if (generation !== loadGeneration) return;
 				changeLog = await loadChangeLog(changeLogUrlForItem(item));
+				if (generation !== loadGeneration) return;
 				blockerLinks =
 					item.type === 'project'
 						? await loadBlockers(workBlockersUrl({ project_id: item.id }))
 						: [];
+				if (generation !== loadGeneration) return;
 				return;
 			}
 
@@ -503,6 +517,7 @@
 							? workItemsUrl({ includeClosed, limit: workListLimit })
 							: workItemsUrl({ type: activeType, includeClosed, limit: workListLimit })
 					);
+			if (generation !== loadGeneration) return;
 			items =
 				activeType === 'project'
 					? loadedItems
@@ -514,19 +529,23 @@
 							),
 							loadedItems
 						);
+			if (activeType !== 'project') {
+				await ensureListParentContext(loadedItems);
+				if (generation !== loadGeneration) return;
+			}
 			blockerLinks =
 				activeType === 'project' ? await loadBlockers(workBlockersUrl({ limit: 500 })) : [];
-			const loadedTypeItems = loadedItems.filter((item) =>
-				isResolutionSection ? resolutionTypes.includes(item.type) : item.type === activeType
-			);
-			selectedId = id ?? loadedTypeItems[0]?.id ?? null;
+			if (generation !== loadGeneration) return;
+			selectedId = id ?? null;
 			const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
 			if (selected) await ensureItemContext(selected);
+			if (generation !== loadGeneration) return;
 			changeLog = [];
 		} catch (err) {
+			if (generation !== loadGeneration) return;
 			error = err instanceof Error ? err.message : 'Unable to load Work';
 		} finally {
-			loading = false;
+			if (generation === loadGeneration) loading = false;
 		}
 	}
 
@@ -572,6 +591,19 @@
 		}
 		const groups = await Promise.all(requests);
 		items = mergeItems(items, groups.flat());
+	}
+
+	async function ensureListParentContext(source: WorkItem[]) {
+		const parentIds = [
+			...new Set(
+				source
+					.map((item) => item.parent_item_id)
+					.filter((parentId): parentId is number => Boolean(parentId))
+			)
+		].filter((parentId) => !items.some((item) => item.id === parentId));
+		if (!parentIds.length) return;
+		const parents = await Promise.all(parentIds.slice(0, 50).map((parentId) => loadItem(parentId)));
+		items = mergeItems(items, parents);
 	}
 
 	function mergeItems(current: WorkItem[], incoming: WorkItem[]): WorkItem[] {
@@ -1054,10 +1086,6 @@
 		return firstText(item.owner, item.subcategory_id, item.category_id, 'Work');
 	}
 
-	function inspect(item: WorkItem) {
-		selectedId = item.id;
-	}
-
 	function setupQuickPaneQuery(): () => void {
 		const query = window.matchMedia('(min-width: 1280px)');
 		showQuickPane = query.matches;
@@ -1070,7 +1098,7 @@
 
 	function handleSectionRowClick(item: WorkItem) {
 		if (showQuickPane) {
-			inspect(item);
+			selectedId = selectedId === item.id ? null : item.id;
 			return;
 		}
 		openDetail(item);
@@ -1349,6 +1377,47 @@
 
 	function selectedRowClass(item: WorkItem): string {
 		return selectedItem?.id === item.id ? 'bg-surface-2/80 ring-1 ring-inset ring-primary/35' : '';
+	}
+
+	function parentTitle(item: WorkItem): string {
+		const parent = parentFor(item);
+		return parent ? parent.title : 'No parent';
+	}
+
+	function resolutionKindLabel(item: WorkItem): string {
+		return item.type === 'decision' ? 'Choice to make' : 'Question to answer';
+	}
+
+	function resolutionPrimaryText(item: WorkItem): string {
+		if (item.type === 'decision') {
+			return firstText(item.decision_question, item.title);
+		}
+		return firstText(item.question_text, item.title);
+	}
+
+	function resolutionSecondaryText(item: WorkItem): string {
+		if (item.type === 'decision') {
+			return firstText(item.recommended_option, item.next_action, 'No recommendation recorded');
+		}
+		return firstText(item.proposed_answer, item.next_action, 'No proposed answer recorded');
+	}
+
+	function changeApprovalLabel(item: WorkItem): string {
+		if (item.approval_required) return 'Approval needed';
+		return sentenceCase(item.approval_state ?? 'No approval');
+	}
+
+	function automationNextRun(item: WorkItem): string {
+		return formatDateTime(item.next_run_at ?? item.scheduled_at);
+	}
+
+	function automationCadence(item: WorkItem): string {
+		const trigger = item.trigger_type ? sentenceCase(item.trigger_type) : null;
+		return firstText(
+			[trigger, item.schedule].filter(Boolean).join(' · '),
+			item.stale_after,
+			'No cadence'
+		);
 	}
 
 	function workItemsUrl({
@@ -2609,7 +2678,19 @@
 									{/each}
 								</div>
 							{:else if activeType === 'change_request'}
-								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
+								<div
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="change-request-list"
+								>
+									<div
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.3fr)_9rem_12rem_9rem_7rem] xl:items-center xl:gap-4"
+									>
+										<span>Change request</span>
+										<span>Approval</span>
+										<span>Risk</span>
+										<span>Waiting</span>
+										<span class="text-right">Updated</span>
+									</div>
 									{#each filteredItems as change (change.id)}
 										<button
 											type="button"
@@ -2617,46 +2698,84 @@
 											ondblclick={() => handleSectionRowDoubleClick(change)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === change.id}
-											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 lg:grid-cols-[minmax(0,1fr)_11rem_9rem] {selectedRowClass(
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
 												change
 											)}"
 										>
-											<div class="min-w-0">
-												<div class="flex flex-wrap items-center gap-2">
-													<span class="text-base font-semibold text-on-surface">{change.title}</span
+											<div
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.3fr)_9rem_12rem_9rem_7rem] xl:items-center xl:gap-4"
+											>
+												<div class="min-w-0">
+													<div class="flex min-w-0 items-baseline gap-2">
+														<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+															{change.id}.
+														</span>
+														<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
+															{change.title}
+														</h3>
+													</div>
+													<p
+														class="ml-6 mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant"
 													>
-													<span class="falcon-chip px-2 py-0.5 text-xs"
-														>{itemDisplayId(change)}</span
-													>
+														{firstText(
+															change.change_scope,
+															change.description,
+															change.body,
+															'Scope not set'
+														)}
+													</p>
+													<div class="ml-6 mt-2 flex min-w-0">
+														<span
+															class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
+														>
+															<span class="shrink-0 text-primary">Next:</span>
+															<span class="truncate"
+																>{firstText(change.next_action, 'No next action set')}</span
+															>
+														</span>
+													</div>
 												</div>
-												<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-													{firstText(change.description, change.body, 'Scope not set')}
-												</p>
-												<p class="mt-2 text-sm font-semibold text-on-surface">
-													Next: {firstText(change.next_action, 'No next action set')}
-												</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Approval</p>
-												<p
-													class="mt-1 text-sm font-semibold {change.approval_required
-														? 'text-status-warning'
-														: 'text-status-muted'}"
-												>
-													{change.approval_required ? 'Required' : 'Not required'}
-												</p>
-												<p class="mt-2 text-xs {statusTone(change.status)}">
-													{formatStatus(change.status)}
-												</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Waiting</p>
-												<p class="mt-1 text-sm font-semibold text-on-surface">
-													{waitingLabel(change.waiting_on)}
-												</p>
-												<p class="mt-2 text-xs {priorityTone(change.priority)}">
-													{sentenceCase(change.priority ?? 'normal')}
-												</p>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Approval
+													</p>
+													<p
+														class="mt-1 text-sm font-semibold xl:mt-0 {change.approval_required
+															? 'text-status-warning'
+															: 'text-status-muted'}"
+													>
+														{changeApprovalLabel(change)}
+													</p>
+													<p class="mt-1 text-xs {statusTone(change.status)}">
+														{sentenceCase(formatStatus(change.status))}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Risk
+													</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{firstText(change.risk, sentenceCase(change.priority ?? 'normal'))}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Waiting
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{waitingLabel(change.waiting_on)}
+													</p>
+												</div>
+												<div class="xl:text-right">
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Updated
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{formatDateTime(change.last_activity_at)}
+													</p>
+												</div>
 											</div>
 										</button>
 									{:else}
@@ -2664,53 +2783,98 @@
 									{/each}
 								</div>
 							{:else if isResolutionSection || activeType === 'open_question' || activeType === 'decision'}
-								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
-									{#each filteredItems as question (question.id)}
+								<div
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="resolution-list"
+								>
+									<div
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.35fr)_9rem_10rem_8rem_7rem] xl:items-center xl:gap-4"
+									>
+										<span>Resolution</span>
+										<span>Kind</span>
+										<span>Waiting</span>
+										<span>Impact</span>
+										<span class="text-right">Updated</span>
+									</div>
+									{#each filteredItems as resolutionItem (resolutionItem.id)}
 										<button
 											type="button"
-											onclick={() => handleSectionRowClick(question)}
-											ondblclick={() => handleSectionRowDoubleClick(question)}
+											onclick={() => handleSectionRowClick(resolutionItem)}
+											ondblclick={() => handleSectionRowDoubleClick(resolutionItem)}
 											data-testid="work-section-row"
-											aria-pressed={selectedItem?.id === question.id}
-											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
-												question
+											aria-pressed={selectedItem?.id === resolutionItem.id}
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
+												resolutionItem
 											)}"
 										>
-											<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem]">
+											<div
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_9rem_10rem_8rem_7rem] xl:items-center xl:gap-4"
+											>
 												<div class="min-w-0">
-													<div class="flex flex-wrap items-center gap-2">
-														<span class="text-base font-semibold text-on-surface"
-															>{question.title}</span
-														>
-														<span class="falcon-chip px-2 py-0.5 text-xs">
-															{itemDisplayId(question)}
+													<div class="flex min-w-0 items-baseline gap-2">
+														<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+															{resolutionItem.id}.
 														</span>
-														<span class="text-xs {statusTone(question.status)}">
-															{formatStatus(question.status)}
-														</span>
+														<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
+															{resolutionPrimaryText(resolutionItem)}
+														</h3>
 													</div>
-													<p class="mt-2 text-xs font-semibold text-on-surface-variant">
-														Recommended resolution
-													</p>
-													<p class="mt-1 line-clamp-2 text-sm leading-6 text-on-surface">
-														{firstText(question.next_action, 'No recommendation recorded')}
-													</p>
-													<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
+													<p
+														class="ml-6 mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant"
+													>
 														{firstText(
-															question.body,
-															question.description,
-															'No context written yet'
+															resolutionItem.description,
+															resolutionItem.body,
+															resolutionItem.title
 														)}
 													</p>
+													<div class="ml-6 mt-2 flex min-w-0">
+														<span
+															class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
+														>
+															<span class="shrink-0 text-primary">Suggested:</span>
+															<span class="truncate">{resolutionSecondaryText(resolutionItem)}</span
+															>
+														</span>
+													</div>
 												</div>
-												<div class="falcon-subtle-panel p-3">
-													<p class="text-xs text-on-surface-variant">Impact</p>
-													<p class="mt-1 text-sm font-semibold {priorityTone(question.priority)}">
-														{sentenceCase(question.priority ?? 'normal')}
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Kind
 													</p>
-													<p class="mt-3 text-xs text-on-surface-variant">Waiting</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{resolutionKindLabel(resolutionItem)}
+													</p>
+													<p class="mt-1 text-xs {statusTone(resolutionItem.status)}">
+														{sentenceCase(formatStatus(resolutionItem.status))}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Waiting
+													</p>
 													<p class="mt-1 text-sm font-semibold text-on-surface">
-														{waitingLabel(question.waiting_on)}
+														{waitingLabel(resolutionItem.waiting_on)}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Impact
+													</p>
+													<p
+														class="mt-1 text-sm font-semibold {priorityTone(
+															resolutionItem.priority
+														)} xl:mt-0"
+													>
+														{sentenceCase(resolutionItem.priority ?? 'normal')}
+													</p>
+												</div>
+												<div class="xl:text-right">
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Updated
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{formatDateTime(resolutionItem.last_activity_at)}
 													</p>
 												</div>
 											</div>
@@ -2720,7 +2884,19 @@
 									{/each}
 								</div>
 							{:else if activeType === 'task'}
-								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
+								<div
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="task-list"
+								>
+									<div
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.35fr)_8rem_10rem_11rem_8rem] xl:items-center xl:gap-4"
+									>
+										<span>Task</span>
+										<span>Status</span>
+										<span>Due</span>
+										<span>Parent</span>
+										<span>Waiting</span>
+									</div>
 									{#each filteredItems as task (task.id)}
 										<button
 											type="button"
@@ -2728,43 +2904,79 @@
 											ondblclick={() => handleSectionRowDoubleClick(task)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === task.id}
-											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 lg:grid-cols-[1.4rem_minmax(0,1fr)_10rem_10rem] {selectedRowClass(
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
 												task
 											)}"
 										>
-											<div class="pt-1">
-												<CheckCircle2
-													class="h-5 w-5 {task.status === 'complete'
-														? 'text-status-active'
-														: 'text-on-surface-variant'}"
-												/>
-											</div>
-											<div class="min-w-0">
-												<div class="flex flex-wrap items-center gap-2">
-													<span class="text-base font-semibold text-on-surface">{task.title}</span>
-													<span class="falcon-chip px-2 py-0.5 text-xs">{itemDisplayId(task)}</span>
-													<span class="text-xs {statusTone(task.status)}"
-														>{formatStatus(task.status)}</span
-													>
+											<div
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_8rem_10rem_11rem_8rem] xl:items-center xl:gap-4"
+											>
+												<div class="min-w-0">
+													<div class="grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2">
+														<CheckCircle2
+															class="mt-0.5 h-4 w-4 {task.status === 'complete'
+																? 'text-status-active'
+																: 'text-on-surface-variant'}"
+														/>
+														<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
+															{task.title}
+														</h3>
+														<p
+															class="col-start-2 mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant"
+														>
+															{firstText(
+																task.description,
+																task.body,
+																'No task context written yet'
+															)}
+														</p>
+														<div class="col-start-2 mt-2 flex min-w-0">
+															<span
+																class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
+															>
+																<span class="shrink-0 text-primary">Action:</span>
+																<span class="truncate">
+																	{firstText(task.task_action, task.next_action, task.title)}
+																</span>
+															</span>
+														</div>
+													</div>
 												</div>
-												<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-													{firstText(task.next_action, task.description, 'No action written yet')}
-												</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Parent</p>
-												<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
-													{parentFor(task) ? itemDisplayId(parentFor(task)!) : 'No parent'}
-												</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Due</p>
-												<p class="mt-1 text-sm font-semibold text-on-surface">
-													{formatDate(task.due_date)}
-												</p>
-												<p class="mt-2 text-xs {priorityTone(task.priority)}">
-													{sentenceCase(task.priority ?? 'normal')}
-												</p>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Status
+													</p>
+													<p class="mt-1 text-sm font-semibold {statusTone(task.status)} xl:mt-0">
+														{sentenceCase(formatStatus(task.status))}
+													</p>
+													<p class="mt-1 text-xs {priorityTone(task.priority)}">
+														{sentenceCase(task.priority ?? 'normal')}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">Due</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{formatDate(task.due_date)}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Parent
+													</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{parentTitle(task)}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Waiting
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{waitingLabel(task.waiting_on)}
+													</p>
+												</div>
 											</div>
 										</button>
 									{:else}
@@ -2772,7 +2984,19 @@
 									{/each}
 								</div>
 							{:else if activeType === 'automation'}
-								<div class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3">
+								<div
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="automation-list"
+								>
+									<div
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.35fr)_10rem_13rem_10rem_8rem] xl:items-center xl:gap-4"
+									>
+										<span>Automation</span>
+										<span>Next run</span>
+										<span>Cadence</span>
+										<span>Last result</span>
+										<span>Status</span>
+									</div>
 									{#each filteredItems as routine (routine.id)}
 										<button
 											type="button"
@@ -2780,48 +3004,78 @@
 											ondblclick={() => handleSectionRowDoubleClick(routine)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === routine.id}
-											class="falcon-subtle-panel block w-full p-4 text-left transition hover:border-primary/35 hover:bg-surface-2/70 {selectedRowClass(
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
 												routine
 											)}"
 										>
-											<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+											<div
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.35fr)_10rem_13rem_10rem_8rem] xl:items-center xl:gap-4"
+											>
 												<div class="min-w-0">
-													<div class="flex flex-wrap items-center gap-2">
-														<span class="text-base font-semibold text-on-surface"
-															>{routine.title}</span
-														>
-														<span class="falcon-chip px-2 py-0.5 text-xs">
-															{itemDisplayId(routine)}
+													<div class="flex min-w-0 items-baseline gap-2">
+														<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+															{routine.id}.
 														</span>
-														<span class="text-xs {statusTone(routine.status)}">
-															{formatStatus(routine.status)}
-														</span>
+														<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
+															{routine.title}
+														</h3>
 													</div>
-													<p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
+													<p
+														class="ml-6 mt-1 line-clamp-2 text-sm leading-5 text-on-surface-variant"
+													>
 														{firstText(
 															routine.description,
 															routine.body,
 															'Automation scope not set'
 														)}
 													</p>
-													<p class="mt-2 text-sm font-semibold text-on-surface">
-														Last result: {firstText(routine.result, 'No result recorded')}
+													<div class="ml-6 mt-2 flex min-w-0">
+														<span
+															class="inline-flex max-w-full items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-on-surface"
+														>
+															<span class="shrink-0 text-primary">Run:</span>
+															<span class="truncate"
+																>{firstText(routine.next_action, 'No run action set')}</span
+															>
+														</span>
+													</div>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Next run
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{automationNextRun(routine)}
 													</p>
 												</div>
 												<div>
-													<p class="text-xs text-on-surface-variant">Next run</p>
-													<p class="mt-1 text-sm font-semibold text-on-surface">
-														{formatDateTime(routine.scheduled_at)}
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Cadence
 													</p>
-													<CalendarClock class="mt-3 h-5 w-5 text-primary" />
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{automationCadence(routine)}
+													</p>
 												</div>
 												<div>
-													<p class="text-xs text-on-surface-variant">Cadence</p>
-													<p class="mt-1 text-sm font-semibold text-on-surface">
-														{firstText(routine.stale_after, 'Not set')}
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Last result
 													</p>
-													<p class="mt-2 text-xs {priorityTone(routine.priority)}">
-														{sentenceCase(routine.priority ?? 'normal')}
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{firstText(routine.last_result, routine.result, 'No result')}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Status
+													</p>
+													<p
+														class="mt-1 text-sm font-semibold {statusTone(routine.status)} xl:mt-0"
+													>
+														{sentenceCase(formatStatus(routine.status))}
 													</p>
 												</div>
 											</div>
@@ -2831,7 +3085,18 @@
 									{/each}
 								</div>
 							{:else if activeType === 'finding'}
-								<div class="min-h-0 flex-1 divide-y divide-outline-variant/50 overflow-y-auto">
+								<div
+									class="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto bg-surface-0/35 p-3"
+									data-testid="finding-list"
+								>
+									<div
+										class="hidden rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-2 text-xs font-semibold text-on-surface-variant xl:grid xl:grid-cols-[minmax(18rem,1.45fr)_11rem_12rem_8rem] xl:items-center xl:gap-4"
+									>
+										<span>Finding</span>
+										<span>Source</span>
+										<span>Attached to</span>
+										<span class="text-right">Captured</span>
+									</div>
 									{#each filteredItems as observation (observation.id)}
 										<button
 											type="button"
@@ -2839,39 +3104,64 @@
 											ondblclick={() => handleSectionRowDoubleClick(observation)}
 											data-testid="work-section-row"
 											aria-pressed={selectedItem?.id === observation.id}
-											class="grid w-full gap-3 p-4 text-left transition hover:bg-surface-2/70 md:grid-cols-[8rem_minmax(0,1fr)_9rem] {selectedRowClass(
+											class="falcon-focus block w-full rounded-md border border-outline-variant/45 bg-surface-1/80 px-4 py-3 text-left transition hover:border-primary/35 hover:bg-surface-2/75 {selectedRowClass(
 												observation
 											)}"
 										>
-											<div class="text-xs text-on-surface-variant">
-												{formatDateTime(observation.last_activity_at)}
-											</div>
-											<div class="min-w-0">
-												<div class="flex flex-wrap items-center gap-2">
-													<span class="text-base font-semibold text-on-surface">
-														{observation.title}
-													</span>
-													<span class="falcon-chip px-2 py-0.5 text-xs">
-														{itemDisplayId(observation)}
-													</span>
+											<div
+												class="grid gap-3 xl:grid-cols-[minmax(18rem,1.45fr)_11rem_12rem_8rem] xl:items-center xl:gap-4"
+											>
+												<div class="min-w-0">
+													<div class="flex min-w-0 items-baseline gap-2">
+														<span class="shrink-0 text-xs font-semibold text-on-surface-variant">
+															{observation.id}.
+														</span>
+														<h3 class="truncate text-base font-semibold leading-6 text-on-surface">
+															{observation.title}
+														</h3>
+													</div>
+													<p
+														class="ml-6 mt-1 line-clamp-3 text-sm leading-5 text-on-surface-variant"
+													>
+														{firstText(
+															observation.finding_text,
+															observation.description,
+															observation.body,
+															'No finding text'
+														)}
+													</p>
 												</div>
-												<p class="mt-2 line-clamp-3 text-sm leading-6 text-on-surface-variant">
-													{firstText(observation.description, observation.body, 'No finding text')}
-												</p>
-											</div>
-											<div>
-												<p class="text-xs text-on-surface-variant">Source</p>
-												<p class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface">
-													{firstText(
-														observation.owner,
-														observation.subcategory_id,
-														observation.category_id,
-														'Work'
-													)}
-												</p>
-												<p class="mt-2 text-xs {statusTone(observation.status)}">
-													{formatStatus(observation.status)}
-												</p>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Source
+													</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{findingSourceLabel(observation)}
+													</p>
+													<p class="mt-1 text-xs {statusTone(observation.status)}">
+														{sentenceCase(formatStatus(observation.status))}
+													</p>
+												</div>
+												<div>
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Attached to
+													</p>
+													<p
+														class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface xl:mt-0"
+													>
+														{parentTitle(observation)}
+													</p>
+												</div>
+												<div class="xl:text-right">
+													<p class="text-xs font-semibold text-on-surface-variant xl:hidden">
+														Captured
+													</p>
+													<p class="mt-1 text-sm font-semibold text-on-surface xl:mt-0">
+														{formatDateTime(observation.created_at)}
+													</p>
+												</div>
 											</div>
 										</button>
 									{:else}
@@ -2901,105 +3191,119 @@
 							{/if}
 						</div>
 
-						{#if showQuickPane && selectedItem && activeType !== 'project'}
+						{#if showQuickPane && activeType !== 'project'}
 							<aside
-								class="falcon-soft-panel sticky top-16 max-h-[calc(100dvh-5rem)] overflow-y-auto"
+								class="falcon-soft-panel sticky top-[4.75rem] flex h-[calc(100dvh-6.25rem)] flex-col overflow-y-auto"
 							>
-								<div class="border-b border-outline-variant/60 p-4">
-									<div class="flex flex-wrap items-center gap-2">
-										<p class="text-xs font-semibold text-on-surface-variant">
-											{itemDisplayId(selectedItem)}
+								{#if selectedItem}
+									<div class="border-b border-outline-variant/60 p-4">
+										<div class="flex flex-wrap items-center gap-2">
+											<p class="text-xs font-semibold text-on-surface-variant">
+												{itemDisplayId(selectedItem)}
+											</p>
+											<span class="text-xs {statusTone(selectedItem.status)}">
+												{formatStatus(selectedItem.status)}
+											</span>
+										</div>
+										<h3 class="mt-2 text-lg font-semibold leading-6 text-on-surface">
+											{selectedItem.title}
+										</h3>
+										<p class="mt-2 line-clamp-4 text-sm leading-6 text-on-surface-variant">
+											{selectedItem.type === 'open_question' || selectedItem.type === 'decision'
+												? questionPrimaryAnswer(selectedItem)
+												: detailLead(selectedItem)}
 										</p>
-										<span class="text-xs {statusTone(selectedItem.status)}">
-											{formatStatus(selectedItem.status)}
-										</span>
+										<a
+											href={resolve(routeFor(selectedItem))}
+											class="falcon-focus mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+										>
+											Open full page <ArrowRight class="h-4 w-4" />
+										</a>
 									</div>
-									<h3 class="mt-2 text-lg font-semibold leading-6 text-on-surface">
-										{selectedItem.title}
-									</h3>
-									<p class="mt-2 line-clamp-4 text-sm leading-6 text-on-surface-variant">
-										{selectedItem.type === 'open_question' || selectedItem.type === 'decision'
-											? questionPrimaryAnswer(selectedItem)
-											: detailLead(selectedItem)}
-									</p>
-									<a
-										href={resolve(routeFor(selectedItem))}
-										class="falcon-focus mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+									<div class="grid grid-cols-2 gap-2 border-b border-outline-variant/50 p-4">
+										{#each quickFacts(selectedItem).slice(0, 4) as fact (fact.label)}
+											<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
+												<p class="text-xs text-on-surface-variant">{fact.label}</p>
+												<p
+													class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
+														''}"
+												>
+													{fact.value}
+												</p>
+											</div>
+										{/each}
+									</div>
+									<form
+										class="space-y-4 p-4"
+										onsubmit={saveSelected}
+										data-testid="work-quick-state"
 									>
-										Open full page <ArrowRight class="h-4 w-4" />
-									</a>
-								</div>
-								<div class="grid grid-cols-2 gap-2 border-b border-outline-variant/50 p-4">
-									{#each quickFacts(selectedItem).slice(0, 4) as fact (fact.label)}
-										<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
-											<p class="text-xs text-on-surface-variant">{fact.label}</p>
-											<p
-												class="mt-1 line-clamp-2 text-sm font-semibold text-on-surface {fact.tone ??
-													''}"
-											>
-												{fact.value}
+										<div>
+											<h4 class="text-sm font-semibold text-on-surface">Quick state</h4>
+											<p class="mt-1 text-xs leading-5 text-on-surface-variant">
+												Update lightweight state only. Narrative fields stay agent-managed.
 											</p>
 										</div>
-									{/each}
-								</div>
-								<form class="space-y-4 p-4" onsubmit={saveSelected} data-testid="work-quick-state">
-									<div>
-										<h4 class="text-sm font-semibold text-on-surface">Quick state</h4>
-										<p class="mt-1 text-xs leading-5 text-on-surface-variant">
-											Update lightweight state only. Narrative fields stay agent-managed.
-										</p>
-									</div>
-									<label class="grid gap-1 text-xs text-on-surface-variant">
-										Status
-										<select
-											bind:value={draft.status}
-											class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-										>
-											{#each workStatuses as status (status)}
-												<option value={status}>{sentenceCase(formatStatus(status))}</option>
-											{/each}
-										</select>
-									</label>
-									<div class="grid grid-cols-2 gap-2">
 										<label class="grid gap-1 text-xs text-on-surface-variant">
-											Priority
+											Status
 											<select
-												bind:value={draft.priority}
+												bind:value={draft.status}
 												class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
 											>
-												<option value="low">Low</option>
-												<option value="normal">Normal</option>
-												<option value="high">High</option>
-												<option value="urgent">Urgent</option>
-											</select>
-										</label>
-										<label class="grid gap-1 text-xs text-on-surface-variant">
-											Waiting on
-											<select
-												bind:value={draft.waiting_on}
-												class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
-											>
-												{#each waitingOptions as option (option.value)}
-													<option value={option.value}>{option.label}</option>
+												{#each workStatuses as status (status)}
+													<option value={status}>{sentenceCase(formatStatus(status))}</option>
 												{/each}
 											</select>
 										</label>
+										<div class="grid grid-cols-2 gap-2">
+											<label class="grid gap-1 text-xs text-on-surface-variant">
+												Priority
+												<select
+													bind:value={draft.priority}
+													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+												>
+													<option value="low">Low</option>
+													<option value="normal">Normal</option>
+													<option value="high">High</option>
+													<option value="urgent">Urgent</option>
+												</select>
+											</label>
+											<label class="grid gap-1 text-xs text-on-surface-variant">
+												Waiting on
+												<select
+													bind:value={draft.waiting_on}
+													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+												>
+													{#each waitingOptions as option (option.value)}
+														<option value={option.value}>{option.label}</option>
+													{/each}
+												</select>
+											</label>
+										</div>
+										<button
+											type="submit"
+											disabled={saving}
+											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+										>
+											<Save class="h-4 w-4" />
+											{saving ? 'Saving...' : 'Save state'}
+										</button>
+										{#if saveMessage}
+											<p class="text-sm text-status-active">{saveMessage}</p>
+										{/if}
+										{#if error}
+											<p class="text-sm text-status-danger">{error}</p>
+										{/if}
+									</form>
+								{:else}
+									<div class="flex min-h-full flex-col justify-center p-5">
+										<p class="text-sm font-semibold text-on-surface">No item selected</p>
+										<p class="mt-2 text-sm leading-6 text-on-surface-variant">
+											Click a row to inspect it here. Click the selected row again to clear the
+											inspector.
+										</p>
 									</div>
-									<button
-										type="submit"
-										disabled={saving}
-										class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-									>
-										<Save class="h-4 w-4" />
-										{saving ? 'Saving...' : 'Save state'}
-									</button>
-									{#if saveMessage}
-										<p class="text-sm text-status-active">{saveMessage}</p>
-									{/if}
-									{#if error}
-										<p class="text-sm text-status-danger">{error}</p>
-									{/if}
-								</form>
+								{/if}
 							</aside>
 						{/if}
 					</section>

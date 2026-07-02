@@ -57,6 +57,9 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   status, coming-up, open-work, blocker, and updated values stay aligned as scannable columns.
 - Desktop project rows should use hover-only emphasis, not persistent selected-row highlighting;
   opening the full page is a double-click action.
+- Desktop non-project Work rows should use type-specific structured columns with a persistent
+  right inspector. Row selection can be cleared by clicking the selected row again; the inspector
+  should stay visible with a placeholder instead of collapsing the layout.
 - In numbered project rows, use a hanging indent so blurbs and next-step badges align with the
   title text rather than the project number.
 - In dense project columns, center narrow numeric counts such as blockers with a small metric

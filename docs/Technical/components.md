@@ -112,6 +112,8 @@ pages. Section list rows follow a breakpoint-specific contract:
 
 - At `xl` and wider, rows single-click into the sticky quick inspector and double-click into the
   standalone detail route.
+- Clicking the selected row again clears selection; the inspector remains visible as a fixed
+  placeholder so the desktop layout does not jump.
 - Below `xl`, rows skip quick inspection and single-tap directly into the standalone detail route.
 - The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
   line above search, type-specific primary filter chips, compact More filters, and refresh. That
@@ -184,9 +186,11 @@ Routeable Work surface for the `/work` module:
   `/work/decisions` redirect into `/work/needs-resolution`. Projects show
   an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
   blockers; needs resolution shows both unresolved knowledge and commitment choices in one queue;
-  change requests show scope, approval, risk, and verification state; tasks show parent and due
-  state; automations show trigger, next run, and last result; findings render as a feed. Section
-  filters are type-aware and URL-backed through `q`, `status`, `focus`, and finding `source` query params. Row clicks select the right-side quick inspector in place. The
+  change requests show scope, approval, risk, and verification state; tasks show action, parent,
+  due, and waiting state; automations show trigger/cadence, next run, and last result; findings
+  render as an evidence feed with source and attachment context. Section filters are type-aware
+  and URL-backed through `q`, `status`, `focus`, and finding `source` query params. Row clicks
+  select the right-side quick inspector in place. The
   inspector shows read-only item context, exposes only status/priority/waiting state controls, and
   links to the full item page.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do

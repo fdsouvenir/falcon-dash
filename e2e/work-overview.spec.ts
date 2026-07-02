@@ -783,6 +783,64 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
+	test('keeps type lists populated while switching tabs and supports unselecting rows', async ({
+		page,
+		request,
+		baseURL
+	}, testInfo) => {
+		test.skip(testInfo.project.name !== 'chromium', 'Quick inspectors are desktop-only.');
+		const seeded = await seedExecutiveOverview(request);
+		const finding = await createWorkItem(request, {
+			type: 'finding',
+			parent_item_id: seeded.project.id,
+			title: `E2E captured launch finding ${Date.now()}`,
+			status: 'needs_review',
+			description: 'A seeded finding for list switching checks.',
+			finding_text: 'The launch checklist has one unresolved owner.'
+		});
+		seeded.items.push(finding);
+
+		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
+			await page.goto(`${baseURL ?? ''}/work/tasks`);
+
+			const taskRow = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: 'E2E send stakeholder brief' })
+				.first();
+			await expect(page.getByTestId('task-list')).toBeVisible();
+			await expect(page.getByText('No item selected')).toBeVisible();
+			await expect(taskRow).toBeVisible();
+			await taskRow.click();
+			await expect(taskRow).toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toBeVisible();
+			await taskRow.click();
+			await expect(taskRow).not.toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+			await expect(page.getByText('No item selected')).toBeVisible();
+
+			const checks = [
+				['Tasks', 'task-list', 'E2E send stakeholder brief'],
+				['Needs resolution', 'resolution-list', seeded.question.title],
+				['Change requests', 'change-request-list', seeded.blockedChange.title],
+				['Automations', 'automation-list', 'E2E run readiness sweep'],
+				['Findings', 'finding-list', finding.title]
+			] as const;
+
+			for (let index = 0; index < 3; index += 1) {
+				for (const [linkName, listId, rowText] of checks) {
+					await page.getByRole('link', { name: linkName, exact: true }).click();
+					await expect(page.getByTestId(listId)).toBeVisible();
+					await expect(
+						page.getByTestId('work-section-row').filter({ hasText: rowText }).first()
+					).toBeVisible();
+				}
+			}
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
 	test('opens full detail on desktop section row double click', async ({
 		page,
 		request,

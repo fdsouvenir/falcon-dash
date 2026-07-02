@@ -17,9 +17,10 @@ redirects to `/work`.
 - Type-specific pages for projects, tasks, needs resolution, change requests, findings, and
   automations. Needs resolution combines open questions and decisions in one list while preserving
   their underlying Work shapes.
-- Desktop type pages with the section title above fixed search/filter controls, a scrollable item
-  list, and a quick inspector on the right. Single clicks select and highlight a row in place;
-  double clicks open that item's standalone detail page.
+- Desktop type pages with the section title above fixed search/filter controls, type-specific
+  structured rows, a scrollable item list, and a fixed quick inspector on the right. Single clicks
+  select and highlight a row in place; clicking it again clears selection; double clicks open that
+  item's standalone detail page.
 - Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page
   directly.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
