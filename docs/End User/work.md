@@ -54,9 +54,9 @@ The desktop Projects section is a searchable, filterable project list rather tha
 workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
 next step, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
 hover only, and double-clicking opens the full project page. The project page starts with compact
-Current Work: editable basics like status, priority, waiting state, and category, the current next
-step, small risk chips, and any active blocker relationships. The right rail keeps the static
-operating brief close by without repeating those details. The project list keeps blockers
+Project Status: editable basics like status, health, priority, waiting state, and category, the
+current next step, and any active blocker relationships. The pinned right rail keeps milestone
+creation and the static operating brief close by without repeating those details. The project list keeps blockers
 lightweight with labels such as "2 holding up"; the project detail uses the same wording and
 explains each active blocker as a relationship: what is stuck, what is blocking it, why, and the
 next unblock move. The same blocker context appears inline under the affected milestone or work row

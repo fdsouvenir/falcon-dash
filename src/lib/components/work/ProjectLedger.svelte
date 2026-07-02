@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
-	import { projectHealth, riskFlagsFor } from '$lib/work/work-insights.js';
+	import { projectHealth } from '$lib/work/work-insights.js';
 	import {
 		formatDate,
 		formatDateTime,
@@ -94,7 +94,7 @@
 	];
 
 	const baseAnchors: ProjectLedgerAnchor[] = [
-		{ id: 'project-current-work', number: '01', label: 'Current Work' },
+		{ id: 'project-current-work', number: '01', label: 'Project Status' },
 		{ id: 'project-plan', number: '02', label: 'Project Plan' },
 		{ id: 'project-signals', number: '03', label: 'Signals' },
 		{ id: 'project-activity', number: '04', label: 'Activity' }
@@ -121,16 +121,10 @@
 		children.filter((candidate) => candidate.type !== 'milestone')
 	);
 	const health = $derived(projectHealth(item, projectWorkChildren));
-	const healthReasons = $derived(riskFlagsFor(item, projectWorkChildren));
 	const activeBlockerLinks = $derived(
 		[...blockerLinks]
 			.filter((link) => link.status === 'active')
 			.sort((a, b) => b.updated_at - a.updated_at || b.id - a.id)
-	);
-	const visibleHealthReasons = $derived(
-		healthReasons.filter(
-			(reason) => !(activeBlockerLinks.length > 0 && reason.key === 'blocked-related')
-		)
 	);
 	const currentNextStep = $derived.by(() => {
 		if (item.current_next_step_id) {
@@ -290,15 +284,6 @@
 	function blockerCountLabel(): string {
 		const count = activeBlockerLinks.length;
 		return count ? `${count} holding up` : 'Clear';
-	}
-
-	function riskDetailLabel(reason: { key: string; detail: string }): string {
-		if (reason.key === 'needs-decision-related') {
-			const match = reason.detail.match(/^(\d+)/);
-			return match ? `${match[1]} need operator review` : 'Needs operator review';
-		}
-		if (reason.key === 'blocked-related') return blockerCountLabel();
-		return reason.detail;
 	}
 
 	function canNavigateToItem(type: WorkItemType | null, id: number | null): boolean {
@@ -579,23 +564,12 @@
 						<h2 class="mt-2 text-2xl font-semibold leading-tight text-on-surface sm:text-3xl">
 							{item.title}
 						</h2>
-						<p class="mt-2 text-sm text-on-surface-variant">
-							Last updated {formatDateTime(item.last_meaningful_update_at ?? item.last_activity_at)}
-						</p>
 					</div>
-					<div class="flex flex-wrap items-center gap-2">
-						<span
-							class="rounded-md border border-outline-variant/70 bg-surface-1 px-2.5 py-1 text-xs font-semibold {statusTone(
-								item.status
-							)}"
-						>
-							{sentenceCase(formatStatus(item.status))}
-						</span>
-						<span
-							class="rounded-md border border-outline-variant/70 bg-surface-1 px-2.5 py-1 text-xs font-semibold {health.tone}"
-						>
-							{healthLabel()}
-						</span>
+					<div class="shrink-0 text-left sm:text-right">
+						<p class="text-xs text-on-surface-variant">Last updated</p>
+						<p class="mt-1 text-sm font-semibold text-on-surface">
+							{formatDateTime(item.last_meaningful_update_at ?? item.last_activity_at)}
+						</p>
 					</div>
 				</div>
 			</header>
@@ -605,7 +579,7 @@
 					<div class="mb-3 flex items-center justify-between gap-3">
 						<div class="flex items-center gap-2">
 							<span class="h-2 w-2 rounded-full bg-primary"></span>
-							<h3 class="text-sm font-semibold text-on-surface">Current Work</h3>
+							<h3 class="text-sm font-semibold text-on-surface">Project Status</h3>
 						</div>
 						<button
 							type="button"
@@ -725,6 +699,12 @@
 									</p>
 								</div>
 								<div class="min-w-0">
+									<p class="text-xs text-on-surface-variant">Health</p>
+									<p class="mt-0.5 truncate text-sm font-semibold {health.tone}">
+										{healthLabel()}
+									</p>
+								</div>
+								<div class="min-w-0">
 									<p class="text-xs text-on-surface-variant">Priority</p>
 									<p class="mt-0.5 truncate text-sm font-semibold {priorityTone(item.priority)}">
 										{sentenceCase(item.priority ?? 'normal')}
@@ -761,26 +741,6 @@
 									</p>
 								</div>
 							</div>
-							{#if visibleHealthReasons.length || !activeBlockerLinks.length}
-								<div class="border-t border-outline-variant/35 px-3 py-2">
-									<div class="flex flex-wrap gap-2">
-										{#each visibleHealthReasons as reason (reason.key)}
-											<span
-												class="inline-flex min-h-7 min-w-0 items-center gap-1 rounded-md border border-outline-variant/45 bg-surface-1/55 px-2 text-xs"
-											>
-												<span class="font-semibold {reason.tone}">{reason.label}</span>
-												<span class="truncate text-on-surface-variant"
-													>{riskDetailLabel(reason)}</span
-												>
-											</span>
-										{:else}
-											<span class="text-xs text-on-surface-variant"
-												>No active blockers or risk flags.</span
-											>
-										{/each}
-									</div>
-								</div>
-							{/if}
 							<div class="border-t border-outline-variant/35 p-3">
 								{#if currentNextStep}
 									<a
@@ -1165,8 +1125,10 @@
 			</div>
 		</div>
 
-		<aside class="border-t border-outline-variant/55 bg-surface-0/45 p-4 xl:border-l xl:border-t-0">
-			<div class="space-y-5 xl:sticky xl:top-16">
+		<aside class="border-t border-outline-variant/55 bg-surface-0/45 p-3 xl:border-l xl:border-t-0">
+			<div
+				class="space-y-3 xl:sticky xl:top-3 xl:max-h-[calc(100dvh-1.5rem)] xl:overflow-y-auto xl:pr-1"
+			>
 				<section class="rounded-lg border border-outline-variant/45 bg-surface-1/45 p-3">
 					<div class="flex items-center justify-between gap-3">
 						<div>

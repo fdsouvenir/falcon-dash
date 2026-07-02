@@ -694,7 +694,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('project-ledger')).toBeVisible();
 			await expect(page.getByPlaceholder('Search projects...')).toHaveCount(0);
 			await expect(page.getByText('Project ledger', { exact: true })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Current Work' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
 			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Health and status' })).toHaveCount(0);
@@ -708,8 +708,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByLabel('Subcategory', { exact: true })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Current state' })).toHaveCount(0);
 			await currentWork.getByRole('button', { name: 'Close' }).click();
-			await expect(currentWork).toContainText('Needs decision');
-			await expect(currentWork).toContainText('need operator review');
+			await expect(currentWork).not.toContainText('Needs decision');
 			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
@@ -847,7 +846,7 @@ test.describe('work overview executive status board', () => {
 			await page.goto(`${baseURL ?? ''}/work/projects/${seeded.project.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Current Work' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
 			await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
 			await expect(page.getByText('Overdue').first()).toBeVisible();
 			await expect(page.getByText('Urgent').first()).toBeVisible();

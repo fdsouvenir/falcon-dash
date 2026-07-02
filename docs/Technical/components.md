@@ -193,13 +193,13 @@ Routeable Work surface for the `/work` module:
   not render the peer list; they show type-aware sections, health reasons, blocker context, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Project detail pages render as a ledger-style page with a left section index, compact
-  header, and a Current Work section that combines editable basics, current next step, risk chips,
-  and active blocker relationships. The blocker panel is hidden when there are no active blocker
-  links; when present, each dense row reads as stuck item, blocked-by source, reason, and unblock
-  move using the same "holding up" wording as the project list. Matching blocked-by chips also
-  render inline under the affected milestone or work row inside Project Plan. The static operating
-  brief moves to the right rail with milestone creation so status, health, priority, dates, and
-  category are not repeated there. Milestones are inert headings with a title and optional
+  header with last update in the upper-right, and a Project Status section that combines editable
+  basics, health, current next step, and active blocker relationships. The blocker panel is hidden
+  when there are no active blocker links; when present, each dense row reads as stuck item,
+  blocked-by source, reason, and unblock move using the same "holding up" wording as the project
+  list. Matching blocked-by chips also render inline under the affected milestone or work row inside
+  Project Plan. The static operating brief moves to the pinned right rail with milestone creation so
+  status, health, priority, dates, and category are not repeated there. Milestones are inert headings with a title and optional
   one-sentence description; they are added from the project right rail and do not have standalone
   list or detail pages. Work attached directly to the project appears in a project-level work group
   instead of being mixed into the milestone structure. Project Plan remains visible even before much
