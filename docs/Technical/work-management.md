@@ -22,8 +22,9 @@ on disk only as static migration input and is opened read-only through
 - `milestone` — short project-local progress checkpoint; milestones are created and shown inside
   a project rather than browsed as standalone Work pages
 - `task` — concrete action, usually starting with a verb
-- `open_question` — unresolved knowledge with answerer, impact, and optional blocker
-- `decision` — unresolved commitment with options, recommendation, and no-decision consequence
+- Needs Resolution — operator-facing queue for unresolved knowledge and unresolved commitments
+  - `open_question` — API/storage variant for missing knowledge, answerer, impact, and optional blocker
+  - `decision` — API/storage variant for a commitment, options, recommendation, and no-decision consequence
 - `change_request` — controlled mutation of code, config, systems, data, auth, deployment, or automation
 - `finding` — captured fact, discovery, source-backed note, or evidence summary
 - `automation` — recurring or triggered work backed by cron, heartbeat, webhook, or manual runs
@@ -31,9 +32,10 @@ on disk only as static migration input and is opened read-only through
 Evidence is attached as provenance through `work_evidence_refs`. Findings may summarize evidence,
 but evidence refs remain provenance rather than standalone work.
 
-The UI presents `open_question` and `decision` together as Needs Resolution. They remain separate
-API/storage types because unanswered knowledge and unmade commitments validate and route
-differently, but the operator sees one queue for things that need to be resolved.
+The UI and operator conversation present `open_question` and `decision` together as Needs
+Resolution. They remain separate API/storage variants because unanswered knowledge and unmade
+commitments validate and route differently, but agents should treat Needs Resolution as the public
+Work concept.
 
 Blocker links are Work-owned relationship records in `work_blocker_links`. They connect the stuck
 Work item to either another Work item or an external person/system/source, with a reason, unblock
@@ -41,7 +43,7 @@ move, status, and timestamps. These links add visible relationship context witho
 blocked or waiting statuses on Work items.
 
 Projects expose the current actionable move through `current_next_item_id`, a pointer to an active
-task, open question, decision, or change request in that project. A project is treated as blocked
+task, Needs Resolution variant, or change request in that project. A project is treated as blocked
 only when that pointed item is blocked/waiting or has an active blocker link; later blocked tasks
 remain visible in the plan without making the whole project blocked. Tasks do not own child tasks
 or next-step records; work that needs sequencing should become a project or be split into project
@@ -58,7 +60,8 @@ directory and unassigns linked Work items instead of archiving the category reco
 ## ID Reference Convention
 
 Work item IDs are not a user-facing taxonomy. Human/operator-facing references should use the
-object type plus ID, such as `Change Request 176`, `Project 4`, `Automation 12`, or `Decision 9`.
+object type plus ID, such as `Change Request 176`, `Project 4`, `Automation 12`, or
+`Needs Resolution 9`.
 API and debug contexts may use raw `id` fields. Avoid using `W-{id}` as a blanket name for all Work
 objects; the `W-` prefix is reserved for generated context filenames where collision-proof file
 names are useful.
@@ -146,7 +149,7 @@ preventing duplicate active relationships.
 `src/lib/server/work/context-writer.ts` writes Work-owned context:
 
 - `WORK.md` — Work Queue
-- `Work/W-{id}.md` — active Work project, question, decision, change request, automation, and finding details
+- `Work/W-{id}.md` — active Work project, Needs Resolution, change request, automation, and finding details
 - `WORK-API.md` — Work API reference
 - `FALCON-DASH.md` — Falcon Dash plugin/module context
 
@@ -159,7 +162,7 @@ The default context directory is:
 Override it with `FALCON_DASH_WORK_CONTEXT_DIR`.
 
 For local UI review, `npm run seed:work` seeds the running dev server with stable `Dev:` Work
-records across projects, tasks, questions, decisions, change requests, automations, findings, and
+records across projects, tasks, Needs Resolution variants, change requests, automations, findings, and
 the Personal/Work/Condo category tree. Run `npm run seed:work -- --force` to archive and recreate
 only those `Dev:` records.
 
@@ -177,7 +180,7 @@ Mapping rules:
 - category -> Work category record
 - subcategory -> child Work subcategory record
 - project -> Work `project`
-- plan -> Work `change_request`, `task`, `open_question`, `decision`, or `automation` based on status/title/body classifier
+- plan -> Work `change_request`, `task`, Needs Resolution variant, or `automation` based on status/title/body classifier
 - plan dependency -> Work `depends_on` relationship
 - plan version -> preserved in the migrated Work item body
 - activity -> Work `finding` plus evidence ref

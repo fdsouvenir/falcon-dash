@@ -18,28 +18,29 @@ archived migration input; there is no active PM API.
 ## Object Types
 
 - `project` — bounded outcome with a finish line, health, timeline, and attached work
-- `milestone` — progress marker or checkpoint
+- `milestone` — short project-local checkpoint shown inside a project, not a standalone browse surface
 - `task` — concrete action, usually starting with a verb
-- `open_question` — unresolved knowledge with answerer, impact, and optional blocker
-- `decision` — unresolved commitment with options, recommendation, and no-decision consequence
+- Needs Resolution — operator-facing queue for unresolved knowledge and unresolved commitments
+  - `open_question` — API/storage variant for missing knowledge, answerer, impact, and optional blocker
+  - `decision` — API/storage variant for a commitment, options, recommendation, and no-decision consequence
 - `change_request` — controlled mutation of code, config, systems, data, auth, deployment, or automation
 - `finding` — captured fact, discovery, source-backed note, or evidence summary
 - `automation` — recurring or triggered work backed by cron, heartbeat, webhook, or manual runs
 
 Evidence is attached through evidence refs/provenance. It is not standalone work.
 
-In user-facing Work UI, open questions and decisions appear together as Needs Resolution. Keep
-using the specific API type that matches the record: `open_question` for missing knowledge and
-`decision` for a commitment or approval.
+In user-facing Work UI and operator conversation, use "Needs Resolution." Use the specific API
+variant only when creating or filtering records: `open_question` for missing knowledge and
+`decision` for a commitment, approval, or choice with options.
 
 Blocker relationships are explicit Work links. They show what item is stuck, whether the blocker is
 another Work item or an external person/system/source, why it is blocked, and the next unblock
 move. Links clarify status; they do not replace the item's `blocked` or `waiting` status.
 
 Projects use `current_next_item_id` for the visible "Next up" item. It points at an active task,
-open question, decision, or change request in the project. A project is blocked only when that
+Needs Resolution variant, or change request in the project. A project is blocked only when that
 pointed item is blocked/waiting or actively blocked; later blocked tasks are shown in the project
-plan without making the whole project blocked. Tasks do not have child tasks.
+plan without making the whole project blocked. Tasks do not have child tasks or child next steps.
 
 Categories and subcategories are setup records, not Work item types. Use `/categories` to list or
 maintain them and `category_id`/`subcategory_id` item filters to group operational work.
@@ -48,7 +49,7 @@ Deleting a category or subcategory removes that directory entry and unassigns li
 ## ID References
 
 Use object-type references in human/operator conversation: `Change Request 176`, `Project 4`,
-`Automation 12`, `Decision 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
+`Automation 12`, `Needs Resolution 9`, etc. Use raw `id` values in API/debug contexts. Do not prefix
 all Work items as `W-{id}`. The `W-` prefix is reserved for generated context filenames where
 collision-proof file names are useful.
 
@@ -108,12 +109,6 @@ POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
 DELETE /api/work/categories/{id}
-GET    /api/work/blockers
-POST   /api/work/blockers
-GET    /api/work/blockers/{id}
-PATCH  /api/work/blockers/{id}
-DELETE /api/work/blockers/{id}
-GET    /api/work/change-log
 ```
 
 Public fields are `id`, `title`, `description`, `kind`, and `parent_category_id`.

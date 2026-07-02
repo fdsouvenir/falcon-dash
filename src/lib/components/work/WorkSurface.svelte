@@ -854,6 +854,7 @@
 	}
 
 	function typeLabel(item: WorkItem): string {
+		if (resolutionTypes.includes(item.type)) return resolutionConfig.singular;
 		return configForType(item.type).singular;
 	}
 

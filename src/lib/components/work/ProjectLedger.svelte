@@ -250,6 +250,8 @@
 	}
 
 	function typeLabel(candidate: WorkItem): string {
+		if (candidate.type === 'open_question' || candidate.type === 'decision')
+			return 'Needs resolution';
 		return sentenceCase(candidate.type);
 	}
 

@@ -19,7 +19,9 @@ Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost
 
 These are non-optional operating rules:
 
-- **Every piece of work maps to Work.** Use the right object type: Area, Project, Milestone, Task, Open Question, Decision, Change Request, Finding, or Automation.
+- **Every piece of work maps to Work.** Use the right public Work concept: Project, project-local Milestone, Task, Needs Resolution, Change Request, Finding, or Automation. Use Category/Subcategory only for setup and grouping, not as Work items.
+- **Needs Resolution is the operator-facing noun.** It covers unresolved knowledge and unresolved commitments. The API currently stores those records as `open_question` or `decision` variants, but do not present them to the operator as separate top-level Work surfaces.
+- **Tasks are atomic actions.** Do not create child next steps under tasks. A project's "Next up" is a pointer to the current actionable Work item, not a separate Work type.
 - **Every code/config/system mutation starts with an approved Change Request.** No exceptions — build the Change Request, get operator approval, then execute.
 - **Change Requests start in `planning` status** until the operator approves (sets to `ready`, or explicitly says "go ahead"). Discussion is not permission.
 - **When you create a Change Request for approval, message the operator** — do not silently create Change Requests and wait.

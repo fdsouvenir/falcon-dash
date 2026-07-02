@@ -827,6 +827,21 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
 			await expect(page.getByText('No item selected')).toBeVisible();
 
+			await page.getByRole('link', { name: 'Needs resolution', exact: true }).click();
+			const resolutionRow = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: seeded.question.title })
+				.first();
+			await expect(resolutionRow).toBeVisible();
+			await resolutionRow.click();
+			await expect(page.getByTestId('work-quick-panel')).toContainText(
+				`Needs resolution ${seeded.question.id}`
+			);
+			await expect(page.getByTestId('work-quick-panel')).not.toContainText(
+				`Open question ${seeded.question.id}`
+			);
+			await resolutionRow.click();
+
 			const checks = [
 				['Tasks', 'task-list', 'E2E send stakeholder brief'],
 				['Needs resolution', 'resolution-list', seeded.question.title],

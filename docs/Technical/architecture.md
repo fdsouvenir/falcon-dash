@@ -230,9 +230,9 @@ The SvelteKit server process handles operations that require local filesystem or
 | Gateway config  | `~/.openclaw/openclaw.json`                                         | `src/routes/api/gateway-config/` |
 
 Work Management is the active agent-facing module for operator work. It stores categories and
-subcategories for setup plus projects, milestones, tasks, open questions, decisions, change
+subcategories for setup plus projects, milestones, tasks, Needs Resolution variants, change
 requests, findings, and automations in its own SQLite database, exposes `/api/work/*` for agent and
-app use, and presents open questions plus decisions together as Needs Resolution in the UI. It
+app use, and presents those resolution variants together as Needs Resolution in the UI. It
 generates Work context files (`WORK.md`, `Work/W-{id}.md`, `WORK-API.md`, `FALCON-DASH.md`). The
 archived PM database may remain on disk as read-only migration source material, but old PM routes,
 stores, context writers, and UI components are not part of Falcon Dash.

@@ -445,5 +445,6 @@ export function waitingLabel(value: string | null): string {
 }
 
 export function itemDisplayId(item: WorkItem): string {
+	if (resolutionTypes.includes(item.type)) return `Needs resolution ${item.id}`;
 	return `${configForType(item.type).singular} ${item.id}`;
 }

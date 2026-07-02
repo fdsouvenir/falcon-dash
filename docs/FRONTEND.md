@@ -61,7 +61,7 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   right inspector. Row selection can be cleared by clicking the selected row again; the inspector
   should stay visible with a placeholder instead of collapsing the layout, and it should not become
   a separate scrolling surface.
-- In numbered project rows, use a hanging indent so blurbs and next-step badges align with the
+- In numbered project rows, use a hanging indent so blurbs and next-up badges align with the
   title text rather than the project number.
 - In dense project columns, center narrow numeric counts such as blockers with a small metric
   anchor; reserve right alignment for date/time values.
@@ -73,7 +73,7 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   continuous milestone rail with nested work rows and in-context due dates; avoid a separate
   global date bar unless the page becomes a true timeline/Gantt surface. Do not repeat status,
   health, priority, dates, or category in the right rail.
-  Do not render milestones, tasks, decisions, questions, and change requests as unrelated type
+  Do not render milestones, tasks, Needs Resolution items, and change requests as unrelated type
   lists inside a project page. Milestones are not standalone browse/detail records in the UI; show
   them only as short headings inside a project plan, with project-page creation limited to a title
   and one-sentence description.

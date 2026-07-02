@@ -15,8 +15,8 @@ redirects to `/work`.
   single chronological recent activity log. The due-next section appears before the ask/risk
   sections so near-term action is visible first.
 - Type-specific pages for projects, tasks, needs resolution, change requests, findings, and
-  automations. Needs resolution combines open questions and decisions in one list while preserving
-  their underlying Work shapes.
+  automations. Needs Resolution is one operator-facing queue for unanswered knowledge and unmade
+  commitments while preserving the API variants behind the scenes.
 - Desktop type pages with the section title above fixed search/filter controls, type-specific
   structured rows, a scrollable item list, and a fixed quick inspector on the right. The inspector
   stays directly under the Work header without its own scroll bar, keeps state controls and quick
@@ -76,11 +76,11 @@ recent Work changes across the module, and project activity filters that same lo
 the feed can say what changed, which object changed, and which fields moved when structured deltas
 are available.
 
-Needs Resolution is the visible queue for unresolved knowledge and unresolved commitments. Open
-questions still capture knowledge that must be answered; decisions still capture a commitment or
-approval with options and a recommendation. The UI groups them because both are things the operator
-needs to resolve. Change requests are reserved for controlled mutation of code, config, systems,
-data, auth, deployment, or automation.
+Needs Resolution is the visible queue for unresolved knowledge and unresolved commitments. Some
+records are stored as missing-knowledge variants and others as commitment/approval variants with
+options and a recommendation, but the operator sees one queue because both are things that need to
+be resolved. Change requests are reserved for controlled mutation of code, config, systems, data,
+auth, deployment, or automation.
 
 Categories and subcategories are setup records rather than front-and-center Work item lists. Work
 settings presents them as a grouped directory where rows are selected for editing in the right-side
