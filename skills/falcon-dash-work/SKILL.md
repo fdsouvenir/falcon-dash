@@ -91,9 +91,27 @@ POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
 DELETE /api/work/categories/{id}
+GET    /api/work/change-log
 ```
 
 Public fields are `id`, `title`, `description`, `kind`, and `parent_category_id`.
+
+## Change Log
+
+```
+GET /api/work/change-log
+```
+
+Filters:
+
+- `project_id`
+- `entity_type`
+- `entity_id`
+- `area_id`
+- `limit`
+
+Rows include the changed entity, project/category/parent scope at the time of the event, a human
+summary, and structured `changes` entries with field labels plus before/after values.
 
 Create example:
 

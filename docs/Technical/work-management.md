@@ -52,7 +52,7 @@ names are useful.
 Work server code lives in `src/lib/server/work/`:
 
 - `database.ts` — Work database pathing, schema, and readonly archived-source opener
-- `crud.ts` — Work categories/items/queue/evidence/activity helpers
+- `crud.ts` — Work categories/items/queue/evidence/change-log helpers
 - `migration.ts` — archived PM preview/apply migration into Work
 - `context.ts` — Work Queue markdown generation
 - `context-writer.ts` — generated Work context files and workspace symlinks
@@ -75,6 +75,7 @@ POST   /api/work/categories
 GET    /api/work/categories/{id}
 PATCH  /api/work/categories/{id}
 DELETE /api/work/categories/{id}
+GET    /api/work/change-log
 GET    /api/work/context
 GET    /api/work/migration/preview
 POST   /api/work/migration/apply
@@ -89,6 +90,14 @@ There is no active PM API. Old PM routes and stores have been removed from the r
 The Projects list intentionally hydrates Work items broadly because project filters and summaries
 depend on child work context. Milestones remain valid API records for project structure, but the
 Work UI does not expose `/work/milestones` as a standalone list or detail surface.
+
+`GET /api/work/change-log` returns the Work-owned mutation log. It supports `project_id`,
+`entity_type`, `entity_id`, `area_id`, and `limit` filters. Each row records the changed entity,
+its project/category/parent scope at the time of the event, a human summary, and structured
+`changes` entries with field labels plus before/after values. Project and overview activity feeds
+read this change log instead of inferring activity from `last_activity_at`; existing databases get
+baseline backfilled “Existing Work item” events so feeds remain populated without inventing old
+field-level diffs.
 
 `GET /api/work/queue` returns actionability buckets:
 

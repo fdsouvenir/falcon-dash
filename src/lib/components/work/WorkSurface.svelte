@@ -8,6 +8,7 @@
 	import WorkSettings from '$lib/components/work/WorkSettings.svelte';
 	import {
 		clearWorkDataCache,
+		loadCachedWorkChangeLog,
 		loadCachedWorkItem,
 		loadCachedWorkItems,
 		loadCachedWorkQueue
@@ -43,7 +44,10 @@
 		typeFromSection,
 		waitingLabel,
 		workStatuses,
+		workTypes,
 		type TypeConfig,
+		type WorkChangeEntityType,
+		type WorkChangeLogEntry,
 		type WorkItem,
 		type WorkItemType,
 		type WorkPriority,
@@ -75,6 +79,8 @@
 		section?: string;
 		id?: number;
 	} = $props();
+
+	const workTypesForChanges: readonly WorkItemType[] = workTypes;
 
 	type Draft = {
 		title: string;
@@ -140,6 +146,7 @@
 	let error = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
 	let items = $state<WorkItem[]>([]);
+	let changeLog = $state<WorkChangeLogEntry[]>([]);
 	let queue = $state<WorkQueue | null>(null);
 	let search = $state('');
 	let statusFilter = $state<WorkStatus | 'open' | 'all'>('open');
@@ -431,16 +438,19 @@
 		try {
 			if (isSettings) {
 				items = [];
+				changeLog = [];
 				queue = null;
 				return;
 			}
 			if (mode === 'overview') {
-				const [loadedItems, loadedQueue] = await Promise.all([
+				const [loadedItems, loadedQueue, loadedChangeLog] = await Promise.all([
 					loadItems(workItemsUrl({ limit: workListLimit })),
-					loadQueue()
+					loadQueue(),
+					loadChangeLog(workChangeLogUrl({ limit: 14 }))
 				]);
 				items = loadedItems;
 				queue = loadedQueue;
+				changeLog = loadedChangeLog;
 				selectedId = id ?? queue?.nextActions[0]?.id ?? items[0]?.id ?? null;
 				return;
 			}
@@ -450,6 +460,7 @@
 				items = mergeItems(items, [item]);
 				selectedId = item.id;
 				await ensureItemContext(item);
+				changeLog = await loadChangeLog(changeLogUrlForItem(item));
 				return;
 			}
 
@@ -474,6 +485,7 @@
 			selectedId = id ?? loadedTypeItems[0]?.id ?? null;
 			const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
 			if (selected) await ensureItemContext(selected);
+			changeLog = [];
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to load Work';
 		} finally {
@@ -491,6 +503,10 @@
 
 	async function loadQueue(): Promise<WorkQueue> {
 		return loadCachedWorkQueue();
+	}
+
+	async function loadChangeLog(url: string): Promise<WorkChangeLogEntry[]> {
+		return loadCachedWorkChangeLog(url);
 	}
 
 	async function ensureItemContext(item: WorkItem) {
@@ -544,6 +560,7 @@
 			items = items.map((item) => (item.id === updated.id ? updated : item));
 			clearWorkDataCache(updated.id);
 			if (mode === 'overview') queue = await loadQueue();
+			await refreshVisibleChangeLog(updated);
 			saveMessage = 'Saved';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to save Work item';
@@ -555,6 +572,7 @@
 	function handleProjectChildCreated(item: WorkItem) {
 		items = mergeItems(items, [item]);
 		clearWorkDataCache(item.id);
+		void refreshVisibleChangeLog(selectedItem ?? item);
 	}
 
 	function emptyDraft(): Draft {
@@ -709,6 +727,18 @@
 		return `/work/${pathForType(item.type)}/${item.id}`;
 	}
 
+	function routeForChange(entry: WorkChangeLogEntry): string | null {
+		const type = entry.entity_type;
+		if (!isWorkItemEntity(type)) {
+			return type === 'category' || type === 'subcategory' ? '/work/settings' : null;
+		}
+		if (type === 'milestone') {
+			return entry.project_id ? `/work/projects/${entry.project_id}` : '/work/projects';
+		}
+		const id = Number(entry.entity_id);
+		return Number.isFinite(id) ? `/work/${pathForType(type)}/${id}` : null;
+	}
+
 	function uniqueItems(source: WorkItem[]): WorkItem[] {
 		const seen: number[] = [];
 		return source.filter((item) => {
@@ -720,6 +750,23 @@
 
 	function typeLabel(item: WorkItem): string {
 		return configForType(item.type).singular;
+	}
+
+	function changeEntityLabel(entry: WorkChangeLogEntry): string {
+		if (isWorkItemEntity(entry.entity_type)) return configForType(entry.entity_type).singular;
+		return sentenceCase(entry.entity_type);
+	}
+
+	function changeActionLabel(action: string): string {
+		return sentenceCase(action);
+	}
+
+	function changeTitle(entry: WorkChangeLogEntry): string {
+		return entry.entity_title ?? `${changeEntityLabel(entry)} ${entry.entity_id}`;
+	}
+
+	function isWorkItemEntity(type: WorkChangeEntityType): type is WorkItemType {
+		return workTypesForChanges.includes(type as WorkItemType);
 	}
 
 	function attentionReason(item: WorkItem): string {
@@ -1215,6 +1262,40 @@
 		return `/api/work/items?${params.toString()}`;
 	}
 
+	function workChangeLogUrl({
+		project_id,
+		entity_type,
+		entity_id,
+		limit = 24
+	}: {
+		project_id?: number;
+		entity_type?: WorkChangeEntityType;
+		entity_id?: string | number;
+		limit?: number;
+	}): string {
+		const params = new SvelteURLSearchParams();
+		if (project_id !== undefined) params.set('project_id', String(project_id));
+		if (entity_type) params.set('entity_type', entity_type);
+		if (entity_id !== undefined) params.set('entity_id', String(entity_id));
+		params.set('limit', String(limit));
+		return `/api/work/change-log?${params.toString()}`;
+	}
+
+	function changeLogUrlForItem(item: WorkItem): string {
+		if (item.type === 'project') return workChangeLogUrl({ project_id: item.id, limit: 24 });
+		return workChangeLogUrl({ entity_type: item.type, entity_id: item.id, limit: 24 });
+	}
+
+	async function refreshVisibleChangeLog(item: WorkItem): Promise<void> {
+		if (mode === 'overview') {
+			changeLog = await loadChangeLog(workChangeLogUrl({ limit: 14 }));
+			return;
+		}
+		if (mode === 'detail') {
+			changeLog = await loadChangeLog(changeLogUrlForItem(item));
+		}
+	}
+
 	function statusNeedsClosedRecords(
 		status: WorkStatus | 'open' | 'all',
 		type: WorkItemType
@@ -1500,28 +1581,60 @@
 							<Clock class="h-5 w-5 text-on-surface-variant" />
 						</div>
 						<div class="divide-y divide-outline-variant/30" data-testid="recent-activity-list">
-							{#each recentItems.slice(0, 12) as item (item.id)}
-								<a
-									href={resolve(routeFor(item))}
-									class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/45 md:grid-cols-[8rem_1fr_auto]"
-								>
-									<div class="text-xs text-on-surface-variant">
-										{formatDateTime(item.last_activity_at)}
-									</div>
-									<div class="min-w-0">
-										<div class="flex flex-wrap items-center gap-2 text-xs">
-											<span class="text-on-surface-variant">{typeLabel(item)}</span>
-											<span class="text-xs {statusTone(item.status)}">
-												{formatStatus(item.status)}
-											</span>
+							{#if changeLog.length}
+								{#each changeLog.slice(0, 12) as entry (entry.id)}
+									{@const href = routeForChange(entry)}
+									<svelte:element
+										this={href ? 'a' : 'div'}
+										href={href ?? undefined}
+										class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/45 md:grid-cols-[8rem_1fr_auto]"
+									>
+										<div class="text-xs text-on-surface-variant">
+											{formatDateTime(entry.occurred_at)}
 										</div>
-										<p class="mt-1 truncate text-sm font-semibold text-on-surface">{item.title}</p>
-									</div>
-									<div class="text-xs text-on-surface-variant md:text-right">
-										{itemDisplayId(item)}
-									</div>
-								</a>
-							{/each}
+										<div class="min-w-0">
+											<div class="flex flex-wrap items-center gap-2 text-xs">
+												<span class="text-on-surface-variant">{changeEntityLabel(entry)}</span>
+												<span class="text-on-surface-variant"
+													>{changeActionLabel(entry.action)}</span
+												>
+											</div>
+											<p class="mt-1 text-sm font-semibold text-on-surface">{entry.summary}</p>
+											<p class="mt-0.5 truncate text-xs text-on-surface-variant">
+												{changeTitle(entry)}
+											</p>
+										</div>
+										<div class="text-xs text-on-surface-variant md:text-right">
+											{entry.source}
+										</div>
+									</svelte:element>
+								{/each}
+							{:else}
+								{#each recentItems.slice(0, 12) as item (item.id)}
+									<a
+										href={resolve(routeFor(item))}
+										class="grid gap-3 px-4 py-3 transition hover:bg-surface-2/45 md:grid-cols-[8rem_1fr_auto]"
+									>
+										<div class="text-xs text-on-surface-variant">
+											{formatDateTime(item.last_activity_at)}
+										</div>
+										<div class="min-w-0">
+											<div class="flex flex-wrap items-center gap-2 text-xs">
+												<span class="text-on-surface-variant">{typeLabel(item)}</span>
+												<span class="text-xs {statusTone(item.status)}">
+													{formatStatus(item.status)}
+												</span>
+											</div>
+											<p class="mt-1 truncate text-sm font-semibold text-on-surface">
+												{item.title}
+											</p>
+										</div>
+										<div class="text-xs text-on-surface-variant md:text-right">
+											{itemDisplayId(item)}
+										</div>
+									</a>
+								{/each}
+							{/if}
 						</div>
 					</section>
 				{:else if isSettings}
@@ -1532,6 +1645,7 @@
 							<ProjectLedger
 								item={selectedItem}
 								{items}
+								activity={changeLog}
 								bind:draft
 								{saving}
 								{saveMessage}

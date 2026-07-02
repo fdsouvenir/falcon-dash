@@ -258,6 +258,7 @@ export function ensureWorkSchema(db: Database.Database = getWorkDb()): void {
 	migrateWorkItemsToV2(db);
 	db.exec(WORK_SCHEMA);
 	backfillV2Details(db);
+	backfillWorkChangeLog(db);
 	initialized = true;
 }
 
@@ -374,6 +375,58 @@ function backfillV2Details(db: Database.Database): void {
 
 		INSERT OR IGNORE INTO work_finding_details (work_item_id, finding_text, source_refs_json)
 		SELECT id, coalesce(description, body, title), '[]' FROM work_items WHERE type = 'finding';
+	`);
+}
+
+function backfillWorkChangeLog(db: Database.Database): void {
+	const existing = db.prepare('SELECT COUNT(*) as count FROM work_change_log').get() as {
+		count: number;
+	};
+	if (existing.count > 0) return;
+
+	db.exec(`
+		INSERT INTO work_change_log
+		  (occurred_at, actor, source, entity_type, entity_id, entity_title, action, project_id,
+		   parent_item_id, area_id, summary, changes_json, metadata_json)
+		SELECT
+		  wi.created_at,
+		  'migration',
+		  'migration',
+		  wi.type,
+		  CAST(wi.id AS TEXT),
+		  wi.title,
+		  'created',
+		  CASE
+		    WHEN wi.type = 'project' THEN wi.id
+		    WHEN parent.type = 'project' THEN parent.id
+		    WHEN grandparent.type = 'project' THEN grandparent.id
+		    ELSE NULL
+		  END,
+		  wi.parent_item_id,
+		  wi.area_id,
+		  'Existing Work item',
+		  '[]',
+		  json_object('backfilled', 1, 'status', wi.status, 'priority', wi.priority)
+		FROM work_items wi
+		LEFT JOIN work_items parent ON parent.id = wi.parent_item_id
+		LEFT JOIN work_items grandparent ON grandparent.id = parent.parent_item_id;
+
+		INSERT INTO work_change_log
+		  (occurred_at, actor, source, entity_type, entity_id, entity_title, action, area_id,
+		   summary, changes_json, metadata_json)
+		SELECT
+		  created_at,
+		  'migration',
+		  'migration',
+		  CASE WHEN parent_area_id IS NULL THEN 'category' ELSE 'subcategory' END,
+		  id,
+		  title,
+		  'created',
+		  id,
+		  CASE WHEN parent_area_id IS NULL THEN 'Existing category' ELSE 'Existing subcategory' END,
+		  '[]',
+		  json_object('backfilled', 1, 'parent_category_id', parent_area_id)
+		FROM work_areas;
 	`);
 }
 

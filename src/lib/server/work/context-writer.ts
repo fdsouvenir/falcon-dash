@@ -146,6 +146,14 @@ Statuses: backlog, planning, ready, in_progress, waiting, needs_review, blocked,
 
 Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOnExternal, needsReview, failedAutomations, scheduledAutomations, staleCleanup, and blockedRisky buckets.
 
+## Change Log
+
+- GET /change-log
+- GET /change-log?project_id={id}
+- GET /change-log?entity_type=next_step&entity_id={id}
+
+Returns Work mutation events with the changed entity, project/category/parent scope at the time of the event, a human summary, and structured field deltas in changes.
+
 ## Context
 
 - GET /context

@@ -15,6 +15,9 @@
 		waitingLabel,
 		workStatuses,
 		type WorkCategory,
+		type WorkChange,
+		type WorkChangeEntityType,
+		type WorkChangeLogEntry,
 		type WorkItem,
 		type WorkItemType,
 		type WorkPriority,
@@ -48,6 +51,7 @@
 	let {
 		item,
 		items,
+		activity = [],
 		draft = $bindable(),
 		saving,
 		saveMessage,
@@ -57,6 +61,7 @@
 	}: {
 		item: WorkItem;
 		items: WorkItem[];
+		activity?: WorkChangeLogEntry[];
 		draft: ProjectLedgerDraft;
 		saving: boolean;
 		saveMessage: string | null;
@@ -164,9 +169,7 @@
 		}
 		return groups;
 	});
-	const recentActivity = $derived(
-		[...projectWorkChildren].sort((a, b) => b.last_activity_at - a.last_activity_at).slice(0, 8)
-	);
+	const recentActivity = $derived(activity.slice(0, 8));
 	const evidenceLabels = $derived(
 		findings
 			.flatMap((finding) => finding.source_refs ?? [])
@@ -235,8 +238,56 @@
 		return `/work/${pathForType(candidate.type)}/${candidate.id}`;
 	}
 
+	function routeForChange(entry: WorkChangeLogEntry): string | null {
+		if (!isWorkItemEntity(entry.entity_type)) {
+			return entry.entity_type === 'category' || entry.entity_type === 'subcategory'
+				? '/work/settings'
+				: null;
+		}
+		if (entry.entity_type === 'project' && entry.entity_id === String(item.id)) return null;
+		if (entry.entity_type === 'milestone') return `/work/projects/${item.id}`;
+		const id = Number(entry.entity_id);
+		return Number.isFinite(id) ? `/work/${pathForType(entry.entity_type)}/${id}` : null;
+	}
+
 	function typeLabel(candidate: WorkItem): string {
 		return sentenceCase(candidate.type);
+	}
+
+	function changeEntityLabel(entry: WorkChangeLogEntry): string {
+		return sentenceCase(entry.entity_type);
+	}
+
+	function changeActionLabel(entry: WorkChangeLogEntry): string {
+		return sentenceCase(entry.action);
+	}
+
+	function changeTitle(entry: WorkChangeLogEntry): string {
+		return entry.entity_title ?? `${changeEntityLabel(entry)} ${entry.entity_id}`;
+	}
+
+	function changeValue(value: unknown): string {
+		if (value === null || value === undefined || value === '') return 'None';
+		if (Array.isArray(value)) return value.length ? value.join(', ') : 'None';
+		if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+		return String(value);
+	}
+
+	function changeDetail(change: WorkChange): string {
+		return `${change.label}: ${changeValue(change.from)} -> ${changeValue(change.to)}`;
+	}
+
+	function isWorkItemEntity(type: WorkChangeEntityType): type is WorkItemType {
+		return [
+			'project',
+			'milestone',
+			'next_step',
+			'open_question',
+			'decision',
+			'automation',
+			'finding',
+			'change_request'
+		].includes(type);
 	}
 
 	function compactDetail(candidate: WorkItem): string {
@@ -925,23 +976,37 @@
 						<h3 class="text-sm font-semibold text-on-surface">Activity</h3>
 					</div>
 					<div class="space-y-3 border-l border-outline-variant/55 pl-4">
-						{#each recentActivity as activity (activity.id)}
-							<a
-								href={resolve(routeFor(activity))}
+						{#each recentActivity as entry (entry.id)}
+							{@const href = routeForChange(entry)}
+							<svelte:element
+								this={href ? 'a' : 'div'}
+								href={href ?? undefined}
 								class="block rounded-md px-3 py-2 transition hover:bg-surface-2/55"
 							>
 								<div class="flex flex-wrap items-center gap-2 text-xs">
-									<span class="text-on-surface-variant">{typeLabel(activity)}</span>
-									<span class={statusTone(activity.status)}>{formatStatus(activity.status)}</span>
+									<span class="text-on-surface-variant">{changeEntityLabel(entry)}</span>
+									<span class="text-on-surface-variant">{changeActionLabel(entry)}</span>
 									<span class="text-on-surface-variant">
-										{formatDateTime(activity.last_activity_at)}
+										{formatDateTime(entry.occurred_at)}
 									</span>
 								</div>
-								<p class="mt-1 text-sm font-semibold text-on-surface">{activity.title}</p>
-							</a>
+								<p class="mt-1 text-sm font-semibold text-on-surface">{entry.summary}</p>
+								<p class="mt-0.5 text-xs text-on-surface-variant">{changeTitle(entry)}</p>
+								{#if entry.changes.length}
+									<div class="mt-2 flex flex-wrap gap-2">
+										{#each entry.changes.slice(0, 3) as change (change.field)}
+											<span
+												class="rounded-md border border-outline-variant/45 bg-surface-0/40 px-2 py-1 text-xs text-on-surface-variant"
+											>
+												{changeDetail(change)}
+											</span>
+										{/each}
+									</div>
+								{/if}
+							</svelte:element>
 						{:else}
 							<p class="text-sm text-on-surface-variant">
-								No child activity has been recorded yet.
+								No project change events have been recorded yet.
 							</p>
 						{/each}
 					</div>

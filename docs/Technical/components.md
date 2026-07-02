@@ -173,7 +173,8 @@ Routeable Work surface for the `/work` module:
 - **Overview** -- `/work` is an executive status board. Top signals focus the matching overview
   section (`#needs-you`, `#at-risk`, `#due-next`, `#recent`) instead of opening an arbitrary item
   detail. The main content starts with a due-next timeline, followed by grouped operator asks,
-  blocked/waiting work, and a single chronological recent activity log.
+  blocked/waiting work, and a single chronological recent activity log backed by
+  `/api/work/change-log`.
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
@@ -199,7 +200,9 @@ Routeable Work surface for the `/work` module:
   Milestones are inert headings with a title and optional one-sentence description; they are added
   from the project right rail and do not have standalone list or detail pages. Work attached
   directly to the project appears in a project-level work group instead of being mixed into the
-  milestone structure. Automations, findings, and activity remain supporting project context.
+  milestone structure. Automations and findings remain supporting project context. Project activity
+  renders project-scoped change-log rows so operators can see what object changed and the structured
+  field deltas behind the summary.
   Question details render as a Question Brief with Markdown sections and collapsed history or legacy
   material instead of one long paragraph.
 - **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
@@ -207,8 +210,9 @@ Routeable Work surface for the `/work` module:
   action and a contextual drawer for category/subcategory creation and edits
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
   person-specific copy is hardcoded
-- **Refresh path** -- overview reloads `/api/work/items` and `/api/work/queue`; type and detail
-  routes use narrower item, parent, and child requests where possible
+- **Refresh path** -- overview reloads `/api/work/items`, `/api/work/queue`, and
+  `/api/work/change-log`; type and detail routes use narrower item, parent, child, and project
+  change-log requests where possible
 
 Work-specific context, migration, and API behavior live in [Work management](work-management.md).
 

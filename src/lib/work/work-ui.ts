@@ -26,6 +26,40 @@ export const workStatuses = [
 export type WorkItemType = (typeof workTypes)[number];
 export type WorkStatus = (typeof workStatuses)[number];
 export type WorkPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type WorkChangeEntityType = WorkItemType | 'category' | 'subcategory' | 'evidence';
+export type WorkChangeAction =
+	| 'created'
+	| 'updated'
+	| 'deleted'
+	| 'moved'
+	| 'completed'
+	| 'answered'
+	| 'approved'
+	| 'attached';
+
+export interface WorkChange {
+	field: string;
+	label: string;
+	from: unknown;
+	to: unknown;
+}
+
+export interface WorkChangeLogEntry {
+	id: number;
+	occurred_at: number;
+	actor: string;
+	source: string;
+	entity_type: WorkChangeEntityType;
+	entity_id: string;
+	entity_title: string | null;
+	action: WorkChangeAction;
+	project_id: number | null;
+	parent_item_id: number | null;
+	area_id: string | null;
+	summary: string;
+	changes: WorkChange[];
+	metadata: Record<string, unknown>;
+}
 
 export interface WorkCategory {
 	id: string;

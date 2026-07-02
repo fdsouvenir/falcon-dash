@@ -62,6 +62,11 @@ not separate pages; the project right rail includes an Add milestone control for
 one-sentence description. Work that is not attached to a milestone appears as project-level work,
 while automations, findings, and activity remain supporting sections.
 
+Activity is a Work change log, not a loose list of recently touched records. Overview activity shows
+recent Work changes across the module, and project activity filters that same log to the project so
+the feed can say what changed, which object changed, and which fields moved when structured deltas
+are available.
+
 Open questions and decisions are separate. An open question captures unresolved knowledge; a
 decision captures a commitment or approval with options and a recommendation. Change requests are
 reserved for controlled mutation of code, config, systems, data, auth, deployment, or automation.
