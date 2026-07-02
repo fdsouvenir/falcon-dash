@@ -5,6 +5,10 @@ import type {
 	WorkCategory,
 	WorkCategoryDeleteResult,
 	WorkCategoryKind,
+	WorkChange,
+	WorkChangeAction,
+	WorkChangeEntityType,
+	WorkChangeLogEntry,
 	WorkItem,
 	WorkItemType,
 	WorkQueue,
@@ -17,12 +21,29 @@ type CreateWorkItemInput = {
 	title: string;
 	approval_required?: boolean | number;
 	actor?: string;
+	source?: string;
 } & Partial<Omit<WorkItem, 'id' | 'type' | 'title' | 'approval_required'>>;
 
 type UpdateWorkItemInput = {
 	approval_required?: boolean | number;
 	actor?: string;
+	source?: string;
 } & Partial<Omit<WorkItem, 'id' | 'approval_required'>>;
+
+type WorkChangeLogInput = {
+	actor?: string;
+	source?: string;
+	entity_type: WorkChangeEntityType;
+	entity_id: string | number;
+	entity_title?: string | null;
+	action: WorkChangeAction;
+	project_id?: number | null;
+	parent_item_id?: number | null;
+	area_id?: string | null;
+	summary: string;
+	changes?: WorkChange[];
+	metadata?: Record<string, unknown>;
+};
 
 export class WorkError extends Error {
 	constructor(
@@ -94,12 +115,27 @@ export function upsertWorkCategory(data: {
 		throw new WorkError('WORK_NOT_FOUND', `Category ${data.parent_category_id} not found`);
 	}
 	const id = data.id?.trim() || categoryIdFor(kind, title, data.parent_category_id);
+	const before = getWorkArea(id);
 	const area = upsertWorkArea({
 		id,
 		title,
 		description: data.description ?? null,
 		parent_area_id: kind === 'subcategory' ? data.parent_category_id : null,
 		status: data.status ?? 'active'
+	});
+	recordWorkChangeLog({
+		actor: 'operator',
+		source: 'api',
+		entity_type: kind,
+		entity_id: area.id,
+		entity_title: area.title,
+		action: before ? 'updated' : 'created',
+		area_id: area.id,
+		summary: before ? `Updated ${kind}` : `Created ${kind}`,
+		changes: before ? diffWorkRecords(before, area, categoryChangeFields) : [],
+		metadata: {
+			parent_category_id: area.parent_area_id
+		}
 	});
 	return mapWorkCategory(area);
 }
@@ -141,6 +177,21 @@ export function deleteWorkCategory(id: string): WorkCategoryDeleteResult | undef
 		};
 	})();
 
+	recordWorkChangeLog({
+		actor: 'operator',
+		source: 'api',
+		entity_type: area.parent_area_id ? 'subcategory' : 'category',
+		entity_id: area.id,
+		entity_title: area.title,
+		action: 'deleted',
+		area_id: area.id,
+		summary: `Deleted ${area.parent_area_id ? 'subcategory' : 'category'}`,
+		changes: [{ field: 'exists', label: 'Exists', from: true, to: false }],
+		metadata: {
+			deleted_categories: result.deleted_categories,
+			unassigned_items: result.unassigned_items
+		}
+	});
 	emitWorkEvent({ type: 'work.changed', entity: 'area', id });
 	if (result.unassigned_items > 0) {
 		emitWorkEvent({ type: 'work.changed', entity: 'item', id: 'category-unassigned' });
@@ -300,8 +351,10 @@ export function createWorkItem(data: CreateWorkItemInput): WorkItem {
 	upsertTypedDetails(id, type, data);
 	logWorkActivity(id, data.actor ?? 'system', 'created', `Created ${type}`);
 	createWorkVersion(id, data.actor ?? 'system');
+	const created = getWorkItem(id)!;
+	recordWorkItemChange(created, 'created', data.actor ?? 'system', data.source, `Created ${type}`);
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
-	return getWorkItem(id)!;
+	return created;
 }
 
 export function updateWorkItem(id: number, data: UpdateWorkItemInput): WorkItem | undefined {
@@ -342,8 +395,19 @@ export function updateWorkItem(id: number, data: UpdateWorkItemInput): WorkItem 
 	upsertTypedDetails(id, nextType, { ...current, ...data, type: nextType });
 	logWorkActivity(id, data.actor ?? 'system', 'updated', summarizeWorkUpdate(current, data));
 	createWorkVersion(id, data.actor ?? 'system');
+	const updated = getWorkItem(id);
+	if (!updated) return undefined;
+	const changes = diffWorkRecords(current, updated, itemChangeFields);
+	recordWorkItemChange(
+		updated,
+		actionForItemChanges(current, updated, changes),
+		data.actor ?? 'system',
+		data.source,
+		summarizeChangeLog(changes, 'Updated'),
+		changes
+	);
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
-	return getWorkItem(id);
+	return updated;
 }
 
 export function listWorkQueue(): WorkQueue {
@@ -395,6 +459,89 @@ export function logWorkActivity(
 	).run(workItemId, actor, action, details ?? null, now());
 }
 
+export function listWorkChangeLog(
+	filters: {
+		project_id?: number;
+		entity_type?: WorkChangeEntityType;
+		entity_id?: string | number;
+		area_id?: string;
+		limit?: number;
+	} = {}
+): WorkChangeLogEntry[] {
+	const db = getWorkDb();
+	const conditions: string[] = [];
+	const values: unknown[] = [];
+	if (filters.project_id !== undefined) {
+		conditions.push('project_id = ?');
+		values.push(filters.project_id);
+	}
+	if (filters.entity_type) {
+		conditions.push('entity_type = ?');
+		values.push(filters.entity_type);
+	}
+	if (filters.entity_id !== undefined) {
+		conditions.push('entity_id = ?');
+		values.push(String(filters.entity_id));
+	}
+	if (filters.area_id) {
+		conditions.push('area_id = ?');
+		values.push(filters.area_id);
+	}
+	const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+	const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+	return db
+		.prepare(`SELECT * FROM work_change_log ${where} ORDER BY occurred_at DESC, id DESC LIMIT ?`)
+		.all(...values, limit)
+		.map(mapWorkChangeLogEntry);
+}
+
+export function recordWorkChangeLog(data: WorkChangeLogInput): WorkChangeLogEntry {
+	const db = getWorkDb();
+	const occurredAt = now();
+	const actor = data.actor ?? 'system';
+	const source = data.source ?? sourceForActor(actor);
+	const changes = data.changes ?? [];
+	const metadata = data.metadata ?? {};
+	const result = db
+		.prepare(
+			`INSERT INTO work_change_log
+			 (occurred_at, actor, source, entity_type, entity_id, entity_title, action, project_id,
+			  parent_item_id, area_id, summary, changes_json, metadata_json)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			occurredAt,
+			actor,
+			source,
+			data.entity_type,
+			String(data.entity_id),
+			data.entity_title ?? null,
+			data.action,
+			data.project_id ?? null,
+			data.parent_item_id ?? null,
+			data.area_id ?? null,
+			data.summary,
+			JSON.stringify(changes),
+			JSON.stringify(metadata)
+		);
+	return mapWorkChangeLogEntry({
+		id: result.lastInsertRowid as number,
+		occurred_at: occurredAt,
+		actor,
+		source,
+		entity_type: data.entity_type,
+		entity_id: String(data.entity_id),
+		entity_title: data.entity_title ?? null,
+		action: data.action,
+		project_id: data.project_id ?? null,
+		parent_item_id: data.parent_item_id ?? null,
+		area_id: data.area_id ?? null,
+		summary: data.summary,
+		changes_json: JSON.stringify(changes),
+		metadata_json: JSON.stringify(metadata)
+	});
+}
+
 export function addEvidenceRef(data: {
 	work_item_id?: number | null;
 	observation_id?: number | null;
@@ -426,6 +573,16 @@ export function addEvidenceRef(data: {
 		data.summary ?? null,
 		now()
 	);
+	if (data.work_item_id) {
+		const item = getWorkItem(data.work_item_id);
+		if (item) {
+			recordWorkItemChange(item, 'attached', 'system', 'api', 'Attached evidence', [], {
+				source_type: data.source_type,
+				source_ref: data.source_ref,
+				summary: data.summary ?? null
+			});
+		}
+	}
 	emitWorkEvent({ type: 'work.changed', entity: 'evidence', id: data.source_ref });
 }
 
@@ -730,6 +887,256 @@ function parseJsonArray(value: string | null | undefined): string[] | null {
 	} catch {
 		return null;
 	}
+}
+
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
+	if (!value) return {};
+	try {
+		const parsed = JSON.parse(value) as unknown;
+		return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+			? (parsed as Record<string, unknown>)
+			: {};
+	} catch {
+		return {};
+	}
+}
+
+function parseJsonChanges(value: string | null | undefined): WorkChange[] {
+	if (!value) return [];
+	try {
+		const parsed = JSON.parse(value) as unknown;
+		if (!Array.isArray(parsed)) return [];
+		return parsed.filter((entry): entry is WorkChange => {
+			return (
+				Boolean(entry) &&
+				typeof entry === 'object' &&
+				typeof (entry as WorkChange).field === 'string' &&
+				typeof (entry as WorkChange).label === 'string'
+			);
+		});
+	} catch {
+		return [];
+	}
+}
+
+function mapWorkChangeLogEntry(row: unknown): WorkChangeLogEntry {
+	const entry = row as WorkChangeLogEntry & {
+		changes_json?: string | null;
+		metadata_json?: string | null;
+	};
+	return {
+		id: entry.id,
+		occurred_at: entry.occurred_at,
+		actor: entry.actor,
+		source: entry.source,
+		entity_type: entry.entity_type,
+		entity_id: entry.entity_id,
+		entity_title: entry.entity_title,
+		action: entry.action,
+		project_id: entry.project_id,
+		parent_item_id: entry.parent_item_id,
+		area_id: entry.area_id,
+		summary: entry.summary,
+		changes: parseJsonChanges(entry.changes_json),
+		metadata: parseJsonObject(entry.metadata_json)
+	};
+}
+
+const categoryChangeFields: Array<[keyof WorkArea, string]> = [
+	['title', 'Name'],
+	['description', 'Notes'],
+	['parent_area_id', 'Parent category'],
+	['status', 'Status']
+];
+
+const itemChangeFields: Array<[keyof WorkItem, string]> = [
+	['type', 'Type'],
+	['parent_item_id', 'Parent'],
+	['area_id', 'Category assignment'],
+	['category_id', 'Category'],
+	['subcategory_id', 'Subcategory'],
+	['title', 'Title'],
+	['description', 'Description'],
+	['body', 'Notes'],
+	['status', 'Status'],
+	['owner', 'Owner'],
+	['waiting_on', 'Waiting on'],
+	['priority', 'Priority'],
+	['next_action', 'Next action'],
+	['approval_required', 'Approval required'],
+	['due_date', 'Due date'],
+	['scheduled_at', 'Scheduled for'],
+	['stale_after', 'Stale after'],
+	['result', 'Result'],
+	['goal', 'Goal'],
+	['definition_of_done', 'Definition of done'],
+	['why_it_matters', 'Why it matters'],
+	['scope', 'Scope'],
+	['non_scope', 'Out of scope'],
+	['health', 'Health'],
+	['operator', 'Operator'],
+	['start_date', 'Start date'],
+	['target_date', 'Target date'],
+	['actual_completed_date', 'Completed date'],
+	['current_next_step_id', 'Current next step'],
+	['milestone_marker', 'Milestone marker'],
+	['next_step_action', 'Action'],
+	['question_text', 'Question'],
+	['answerer', 'Can answer'],
+	['blocked_item_id', 'Blocked item'],
+	['proposed_answer', 'Proposed answer'],
+	['answer', 'Answer'],
+	['answered_at', 'Answered at'],
+	['decision_question', 'Decision question'],
+	['options', 'Options'],
+	['recommended_option', 'Recommendation'],
+	['consequence_of_no_decision', 'No-decision consequence'],
+	['decision', 'Decision answer'],
+	['decided_by', 'Decided by'],
+	['decided_at', 'Decided at'],
+	['change_scope', 'Change scope'],
+	['systems_touched', 'Systems touched'],
+	['risk', 'Risk'],
+	['rollback_notes', 'Rollback notes'],
+	['verification_plan', 'Verification plan'],
+	['approval_state', 'Approval state'],
+	['execution_state', 'Execution state'],
+	['trigger_type', 'Trigger'],
+	['schedule', 'Schedule'],
+	['enabled', 'Enabled'],
+	['last_run_at', 'Last run'],
+	['next_run_at', 'Next run'],
+	['last_result', 'Last result'],
+	['failure_count', 'Failure count'],
+	['generated_work_policy', 'Generated work policy'],
+	['backing_ref', 'Backing system'],
+	['finding_text', 'Finding'],
+	['source_refs', 'Sources']
+];
+
+function diffWorkRecords<T extends object>(
+	before: T,
+	after: T,
+	fields: Array<[keyof T, string]>
+): WorkChange[] {
+	const changes: WorkChange[] = [];
+	const beforeRecord = before as Record<PropertyKey, unknown>;
+	const afterRecord = after as Record<PropertyKey, unknown>;
+	for (const [field, label] of fields) {
+		const from = normalizeChangeValue(beforeRecord[field]);
+		const to = normalizeChangeValue(afterRecord[field]);
+		if (!sameChangeValue(from, to)) {
+			changes.push({ field: String(field), label, from, to });
+		}
+	}
+	return changes;
+}
+
+function normalizeChangeValue(value: unknown): unknown {
+	if (value === undefined) return null;
+	if (Array.isArray(value)) return value.map((entry) => normalizeChangeValue(entry));
+	if (typeof value === 'string') return value.trim() ? value : null;
+	return value;
+}
+
+function sameChangeValue(left: unknown, right: unknown): boolean {
+	return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function recordWorkItemChange(
+	item: WorkItem,
+	action: WorkChangeAction,
+	actor: string,
+	source: string | undefined,
+	summary: string,
+	changes: WorkChange[] = [],
+	metadata: Record<string, unknown> = {}
+): void {
+	recordWorkChangeLog({
+		actor,
+		source,
+		entity_type: item.type,
+		entity_id: item.id,
+		entity_title: item.title,
+		action,
+		project_id: projectIdForItem(item),
+		parent_item_id: item.parent_item_id,
+		area_id: item.area_id,
+		summary,
+		changes,
+		metadata: {
+			status: item.status,
+			priority: item.priority,
+			...metadata
+		}
+	});
+}
+
+function projectIdForItem(item: WorkItem): number | null {
+	if (item.type === 'project') return item.id;
+	let cursor = item.parent_item_id ? getWorkItem(item.parent_item_id) : undefined;
+	const seen = new Set<number>([item.id]);
+	while (cursor && !seen.has(cursor.id)) {
+		if (cursor.type === 'project') return cursor.id;
+		seen.add(cursor.id);
+		cursor = cursor.parent_item_id ? getWorkItem(cursor.parent_item_id) : undefined;
+	}
+	return null;
+}
+
+function actionForItemChanges(
+	before: WorkItem,
+	after: WorkItem,
+	changes: WorkChange[]
+): WorkChangeAction {
+	if (before.status !== 'complete' && after.status === 'complete') return 'completed';
+	if (after.type === 'open_question' && changes.some((change) => change.field === 'answer')) {
+		return 'answered';
+	}
+	if (after.type === 'decision' && changes.some((change) => change.field === 'decision')) {
+		return 'answered';
+	}
+	if (
+		after.type === 'change_request' &&
+		changes.some((change) => change.field === 'approval_state')
+	) {
+		return 'approved';
+	}
+	if (
+		changes.some((change) =>
+			['parent_item_id', 'area_id', 'category_id', 'subcategory_id'].includes(change.field)
+		)
+	) {
+		return 'moved';
+	}
+	return 'updated';
+}
+
+function summarizeChangeLog(changes: WorkChange[], fallback: string): string {
+	if (!changes.length) return fallback;
+	return changes
+		.slice(0, 3)
+		.map(
+			(change) =>
+				`${change.label}: ${formatChangeValue(change.from)} -> ${formatChangeValue(change.to)}`
+		)
+		.join('; ');
+}
+
+function formatChangeValue(value: unknown): string {
+	if (value === null || value === undefined || value === '') return 'None';
+	if (Array.isArray(value)) return value.length ? value.join(', ') : 'None';
+	if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+	return String(value);
+}
+
+function sourceForActor(actor: string): string {
+	if (actor === 'migration') return 'migration';
+	if (actor === 'agent') return 'agent';
+	if (actor === 'automation') return 'automation';
+	if (actor === 'operator') return 'ui';
+	if (actor === 'system') return 'system';
+	return 'api';
 }
 
 function toApprovalFlag(value: boolean | number | undefined): number {

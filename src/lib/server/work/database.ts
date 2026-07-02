@@ -173,6 +173,23 @@ CREATE TABLE IF NOT EXISTS work_versions (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+CREATE TABLE IF NOT EXISTS work_change_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  occurred_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  actor TEXT NOT NULL DEFAULT 'system',
+  source TEXT NOT NULL DEFAULT 'api',
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  entity_title TEXT,
+  action TEXT NOT NULL,
+  project_id INTEGER,
+  parent_item_id INTEGER,
+  area_id TEXT,
+  summary TEXT NOT NULL,
+  changes_json TEXT NOT NULL DEFAULT '[]',
+  metadata_json TEXT NOT NULL DEFAULT '{}'
+);
+
 CREATE TABLE IF NOT EXISTS work_automation_runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   automation_item_id INTEGER NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
@@ -208,6 +225,9 @@ CREATE INDEX IF NOT EXISTS idx_work_items_activity ON work_items(last_activity_a
 CREATE INDEX IF NOT EXISTS idx_work_evidence_item ON work_evidence_refs(work_item_id);
 CREATE INDEX IF NOT EXISTS idx_work_evidence_observation ON work_evidence_refs(observation_id);
 CREATE INDEX IF NOT EXISTS idx_work_activity_item ON work_activity(work_item_id);
+CREATE INDEX IF NOT EXISTS idx_work_change_log_project ON work_change_log(project_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_work_change_log_entity ON work_change_log(entity_type, entity_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_work_change_log_area ON work_change_log(area_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_work_automation_runs_item ON work_automation_runs(automation_item_id);
 `;
 
