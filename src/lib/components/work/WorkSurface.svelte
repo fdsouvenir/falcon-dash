@@ -3220,24 +3220,29 @@
 										onsubmit={saveSelected}
 										data-testid="work-quick-state"
 									>
-										<div>
-											<h4 class="text-sm font-semibold text-on-surface">State</h4>
-											<p class="mt-1 text-xs leading-5 text-on-surface-variant">
-												Update lightweight state only. Narrative fields stay agent-managed.
-											</p>
-										</div>
 										<div class="rounded-md border border-outline-variant/45 bg-surface-0/45 p-3">
-											<label class="grid gap-1 text-xs text-on-surface-variant">
-												Status
-												<select
-													bind:value={draft.status}
-													class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+											<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+												<label class="grid gap-1 text-xs text-on-surface-variant">
+													Status
+													<select
+														bind:value={draft.status}
+														class="falcon-focus min-h-9 rounded-md border border-outline-variant/70 bg-surface-0 px-2 text-sm text-on-surface"
+													>
+														{#each workStatuses as status (status)}
+															<option value={status}>{sentenceCase(formatStatus(status))}</option>
+														{/each}
+													</select>
+												</label>
+												<button
+													type="submit"
+													disabled={saving}
+													aria-label="Save state"
+													title="Save state"
+													class="falcon-focus mt-5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
 												>
-													{#each workStatuses as status (status)}
-														<option value={status}>{sentenceCase(formatStatus(status))}</option>
-													{/each}
-												</select>
-											</label>
+													<Save class="h-4 w-4" />
+												</button>
+											</div>
 											<div class="mt-3 grid grid-cols-2 gap-2">
 												<label class="grid gap-1 text-xs text-on-surface-variant">
 													Priority
@@ -3283,14 +3288,6 @@
 												{/each}
 											</div>
 										</div>
-										<button
-											type="submit"
-											disabled={saving}
-											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-										>
-											<Save class="h-4 w-4" />
-											{saving ? 'Saving...' : 'Save state'}
-										</button>
 										{#if saveMessage}
 											<p class="text-sm text-status-active">{saveMessage}</p>
 										{/if}
@@ -3303,7 +3300,7 @@
 											href={resolve(routeFor(selectedItem))}
 											class="falcon-focus inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
 										>
-											Open full page <ArrowRight class="h-4 w-4" />
+											Open details <ArrowRight class="h-4 w-4" />
 										</a>
 									</div>
 								{:else}

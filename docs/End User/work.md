@@ -20,7 +20,7 @@ redirects to `/work`.
 - Desktop type pages with the section title above fixed search/filter controls, type-specific
   structured rows, a scrollable item list, and a fixed quick inspector on the right. The inspector
   stays directly under the Work header without its own scroll bar, keeps state controls and quick
-  facts together, and places the full-page action at the bottom. Single clicks select and highlight
+  facts together, and places the details action at the bottom. Single clicks select and highlight
   a row in place; clicking it again clears selection; double clicks open that item's standalone
   detail page.
 - Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page

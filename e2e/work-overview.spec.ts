@@ -682,7 +682,7 @@ test.describe('work overview executive status board', () => {
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
 			await expect(row).not.toHaveAttribute('aria-pressed', 'true');
 			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
-			await expect(page.getByRole('link', { name: 'Open full page' })).toHaveCount(0);
+			await expect(page.getByRole('link', { name: 'Open details' })).toHaveCount(0);
 			await row.dblclick();
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
@@ -816,7 +816,7 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-quick-state')).toBeVisible();
 			await expect(page.getByTestId('work-quick-panel')).toHaveCSS('overflow-y', 'hidden');
 			const stateBox = await page.getByTestId('work-quick-state').boundingBox();
-			const openFullPage = page.getByRole('link', { name: 'Open full page' });
+			const openFullPage = page.getByRole('link', { name: 'Open details' });
 			const openFullPageBox = await openFullPage.boundingBox();
 			expect(openFullPageBox?.y ?? 0).toBeGreaterThan(stateBox?.y ?? 0);
 			await taskRow.click();
