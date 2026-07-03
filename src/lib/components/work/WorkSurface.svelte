@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import WorkIntegrityPanel from '$lib/components/work/WorkIntegrityPanel.svelte';
 	import {
 		clearWorkDataCache,
 		loadCachedWorkItem,
@@ -46,6 +47,7 @@
 		type WorkItemType,
 		type WorkPriority,
 		type WorkQueue,
+		type WorkReconciliationRun,
 		type WorkStatus
 	} from '$lib/work/work-ui.js';
 	import {
@@ -143,6 +145,10 @@
 	let selectedId = $state<number | null>(null);
 	let draft = $state<Draft>(emptyDraft());
 	let showQuickPane = $state(false);
+	let reconciliationRuns = $state<WorkReconciliationRun[]>([]);
+	let reconciliationLoading = $state(false);
+	let contextualMessage = $state('');
+	let contextualSessionMessage = $state<string | null>(null);
 
 	const workListLimit = 300;
 
@@ -482,6 +488,18 @@
 		}
 		const groups = await Promise.all(requests);
 		items = mergeItems(items, groups.flat());
+		await loadReconciliationRuns(item.id);
+	}
+
+	async function loadReconciliationRuns(itemId: number): Promise<void> {
+		try {
+			const response = await fetch(`/api/work/items/${itemId}/reconciliation`);
+			if (!response.ok) throw new Error(`Reconciliation request failed: ${response.status}`);
+			const json = (await response.json()) as { runs?: WorkReconciliationRun[] };
+			reconciliationRuns = json.runs ?? [];
+		} catch {
+			reconciliationRuns = [];
+		}
 	}
 
 	function mergeItems(current: WorkItem[], incoming: WorkItem[]): WorkItem[] {
@@ -511,11 +529,67 @@
 			items = items.map((item) => (item.id === updated.id ? updated : item));
 			clearWorkDataCache(updated.id);
 			if (mode === 'overview') queue = await loadQueue();
+			await loadReconciliationRuns(updated.id);
 			saveMessage = 'Saved';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to save Work item';
 		} finally {
 			saving = false;
+		}
+	}
+
+	async function runSelectedReconciliation(forceAgent = false): Promise<void> {
+		if (!selectedItem) return;
+		reconciliationLoading = true;
+		contextualSessionMessage = null;
+		error = null;
+		try {
+			const response = await fetch('/api/work/reconcile', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ itemId: selectedItem.id, forceAgent })
+			});
+			if (!response.ok) throw new Error(`Reconcile failed: ${response.status}`);
+			await response.json();
+			clearWorkDataCache(selectedItem.id);
+			await loadWork();
+			await loadReconciliationRuns(selectedItem.id);
+			contextualSessionMessage = forceAgent
+				? 'Agent reconciliation requested'
+				: 'Integrity check ran';
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Unable to reconcile Work';
+		} finally {
+			reconciliationLoading = false;
+		}
+	}
+
+	async function openContextualSession(mode: 'ask' | 'reconcile'): Promise<void> {
+		if (!selectedItem) return;
+		reconciliationLoading = true;
+		contextualSessionMessage = null;
+		error = null;
+		try {
+			const response = await fetch(`/api/work/items/${selectedItem.id}/session`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					mode,
+					message: contextualMessage.trim() || undefined
+				})
+			});
+			if (!response.ok) {
+				const json = (await response.json().catch(() => null)) as { error?: string } | null;
+				throw new Error(json?.error ?? `Session failed: ${response.status}`);
+			}
+			const json = (await response.json()) as { sessionKey: string };
+			contextualMessage = '';
+			contextualSessionMessage = `Session opened: ${json.sessionKey}`;
+			await loadReconciliationRuns(selectedItem.id);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Unable to open contextual session';
+		} finally {
+			reconciliationLoading = false;
 		}
 	}
 
@@ -1712,6 +1786,17 @@
 											</div>
 										</div>
 
+										<WorkIntegrityPanel
+											runs={reconciliationRuns}
+											message={contextualMessage}
+											statusMessage={contextualSessionMessage}
+											loading={reconciliationLoading}
+											onMessage={(message) => (contextualMessage = message)}
+											onRun={() => runSelectedReconciliation(false)}
+											onForceAgent={() => runSelectedReconciliation(true)}
+											onAsk={() => openContextualSession('ask')}
+										/>
+
 										<section class="rounded-lg border border-outline-variant/45 bg-surface-0/25">
 											<div class="border-b border-outline-variant/35 px-4 py-3">
 												<h3 class="text-sm font-semibold text-on-surface">
@@ -2004,6 +2089,17 @@
 												</div>
 											</div>
 										</div>
+
+										<WorkIntegrityPanel
+											runs={reconciliationRuns}
+											message={contextualMessage}
+											statusMessage={contextualSessionMessage}
+											loading={reconciliationLoading}
+											onMessage={(message) => (contextualMessage = message)}
+											onRun={() => runSelectedReconciliation(false)}
+											onForceAgent={() => runSelectedReconciliation(true)}
+											onAsk={() => openContextualSession('ask')}
+										/>
 									</aside>
 								</div>
 							</section>

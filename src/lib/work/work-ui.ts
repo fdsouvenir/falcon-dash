@@ -64,6 +64,31 @@ export interface WorkQueue {
 	blockedRisky: WorkItem[];
 }
 
+export type WorkReconciliationStatus =
+	| 'queued'
+	| 'running'
+	| 'applied'
+	| 'no_action'
+	| 'needs_agent'
+	| 'agent_running'
+	| 'needs_review'
+	| 'failed';
+
+export interface WorkReconciliationRun {
+	id: number;
+	root_item_id: number;
+	trigger_entity: string;
+	trigger_id: string;
+	status: WorkReconciliationStatus;
+	deterministic_changes_json: string;
+	ambiguities_json: string;
+	deterministic_changes: string[];
+	ambiguities: string[];
+	session_key: string | null;
+	created_at: number;
+	updated_at: number;
+}
+
 export interface TypeConfig {
 	type: WorkItemType;
 	path: string;

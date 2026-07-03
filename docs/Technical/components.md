@@ -191,7 +191,9 @@ Routeable Work surface for the `/work` module:
   not render the peer list; they show type-aware sections, health reasons, literal blockers, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
   fields. Question details render as a Question Brief with Markdown sections and collapsed history
-  or legacy material instead of one long paragraph.
+  or legacy material instead of one long paragraph. Detail sidebars include a Work integrity panel
+  that can run reconciliation, open a contextual agent session, and show recent reconciliation
+  history for the root project.
 - **Areas** -- `area` remains a Work model type for grouping, but it is not shown as a primary
   operator tab until an explicit area-management workflow exists
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
