@@ -46,9 +46,10 @@ Work server code lives in `src/lib/server/work/`:
 - `context.ts` — Work Queue markdown generation
 - `context-writer.ts` — generated Work context files and workspace symlinks
 - `context-scheduler.ts` — debounced Work context regeneration after Work mutations
-- `reconciliation.ts` — graph-first Work integrity cascade, run history, and contextual agent
-  sessions
-- `reconciliation-scheduler.ts` — debounced per-project reconciliation after Work mutations
+- `reconciliation.ts` — mechanical Work integrity propagation, agent steward packets, run history,
+  and contextual agent sessions
+- `reconciliation-scheduler.ts` — debounced per-project reconciliation after Work mutations plus
+  periodic stale-risk sweep
 - `module.ts` — Falcon Dash internal module metadata
 - `index.ts` — exports
 
@@ -98,23 +99,31 @@ generated context should use operator-focused bucket names.
 
 ## Work Integrity
 
-Falcon Dash runs a Work integrity loop after item, evidence, and relationship mutations. The loop
+Falcon Dash runs a Work integrity loop after item, evidence, and relationship mutations. The agent
+is the project steward; deterministic code is only the mechanical integrity layer. The loop
 coalesces by root project, ignores writes from actor `work-reconciler`, and records every pass in
 `work_reconciliation_runs`.
 
-The deterministic pass is graph-first:
+The mechanical pass is graph-first:
 
 - `depends_on` means `from_item_id` waits for `to_item_id`
 - `blocks` means `from_item_id` blocks `to_item_id`
-- closed blockers/dependencies can clear stale `blocked` or `waiting` downstream work
-- decisions that only gate already closed work are completed with an audit result
-- project `next_action` is recomputed from live child state: blockers, operator questions,
-  actionable tasks/changes, then scheduled/due work
+- closed blockers/dependencies can clear `blocked` or `waiting` only when that blocked state has an
+  explicit incoming `depends_on` or `blocks` relationship
+- decisions, project `next_action`, evidence interpretation, and narrative cleanup are agent-owned
+  semantic work
 
-If the deterministic pass finds an ambiguity, Falcon Dash opens a contextual agent session when the
-gateway is available. The agent receives a compact packet with root project, related Work,
-relationships, and the failed invariants, and is instructed to update Work through `/api/work/*`.
-If the gateway is unavailable, the run remains `needs_agent` with the failure recorded.
+If stale-risk remains, Falcon Dash opens or reuses a contextual `fd-chat` agent session. The agent
+receives an AXI-style packet: live Work first, minimal fields, explicit `0 results` empty buckets,
+precomputed counts, truncated long text with size hints, evidence refs, recent activity, stale-risk
+candidates, mechanical changes already applied, and concrete `/api/work/*` next-command templates.
+The agent is instructed to update Work through `/api/work/*`; a prose-only reply is not considered
+reconciliation. If the gateway is unavailable, the run remains `needs_agent` with the failure
+recorded.
+
+A periodic sweep scans active projects for stale-risk signals and routes them into the same agent
+steward path. It does not perform semantic cleanup itself, and it respects per-project cooldowns,
+one active reconciliation session per root project, and a max-projects-per-sweep cap.
 
 ## Context Generation
 

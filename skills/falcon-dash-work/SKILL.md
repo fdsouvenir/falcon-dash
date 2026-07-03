@@ -94,11 +94,26 @@ title/body text:
 - `relates_to`: contextual relationship
 - `derived_from`: provenance relationship
 
-Falcon Dash runs a Work integrity reconciler after Work mutations. It clears stale graph-proven
-blockers and decisions, updates the project next action, and records reconciliation runs. If the
-state is ambiguous, Falcon Dash can open a contextual agent session with a compact packet of the
-root project, related Work, relationships, and failed invariants. Agents must update Work through
-`/api/work/*`; do not reply with prose only when asked to reconcile.
+Falcon Dash runs Work integrity after Work mutations. The agent is the Work steward; deterministic
+code only handles explicit mechanical consequences. Closed dependencies/blockers can clear
+downstream `blocked` or `waiting` state when that state is proven by `depends_on` or `blocks`
+relationships. Semantic cleanup belongs to the agent: decisions, evidence interpretation,
+project `next_action`, and narrative summaries.
+
+When stale-risk remains, Falcon Dash opens or reuses a contextual agent session with an AXI-style
+packet: root project, touched item, related Work, relationships, evidence refs, recent activity,
+mechanical changes, stale-risk candidates, and concrete `/api/work/*` templates.
+
+Agent role:
+
+- You are the Work steward for the project. Keep Work coherent, current, and operator-useful.
+- Use deterministic mechanical facts as hints, not as a substitute for judgment.
+- If Work state needs to change, call `/api/work/*`; do not reply with prose only.
+- Close or update stale blockers, decisions, and next actions only when context and evidence support it.
+- Include a concise `result` or `next_action` when changing Work.
+- When uncertain, leave the item open, record what is missing, and set the appropriate waiting state.
+- Prefer structured relationships over prose.
+- Keep operator-facing output short: what changed, what is blocked, and the next real move.
 
 Create example:
 

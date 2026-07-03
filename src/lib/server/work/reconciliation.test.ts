@@ -8,10 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const gatewayCalls = vi.hoisted(
 	() => [] as Array<{ method: string; params?: Record<string, unknown> }>
 );
+const gatewayState = vi.hoisted(() => ({ state: 'ready' }));
 
 vi.mock('../gateway-client.js', () => ({
 	getGatewayClient: () => ({
-		state: 'ready',
+		state: gatewayState.state,
 		snapshot: { snapshot: { sessionDefaults: { defaultAgentId: 'main' } } },
 		call: async (method: string, params?: Record<string, unknown>) => {
 			gatewayCalls.push({ method, params });
@@ -21,6 +22,7 @@ vi.mock('../gateway-client.js', () => ({
 }));
 
 import {
+	addEvidenceRef,
 	closeWorkDb,
 	createContextualAgentSession,
 	createWorkItem,
@@ -31,6 +33,7 @@ import {
 	resetWorkSchemaForTests,
 	updateWorkItem
 } from './index.js';
+import { runReconciliationSweep } from './reconciliation-scheduler.js';
 
 let tempDir: string;
 
@@ -40,6 +43,7 @@ beforeEach(() => {
 	closeWorkDb();
 	resetWorkSchemaForTests();
 	gatewayCalls.length = 0;
+	gatewayState.state = 'ready';
 });
 
 afterEach(() => {
@@ -50,7 +54,7 @@ afterEach(() => {
 });
 
 describe('Work reconciliation', () => {
-	it('cascades completed gated work and advances the project next move', async () => {
+	it('routes Miami-style semantic cleanup to the agent steward instead of closing decisions', async () => {
 		const project = createWorkItem({
 			type: 'project',
 			title: 'Miami trip',
@@ -66,6 +70,13 @@ describe('Work reconciliation', () => {
 			result: 'United flights booked.',
 			actor: 'agent'
 		});
+		addEvidenceRef({
+			work_item_id: booking.id,
+			source_type: 'gmail',
+			source_ref: 'united-confirmation',
+			summary: 'United confirmation for Miami flights',
+			actor: 'agent'
+		});
 		const flightDecision = createWorkItem({
 			type: 'decision',
 			parent_item_id: project.id,
@@ -74,7 +85,7 @@ describe('Work reconciliation', () => {
 			waiting_on: 'operator',
 			actor: 'agent'
 		});
-		const lodging = createWorkItem({
+		createWorkItem({
 			type: 'task',
 			parent_item_id: project.id,
 			title: 'Lodging and ground logistics',
@@ -91,13 +102,21 @@ describe('Work reconciliation', () => {
 
 		const { run } = await reconcileWorkItem(booking.id);
 
-		expect(run.status).toBe('applied');
+		expect(run.status).toBe('agent_running');
 		expect(getWorkItem(flightDecision.id)).toMatchObject({
-			status: 'complete',
-			waiting_on: null
+			status: 'needs_review',
+			waiting_on: 'operator'
 		});
-		expect(getWorkItem(project.id)?.next_action).toContain(lodging.next_action);
-		expect(gatewayCalls).toEqual([]);
+		expect(getWorkItem(project.id)?.next_action).toBe('Choose Miami flights');
+		expect(run.deterministic_changes).toEqual([]);
+		expect(run.ambiguities.join('\n')).toContain('gates only closed Work');
+		expect(gatewayCalls.map((call) => call.method)).toEqual(['sessions.patch', 'chat.send']);
+		const prompt = String(gatewayCalls[1]?.params?.message ?? '');
+		expect(prompt).toContain('You are the Work steward');
+		expect(prompt).toContain('Use deterministic mechanical facts as hints');
+		expect(prompt).toContain('stale_risk_candidates[2]');
+		expect(prompt).toContain('evidence_refs[1]');
+		expect(prompt).toContain('POST /api/work/items/<id>/relationships');
 	});
 
 	it('clears downstream blocked work only after all graph blockers are closed', async () => {
@@ -158,6 +177,7 @@ describe('Work reconciliation', () => {
 			status: 'ready',
 			waiting_on: null
 		});
+		expect(gatewayCalls).toEqual([]);
 	});
 
 	it('does not infer from unlinked findings and opens an agent reconciliation session', async () => {
@@ -194,6 +214,7 @@ describe('Work reconciliation', () => {
 		expect(run.ambiguities.join('\n')).toContain('not linked to open operator questions');
 		expect(gatewayCalls.map((call) => call.method)).toEqual(['sessions.patch', 'chat.send']);
 		expect(gatewayCalls[1]?.params?.message).toContain('Do not reply with prose only');
+		expect(gatewayCalls[1]?.params?.message).toContain('current_work');
 	});
 
 	it('creates contextual agent sessions with Work-scoped prompts', async () => {
@@ -216,11 +237,104 @@ describe('Work reconciliation', () => {
 		});
 		expect(gatewayCalls[1]).toMatchObject({
 			method: 'chat.send',
-			params: { sessionKey: result.sessionKey, message: 'What is the next safest action?' }
+			params: { sessionKey: result.sessionKey }
 		});
+		expect(gatewayCalls[1]?.params?.message).toContain(
+			'Operator message: What is the next safest action?'
+		);
+		expect(gatewayCalls[1]?.params?.message).toContain('Work packet:');
 		expect(listReconciliationRunsForItem(project.id)[0]).toMatchObject({
 			status: 'agent_running',
 			session_key: result.sessionKey
 		});
+	});
+
+	it('records needs_agent without semantic changes when the gateway is unavailable', async () => {
+		gatewayState.state = 'closed';
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Dirty project',
+			status: 'in_progress',
+			next_action: 'Resolve old question',
+			actor: 'agent'
+		});
+		const task = createWorkItem({
+			type: 'task',
+			parent_item_id: project.id,
+			title: 'Finished related work',
+			status: 'complete',
+			actor: 'agent'
+		});
+		const decision = createWorkItem({
+			type: 'decision',
+			parent_item_id: project.id,
+			title: 'Old question',
+			status: 'needs_review',
+			waiting_on: 'operator',
+			actor: 'agent'
+		});
+		createWorkRelationship({
+			from_item_id: task.id,
+			to_item_id: decision.id,
+			relation_type: 'depends_on',
+			actor: 'agent'
+		});
+
+		const { run } = await reconcileWorkItem(task.id);
+
+		expect(run.status).toBe('needs_agent');
+		expect(run.ambiguities.join('\n')).toContain('Gateway closed');
+		expect(getWorkItem(decision.id)).toMatchObject({
+			status: 'needs_review',
+			waiting_on: 'operator'
+		});
+	});
+
+	it('reuses the active steward session for repeated semantic reconciliation', async () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Repeat project',
+			status: 'in_progress',
+			actor: 'agent'
+		});
+		const blocked = createWorkItem({
+			type: 'task',
+			parent_item_id: project.id,
+			title: 'Blocked without graph',
+			status: 'blocked',
+			waiting_on: 'external',
+			actor: 'agent'
+		});
+
+		const first = await reconcileWorkItem(blocked.id);
+		const second = await reconcileWorkItem(blocked.id);
+
+		expect(first.run.session_key).toBeTruthy();
+		expect(second.run.session_key).toBe(first.run.session_key);
+		expect(gatewayCalls.filter((call) => call.method === 'sessions.patch')).toHaveLength(1);
+	});
+
+	it('sweeps active stale-risk projects with cooldowns', async () => {
+		const project = createWorkItem({
+			type: 'project',
+			title: 'Sweep project',
+			status: 'in_progress',
+			actor: 'agent'
+		});
+		createWorkItem({
+			type: 'task',
+			parent_item_id: project.id,
+			title: 'Blocked without graph',
+			status: 'blocked',
+			waiting_on: 'external',
+			actor: 'agent'
+		});
+
+		const first = await runReconciliationSweep({ maxProjects: 5, cooldownSeconds: 1_800 });
+		const second = await runReconciliationSweep({ maxProjects: 5, cooldownSeconds: 1_800 });
+
+		expect(first).toMatchObject({ checked: 1, queued: 1, skippedCooldown: 0 });
+		expect(second).toMatchObject({ checked: 1, queued: 0, skippedCooldown: 1 });
+		expect(gatewayCalls.filter((call) => call.method === 'sessions.patch')).toHaveLength(1);
 	});
 });

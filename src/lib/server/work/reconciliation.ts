@@ -18,6 +18,7 @@ import type {
 } from './types.js';
 
 const RECONCILER_ACTOR = 'work-reconciler';
+const PACKET_TEXT_LIMIT = 220;
 const openStatuses = new Set([
 	'backlog',
 	'planning',
@@ -49,6 +50,34 @@ type ContextualSessionResult = {
 	mode: SessionMode;
 };
 
+type StewardPacket = {
+	root: WorkItem;
+	touched: WorkItem | null;
+	items: WorkItem[];
+	relationships: WorkRelationship[];
+	mechanicalChanges: string[];
+	staleCandidates: string[];
+	evidenceRefs: WorkEvidencePacket[];
+	recentActivity: WorkActivityPacket[];
+};
+
+type WorkEvidencePacket = {
+	work_item_id: number | null;
+	observation_id: number | null;
+	source_type: string;
+	source_ref: string;
+	summary: string | null;
+	created_at: number;
+};
+
+type WorkActivityPacket = {
+	work_item_id: number;
+	actor: string;
+	action: string;
+	details: string | null;
+	created_at: number;
+};
+
 export { RECONCILER_ACTOR };
 
 export async function reconcileWorkItem(
@@ -56,6 +85,7 @@ export async function reconcileWorkItem(
 	options: ReconcileOptions = {}
 ): Promise<ReconcileResult> {
 	const root = rootItemFor(itemId);
+	const touched = getWorkItem(itemId) ?? null;
 	const run = createReconciliationRun({
 		root_item_id: root.id,
 		trigger_entity: options.triggerEntity ?? 'item',
@@ -66,34 +96,49 @@ export async function reconcileWorkItem(
 	const related = relatedWorkForRoot(root);
 	const relationships = listWorkRelationshipsForItems(related.map((item) => item.id));
 	const changes: string[] = [];
-	const ambiguities: string[] = [];
+	let staleCandidates: string[] = [];
 
 	if (options.forceAgent) {
-		ambiguities.push('Manual reconciliation requested agent review.');
+		staleCandidates.push('Manual reconciliation requested agent steward review.');
 	} else {
 		changes.push(...resolveGraphCascades(related, relationships));
-		changes.push(...closeSatisfiedDecisions(related, relationships));
-		changes.push(...updateProjectNextMove(root.id));
-		ambiguities.push(...findAmbiguities(root, related, relationships, itemId));
 	}
+	staleCandidates = uniqueStrings([
+		...staleCandidates,
+		...findStaleRiskCandidates(root, related, relationships, itemId)
+	]);
 
 	let status: WorkReconciliationStatus =
-		ambiguities.length > 0 ? 'needs_agent' : changes.length > 0 ? 'applied' : 'no_action';
+		staleCandidates.length > 0 ? 'needs_agent' : changes.length > 0 ? 'applied' : 'no_action';
 	let sessionKey: string | null = null;
 
-	if (ambiguities.length > 0) {
-		try {
-			const session = await createContextualAgentSession(root.id, {
-				mode: 'reconcile',
-				message: buildReconciliationPrompt(root, related, relationships, ambiguities)
-			});
-			sessionKey = session.sessionKey;
+	if (staleCandidates.length > 0) {
+		if (run.session_key && ['agent_running', 'needs_agent', 'needs_review'].includes(run.status)) {
+			sessionKey = run.session_key;
 			status = 'agent_running';
-		} catch (err) {
-			ambiguities.push(
-				`Agent session could not be started: ${err instanceof Error ? err.message : String(err)}`
-			);
-			status = 'needs_agent';
+		} else {
+			try {
+				const packet = buildStewardPacket({
+					root,
+					touched,
+					items: related,
+					relationships,
+					mechanicalChanges: changes,
+					staleCandidates
+				});
+				const session = await createContextualAgentSession(root.id, {
+					mode: 'reconcile',
+					message: buildReconciliationPrompt(packet),
+					recordRun: false
+				});
+				sessionKey = session.sessionKey;
+				status = 'agent_running';
+			} catch (err) {
+				staleCandidates.push(
+					`Agent session could not be started: ${err instanceof Error ? err.message : String(err)}`
+				);
+				status = 'needs_agent';
+			}
 		}
 	}
 
@@ -102,7 +147,7 @@ export async function reconcileWorkItem(
 		run: updateReconciliationRun(run.id, {
 			status,
 			deterministic_changes: changes,
-			ambiguities,
+			ambiguities: staleCandidates,
 			session_key: sessionKey
 		})
 	};
@@ -110,19 +155,32 @@ export async function reconcileWorkItem(
 
 export async function createContextualAgentSession(
 	workItemId: number,
-	options: { mode: SessionMode; message?: string }
+	options: { mode: SessionMode; message?: string; recordRun?: boolean }
 ): Promise<ContextualSessionResult> {
 	const item = getWorkItem(workItemId);
 	if (!item) throw new Error(`Work item ${workItemId} not found`);
 	const root = rootItemFor(workItemId);
 	const related = relatedWorkForRoot(root);
+	const relationships = listWorkRelationshipsForItems(related.map((workItem) => workItem.id));
 	const sessionKey = createSessionKey();
 	const label = `${capitalize(root.type)} ${root.id} · ${
 		options.mode === 'reconcile' ? 'Reconcile Work' : 'Ask Agent'
 	}`;
+	const packet = buildStewardPacket({
+		root,
+		touched: item,
+		items: related,
+		relationships,
+		mechanicalChanges: [],
+		staleCandidates:
+			options.mode === 'reconcile'
+				? findStaleRiskCandidates(root, related, relationships, item.id)
+				: []
+	});
 	const prompt =
-		options.message?.trim() ||
-		buildAskPrompt(item, root, related, options.mode === 'reconcile' ? 'reconcile' : 'ask');
+		options.mode === 'reconcile' && options.message?.trim()
+			? options.message
+			: buildAskPrompt(packet, options.mode, options.message);
 	const client = getGatewayClient();
 	if (client.state !== 'ready') throw new Error(`Gateway ${client.state}`);
 
@@ -132,7 +190,9 @@ export async function createContextualAgentSession(
 		message: prompt
 	});
 
-	logContextualSession(root.id, workItemId, sessionKey, options.mode, prompt);
+	if (options.recordRun ?? true) {
+		logContextualSession(root.id, workItemId, sessionKey, options.mode, prompt);
+	}
 	return { sessionKey, workItemId, mode: options.mode };
 }
 
@@ -175,11 +235,20 @@ export function ensureRelationship(data: {
 	return createWorkRelationship(data);
 }
 
+export function hasStaleRiskForProject(rootItemId: number): boolean {
+	const root = getWorkItem(rootItemId);
+	if (!root) return false;
+	const related = relatedWorkForRoot(root);
+	const relationships = listWorkRelationshipsForItems(related.map((item) => item.id));
+	return findStaleRiskCandidates(root, related, relationships, root.id).length > 0;
+}
+
 function resolveGraphCascades(items: WorkItem[], relationships: WorkRelationship[]): string[] {
 	const changes: string[] = [];
 	const byId = mapItems(items);
 	for (const item of items) {
 		if (!['blocked', 'waiting'].includes(item.status)) continue;
+		if (!hasStructuredBlockerReason(item.id, relationships)) continue;
 		const blockers = requiredOpenBlockers(item.id, relationships, byId);
 		if (blockers.length > 0) continue;
 		const nextStatus =
@@ -195,51 +264,14 @@ function resolveGraphCascades(items: WorkItem[], relationships: WorkRelationship
 	return changes;
 }
 
-function closeSatisfiedDecisions(items: WorkItem[], relationships: WorkRelationship[]): string[] {
-	const changes: string[] = [];
-	const byId = mapItems(items);
-	for (const decision of items.filter(
-		(item) => item.type === 'decision' && openStatuses.has(item.status)
-	)) {
-		const gated = gatedItemsForDecision(decision.id, relationships, byId);
-		if (gated.length === 0) continue;
-		if (gated.every((item) => closedStatuses.has(item.status))) {
-			updateWorkItem(decision.id, {
-				status: 'complete',
-				waiting_on: null,
-				result: appendResult(
-					decision.result,
-					`Work reconciler closed this question because gated work is already ${summarizeStatuses(gated)}.`
-				),
-				actor: RECONCILER_ACTOR
-			});
-			changes.push(`${label(decision)} completed because its gated work is closed.`);
-		}
-	}
-	return changes;
-}
-
-function updateProjectNextMove(rootId: number): string[] {
-	const root = getWorkItem(rootId);
-	if (!root || root.type !== 'project') return [];
-	const children = listWorkItems({ parent_item_id: root.id, includeClosed: true, limit: 500 });
-	const next = deriveNextMove(root, children);
-	if (next === root.next_action) return [];
-	updateWorkItem(root.id, {
-		next_action: next,
-		actor: RECONCILER_ACTOR
-	});
-	return [`${label(root)} next action updated to: ${next}`];
-}
-
-function findAmbiguities(
+function findStaleRiskCandidates(
 	root: WorkItem,
 	items: WorkItem[],
 	relationships: WorkRelationship[],
 	triggerItemId: number
 ): string[] {
+	const candidates: string[] = [];
 	const trigger = items.find((item) => item.id === triggerItemId);
-	if (!trigger) return [];
 	const connectedIds = new Set<number>();
 	for (const relationship of relationships) {
 		connectedIds.add(relationship.from_item_id);
@@ -247,21 +279,72 @@ function findAmbiguities(
 	}
 	const openQuestions = items.filter(
 		(item) =>
-			item.id !== trigger.id &&
+			item.id !== trigger?.id &&
 			openStatuses.has(item.status) &&
 			(item.type === 'decision' || item.status === 'needs_review' || item.waiting_on === 'operator')
 	);
 	if (
+		trigger &&
 		trigger.type === 'observation' &&
 		closedStatuses.has(trigger.status) &&
 		openQuestions.length > 0 &&
 		!connectedIds.has(trigger.id)
 	) {
-		return [
+		candidates.push(
 			`${label(trigger)} is a completed finding under ${label(root)}, but it is not linked to open operator questions. An agent must decide whether any question is stale.`
-		];
+		);
 	}
-	return [];
+
+	const byId = mapItems(items);
+	for (const decision of openQuestions.filter((item) => item.type === 'decision')) {
+		const gated = gatedItemsForDecision(decision.id, relationships, byId);
+		if (gated.length > 0 && gated.every((item) => closedStatuses.has(item.status))) {
+			candidates.push(
+				`${label(decision)} gates only closed Work (${gated.map(label).join(', ')}). The agent must decide whether to complete, supersede, or keep it open.`
+			);
+		}
+	}
+
+	for (const item of items.filter((candidate) =>
+		['blocked', 'waiting'].includes(candidate.status)
+	)) {
+		const blockers = requiredOpenBlockers(item.id, relationships, byId);
+		const hasStructuredReason = hasStructuredBlockerReason(item.id, relationships);
+		const isStructuredBlocker = relationships.some(
+			(relationship) =>
+				relationship.relation_type === 'blocks' && relationship.from_item_id === item.id
+		);
+		if (!hasStructuredReason && !isStructuredBlocker) {
+			candidates.push(
+				`${label(item)} is ${item.status} without an explicit depends_on/blocks relationship. The agent should encode the blocker or update the state.`
+			);
+		} else if (blockers.length === 0 && item.type === 'decision') {
+			candidates.push(
+				`${label(item)} has no open structured blockers after mechanical propagation. The agent should confirm the decision state and next operator-facing action.`
+			);
+		}
+	}
+
+	const suggestedNext = root.type === 'project' ? deriveNextMove(root, items) : null;
+	if (
+		suggestedNext &&
+		root.next_action?.trim() &&
+		normalizeText(suggestedNext) !== normalizeText(root.next_action)
+	) {
+		candidates.push(
+			`${label(root)} next_action may need agent review. Current="${truncate(root.next_action)}"; mechanical candidate="${truncate(suggestedNext)}".`
+		);
+	}
+
+	return uniqueStrings(candidates);
+}
+
+function hasStructuredBlockerReason(itemId: number, relationships: WorkRelationship[]): boolean {
+	return relationships.some(
+		(relationship) =>
+			(relationship.relation_type === 'depends_on' && relationship.from_item_id === itemId) ||
+			(relationship.relation_type === 'blocks' && relationship.to_item_id === itemId)
+	);
 }
 
 function requiredOpenBlockers(
@@ -322,6 +405,22 @@ function deriveNextMove(project: WorkItem, children: WorkItem[]): string {
 	);
 	if (scheduled) return `Track: ${scheduled.title}`;
 	return project.next_action?.trim() || 'No operator action set';
+}
+
+function buildStewardPacket(data: {
+	root: WorkItem;
+	touched: WorkItem | null;
+	items: WorkItem[];
+	relationships: WorkRelationship[];
+	mechanicalChanges: string[];
+	staleCandidates: string[];
+}): StewardPacket {
+	const itemIds = data.items.map((item) => item.id);
+	return {
+		...data,
+		evidenceRefs: listEvidenceRefsForItems(itemIds),
+		recentActivity: listRecentActivityForItems(itemIds)
+	};
 }
 
 function relatedWorkForRoot(root: WorkItem): WorkItem[] {
@@ -424,45 +523,34 @@ function logContextualSession(
 	);
 }
 
-function buildReconciliationPrompt(
-	root: WorkItem,
-	items: WorkItem[],
-	relationships: WorkRelationship[],
-	ambiguities: string[]
-): string {
-	return `You are resolving Falcon Dash Work integrity for ${label(root)}.
+function buildReconciliationPrompt(packet: StewardPacket): string {
+	return `${renderStewardInstructions(packet.root)}
 
-Do not reply with prose only. Inspect and update Work through /api/work/* so the dashboard stops showing stale state.
+Mode: reconcile
 
-Ambiguities:
-${ambiguities.map((item) => `- ${item}`).join('\n')}
-
-Current Work:
-${items.map(compactItem).join('\n')}
-
-Relationships:
-${relationships.length ? relationships.map(compactRelationship).join('\n') : '- none'}
+${renderStewardPacket(packet)}
 
 Required finish:
-- Close or keep open any stale decisions/blockers based on evidence.
-- Ensure ${label(root)} has the correct next_action.
-- Leave a concise result summary on every item you change.`;
+- Update Work through /api/work/* when state should change.
+- Do not reply with prose only; prose is not reconciliation.
+- Close or update stale blockers, decisions, and next actions only when the Work context and evidence support it.
+- When uncertain, leave the item open, record what is missing, and set the appropriate waiting state.
+- Keep the operator-facing summary short: what changed, what remains blocked, and the next real move.`;
 }
 
 function buildAskPrompt(
-	item: WorkItem,
-	root: WorkItem,
-	items: WorkItem[],
-	mode: 'ask' | 'reconcile'
+	packet: StewardPacket,
+	mode: SessionMode,
+	operatorMessage?: string
 ): string {
-	return `You are in a Falcon Dash contextual session for ${label(item)} under ${label(root)}.
+	return `${renderStewardInstructions(packet.root)}
 
 Mode: ${mode}
+Operator message: ${operatorMessage?.trim() || '0 results. No explicit operator message provided.'}
 
-Use the Work API when state needs to change. Keep the operator-facing answer concise.
+${renderStewardPacket(packet)}
 
-Current Work:
-${items.map(compactItem).join('\n')}`;
+If Work state needs to change, call /api/work/*. Otherwise answer concisely with the current state and next real move.`;
 }
 
 function createSessionKey(): string {
@@ -502,6 +590,148 @@ function compactRelationship(relationship: WorkRelationship): string {
 	return `- ${relationship.from_item_id} ${relationship.relation_type} ${relationship.to_item_id}`;
 }
 
+function renderStewardInstructions(root: WorkItem): string {
+	return `You are the Work steward for ${label(root)}. Your job is to keep Falcon Dash's Work state coherent, current, and operator-useful.
+
+Role rules:
+- Use deterministic mechanical facts as hints, not as a substitute for judgment.
+- If Work state needs to change, call /api/work/*. Do not only explain what should happen.
+- Close or update stale blockers, decisions, and next actions only when the provided Work context and evidence support it.
+- When you change a Work item, include a concise result or next_action explaining why.
+- When uncertain, leave the item open, record what is missing, and set the appropriate waiting state.
+- Prefer structured relationships over prose. If one item gates another, create or update a depends_on, blocks, relates_to, or derived_from relationship.
+- Keep operator-facing output short: what changed, what is still blocked, and the next real move.`;
+}
+
+function renderStewardPacket(packet: StewardPacket): string {
+	const buckets = bucketItems(packet.items);
+	return `Work packet:
+root:
+${compactItem(packet.root)}
+
+touched:
+${packet.touched ? compactItem(packet.touched) : '0 results. No touched Work item was available.'}
+
+aggregates:
+- open_blockers: ${buckets.openBlockers.length}
+- open_operator_questions: ${buckets.openOperatorQuestions.length}
+- ready_actions: ${buckets.readyActions.length}
+- stale_risk_candidates: ${packet.staleCandidates.length}
+- mechanical_changes: ${packet.mechanicalChanges.length}
+
+stale_risk_candidates[${packet.staleCandidates.length}]:
+${renderStringRows(packet.staleCandidates)}
+
+mechanical_changes[${packet.mechanicalChanges.length}]:
+${renderStringRows(packet.mechanicalChanges)}
+
+open_blockers[${buckets.openBlockers.length}]:
+${renderItemRows(buckets.openBlockers)}
+
+open_operator_questions[${buckets.openOperatorQuestions.length}]:
+${renderItemRows(buckets.openOperatorQuestions)}
+
+ready_actions[${buckets.readyActions.length}]:
+${renderItemRows(buckets.readyActions)}
+
+current_work[${packet.items.length}]{id,type,status,waiting_on,title,next_action,result}:
+${renderItemRows(packet.items)}
+
+relationships[${packet.relationships.length}]{from,relation,to}:
+${packet.relationships.length ? packet.relationships.map(compactRelationship).join('\n') : '0 results. No relationships recorded.'}
+
+evidence_refs[${packet.evidenceRefs.length}]{work_item_id,source_type,source_ref,summary}:
+${renderEvidenceRows(packet.evidenceRefs)}
+
+recent_activity[${packet.recentActivity.length}]{work_item_id,actor,action,details}:
+${renderActivityRows(packet.recentActivity)}
+
+next_commands:
+- GET /api/work/items/${packet.root.id}
+- GET /api/work/items/${packet.root.id}/relationships
+- PATCH /api/work/items/<id> with {"status":"<status>","waiting_on":null,"result":"<why>","actor":"agent"}
+- POST /api/work/items/<id>/relationships with {"to_item_id":<id>,"relation_type":"depends_on"}`;
+}
+
+function bucketItems(items: WorkItem[]): {
+	openBlockers: WorkItem[];
+	openOperatorQuestions: WorkItem[];
+	readyActions: WorkItem[];
+} {
+	return {
+		openBlockers: items.filter((item) => item.status === 'blocked'),
+		openOperatorQuestions: items.filter(
+			(item) =>
+				openStatuses.has(item.status) &&
+				(item.type === 'decision' ||
+					item.status === 'needs_review' ||
+					item.waiting_on === 'operator')
+		),
+		readyActions: items.filter(
+			(item) =>
+				['task', 'change'].includes(item.type) && ['ready', 'in_progress'].includes(item.status)
+		)
+	};
+}
+
+function renderStringRows(rows: string[]): string {
+	return rows.length ? rows.map((row) => `- ${row}`).join('\n') : '0 results.';
+}
+
+function renderItemRows(items: WorkItem[]): string {
+	return items.length ? items.map(compactItem).join('\n') : '0 results.';
+}
+
+function renderEvidenceRows(rows: WorkEvidencePacket[]): string {
+	if (rows.length === 0) return '0 results.';
+	return rows
+		.map(
+			(row) =>
+				`- item=${row.work_item_id ?? '-'} source=${row.source_type}:${row.source_ref} summary="${truncate(row.summary)}"`
+		)
+		.join('\n');
+}
+
+function renderActivityRows(rows: WorkActivityPacket[]): string {
+	if (rows.length === 0) return '0 results.';
+	return rows
+		.map(
+			(row) =>
+				`- item=${row.work_item_id} actor=${row.actor} action=${row.action} details="${truncate(row.details)}"`
+		)
+		.join('\n');
+}
+
+function listEvidenceRefsForItems(itemIds: number[]): WorkEvidencePacket[] {
+	if (itemIds.length === 0) return [];
+	const placeholders = itemIds.map(() => '?').join(',');
+	const db = getWorkDb();
+	return db
+		.prepare(
+			`SELECT work_item_id, observation_id, source_type, source_ref, summary, created_at
+			 FROM work_evidence_refs
+			 WHERE work_item_id IN (${placeholders}) OR observation_id IN (${placeholders})
+			 ORDER BY created_at DESC, id DESC
+			 LIMIT 30`
+		)
+		.all(...itemIds, ...itemIds) as WorkEvidencePacket[];
+}
+
+function listRecentActivityForItems(itemIds: number[]): WorkActivityPacket[] {
+	if (itemIds.length === 0) return [];
+	const placeholders = itemIds.map(() => '?').join(',');
+	const db = getWorkDb();
+	return db
+		.prepare(
+			`SELECT work_item_id, actor, action, details, created_at
+			 FROM work_activity
+			 WHERE work_item_id IN (${placeholders})
+			 ORDER BY created_at DESC, id DESC
+			 LIMIT 30`
+		)
+		.all(...itemIds) as WorkActivityPacket[];
+}
+
 function label(item: WorkItem): string {
 	return `${capitalize(item.type)} ${item.id}`;
 }
@@ -512,11 +742,6 @@ function capitalize(value: string): string {
 
 function appendResult(current: string | null, addition: string): string {
 	return current?.trim() ? `${current.trim()}\n\n${addition}` : addition;
-}
-
-function summarizeStatuses(items: WorkItem[]): string {
-	const statuses = [...new Set(items.map((item) => item.status))];
-	return statuses.join('/');
 }
 
 function parseJsonArray(value: string): string[] {
@@ -538,4 +763,20 @@ function runView(row: WorkReconciliationRun): WorkReconciliationRunView {
 
 function now(): number {
 	return Math.floor(Date.now() / 1000);
+}
+
+function normalizeText(value: string | null | undefined): string {
+	return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function truncate(value: string | null | undefined): string {
+	const text = value?.trim() ?? '';
+	if (!text) return '-';
+	return text.length > PACKET_TEXT_LIMIT
+		? `${text.slice(0, PACKET_TEXT_LIMIT)}... (${text.length} chars total)`
+		: text;
+}
+
+function uniqueStrings(values: string[]): string[] {
+	return [...new Set(values.filter((value) => value.trim()))];
 }

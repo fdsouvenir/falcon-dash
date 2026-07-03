@@ -200,8 +200,25 @@ curl -X POST http://localhost:3000/api/work/items/<id>/relationships \\
 - POST /items/{id}/session
 
 Falcon Dash reconciles Work after mutations. Deterministic reconciliation uses relationships and
-parent/child state to clear stale blockers, complete satisfied decisions, and update project
-next_action. Ambiguous state opens a contextual agent session when the gateway is available.
+parent/child state only for explicit mechanical consequences, such as clearing downstream
+blocked/waiting state when all structured blockers are closed. Semantic cleanup is agent-owned:
+decisions, evidence interpretation, project next_action, and narrative summaries.
+
+When stale-risk remains, Falcon Dash opens or reuses a contextual agent session. The reconciliation
+packet is AXI-style: content first, minimal fields, precomputed counts, explicit "0 results" empty
+states, truncated long text, evidence refs, recent activity, stale-risk candidates, mechanical
+changes, and concrete /api/work/* next-command templates.
+
+Agent role during reconciliation:
+
+- You are the Work steward for the project. Keep Work coherent, current, and operator-useful.
+- Use deterministic mechanical facts as hints, not as a substitute for judgment.
+- If Work state needs to change, call /api/work/*. Do not only explain what should happen.
+- Close or update stale blockers, decisions, and next actions only when context and evidence support it.
+- Include a concise result or next_action when changing Work.
+- When uncertain, leave the item open, record what is missing, and set the appropriate waiting state.
+- Prefer structured relationships over prose.
+- Keep operator-facing output short: what changed, what is blocked, and the next real move.
 
 ## Queue
 

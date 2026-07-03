@@ -28,9 +28,11 @@ export { applyWorkMigration, isWorkSourceOfTruth, previewWorkMigration } from '.
 export { generateWorkContext, generateWorkItemContext } from './context.js';
 export { generateAndWriteContext, getWorkContextDir } from './context-writer.js';
 export { triggerContextGeneration } from './context-scheduler.js';
+export { runReconciliationSweep } from './reconciliation-scheduler.js';
 export {
 	createContextualAgentSession,
 	ensureRelationship,
+	hasStaleRiskForProject,
 	listReconciliationRunsForItem,
 	reconcileWorkItem
 } from './reconciliation.js';

@@ -46,7 +46,7 @@
 		<div>
 			<h3 class="text-sm font-semibold text-on-surface">Work integrity</h3>
 			<p class="mt-1 text-xs leading-5 text-on-surface-variant">
-				Reconcile stale blockers, questions, and next moves from live Work state.
+				Run mechanical graph checks and route semantic cleanup to the project agent.
 			</p>
 		</div>
 		<Bot class="h-5 w-5 shrink-0 text-primary" />

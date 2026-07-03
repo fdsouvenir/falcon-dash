@@ -50,11 +50,12 @@ Desktop quick inspectors and detail pages expose lightweight state controls for 
 and waiting state. Narrative fields such as title, next action, notes, description, and results are
 shown as agent-managed record content rather than casual text editors.
 
-Falcon Dash also runs Work integrity reconciliation after Work changes. When structured
-relationships prove that a blocker, dependency, or decision is stale, the dashboard can update the
-related Work and record an audit run. When the next move is ambiguous, it opens a contextual agent
-session tied to the Work item so the agent can resolve the stale state with the right project
-context.
+Falcon Dash also runs Work integrity reconciliation after Work changes. Deterministic cleanup is
+limited to explicit mechanical graph consequences, such as clearing a blocked task after all
+structured dependencies are closed. The contextual agent remains the project steward for semantic
+cleanup: stale questions, evidence interpretation, project next actions, and operator-facing
+summaries. When stale-risk remains, Falcon Dash opens or reuses an agent session tied to the Work
+item so the agent can resolve the state with the right project context.
 
 In UI copy, `/work/changes` is labeled **Change requests** because those items are implementation
 or configuration work that may need approval. `/work/decisions` is labeled **Questions** because
