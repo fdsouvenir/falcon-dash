@@ -107,6 +107,13 @@ Falcon Dash is the OpenClaw operator dashboard plugin. The active work system is
 - API reference: WORK-API.md
 
 Archived PM data is not part of the active Falcon Dash contract. If an old source database exists on disk, treat it only as migration source material.
+
+## Agent Interface
+
+- Start with WORK.md for a compact current-state home view.
+- Open Work/W-<id>.md only when the queue row is not enough.
+- Use WORK-API.md for mutation templates and filter options.
+- Human/operator-facing references should be type plus ID, such as Change 176 or Project 4. The W- prefix is only a context filename convention.
 `;
 }
 
@@ -115,17 +122,86 @@ function generateWorkApiDoc(): string {
 
 Base URL: http://localhost:3000/api/work
 
+This API backs the generated context files. Prefer WORK.md for the first read, then use the API
+when you need fresh data, filtered lists, or mutations.
+
+## Agent-Ergonomic Contract
+
+- List responses should be filtered and capped with limit instead of hydrating everything by default.
+- Empty results are valid; the generated context renders them as "0 results" so agents do not treat silence as failure.
+- Long inline queue text may be truncated in WORK.md; use Work/W-<id>.md or GET /items/{id} for full content.
+- Mutations should be idempotent from the agent's point of view: PATCH the intended final state and include actor.
+- Unknown fields are not part of the contract. Prefer the templates below over inventing request shapes.
+
 ## Items
 
 - GET /items
 - GET /items?type=change&status=in_progress
+- GET /items?type=task&status=ready&limit=50
 - POST /items
 - GET /items/{id}
 - PATCH /items/{id}
+- GET /items/{id}/relationships
+- POST /items/{id}/relationships
+- DELETE /items/{id}/relationships
+- GET /items/{id}/reconciliation
+- POST /items/{id}/session
+- POST /reconcile
 
 Item types: area, project, task, decision, routine, observation, change.
 
 Statuses: backlog, planning, ready, in_progress, waiting, needs_review, blocked, scheduled, complete, cancelled, archived.
+
+Create an approval-gated Change:
+
+\`\`\`bash
+curl -X POST http://localhost:3000/api/work/items \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"change","title":"<title>","status":"planning","owner":"agent","waiting_on":"operator","approval_required":true,"description":"<spec>"}'
+\`\`\`
+
+Mark an approved item in progress:
+
+\`\`\`bash
+curl -X PATCH http://localhost:3000/api/work/items/<id> \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"in_progress","waiting_on":"agent","actor":"agent"}'
+\`\`\`
+
+Complete an item with a result summary:
+
+\`\`\`bash
+curl -X PATCH http://localhost:3000/api/work/items/<id> \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"complete","result":"<summary>","waiting_on":null,"actor":"agent"}'
+\`\`\`
+
+## Relationships
+
+Use relationships for graph-safe reconciliation:
+
+- depends_on: from_item_id waits for to_item_id
+- blocks: from_item_id blocks to_item_id
+- relates_to: contextual relationship
+- derived_from: provenance relationship
+
+Create a relationship:
+
+\`\`\`bash
+curl -X POST http://localhost:3000/api/work/items/<id>/relationships \\
+  -H "Content-Type: application/json" \\
+  -d '{"to_item_id":123,"relation_type":"depends_on"}'
+\`\`\`
+
+## Reconciliation
+
+- POST /reconcile
+- GET /items/{id}/reconciliation
+- POST /items/{id}/session
+
+Falcon Dash reconciles Work after mutations. Deterministic reconciliation uses relationships and
+parent/child state to clear stale blockers, complete satisfied decisions, and update project
+next_action. Ambiguous state opens a contextual agent session when the gateway is available.
 
 ## Queue
 
@@ -138,6 +214,12 @@ Returns nextActions, needsOperator, waitingOnOperator, waitingOnAgent, waitingOn
 - GET /context
 
 Returns the generated Work markdown plus queue stats.
+
+Context files:
+
+- WORK.md — compact source-of-truth home view with counts, queues, empty states, and next commands.
+- Work/W-<id>.md — full item detail for active Work items.
+- WORK-API.md — this reference.
 
 ## Migration
 

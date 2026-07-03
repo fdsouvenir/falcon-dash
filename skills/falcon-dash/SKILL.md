@@ -41,9 +41,13 @@ When dispatching work to sub-agents (ACP sessions, acpx, etc.):
 
 Falcon Dash generates and symlinks these files into your workspace — read them instead of making API calls when you just need context:
 
-- `WORK.md` — Work Queue and source-of-truth context
-- `Work/W-{id}.md` — full detail per active Work project/change
-- `WORK-API.md` — complete Work API reference
+- `WORK.md` — compact source-of-truth home view with counts, explicit `0 results` empty states, capped queue rows, detail-file links, and concrete next-command templates
+- `Work/W-{id}.md` — full detail per active Work item, with type-plus-ID heading and item-specific update templates
+- `WORK-API.md` — complete Work API reference, filters, and mutation examples
+- `FALCON-DASH.md` — context directory and Falcon Dash module guidance
+
+Treat `WORK.md` like the first tool result: read the content before asking for help text. Open
+`Work/W-{id}.md` or call `/api/work/items/{id}` only when the compact row is not enough.
 
 For the full Work API (endpoints, fields, examples), load the **falcon-dash-work** skill.
 

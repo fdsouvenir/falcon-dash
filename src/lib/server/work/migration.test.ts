@@ -11,6 +11,7 @@ import {
 	createWorkItem,
 	generateAndWriteContext,
 	generateWorkContext,
+	generateWorkItemContext,
 	getWorkDb,
 	getWorkItemByLegacy,
 	isWorkSourceOfTruth,
@@ -130,6 +131,37 @@ describe('Work migration', () => {
 			true
 		);
 		expect(generateWorkContext().markdown).toContain('Write Work-first context');
+	});
+
+	it('renders agent-ergonomic Work context with counts, empty states, and help', () => {
+		const context = generateWorkContext().markdown;
+
+		expect(context).toContain('## Summary');
+		expect(context).toContain('active: 0');
+		expect(context).toContain('types: 0 results');
+		expect(context).toContain('## Next Actions (0)');
+		expect(context).toContain('0 results.');
+		expect(context).toContain('Create approved Change spec');
+	});
+
+	it('renders Work item detail with type references and update templates', () => {
+		const item = createWorkItem({
+			type: 'change',
+			title: 'Adopt AXI context hints',
+			status: 'planning',
+			owner: 'agent',
+			waiting_on: 'operator',
+			approval_required: true,
+			next_action: 'Ask the operator to approve the generated context contract',
+			actor: 'agent'
+		});
+
+		const context = generateWorkItemContext(item);
+
+		expect(context).toContain(`# Change ${item.id}: Adopt AXI context hints`);
+		expect(context).toContain(`context_file: Work/W-${item.id}.md`);
+		expect(context).toContain('Mark approved Change ready after operator approval');
+		expect(context).toContain('Complete with result');
 	});
 
 	it('writes Work-first context from the separate Work DB', () => {
