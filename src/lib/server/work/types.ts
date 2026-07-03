@@ -27,6 +27,16 @@ export const WORK_STATUSES = [
 export type WorkStatus = (typeof WORK_STATUSES)[number];
 
 export type WorkPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type WorkRelationType = 'depends_on' | 'blocks' | 'relates_to' | 'derived_from';
+export type WorkReconciliationStatus =
+	| 'queued'
+	| 'running'
+	| 'applied'
+	| 'no_action'
+	| 'needs_agent'
+	| 'agent_running'
+	| 'needs_review'
+	| 'failed';
 
 export interface WorkArea {
 	id: string;
@@ -71,6 +81,33 @@ export interface WorkEvidenceRef {
 	source_ref: string;
 	summary: string | null;
 	created_at: number;
+}
+
+export interface WorkRelationship {
+	from_item_id: number;
+	to_item_id: number;
+	relation_type: WorkRelationType;
+	created_at: number;
+	from_item?: WorkItem;
+	to_item?: WorkItem;
+}
+
+export interface WorkReconciliationRun {
+	id: number;
+	root_item_id: number;
+	trigger_entity: string;
+	trigger_id: string;
+	status: WorkReconciliationStatus;
+	deterministic_changes_json: string;
+	ambiguities_json: string;
+	session_key: string | null;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface WorkReconciliationRunView extends WorkReconciliationRun {
+	deterministic_changes: string[];
+	ambiguities: string[];
 }
 
 export interface WorkMigrationMap {

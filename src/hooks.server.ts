@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/sveltekit';
 import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { startContextScheduler } from '$lib/server/work/context-scheduler.js';
+import { startReconciliationScheduler } from '$lib/server/work/reconciliation-scheduler.js';
 import { startTerminalServer } from '$lib/server/terminal-server.js';
 import { startGatewayClient } from '$lib/server/gateway-client.js';
 
@@ -14,6 +15,7 @@ Sentry.init({
 });
 
 startContextScheduler();
+startReconciliationScheduler();
 
 // Only start standalone terminal server in dev — production uses entry.js wrapper
 // which attaches the terminal WebSocket to the same HTTP server

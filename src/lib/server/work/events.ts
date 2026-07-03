@@ -3,6 +3,7 @@ type WorkEvent = {
 	timestamp: number;
 	entity?: string;
 	id?: string | number;
+	actor?: string;
 };
 
 type WorkEventListener = (event: WorkEvent) => void;

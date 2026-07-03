@@ -10,13 +10,17 @@ export {
 export {
 	WorkError,
 	addEvidenceRef,
+	createWorkRelationship,
 	createWorkItem,
+	deleteWorkRelationship,
 	getWorkArea,
 	getWorkItem,
 	getWorkItemByLegacy,
 	listWorkAreas,
 	listWorkItems,
 	listWorkQueue,
+	listWorkRelationships,
+	listWorkRelationshipsForItems,
 	updateWorkItem,
 	upsertWorkArea
 } from './crud.js';
@@ -24,6 +28,12 @@ export { applyWorkMigration, isWorkSourceOfTruth, previewWorkMigration } from '.
 export { generateWorkContext, generateWorkItemContext } from './context.js';
 export { generateAndWriteContext, getWorkContextDir } from './context-writer.js';
 export { triggerContextGeneration } from './context-scheduler.js';
+export {
+	createContextualAgentSession,
+	ensureRelationship,
+	listReconciliationRunsForItem,
+	reconcileWorkItem
+} from './reconciliation.js';
 export { emitWorkEvent, getRecentWorkEvents, getWorkStateVersion, onWorkEvent } from './events.js';
 export { getFalconDashModules, FALCON_DASH_MODULES } from './module.js';
 export type {
@@ -36,5 +46,10 @@ export type {
 	WorkMigrationPreview,
 	WorkPriority,
 	WorkQueue,
+	WorkReconciliationRun,
+	WorkReconciliationRunView,
+	WorkReconciliationStatus,
+	WorkRelationship,
+	WorkRelationType,
 	WorkStatus
 } from './types.js';

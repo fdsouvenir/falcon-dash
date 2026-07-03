@@ -3,6 +3,8 @@ import { emitWorkEvent } from './events.js';
 import type {
 	WorkArea,
 	WorkItem,
+	WorkRelationship,
+	WorkRelationType,
 	WorkItemType,
 	WorkPriority,
 	WorkQueue,
@@ -200,7 +202,7 @@ export function createWorkItem(data: {
 	const id = result.lastInsertRowid as number;
 	logWorkActivity(id, data.actor ?? 'system', 'created', `Created ${type}`);
 	createWorkVersion(id, data.actor ?? 'system');
-	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
+	emitWorkEvent({ type: 'work.changed', entity: 'item', id, actor: data.actor ?? 'system' });
 	return getWorkItem(id)!;
 }
 
@@ -260,8 +262,91 @@ export function updateWorkItem(
 	db.prepare(`UPDATE work_items SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 	logWorkActivity(id, data.actor ?? 'system', 'updated', summarizeWorkUpdate(current, data));
 	createWorkVersion(id, data.actor ?? 'system');
-	emitWorkEvent({ type: 'work.changed', entity: 'item', id });
+	emitWorkEvent({ type: 'work.changed', entity: 'item', id, actor: data.actor ?? 'system' });
 	return getWorkItem(id);
+}
+
+export function listWorkRelationships(itemId: number): WorkRelationship[] {
+	const db = getWorkDb();
+	return db
+		.prepare(
+			`SELECT * FROM work_relationships
+			 WHERE from_item_id = ? OR to_item_id = ?
+			 ORDER BY created_at DESC, from_item_id ASC, to_item_id ASC`
+		)
+		.all(itemId, itemId) as WorkRelationship[];
+}
+
+export function listWorkRelationshipsForItems(itemIds: number[]): WorkRelationship[] {
+	if (itemIds.length === 0) return [];
+	const db = getWorkDb();
+	const placeholders = itemIds.map(() => '?').join(',');
+	return db
+		.prepare(
+			`SELECT * FROM work_relationships
+			 WHERE from_item_id IN (${placeholders}) OR to_item_id IN (${placeholders})
+			 ORDER BY created_at DESC, from_item_id ASC, to_item_id ASC`
+		)
+		.all(...itemIds, ...itemIds) as WorkRelationship[];
+}
+
+export function createWorkRelationship(data: {
+	from_item_id: number;
+	to_item_id: number;
+	relation_type: WorkRelationType;
+	actor?: string;
+}): WorkRelationship {
+	if (data.from_item_id === data.to_item_id) {
+		throw new WorkError('WORK_CONSTRAINT', 'Work relationship cannot point to itself');
+	}
+	const from = getWorkItem(data.from_item_id);
+	const to = getWorkItem(data.to_item_id);
+	if (!from) throw new WorkError('WORK_NOT_FOUND', `Work item ${data.from_item_id} not found`);
+	if (!to) throw new WorkError('WORK_NOT_FOUND', `Work item ${data.to_item_id} not found`);
+	const db = getWorkDb();
+	const ts = now();
+	db.prepare(
+		`INSERT OR IGNORE INTO work_relationships
+		 (from_item_id, to_item_id, relation_type, created_at)
+		 VALUES (?, ?, ?, ?)`
+	).run(data.from_item_id, data.to_item_id, data.relation_type, ts);
+	const relationship = db
+		.prepare(
+			`SELECT * FROM work_relationships
+			 WHERE from_item_id = ? AND to_item_id = ? AND relation_type = ?`
+		)
+		.get(data.from_item_id, data.to_item_id, data.relation_type) as WorkRelationship;
+	emitWorkEvent({
+		type: 'work.changed',
+		entity: 'relationship',
+		id: data.from_item_id,
+		actor: data.actor ?? 'system'
+	});
+	return relationship;
+}
+
+export function deleteWorkRelationship(data: {
+	from_item_id: number;
+	to_item_id: number;
+	relation_type: WorkRelationType;
+	actor?: string;
+}): boolean {
+	const db = getWorkDb();
+	const result = db
+		.prepare(
+			`DELETE FROM work_relationships
+			 WHERE from_item_id = ? AND to_item_id = ? AND relation_type = ?`
+		)
+		.run(data.from_item_id, data.to_item_id, data.relation_type);
+	if (result.changes > 0) {
+		emitWorkEvent({
+			type: 'work.changed',
+			entity: 'relationship',
+			id: data.from_item_id,
+			actor: data.actor ?? 'system'
+		});
+	}
+	return result.changes > 0;
 }
 
 export function listWorkQueue(): WorkQueue {
@@ -313,6 +398,7 @@ export function addEvidenceRef(data: {
 	source_type: string;
 	source_ref: string;
 	summary?: string | null;
+	actor?: string;
 }): void {
 	const db = getWorkDb();
 	const existing = db
@@ -338,7 +424,12 @@ export function addEvidenceRef(data: {
 		data.summary ?? null,
 		now()
 	);
-	emitWorkEvent({ type: 'work.changed', entity: 'evidence', id: data.source_ref });
+	emitWorkEvent({
+		type: 'work.changed',
+		entity: 'evidence',
+		id: data.work_item_id ?? data.observation_id ?? data.source_ref,
+		actor: data.actor ?? 'system'
+	});
 }
 
 function createWorkVersion(workItemId: number, actor: string): void {

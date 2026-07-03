@@ -67,6 +67,12 @@ GET    /api/work/items
 POST   /api/work/items
 GET    /api/work/items/{id}
 PATCH  /api/work/items/{id}
+GET    /api/work/items/{id}/relationships
+POST   /api/work/items/{id}/relationships
+DELETE /api/work/items/{id}/relationships
+GET    /api/work/items/{id}/reconciliation
+POST   /api/work/items/{id}/session
+POST   /api/work/reconcile
 ```
 
 List filters:
@@ -77,6 +83,22 @@ List filters:
 - `parent_item_id`
 - `includeClosed=true`
 - `limit`
+
+## Relationships and Reconciliation
+
+Use relationships when one Work item gates another instead of encoding that dependency only in
+title/body text:
+
+- `depends_on`: `from_item_id` waits for `to_item_id`
+- `blocks`: `from_item_id` blocks `to_item_id`
+- `relates_to`: contextual relationship
+- `derived_from`: provenance relationship
+
+Falcon Dash runs a Work integrity reconciler after Work mutations. It clears stale graph-proven
+blockers and decisions, updates the project next action, and records reconciliation runs. If the
+state is ambiguous, Falcon Dash can open a contextual agent session with a compact packet of the
+root project, related Work, relationships, and failed invariants. Agents must update Work through
+`/api/work/*`; do not reply with prose only when asked to reconcile.
 
 Create example:
 
@@ -111,6 +133,10 @@ GET /api/work/context
 
 Generated context files become Work-first once migration apply marks Work as source of truth:
 
-- `WORK.md` — Work Queue
-- `Work/W-{id}.md` — Work item details for project/change items
-- `WORK-API.md` — Work API reference
+- `WORK.md` — compact Work home view with counts, definitive `0 results` empty states, capped queue rows, detail-file links, and next-command templates
+- `Work/W-{id}.md` — full active Work item detail with type-plus-ID heading and item-specific update templates
+- `WORK-API.md` — Work API reference, filters, and mutation examples
+- `FALCON-DASH.md` — Falcon Dash context directory and module guidance
+
+Read `WORK.md` first for current state. Open `Work/W-{id}.md` or call `GET /items/{id}` only when
+the compact row is insufficient.

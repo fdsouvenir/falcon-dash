@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS work_relationships (
   CHECK (from_item_id != to_item_id)
 );
 
+CREATE TABLE IF NOT EXISTS work_reconciliation_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  root_item_id INTEGER NOT NULL REFERENCES work_items(id) ON DELETE CASCADE,
+  trigger_entity TEXT NOT NULL,
+  trigger_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('queued','running','applied','no_action','needs_agent','agent_running','needs_review','failed')),
+  deterministic_changes_json TEXT NOT NULL DEFAULT '[]',
+  ambiguities_json TEXT NOT NULL DEFAULT '[]',
+  session_key TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 CREATE TABLE IF NOT EXISTS work_observations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
@@ -125,6 +138,10 @@ CREATE INDEX IF NOT EXISTS idx_work_items_parent ON work_items(parent_item_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_legacy_project ON work_items(legacy_project_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_legacy_plan ON work_items(legacy_plan_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_activity ON work_items(last_activity_at);
+CREATE INDEX IF NOT EXISTS idx_work_relationships_from ON work_relationships(from_item_id);
+CREATE INDEX IF NOT EXISTS idx_work_relationships_to ON work_relationships(to_item_id);
+CREATE INDEX IF NOT EXISTS idx_work_reconciliation_root ON work_reconciliation_runs(root_item_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_work_reconciliation_status ON work_reconciliation_runs(status);
 CREATE INDEX IF NOT EXISTS idx_work_evidence_item ON work_evidence_refs(work_item_id);
 CREATE INDEX IF NOT EXISTS idx_work_evidence_observation ON work_evidence_refs(observation_id);
 CREATE INDEX IF NOT EXISTS idx_work_activity_item ON work_activity(work_item_id);

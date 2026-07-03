@@ -46,6 +46,9 @@ Work server code lives in `src/lib/server/work/`:
 - `context.ts` — Work Queue markdown generation
 - `context-writer.ts` — generated Work context files and workspace symlinks
 - `context-scheduler.ts` — debounced Work context regeneration after Work mutations
+- `reconciliation.ts` — graph-first Work integrity cascade, run history, and contextual agent
+  sessions
+- `reconciliation-scheduler.ts` — debounced per-project reconciliation after Work mutations
 - `module.ts` — Falcon Dash internal module metadata
 - `index.ts` — exports
 
@@ -59,6 +62,12 @@ GET    /api/work/items
 POST   /api/work/items
 GET    /api/work/items/{id}
 PATCH  /api/work/items/{id}
+GET    /api/work/items/{id}/relationships
+POST   /api/work/items/{id}/relationships
+DELETE /api/work/items/{id}/relationships
+GET    /api/work/items/{id}/reconciliation
+POST   /api/work/items/{id}/session
+POST   /api/work/reconcile
 GET    /api/work/context
 GET    /api/work/migration/preview
 POST   /api/work/migration/apply
@@ -87,14 +96,42 @@ hydrates Work items broadly because project filters and summaries depend on chil
 `waitingOnFred` is still returned as a legacy alias for older callers, but new UI, docs, and
 generated context should use operator-focused bucket names.
 
+## Work Integrity
+
+Falcon Dash runs a Work integrity loop after item, evidence, and relationship mutations. The loop
+coalesces by root project, ignores writes from actor `work-reconciler`, and records every pass in
+`work_reconciliation_runs`.
+
+The deterministic pass is graph-first:
+
+- `depends_on` means `from_item_id` waits for `to_item_id`
+- `blocks` means `from_item_id` blocks `to_item_id`
+- closed blockers/dependencies can clear stale `blocked` or `waiting` downstream work
+- decisions that only gate already closed work are completed with an audit result
+- project `next_action` is recomputed from live child state: blockers, operator questions,
+  actionable tasks/changes, then scheduled/due work
+
+If the deterministic pass finds an ambiguity, Falcon Dash opens a contextual agent session when the
+gateway is available. The agent receives a compact packet with root project, related Work,
+relationships, and the failed invariants, and is instructed to update Work through `/api/work/*`.
+If the gateway is unavailable, the run remains `needs_agent` with the failure recorded.
+
 ## Context Generation
 
 `src/lib/server/work/context-writer.ts` writes Work-owned context:
 
-- `WORK.md` — Work Queue
-- `Work/W-{id}.md` — active Work project/change/task/decision/routine details
-- `WORK-API.md` — Work API reference
-- `FALCON-DASH.md` — Falcon Dash plugin/module context
+- `WORK.md` — compact Work home view with generated timestamp, active counts, queue bucket
+  counts, definitive `0 results` empty states, capped bucket rows, detail-file links, and concrete
+  next-command templates
+- `Work/W-{id}.md` — active Work item details with type-plus-ID heading, metadata, full item
+  content, and item-specific update templates
+- `WORK-API.md` — Work API reference with filter defaults, mutation examples, and context contract
+- `FALCON-DASH.md` — Falcon Dash plugin/module context and generated context directory hint
+
+The generated context follows an agent-ergonomic pattern: default reads should be small and
+actionable, full detail is one file or API call away, and empty buckets should say `0 results`
+instead of disappearing. Human-facing references still use object type plus ID (`Change 176`);
+`W-{id}` is only the generated filename.
 
 The default context directory is:
 
