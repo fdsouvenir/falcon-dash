@@ -10,7 +10,9 @@ dist/
 *.log
 test-results/
 playwright-report/
+coverage/
 .omc/
+.stitch/
 *.pem
 *.key
 .vscode/
