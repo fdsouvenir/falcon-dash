@@ -115,6 +115,9 @@ pages. Section list rows follow a breakpoint-specific contract:
 - Clicking the selected row again clears selection; the inspector remains visible as a fixed
   placeholder so the desktop layout does not jump.
 - Below `xl`, rows skip quick inspection and single-tap directly into the standalone detail route.
+- On mobile detail routes, `WorkSurface` delegates to `MobileWorkDetail.svelte`. The mobile view
+  supports every v2 Work type, uses typed fields for its brief and next move, and keeps its agent
+  composer above the shell navigation.
 - The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
   line above search, type-specific primary filter chips, compact More filters, and refresh. That
   full header stays fixed in the list frame while only the row list scrolls.

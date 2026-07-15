@@ -24,6 +24,9 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   scrolling in normal workflows.
 - Prefer existing UI primitives in `src/lib/components/ui/` before building bespoke variants.
 - Treat cards as optional containers, not default layout.
+- Use the MD3-compatible aliases in `src/app.css` for shape, typography, motion, and semantic color
+  while keeping Falcon's own palette. Shared buttons use full-radius silhouettes and cards use
+  tonal elevation instead of default drop shadows.
 
 ## Shell Model
 
@@ -61,6 +64,9 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   right inspector. Row selection can be cleared by clicking the selected row again; the inspector
   should stay visible with a placeholder instead of collapsing the layout, and it should not become
   a separate scrolling surface.
+- Mobile Work details should prioritize the agent note, actionable next steps, and a persistent
+  agent composer. Keep status and metadata quiet, place secondary facts in a collapsed section, and
+  preserve at least 48px controls except for compact inline text actions.
 - In numbered project rows, use a hanging indent so blurbs and next-up badges align with the
   title text rather than the project number.
 - In dense project columns, center narrow numeric counts such as blockers with a small metric

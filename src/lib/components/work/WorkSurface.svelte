@@ -4,9 +4,11 @@
 	import { page } from '$app/state';
 	import FalconModuleShell from '$lib/components/falcon/FalconModuleShell.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import MobileWorkDetail from '$lib/components/work/MobileWorkDetail.svelte';
 	import WorkIntegrityPanel from '$lib/components/work/WorkIntegrityPanel.svelte';
 	import ProjectLedger from '$lib/components/work/ProjectLedger.svelte';
 	import WorkSettings from '$lib/components/work/WorkSettings.svelte';
+	import { isMobile } from '$lib/stores/viewport.js';
 	import {
 		clearWorkDataCache,
 		loadCachedWorkBlockers,
@@ -168,6 +170,7 @@
 	let contextualSessionMessage = $state<string | null>(null);
 	let lastLoadKey = '';
 	let loadGeneration = 0;
+	let mobile = $state(false);
 
 	const workListLimit = 300;
 
@@ -457,6 +460,13 @@
 		if (lastLoadKey === key) return;
 		lastLoadKey = key;
 		void loadWork();
+	});
+
+	$effect(() => {
+		const unsub = isMobile.subscribe((value) => {
+			mobile = value;
+		});
+		return unsub;
 	});
 
 	async function loadWork() {
@@ -1927,7 +1937,21 @@
 					<WorkSettings />
 				{:else if mode === 'detail'}
 					{#if selectedItem}
-						{#if selectedItem.type === 'project'}
+						{#if mobile}
+							<MobileWorkDetail
+								item={selectedItem}
+								parent={parentFor(selectedItem)}
+								relatedItems={relatedItemsFor(selectedItem)}
+								blockers={blockersFor(selectedItem)}
+								runs={reconciliationRuns}
+								statusMessage={contextualSessionMessage}
+								loading={reconciliationLoading}
+								backHref={resolve(`/work/${activeConfig.path}`)}
+								onMessage={(message) => (contextualMessage = message)}
+								onRun={() => runSelectedReconciliation(false)}
+								onAsk={() => openContextualSession('ask')}
+							/>
+						{:else if selectedItem.type === 'project'}
 							<ProjectLedger
 								item={selectedItem}
 								{items}

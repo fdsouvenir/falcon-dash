@@ -164,13 +164,13 @@ export const CARD = {
 } as const;
 
 export const BADGE = {
-	/** Status badge — pill shape with semantic color */
+	/** Status badge — quiet semantic label */
 	status: (status: StatusKey) => {
 		const c = STATUS_COLORS[status];
-		return `${c.text} ${c.bg} ${TEXT.badge} ${SPACE.badgePadding} rounded-full`;
+		return `${c.text} ${c.bg} ${TEXT.badge} ${SPACE.badgePadding} rounded-[var(--md-sys-shape-corner-small)] border border-current/15`;
 	},
 	/** Count badge — small rounded with muted style */
-	count: `${TEXT.badge} ${SPACE.badgePadding} rounded-full bg-surface-3 text-status-muted`
+	count: `${TEXT.badge} ${SPACE.badgePadding} rounded-[var(--md-sys-shape-corner-small)] bg-surface-container text-status-muted`
 } as const;
 
 /* ── Tool Colors (for Ops Observer activity feed) ── */

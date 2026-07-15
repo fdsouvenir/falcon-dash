@@ -23,11 +23,13 @@ redirects to `/work`.
   facts together, and places the details action directly below that state block. Single clicks select and highlight
   a row in place; clicking it again clears selection; double clicks open that item's standalone
   detail page.
-- Mobile type pages skip the quick inspector. Tapping a row opens the standalone detail page
-  directly.
+- Mobile type pages skip the quick inspector. Tapping a row opens a mobile-first detail page
+  directly. That page leads with the agent's current note and next steps, keeps structured facts in
+  a collapsed Work details section, and pins a message composer above the mobile navigation.
 - Standalone detail pages for individual Work items. These pages show type-aware context, health
-  reasons, blocker context, related work, and read-only narrative fields. Needs Resolution detail
-  pages use a sectioned Resolution brief so long agent-written Markdown plans remain scannable.
+  reasons, blocker context, related work, and read-only narrative fields. Desktop Needs Resolution
+  detail pages use a sectioned Resolution brief so long agent-written Markdown plans remain
+  scannable.
 - A Work integrity panel on detail pages for checking stale state, opening a scoped agent session,
   and reviewing recent reconciliation runs.
 - Findings feed for captured facts, events, and evidence

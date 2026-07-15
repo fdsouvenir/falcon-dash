@@ -908,6 +908,45 @@ test.describe('work overview executive status board', () => {
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+			await expect(page.getByText('Project Status', { exact: true })).toHaveCount(0);
+			await expect(page.getByTestId('mobile-work-agent-note')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-next-steps')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-project-details')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-brief')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-activity')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-agent-composer')).toBeVisible();
+			await expect(page.getByText('Category', { exact: true })).toBeHidden();
+			await expect
+				.poll(() =>
+					page.evaluate(() => {
+						const composer = document
+							.querySelector('[data-testid="mobile-work-agent-composer"]')
+							?.getBoundingClientRect();
+						const bottomNav = Array.from(document.querySelectorAll('nav'))
+							.at(-1)
+							?.getBoundingClientRect();
+						if (!composer || !bottomNav) return false;
+						return composer.bottom <= bottomNav.top + 1;
+					})
+				)
+				.toBe(true);
+			await expect
+				.poll(() =>
+					page.evaluate(() =>
+						Array.from(
+							document.querySelectorAll(
+								'[data-mobile-work-detail="true"] button, [data-mobile-work-detail="true"] a'
+							)
+						)
+							.filter((element) => !element.classList.contains('touch-target-inline'))
+							.every((element) => {
+								const rect = element.getBoundingClientRect();
+								return rect.height >= 48 || rect.width >= 48;
+							})
+					)
+				)
+				.toBe(true);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
