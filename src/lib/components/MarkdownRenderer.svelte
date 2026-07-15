@@ -1,9 +1,18 @@
 <script lang="ts">
-	import { renderMarkdownSync } from '$lib/utils/markdown.js';
+	import {
+		getSafeMathProcessor,
+		hasMath,
+		renderMarkdownSafeSync,
+		renderMarkdownSync
+	} from '$lib/utils/markdown.js';
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 
-	let { content = '', isStreaming = false }: { content: string; isStreaming?: boolean } = $props();
+	let {
+		content = '',
+		isStreaming = false,
+		allowRawHtml = true
+	}: { content: string; isStreaming?: boolean; allowRawHtml?: boolean } = $props();
 
 	/**
 	 * Close unclosed markdown fences and inline markers during streaming
@@ -36,6 +45,7 @@
 	let renderedContent = $state(content);
 	let rafId: number | null = null;
 	let pendingContent: string | null = null;
+	let safeMathRevision = $state(0);
 
 	$effect(() => {
 		const current = content;
@@ -63,6 +73,16 @@
 				}
 			});
 		}
+	});
+
+	$effect(() => {
+		const current = content;
+		if (allowRawHtml || !hasMath(current)) return;
+		void getSafeMathProcessor()
+			.then(() => {
+				safeMathRevision += 1;
+			})
+			.catch(() => undefined);
 	});
 
 	// Sanitize content for display during streaming
@@ -155,6 +175,13 @@
 			}
 		);
 	}
+
+	function renderSegment(markdown: string): string {
+		void safeMathRevision;
+		return allowRawHtml
+			? renderMarkdownSync(preprocessMarkdown(markdown))
+			: renderMarkdownSafeSync(markdown);
+	}
 </script>
 
 <div class="markdown-content prose prose-invert prose-sm max-w-none break-words">
@@ -169,7 +196,7 @@
 			<CodeBlock code={segment.content} lang={segment.lang} />
 		{:else}
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-			{@html renderMarkdownSync(preprocessMarkdown(segment.content))}
+			{@html renderSegment(segment.content)}
 		{/if}
 	{/each}
 	{#if isStreaming}

@@ -18,9 +18,7 @@
 	let description = $state(job?.description ?? '');
 	let scheduleType = $state<CronJobInput['scheduleType']>(job?.scheduleType ?? 'cron');
 	let schedule = $state(job?.schedule ?? '');
-	let payloadType = $state<CronJobInput['payloadType']>(
-		(job?.payloadType as CronJobInput['payloadType']) ?? 'system-event'
-	);
+	let payloadType = $state<CronJobInput['payloadType']>(job?.payloadType ?? 'system-event');
 	let sessionTarget = $state(job?.sessionTarget ?? '');
 	let isSaving = $state(false);
 
@@ -44,7 +42,10 @@
 			scheduleType,
 			schedule: schedule.trim(),
 			payloadType,
-			sessionTarget: sessionTarget.trim() || undefined
+			sessionTarget: sessionTarget.trim() || undefined,
+			sessionKey: job?.sessionKey,
+			existingSchedule: job?.rawSchedule,
+			existingPayload: job?.rawPayload
 		};
 
 		let success: boolean;
@@ -172,6 +173,9 @@
 				>
 					<option value="system-event">System Event</option>
 					<option value="agent-turn">Agent Turn</option>
+					{#if job?.payloadType === 'command'}
+						<option value="command">Command (preserve existing)</option>
+					{/if}
 				</select>
 			</div>
 

@@ -97,12 +97,12 @@
 
 	async function handleSaveConfig() {
 		isSaving = true;
-		await updateHeartbeatConfig({
+		const success = await updateHeartbeatConfig({
 			activeHours: { start: editStart, end: editEnd, timezone: editTimezone },
 			deliveryTarget: editTarget
 		});
 		isSaving = false;
-		showConfigEdit = false;
+		if (success) showConfigEdit = false;
 	}
 
 	async function toggleHeartbeat() {

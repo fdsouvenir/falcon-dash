@@ -68,7 +68,8 @@ The Information tab shows detailed information about your current gateway connec
 - Session defaults such as context token limits and the default agent.
 - A list of all connected devices.
 - Usage and cost information by AI provider.
-- Active and recently completed agent runs.
+- Active and recently completed agent runs from the gateway task ledger. Stopping an active run
+  cancels its task.
 
 ---
 

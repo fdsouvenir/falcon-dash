@@ -17,7 +17,19 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	try {
 		const id = Number(params.id);
 		const body = await request.json();
-		const item = updateWorkItem(id, { ...body, actor: body.actor ?? 'agent' });
+		const categoryFields = ['area_id', 'subcategory_id', 'category_id'].filter((field) =>
+			Object.prototype.hasOwnProperty.call(body, field)
+		);
+		// Clients may send all three aliases. Prefer the first populated value;
+		// null is an explicit clear only when no alias provides a selection.
+		const categoryField =
+			categoryFields.find((field) => body[field] !== null && body[field] !== undefined) ??
+			categoryFields[0];
+		const item = updateWorkItem(id, {
+			...body,
+			...(categoryField ? { area_id: body[categoryField] } : {}),
+			actor: body.actor ?? 'agent'
+		});
 		if (!item) throw new WorkError('WORK_NOT_FOUND', `Work item ${id} not found`);
 		return json(item);
 	} catch (err) {

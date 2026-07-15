@@ -29,7 +29,9 @@ Click "Install" and wait for the process to complete. The new skill will appear 
 
 ## Uninstalling a skill
 
-If you no longer need a skill, click the "Uninstall" button on its row. You will be asked to confirm before the skill is removed.
+Gateway protocol v4 does not expose a direct skill uninstall method. If you no longer need a
+skill, remove it from the gateway configuration (`skills.entries`) with Fredbot Hosting guidance or
+through the Config tab during troubleshooting.
 
 ## How agents use skills
 

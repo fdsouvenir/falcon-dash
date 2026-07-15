@@ -1,8 +1,18 @@
 import WebSocket from 'ws';
-import { ensureServerIdentity, buildSignMessage, signChallenge } from './server-device-identity.js';
+import {
+	ensureServerIdentity,
+	buildSignMessage,
+	signChallenge,
+	saveDeviceToken
+} from './server-device-identity.js';
 import { readGatewayConfig } from './gateway-config.js';
 
-const PROTOCOL_VERSION = 3;
+// Protocol negotiation range. The gateway accepts a client when
+// `maxProtocol >= <gateway protocol> && minProtocol <= <gateway protocol>`.
+// Advertising 3–4 keeps us compatible with both a v3 gateway and the
+// current v4 gateway (2026.6.x) without a flag-day.
+const MIN_PROTOCOL = 3;
+const MAX_PROTOCOL = 4;
 const CLIENT_ID = 'gateway-client';
 const CLIENT_MODE = 'ui';
 const CLIENT_VERSION = '0.1.0';
@@ -40,11 +50,18 @@ interface ChallengePayload {
 	ts: number;
 }
 
+export interface DeviceTokenGrant {
+	deviceToken: string;
+	role: string;
+	scopes: string[];
+}
+
 export interface HelloOkPayload {
 	type: 'hello-ok';
 	protocol: number;
 	server: { version: string; host: string; connId: string };
-	features: { methods: string[] };
+	// v4 adds `events` to the feature advertisement alongside `methods`.
+	features: { methods: string[]; events?: string[] };
 	policy: { maxPayload: number; maxBufferedBytes: number; tickIntervalMs: number };
 	snapshot: {
 		presence: unknown[];
@@ -55,7 +72,16 @@ export interface HelloOkPayload {
 		stateDir?: string;
 		sessionDefaults?: Record<string, unknown>;
 	};
-	auth?: { deviceToken?: string; role: string; scopes: string[] };
+	// v4 may return a primary `deviceToken` plus bounded alternative
+	// `deviceTokens` (e.g. for QR bootstrap).
+	auth?: {
+		deviceToken?: string;
+		deviceTokens?: DeviceTokenGrant[];
+		role: string;
+		scopes: string[];
+	};
+	// v4 may surface plugin UI surfaces here.
+	pluginSurfaceUrls?: Record<string, string>;
 }
 
 type EventHandler = (event: EventFrame) => void;
@@ -79,7 +105,7 @@ const ACTIVITY_EVENTS = new Set([
 	'discord',
 	'health',
 	'exec.approval.requested',
-	'session'
+	'sessions.changed'
 ]);
 
 export class GatewayClient {
@@ -87,6 +113,7 @@ export class GatewayClient {
 	private _state: GatewayState = 'disconnected';
 	private _snapshot: HelloOkPayload | null = null;
 	private _snapshotReceivedAt: number = 0;
+	private _negotiatedProtocol: number | null = null;
 	private _activityLog: ActivityEntry[] = [];
 	private eventHandlers = new Set<EventHandler>();
 	private stateHandlers = new Set<StateHandler>();
@@ -94,6 +121,9 @@ export class GatewayClient {
 	private counter = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private reconnectAttempt = 0;
+	// Set when the gateway asks us to retry after a specific delay (v4
+	// startup-sidecars). Consumed once by the next scheduleReconnect().
+	private pendingRetryAfterMs: number | null = null;
 	private instanceId = crypto.randomUUID();
 	private shouldReconnect = true;
 	private tickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -104,6 +134,11 @@ export class GatewayClient {
 
 	get snapshot(): HelloOkPayload | null {
 		return this._snapshot;
+	}
+
+	/** Protocol version negotiated with the gateway, available after connect. */
+	get negotiatedProtocol(): number | null {
+		return this._negotiatedProtocol;
 	}
 
 	get snapshotReceivedAt(): number {
@@ -243,16 +278,35 @@ export class GatewayClient {
 				if (helloOk.type === 'hello-ok') {
 					this._snapshot = helloOk;
 					this._snapshotReceivedAt = Date.now();
+					this._negotiatedProtocol = helloOk.protocol ?? null;
 					this._activityLog = [];
 					this.reconnectAttempt = 0;
+					// Persist the device token so reconnects/restarts skip re-pairing.
+					if (helloOk.auth?.deviceToken) {
+						saveDeviceToken(helloOk.auth.deviceToken);
+					}
 					this.setState('ready');
 					console.log(
-						`[gateway-client] Connected: connId=${helloOk.server?.connId} v=${helloOk.server?.version}`
+						`[gateway-client] Connected: connId=${helloOk.server?.connId} v=${helloOk.server?.version} protocol=${helloOk.protocol}`
 					);
 					this.startTickTimer(helloOk.policy.tickIntervalMs);
 				}
 			} else {
-				console.error('[gateway-client] Auth failed:', res.error);
+				// v4: during sidecar boot the gateway returns a retryable error.
+				// Honor retryAfterMs instead of falling back to exponential backoff.
+				const details = res.error?.details as { reason?: string } | undefined;
+				if (
+					res.error?.retryable &&
+					details?.reason === 'startup-sidecars' &&
+					typeof res.error.retryAfterMs === 'number'
+				) {
+					console.log(
+						`[gateway-client] Gateway starting sidecars — retrying in ${res.error.retryAfterMs}ms`
+					);
+					this.pendingRetryAfterMs = res.error.retryAfterMs;
+				} else {
+					console.error('[gateway-client] Auth failed:', res.error);
+				}
 				this.ws?.close();
 			}
 			return;
@@ -330,8 +384,8 @@ export class GatewayClient {
 		const signature = signChallenge(message);
 
 		const params = {
-			minProtocol: PROTOCOL_VERSION,
-			maxProtocol: PROTOCOL_VERSION,
+			minProtocol: MIN_PROTOCOL,
+			maxProtocol: MAX_PROTOCOL,
 			client: {
 				id: CLIENT_ID,
 				version: CLIENT_VERSION,
@@ -375,11 +429,18 @@ export class GatewayClient {
 
 	private scheduleReconnect(): void {
 		if (this.reconnectTimer) return;
-		const delay = Math.min(
-			BACKOFF_BASE_MS * Math.pow(BACKOFF_MULTIPLIER, this.reconnectAttempt),
-			BACKOFF_CAP_MS
-		);
-		this.reconnectAttempt++;
+		let delay: number;
+		if (this.pendingRetryAfterMs !== null) {
+			// Gateway-directed retry (v4 startup-sidecars) — don't grow backoff.
+			delay = this.pendingRetryAfterMs;
+			this.pendingRetryAfterMs = null;
+		} else {
+			delay = Math.min(
+				BACKOFF_BASE_MS * Math.pow(BACKOFF_MULTIPLIER, this.reconnectAttempt),
+				BACKOFF_CAP_MS
+			);
+			this.reconnectAttempt++;
+		}
 		console.log(
 			`[gateway-client] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempt})`
 		);

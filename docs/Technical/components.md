@@ -112,11 +112,23 @@ pages. Section list rows follow a breakpoint-specific contract:
 
 - At `xl` and wider, rows single-click into the sticky quick inspector and double-click into the
   standalone detail route.
+- Clicking the selected row again clears selection; the inspector remains visible as a fixed
+  placeholder so the desktop layout does not jump.
 - Below `xl`, rows skip quick inspection and single-tap directly into the standalone detail route.
+- On mobile detail routes, `WorkSurface` delegates to `MobileWorkDetail.svelte`. The mobile view
+  supports every v2 Work type, uses typed fields for its brief and next move, and keeps its agent
+  composer above the shell navigation.
+- Mobile Work briefs render persisted Markdown with raw HTML disabled, preserve native Markdown
+  blocks, fenced code, and double-dollar-delimited math, keep ordinary currency literal, bundle
+  KaTeX styles and fonts locally for the normal-route CSP, compare date-only deadlines in local
+  calendar time and timestamp schedules against the current instant, and prefer an automation's
+  structured `next_run_at` over its general scheduling fields.
 - The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
   line above search, type-specific primary filter chips, compact More filters, and refresh. That
-  full header stays fixed in the list frame while only the row list scrolls. The inspector remains
-  visible and internally scrollable.
+  full header stays fixed in the list frame while only the row list scrolls.
+- At desktop sizes, the quick inspector is a fixed rail directly under the Work header with no
+  independent scrollport. Its identity summary stays above a combined state-and-facts block, while
+  the details route action stays directly below that block.
 
 ## Chat components
 
@@ -172,38 +184,65 @@ Routeable Work surface for the `/work` module:
 
 - **Overview** -- `/work` is an executive status board. Top signals focus the matching overview
   section (`#needs-you`, `#at-risk`, `#due-next`, `#recent`) instead of opening an arbitrary item
-  detail. The main content is a project portfolio pulse followed by grouped operator asks,
-  blocked/waiting work, a due-next timeline, and a single chronological recent activity log.
+  detail. The main content starts with a due-next timeline, followed by grouped operator asks,
+  blocked/waiting work, and a single chronological recent activity log backed by
+  `/api/work/change-log`.
 - **Search** -- `/work/search?q=...` is a read-only search surface for existing Work records. The
   shell Work search form routes there and result rows link to exact item detail routes. The Work
   shell does not expose manual capture/create controls until a dedicated capture workflow exists.
-- **Type pages** -- `/work/projects`, `/work/changes`, `/work/decisions`, `/work/tasks`,
-  `/work/routines`, and `/work/observations` use type-specific page anatomy instead of one generic
-  list row. Projects show outcomes, upcoming dates, operator moves, supporting work, and blockers;
-  change requests show scope, approval, and waiting state; questions show recommendation and impact;
-  tasks show parent and due state; routines show cadence, next run, and last result; observations
-  render as a feed. Section filters are type-aware and URL-backed through `q`, `status`, `focus`,
-  and observation `source` query params. Row clicks select the right-side quick inspector in place.
-  The inspector shows read-only item context, exposes only status/priority/waiting state controls,
-  and links to the full item page. The UI labels `change` as Change request and `decision` as Question to clarify
-  the operator-facing distinction.
+- **Type pages** -- `/work/projects`, `/work/tasks`, `/work/needs-resolution`,
+  `/work/change-requests`, `/work/findings`, and `/work/automations` use
+  type-specific page anatomy instead of one generic list row. `/work/open-questions` and
+  `/work/decisions` redirect into `/work/needs-resolution`. Projects show
+  an operating brief with outcomes, health, upcoming dates, operator moves, supporting work, and
+  blockers; needs resolution shows both unresolved knowledge and commitment choices in one queue;
+  change requests show scope, approval, risk, and verification state; tasks show action, parent,
+  due, and waiting state; automations show trigger/cadence, next run, and last result; findings
+  render as an evidence feed with source and attachment context. Section filters are type-aware
+  and URL-backed through `q`, `status`, `focus`, and finding `source` query params. Row clicks
+  select the right-side quick inspector in place. The
+  inspector shows read-only item context, exposes only status/priority/waiting state controls, and
+  links to the full item page.
 - **Detail pages** -- `/work/{type}/{id}` gives each item a stable standalone URL. Detail pages do
-  not render the peer list; they show type-aware sections, health reasons, literal blockers, related
+  not render the peer list; they show type-aware sections, health reasons, blocker context, related
   work, and the same lightweight state controls without text editors for agent-managed narrative
-  fields. Question details render as a Question Brief with Markdown sections and collapsed history
-  or legacy material instead of one long paragraph. Detail sidebars include a Work integrity panel
-  that can run mechanical graph checks, open a contextual agent steward session for semantic
+  fields. Project detail pages render as a ledger-style page with a left section index, compact
+  header with last update in the upper-right, and a Project Status section that combines editable
+  basics, health, current next up, and active blocker relationships. The blocker panel is hidden
+  when there are no active blocker links; when present, each dense row reads as stuck item,
+  blocked-by source, reason, and unblock move using the same "holding up" wording as the project
+  list. Project Plan renders a continuous milestone rail with due chips and nested work rows;
+  matching blocked-by chips also render inline under the affected milestone or work row. The static
+  operating brief moves to the pinned right rail with milestone creation so status, health,
+  priority, dates, and category are not repeated there. Milestones are inert headings with a title and optional
+  one-sentence description; they are added from the project right rail and do not have standalone
+  list or detail pages. Work attached directly to the project appears in a project-level work group
+  instead of being mixed into the milestone structure. Project Plan remains visible even before much
+  structure exists, while
+  supporting sections such as Automations and Findings/evidence render only when attached content
+  exists. Project activity renders project-scoped change-log rows so operators can see what object
+  changed and the structured field deltas behind the summary.
+  Needs Resolution details render as a Resolution brief with Markdown sections and collapsed
+  history or legacy material instead of one long paragraph. Detail sidebars include a Work integrity
+  panel that can run mechanical graph checks, open a contextual agent steward session for semantic
   cleanup, and show recent reconciliation history for the root project.
-- **Areas** -- `area` remains a Work model type for grouping, but it is not shown as a primary
-  operator tab until an explicit area-management workflow exists
+- **Work settings** -- `/work/settings` is reached through the Work settings gear and manages
+  categories and subcategories as a read-only grouped directory with an explicit `Add category`
+  action and a contextual drawer for category/subcategory creation and edits
 - **Operator language** -- waiting states use operator, agent, and external/system labels; no
   person-specific copy is hardcoded
-- **Refresh path** -- overview reloads `/api/work/items` and `/api/work/queue`; type and detail
-  routes use narrower item, parent, and child requests where possible
+- **Refresh path** -- overview reloads `/api/work/items`, `/api/work/queue`, and
+  `/api/work/change-log`; type and detail routes use narrower item, parent, child, and project
+  change-log requests where possible
 
 Work-specific context, migration, and API behavior live in [Work management](work-management.md).
 
 ## Settings components
+
+Cron and heartbeat editors must reflect gateway capabilities rather than assuming every connected
+gateway exposes the same mutation surface. Preserve opaque schedule, payload, session, and timing
+metadata when editing existing cron jobs; keep a failed editor open and surface the store error
+when a protocol cannot apply a requested heartbeat setting.
 
 ### SettingsPage (`src/lib/components/settings/SettingsPage.svelte`)
 

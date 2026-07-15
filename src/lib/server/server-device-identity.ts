@@ -10,9 +10,13 @@ interface StoredIdentity {
 	deviceId: string;
 	publicKeyBase64: string;
 	privateKeyPem: string;
+	// v4: primary device token returned in hello-ok.auth.deviceToken, persisted
+	// across restarts per the protocol guidance. Captured for future
+	// token-based reconnect; loopback shared-token auth remains primary.
+	deviceToken?: string;
 }
 
-let cached: { deviceId: string; publicKeyBase64: string; privateKeyPem: string } | null = null;
+let cached: StoredIdentity | null = null;
 
 function loadOrGenerate(): StoredIdentity {
 	if (cached) return cached;
@@ -87,4 +91,23 @@ export function signChallenge(message: string): string {
 	const key = createPrivateKey(privateKeyPem);
 	const sig = sign(null, Buffer.from(message), key);
 	return sig.toString('base64');
+}
+
+/** Persist the primary device token returned by the gateway in hello-ok (v4). */
+export function saveDeviceToken(deviceToken: string): void {
+	const identity = loadOrGenerate();
+	if (identity.deviceToken === deviceToken) return;
+	identity.deviceToken = deviceToken;
+	cached = identity;
+	try {
+		mkdirSync(IDENTITY_DIR, { recursive: true });
+		writeFileSync(IDENTITY_FILE, JSON.stringify(identity, null, '\t'), { mode: 0o600 });
+	} catch (err) {
+		console.error('[server-device-identity] Failed to persist device token:', err);
+	}
+}
+
+/** Read the persisted device token, if any. */
+export function loadDeviceToken(): string | null {
+	return loadOrGenerate().deviceToken ?? null;
 }

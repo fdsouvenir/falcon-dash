@@ -14,6 +14,31 @@ Running list of project discoveries, gotchas, architectural decisions, and thing
 - **2026-02-25 (Claude, seeded):** The connect frame uses string ID `'__connect'` (not numeric) to avoid collision with `RequestCorrelator`'s monotonic counter. Do not change this to a numeric ID.
 - **2026-02-25 (Claude, seeded):** `webchat-ui` as client ID triggers `isWebchatClient()=true` regardless of mode — never use it for operator dashboards.
 
+### Gateway protocol v4 migration (2026-06-28, Claude)
+
+Gateway 2026.6.10 serves **protocol v4**; Falcon Dash hardcoded v3 and could not connect. Migration notes:
+
+- **Negotiation is a range.** The gateway accepts a client when `maxProtocol >= 4 && minProtocol <= 4`. We now send `minProtocol: 3, maxProtocol: 4` (constants `MIN_PROTOCOL`/`MAX_PROTOCOL` in `gateway-client.ts`) to stay compatible with both v3 and v4 gateways. The negotiated version is read back from `helloOk.protocol`.
+- **Device signing is still v2.** The gateway and its own control-ui both sign with the `v2|deviceId|clientId|clientMode|role|scopes|signedAt|token|nonce` format. No v3 sign-string exists in the installed gateway — do NOT speculatively emit v3 or connect auth breaks.
+- **Many RPC methods were renamed or reshaped.** Confirmed against the installed binary + live `hello-ok.features.methods`:
+  - `cron.create`→`cron.add`, `cron.delete`→`cron.remove`. **`cron.add` also reshaped:** `schedule` is now a discriminated object (`{kind:'cron',expr}` / `{kind:'every',everyMs}` / `{kind:'at',at}`), plus required `payload` (`{kind:'systemEvent',text}` / `{kind:'agentTurn',message}`), `sessionTarget`, and `wakeMode`. `cron.remove/update/run` accept `id` (anyOf `id`/`jobId`).
+    `cron.list` keeps runtime times/status under `job.state`; `cron.update.patch` uses the same nested
+    schedule/payload objects; and `cron.runs` returns `{entries}` with `ok`/`error`/`skipped` statuses.
+    Human interval input must be parsed into integer milliseconds. `systemEvent` requires `main`,
+    while `agentTurn` requires `isolated`, `current`, or `session:<id>`.
+  - `agents-files.get/set`→`agents.files.get/set` AND params changed: `{agentId, name}` (not `path`); content is at `payload.file.content`.
+  - `agents.stop` removed → `tasks.cancel {taskId}` (or `sessions.abort {sessionKey, runId}`).
+  - `agents.list` now returns **configured agents** (`{agents:[...]}`), NOT runs. Agent runs live in the **task ledger**: `tasks.list` → `{tasks: TaskSummary[]}` (status `queued`/`running` = active). `tasks.cancel {taskId}` stops a run.
+  - `heartbeat.status` removed. Heartbeat enabled/interval come from the `status` payload (`status.heartbeat.agents[]`); enable/disable via `set-heartbeats {enabled}` (global toggle only — interval/activeHours/deliveryTarget have no granular v4 RPC, they're gateway config). Template via `agents.files.*`.
+    `last-heartbeat` returns one nullable event (`{ts,status,...}`), not an executions collection.
+  - `info.status`→`status` (session count at `sessions.count`; no uptime field — use the hello-ok snapshot `uptimeMs`). `info.usage`→`usage.cost` (totals) + `usage.status` (provider list). `nodes.list`→`node.list`.
+  - `skills.uninstall` removed (no RPC replacement; removal is a gateway config edit).
+  - `config.get` dropped path-scoping (`{path:'heartbeat'}` is rejected); call with `{}` for the full config.
+- **Event renames.** `session`→`sessions.changed` (broad invalidation, reload on any), `chat.message`→`session.message`. Check the snapshot's `features.events`.
+- **Chat `deltaText`/`replace`** streaming deltas are a no-op for Falcon Dash — streaming chat was removed in the #288 pivot; nothing consumes them.
+- **Plugin methods/events aren't in `features.methods`/`features.events`.** discord/telegram/canvas methods (e.g. `canvas.action`) are plugin-provided; the discord/telegram wizards already gate on `features.methods.includes(...)` and fall back to `config.apply`. `canvas.action` is unregistered in the gateway core — it belongs to the separate falcon-dash gateway plugin.
+- **Gateway 2026.6.10 upgrade gotchas:** daemon refuses to host unless `gateway.mode: "local"` (was `remote`); `channels.{telegram,discord}.streaming` must be an object `{mode:"off"}` not the scalar `"off"`. `openclaw doctor --fix` migrates telegram but misses discord.
+
 ## Agent streams
 
 - **2026-02-25 (Claude, seeded):** Tool events use `data.phase` (not `data.type`). Phases: `start`, `update`, `result`.

@@ -7,6 +7,17 @@ type SeededWorkItem = {
 	title: string;
 };
 
+type SeededWorkCategory = {
+	id: string;
+	title: string;
+};
+
+type SeededWorkBlocker = {
+	id: number;
+	status: 'active' | 'resolved';
+	external_label: string | null;
+};
+
 const packageVersion = JSON.parse(
 	readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
 ) as { version: string };
@@ -25,11 +36,72 @@ async function createWorkItem(
 			owner: 'agent',
 			priority: 'normal',
 			actor: 'playwright',
+			...defaultTypedFields(body),
 			...body
 		}
 	});
 	expect(response.ok()).toBe(true);
 	return (await response.json()) as SeededWorkItem;
+}
+
+async function createWorkCategory(
+	request: APIRequestContext,
+	body: Record<string, unknown>
+): Promise<SeededWorkCategory> {
+	const response = await request.post('/api/work/categories', {
+		data: {
+			status: 'active',
+			...body
+		}
+	});
+	expect(response.ok()).toBe(true);
+	return (await response.json()) as SeededWorkCategory;
+}
+
+async function createWorkBlocker(
+	request: APIRequestContext,
+	body: Record<string, unknown>
+): Promise<SeededWorkBlocker> {
+	const response = await request.post('/api/work/blockers', {
+		data: {
+			actor: 'playwright',
+			...body
+		}
+	});
+	expect(response.ok()).toBe(true);
+	return (await response.json()) as SeededWorkBlocker;
+}
+
+function defaultTypedFields(body: Record<string, unknown>): Record<string, unknown> {
+	if (body.type === 'decision') {
+		return {
+			decision_question: body.title,
+			options: ['Approve', 'Defer'],
+			recommended_option: body.next_action ?? 'Approve',
+			consequence_of_no_decision: 'Related work remains waiting.'
+		};
+	}
+	if (body.type === 'open_question') {
+		return {
+			question_text: body.title,
+			why_it_matters: 'The answer changes the next up.',
+			answerer: body.waiting_on ?? 'operator'
+		};
+	}
+	if (body.type === 'change_request') {
+		return {
+			change_scope: body.description ?? body.title,
+			risk: body.priority ?? 'normal',
+			verification_plan: body.next_action ?? 'Verify the change request.'
+		};
+	}
+	if (body.type === 'automation') {
+		return {
+			trigger_type: 'heartbeat',
+			schedule: body.scheduled_at
+		};
+	}
+	return {};
 }
 
 async function seedExecutiveOverview(request: APIRequestContext) {
@@ -56,7 +128,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 	items.push(question);
 
 	const blockedChange = await createWorkItem(request, {
-		type: 'change',
+		type: 'change_request',
 		parent_item_id: project.id,
 		title: `E2E unblock provider access ${stamp}`,
 		status: 'blocked',
@@ -77,9 +149,30 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 		})
 	);
 
+	const milestone = await createWorkItem(request, {
+		type: 'milestone',
+		parent_item_id: project.id,
+		title: `E2E launch readiness milestone ${stamp}`,
+		status: 'in_progress',
+		due_date: isoDaysFromNow(3),
+		next_action: 'Complete launch readiness'
+	});
+	items.push(milestone);
+
 	items.push(
 		await createWorkItem(request, {
-			type: 'routine',
+			type: 'task',
+			parent_item_id: milestone.id,
+			title: `E2E verify milestone checklist ${stamp}`,
+			status: 'ready',
+			due_date: isoDaysFromNow(2),
+			next_action: 'Verify each launch readiness item'
+		})
+	);
+
+	items.push(
+		await createWorkItem(request, {
+			type: 'automation',
 			parent_item_id: project.id,
 			title: `E2E run readiness sweep ${stamp}`,
 			status: 'scheduled',
@@ -88,7 +181,7 @@ async function seedExecutiveOverview(request: APIRequestContext) {
 		})
 	);
 
-	return { project, question, blockedChange, items };
+	return { project, question, blockedChange, milestone, items };
 }
 
 async function seedUrgentOverdueProject(request: APIRequestContext) {
@@ -122,7 +215,7 @@ async function seedUrgentOverdueProject(request: APIRequestContext) {
 async function seedLongQuestion(request: APIRequestContext) {
 	const stamp = Date.now();
 	const question = await createWorkItem(request, {
-		type: 'decision',
+		type: 'open_question',
 		title: `E2E long question brief ${stamp}`,
 		status: 'needs_review',
 		waiting_on: 'operator',
@@ -179,6 +272,12 @@ async function archiveWorkItems(request: APIRequestContext, items: SeededWorkIte
 			})
 		)
 	);
+}
+
+async function deleteWorkCategories(request: APIRequestContext, categories: SeededWorkCategory[]) {
+	for (const category of categories) {
+		await request.delete(`/api/work/categories/${category.id}`);
+	}
 }
 
 test.describe('work overview executive status board', () => {
@@ -250,7 +349,7 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
-	test('routes portfolio aggregates to filtered project lists', async ({
+	test('prioritizes due-next work before call and risk sections without portfolio blocks', async ({
 		page,
 		request,
 		baseURL
@@ -259,32 +358,22 @@ test.describe('work overview executive status board', () => {
 		try {
 			await page.goto(`${baseURL ?? ''}/work`);
 
-			await expect(page.getByTestId('project-portfolio')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project portfolio' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project health' })).toHaveCount(0);
+			await expect(page.getByTestId('project-portfolio')).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'Project portfolio' })).toHaveCount(0);
+			await expect(page.getByText('Health mix', { exact: true })).toHaveCount(0);
 			await expect(page.getByTestId('project-health-row')).toHaveCount(0);
 			await expect(page.getByText('Active outcomes', { exact: true })).toHaveCount(0);
 			await expect(page.getByText('Projects blocked directly or by child work')).toHaveCount(0);
 
-			const blockedMetric = page.getByTestId('project-portfolio-metric-blocked');
-			await expect(blockedMetric).toHaveAttribute('href', /\/work\/projects\?focus=blocked$/);
-			await blockedMetric.click();
+			const dueNextBox = await page.getByTestId('due-next-section').boundingBox();
+			const needsYouBox = await page.getByTestId('needs-you-section').boundingBox();
+			const atRiskBox = await page.getByTestId('at-risk-section').boundingBox();
 
-			await expect(page).toHaveURL(/\/work\/projects\?focus=blocked$/);
-			await expect(
-				page.locator('button[aria-pressed="true"]').filter({ hasText: 'Blocked' })
-			).toBeVisible();
-			await expect(
-				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
-			).toBeVisible();
-
-			const search = page.getByPlaceholder('Search projects...');
-			await search.fill(seeded.project.title);
-			await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(seeded.project.title);
-			await page.reload();
-			await expect(
-				page.getByTestId('work-section-row').filter({ hasText: seeded.project.title }).first()
-			).toBeVisible();
+			expect(dueNextBox).not.toBeNull();
+			expect(needsYouBox).not.toBeNull();
+			expect(atRiskBox).not.toBeNull();
+			expect(dueNextBox!.y).toBeLessThan(needsYouBox!.y);
+			expect(dueNextBox!.y).toBeLessThan(atRiskBox!.y);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -294,6 +383,7 @@ test.describe('work overview executive status board', () => {
 		page,
 		baseURL
 	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
 		await page.goto(`${baseURL ?? ''}/settings`);
 		await page.getByRole('button', { name: 'Preferences' }).click();
 		await expect(page.getByText('Text size', { exact: true })).toBeVisible();
@@ -331,15 +421,18 @@ test.describe('work overview executive status board', () => {
 
 	test('renders type-aware primary filters on section pages', async ({ page, baseURL }) => {
 		const expectations = [
-			['projects', ['Blocked', 'Overdue', 'Needs decision', 'No next move', 'Stale']],
-			['changes', ['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']],
+			['projects', ['Blocked', 'Overdue', 'Needs resolution', 'No next move', 'Stale']],
 			[
-				'decisions',
-				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Answered']
+				'change-requests',
+				['Needs approval', 'Waiting on you', 'Waiting on agent', 'Blocked', 'Recent']
+			],
+			[
+				'needs-resolution',
+				['Needs answer', 'Needs review', 'Waiting on agent', 'High impact', 'Resolved']
 			],
 			['tasks', ['Due today', 'Due this week', 'Overdue', 'Blocked', 'Waiting']],
-			['routines', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
-			['observations', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
+			['automations', ['Scheduled soon', 'Overdue run', 'Blocked', 'No cadence', 'Recent result']],
+			['findings', ['Needs triage', 'Linked to work', 'Unlinked', 'Recent']]
 		] as const;
 
 		for (const [section, labels] of expectations) {
@@ -351,11 +444,254 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
+	test('keeps milestones inside projects instead of standalone pages', async ({
+		page,
+		baseURL
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto(`${baseURL ?? ''}/work/projects`);
+
+		await expect(page.getByRole('link', { name: 'Milestones', exact: true })).toHaveCount(0);
+
+		await page.goto(`${baseURL ?? ''}/work/milestones`);
+		await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
+
+		await page.goto(`${baseURL ?? ''}/work/milestones/1`);
+		await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
+	});
+
+	test('supports Work blocker API CRUD and relationship filters', async ({ request }) => {
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E blocker API project ${Date.now()}`,
+			status: 'in_progress',
+			next_action: 'Review blocker links'
+		});
+		const nextStep = await createWorkItem(request, {
+			type: 'task',
+			parent_item_id: project.id,
+			title: `E2E blocker API step ${Date.now()}`,
+			status: 'ready',
+			next_action: 'Ask Jamie for the missing file'
+		});
+		let blocker: SeededWorkBlocker | null = null;
+
+		try {
+			blocker = await createWorkBlocker(request, {
+				blocked_item_id: nextStep.id,
+				blocker_source: 'person',
+				external_label: 'Jamie',
+				reason: 'Jamie has the source file.',
+				unblock_action: 'Ask Jamie to upload the file.'
+			});
+
+			const projectLinks = await request.get(
+				`/api/work/blockers?project_id=${project.id}&state=active`
+			);
+			expect(projectLinks.ok()).toBe(true);
+			const projectJson = await projectLinks.json();
+			expect(projectJson.blockers).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						id: blocker.id,
+						blocked_item_id: nextStep.id,
+						blocker_source: 'person',
+						external_label: 'Jamie',
+						status: 'active'
+					})
+				])
+			);
+
+			const duplicate = await request.post('/api/work/blockers', {
+				data: {
+					actor: 'playwright',
+					blocked_item_id: nextStep.id,
+					blocker_source: 'person',
+					external_label: 'Jamie'
+				}
+			});
+			expect(duplicate.status()).toBe(409);
+
+			const invalid = await request.post('/api/work/blockers', {
+				data: {
+					actor: 'playwright',
+					blocked_item_id: nextStep.id,
+					blocker_source: 'work_item'
+				}
+			});
+			expect(invalid.status()).toBe(400);
+
+			const resolved = await request.patch(`/api/work/blockers/${blocker.id}`, {
+				data: { actor: 'playwright', status: 'resolved' }
+			});
+			expect(resolved.ok()).toBe(true);
+			blocker = (await resolved.json()) as SeededWorkBlocker;
+			expect(blocker.status).toBe('resolved');
+
+			const activeLinks = await request.get(
+				`/api/work/blockers?blocked_item_id=${nextStep.id}&state=active`
+			);
+			expect((await activeLinks.json()).blockers).toHaveLength(0);
+
+			const allLinks = await request.get(
+				`/api/work/blockers?blocked_item_id=${nextStep.id}&state=all`
+			);
+			expect((await allLinks.json()).blockers).toEqual(
+				expect.arrayContaining([expect.objectContaining({ id: blocker.id, status: 'resolved' })])
+			);
+
+			const deleted = await request.delete(`/api/work/blockers/${blocker.id}`);
+			expect(deleted.ok()).toBe(true);
+			blocker = null;
+		} finally {
+			if (blocker) await request.delete(`/api/work/blockers/${blocker.id}`);
+			await archiveWorkItems(request, [nextStep, project]);
+		}
+	});
+
+	test('clears an existing Work category through the item API', async ({ request }) => {
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E clear category ${Date.now()}`
+		});
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E categorized project ${Date.now()}`,
+			status: 'in_progress',
+			area_id: category.id
+		});
+
+		try {
+			const response = await request.patch(`/api/work/items/${project.id}`, {
+				data: { actor: 'playwright', area_id: null }
+			});
+			expect(response.ok()).toBe(true);
+			expect(await response.json()).toMatchObject({
+				id: project.id,
+				area_id: null,
+				category_id: null,
+				subcategory_id: null
+			});
+		} finally {
+			await archiveWorkItems(request, [project]);
+			await deleteWorkCategories(request, [category]);
+		}
+	});
+
+	test('prefers a populated category alias over a null subcategory alias', async ({ request }) => {
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E category alias ${Date.now()}`
+		});
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E category alias project ${Date.now()}`,
+			status: 'in_progress'
+		});
+
+		try {
+			const response = await request.patch(`/api/work/items/${project.id}`, {
+				data: {
+					actor: 'playwright',
+					category_id: category.id,
+					subcategory_id: null
+				}
+			});
+			expect(response.ok()).toBe(true);
+			expect(await response.json()).toMatchObject({
+				id: project.id,
+				area_id: category.id,
+				category_id: category.id,
+				subcategory_id: null
+			});
+		} finally {
+			await archiveWorkItems(request, [project]);
+			await deleteWorkCategories(request, [category]);
+		}
+	});
+
+	test('renders settings as a grouped directory with top-level category creation', async ({
+		page,
+		request,
+		baseURL
+	}) => {
+		const stamp = Date.now();
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E settings category ${stamp}`,
+			description: 'A seeded category for settings directory coverage.'
+		});
+		const subcategory = await createWorkCategory(request, {
+			kind: 'subcategory',
+			parent_category_id: category.id,
+			title: `E2E settings subcategory ${stamp}`,
+			description: 'A seeded subcategory for settings directory coverage.'
+		});
+
+		try {
+			await page.setViewportSize({ width: 1440, height: 900 });
+			await page.goto(`${baseURL ?? ''}/work/settings`);
+
+			await expect(page.getByTestId('work-settings-add-category')).toBeVisible();
+			await expect(page.getByTestId('work-settings-add-subcategory')).toBeVisible();
+			await expect(page.getByRole('link', { name: 'Work settings' })).toHaveClass(/bg-primary/);
+			await expect(page.getByRole('link', { name: 'Projects', exact: true })).not.toHaveClass(
+				/bg-primary/
+			);
+			await expect(page.getByTestId('work-settings')).not.toContainText('Linked projects');
+			await expect(page.getByTestId('work-settings-directory')).toContainText(category.title);
+			await expect(page.getByTestId('work-settings-directory')).toContainText(subcategory.title);
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText(
+				'Add subcategory'
+			);
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 projects');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 tasks');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('0 waiting');
+			await expect(page.getByTestId('work-settings-directory')).not.toContainText('Active');
+			await expect(page.getByTestId('work-settings-drawer')).not.toContainText('Archive');
+
+			await page.getByTestId('work-settings-add-category').click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
+			await expect(page.getByTestId('work-settings-drawer').getByLabel('Name')).toBeVisible();
+
+			const categoryRow = page
+				.getByTestId('work-settings-category-row')
+				.filter({ hasText: category.title });
+			await categoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit category');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await expect(categoryRow).toHaveAttribute('aria-pressed', 'true');
+			await categoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New category');
+			await expect(categoryRow).toHaveAttribute('aria-pressed', 'false');
+			await categoryRow.click();
+			await page.getByTestId('work-settings-add-subcategory').click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await expect(page.getByTestId('work-settings-drawer').getByLabel('Category')).toBeVisible();
+
+			const subcategoryRow = page
+				.getByTestId('work-settings-subcategory-row')
+				.filter({ hasText: subcategory.title });
+			await subcategoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('Edit subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(subcategory.title);
+			await expect(subcategoryRow).toHaveAttribute('aria-pressed', 'true');
+			await subcategoryRow.click();
+			await expect(page.getByTestId('work-settings-drawer')).toContainText('New subcategory');
+			await expect(page.getByTestId('work-settings-drawer')).toContainText(category.title);
+			await expect(subcategoryRow).toHaveAttribute('aria-pressed', 'false');
+		} finally {
+			await deleteWorkCategories(request, [subcategory, category]);
+		}
+	});
+
 	test('routes top Work search to read-only results and hides capture', async ({
 		page,
 		request,
 		baseURL
 	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
 		const seeded = await seedExecutiveOverview(request);
 		try {
 			await page.goto(`${baseURL ?? ''}/work`);
@@ -372,53 +708,116 @@ test.describe('work overview executive status board', () => {
 			await expect(page.getByTestId('work-search-results')).toContainText(seeded.question.title);
 
 			await page.getByTestId('work-search-results').getByText(seeded.question.title).click();
-			await expect(page).toHaveURL(new RegExp(`/work/decisions/${seeded.question.id}$`));
+			await expect(page).toHaveURL(new RegExp(`/work/needs-resolution/${seeded.question.id}$`));
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
 	});
 
-	test('uses section rows for quick inspection and opens a standalone detail page', async ({
+	test('uses project rows as hover-only cards and opens detail on double click', async ({
 		page,
 		request,
 		baseURL
 	}) => {
 		const seeded = await seedExecutiveOverview(request);
 		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
 			await page.goto(`${baseURL ?? ''}/work/projects`);
 
+			await expect(page.getByTestId('project-list')).toBeVisible();
+			await expect(page.getByTestId('project-list-columns')).toContainText('Status');
+			await expect(page.getByTestId('project-list-columns')).toContainText('Coming up');
+			await expect(page.getByTestId('project-list-columns')).toContainText('Open work');
 			const row = page
 				.getByTestId('work-section-row')
 				.filter({ hasText: seeded.project.title })
 				.first();
 			await expect(row).toBeVisible();
+			await expect(row).toContainText(`${seeded.project.id}.`);
+			await expect(row).not.toContainText(`Project ${seeded.project.id}`);
+			await expect(row).toContainText('A seeded outcome for overview workflow checks.');
+			await expect(row).toContainText('Next up:');
+			await expect(row).toContainText('1 later holding up');
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
-			await expect(row).toHaveAttribute('aria-pressed', 'true');
-			await expect(page.getByTestId('work-quick-state')).toBeVisible();
-			await expect(page.getByTestId('work-quick-state').locator('input, textarea')).toHaveCount(0);
-
-			const openFullPage = page.getByRole('link', { name: 'Open full page' });
-			await expect(openFullPage).toHaveAttribute(
-				'href',
-				new RegExp(`/work/projects/${seeded.project.id}$`)
-			);
-			await openFullPage.click();
+			await expect(row).not.toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+			await expect(page.getByRole('link', { name: 'Open details' })).toHaveCount(0);
+			await row.dblclick();
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.getByTestId('project-ledger')).toBeVisible();
 			await expect(page.getByPlaceholder('Search projects...')).toHaveCount(0);
-			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
+			await expect(page.getByText('Project ledger', { exact: true })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'Operating brief' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Health and status' })).toHaveCount(0);
+			await expect(page.getByRole('heading', { name: 'State controls' })).toHaveCount(0);
+			const currentWork = page.locator('#project-current-work');
+			await currentWork.getByRole('button', { name: 'Edit' }).click();
+			await expect(page.getByLabel('Status')).toBeVisible();
+			await expect(page.getByLabel('Priority')).toBeVisible();
+			await expect(page.getByLabel('Waiting for')).toBeVisible();
+			await expect(page.getByLabel('Category', { exact: true })).toBeVisible();
+			await expect(page.getByLabel('Subcategory', { exact: true })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Current state' })).toHaveCount(0);
+			await currentWork.getByRole('button', { name: 'Close' }).click();
+			await expect(currentWork).not.toContainText('Needs resolution');
+			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
+			await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
+			await expect(page.getByTestId('project-plan')).toContainText(seeded.milestone.title);
 			await expect(
-				page.getByRole('link').filter({ hasText: seeded.blockedChange.title }).first()
-			).toBeVisible();
+				page.getByTestId('project-plan').getByRole('link', { name: seeded.milestone.title })
+			).toHaveCount(0);
+			await expect(page.getByTestId('project-plan')).toContainText(
+				`E2E verify milestone checklist`
+			);
+			await expect(page.getByTestId('project-plan')).toContainText('Project-level work');
+			const addedMilestoneTitle = `E2E local milestone ${Date.now()}`;
+			const milestonePanel = page.locator('section').filter({
+				has: page.getByRole('heading', { name: 'Milestones', exact: true })
+			});
+			await milestonePanel.getByRole('button', { name: 'Add' }).click();
+			await milestonePanel.getByLabel('Title').fill(addedMilestoneTitle);
+			await milestonePanel
+				.getByLabel('Short description')
+				.fill('A compact checkpoint created from the project page.');
+			await milestonePanel.getByRole('button', { name: 'Add milestone' }).click();
+			await expect(page.getByTestId('project-plan')).toContainText(addedMilestoneTitle);
+			const milestoneResponse = await request.get(
+				`/api/work/items?parent_item_id=${seeded.project.id}&includeClosed=true&limit=100`
+			);
+			const milestoneJson = await milestoneResponse.json();
+			const createdMilestone = milestoneJson.items.find(
+				(item: SeededWorkItem) => item.title === addedMilestoneTitle
+			);
+			expect(createdMilestone).toBeTruthy();
+			seeded.items.push(createdMilestone);
+			await expect(page.getByTestId('project-blocker-panel')).toBeVisible();
+			await expect(page.getByTestId('project-blocker-panel')).toContainText('Holding up');
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				seeded.blockedChange.title
+			);
+			await expect(page.getByTestId('project-blocker-panel')).toContainText('External party');
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				'This work is marked blocked.'
+			);
+			await expect(page.getByTestId('project-blocker-panel')).toContainText(
+				'Wait for provider support'
+			);
+			await expect(page.getByTestId('project-plan')).toContainText('Blocked by External party');
+			await expect(page.getByTestId('project-plan')).toContainText(
+				'Unblock: Wait for provider support'
+			);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
 	});
 
-	test('keeps desktop quick detail visible when selecting a scrolled list row', async ({
+	test('keeps desktop project list stable when clicking a scrolled row', async ({
 		page,
 		request,
 		baseURL
@@ -434,13 +833,93 @@ test.describe('work overview executive status board', () => {
 				.first();
 			await row.scrollIntoViewIfNeeded();
 			await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-			await expect(page.getByRole('heading', { name: 'Projects' })).toBeInViewport();
-			await expect(page.getByPlaceholder('Search projects...')).toBeInViewport();
+			await expect(page.getByTestId('project-list')).toBeVisible();
 			await row.click();
 
 			await expect.poll(() => new URL(page.url()).pathname).toBe('/work/projects');
-			await expect(row).toHaveAttribute('aria-pressed', 'true');
-			await expect(page.getByTestId('work-quick-state')).toBeInViewport();
+			await expect(row).not.toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+		} finally {
+			await archiveWorkItems(request, seeded.items);
+		}
+	});
+
+	test('keeps type lists populated while switching tabs and supports unselecting rows', async ({
+		page,
+		request,
+		baseURL
+	}, testInfo) => {
+		test.skip(testInfo.project.name !== 'chromium', 'Quick inspectors are desktop-only.');
+		const seeded = await seedExecutiveOverview(request);
+		const finding = await createWorkItem(request, {
+			type: 'finding',
+			parent_item_id: seeded.project.id,
+			title: `E2E captured launch finding ${Date.now()}`,
+			status: 'needs_review',
+			description: 'A seeded finding for list switching checks.',
+			finding_text: 'The launch checklist has one unresolved owner.'
+		});
+		seeded.items.push(finding);
+
+		try {
+			await page.setViewportSize({ width: 1440, height: 720 });
+			await page.goto(`${baseURL ?? ''}/work/tasks`);
+
+			const taskRow = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: 'E2E send stakeholder brief' })
+				.first();
+			await expect(page.getByTestId('task-list')).toBeVisible();
+			await expect(page.getByText('No item selected')).toBeVisible();
+			await expect(taskRow).toBeVisible();
+			await taskRow.click();
+			await expect(taskRow).toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toBeVisible();
+			await expect(page.getByTestId('work-quick-panel')).toHaveCSS('overflow-y', 'hidden');
+			const stateBox = await page.getByTestId('work-quick-state').boundingBox();
+			const openFullPage = page.getByRole('link', { name: 'Open details' });
+			const openFullPageBox = await openFullPage.boundingBox();
+			expect(openFullPageBox?.y ?? 0).toBeGreaterThan(stateBox?.y ?? 0);
+			expect(openFullPageBox?.y ?? 0).toBeLessThan(
+				(stateBox?.y ?? 0) + (stateBox?.height ?? 0) + 40
+			);
+			await taskRow.click();
+			await expect(taskRow).not.toHaveAttribute('aria-pressed', 'true');
+			await expect(page.getByTestId('work-quick-state')).toHaveCount(0);
+			await expect(page.getByText('No item selected')).toBeVisible();
+
+			await page.getByRole('link', { name: 'Needs resolution', exact: true }).click();
+			const resolutionRow = page
+				.getByTestId('work-section-row')
+				.filter({ hasText: seeded.question.title })
+				.first();
+			await expect(resolutionRow).toBeVisible();
+			await resolutionRow.click();
+			await expect(page.getByTestId('work-quick-panel')).toContainText(
+				`Needs resolution ${seeded.question.id}`
+			);
+			await expect(page.getByTestId('work-quick-panel')).not.toContainText(
+				`Open question ${seeded.question.id}`
+			);
+			await resolutionRow.click();
+
+			const checks = [
+				['Tasks', 'task-list', 'E2E send stakeholder brief'],
+				['Needs resolution', 'resolution-list', seeded.question.title],
+				['Change requests', 'change-request-list', seeded.blockedChange.title],
+				['Automations', 'automation-list', 'E2E run readiness sweep'],
+				['Findings', 'finding-list', finding.title]
+			] as const;
+
+			for (let index = 0; index < 3; index += 1) {
+				for (const [linkName, listId, rowText] of checks) {
+					await page.getByRole('link', { name: linkName, exact: true }).click();
+					await expect(page.getByTestId(listId)).toBeVisible();
+					await expect(
+						page.getByTestId('work-section-row').filter({ hasText: rowText }).first()
+					).toBeVisible();
+				}
+			}
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -490,6 +969,45 @@ test.describe('work overview executive status board', () => {
 
 			await expect(page).toHaveURL(new RegExp(`/work/projects/${seeded.project.id}$`));
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
+			await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+			await expect(page.getByText('Project Status', { exact: true })).toHaveCount(0);
+			await expect(page.getByTestId('mobile-work-agent-note')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-next-steps')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-project-details')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-brief')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-activity')).toBeVisible();
+			await expect(page.getByTestId('mobile-work-agent-composer')).toBeVisible();
+			await expect(page.getByText('Category', { exact: true })).toBeHidden();
+			await expect
+				.poll(() =>
+					page.evaluate(() => {
+						const composer = document
+							.querySelector('[data-testid="mobile-work-agent-composer"]')
+							?.getBoundingClientRect();
+						const bottomNav = Array.from(document.querySelectorAll('nav'))
+							.at(-1)
+							?.getBoundingClientRect();
+						if (!composer || !bottomNav) return false;
+						return composer.bottom <= bottomNav.top + 1;
+					})
+				)
+				.toBe(true);
+			await expect
+				.poll(() =>
+					page.evaluate(() =>
+						Array.from(
+							document.querySelectorAll(
+								'[data-mobile-work-detail="true"] button, [data-mobile-work-detail="true"] a'
+							)
+						)
+							.filter((element) => !element.classList.contains('touch-target-inline'))
+							.every((element) => {
+								const rect = element.getBoundingClientRect();
+								return rect.height >= 48 || rect.width >= 48;
+							})
+					)
+				)
+				.toBe(true);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -499,17 +1017,26 @@ test.describe('work overview executive status board', () => {
 		page,
 		request,
 		baseURL
-	}) => {
+	}, testInfo) => {
 		const seeded = await seedUrgentOverdueProject(request);
 		try {
 			await page.goto(`${baseURL ?? ''}/work/projects/${seeded.project.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Health reasons' })).toBeVisible();
+			if (testInfo.project.name === 'mobile-chrome') {
+				await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Work details' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Project Status' })).toHaveCount(0);
+			} else {
+				await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
+				await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Automations' })).toHaveCount(0);
+				await expect(page.getByRole('heading', { name: 'Findings and evidence' })).toHaveCount(0);
+			}
 			await expect(page.getByText('Overdue').first()).toBeVisible();
 			await expect(page.getByText('Urgent').first()).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Blockers' })).toBeVisible();
-			await expect(page.getByText('No active blockers.')).toBeVisible();
+			await expect(page.getByTestId('project-blocker-panel')).toHaveCount(0);
 			await expect(page.getByRole('link').filter({ hasText: seeded.project.title })).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
@@ -520,23 +1047,33 @@ test.describe('work overview executive status board', () => {
 		page,
 		request,
 		baseURL
-	}) => {
+	}, testInfo) => {
 		const seeded = await seedLongQuestion(request);
 		try {
-			await page.goto(`${baseURL ?? ''}/work/decisions/${seeded.question.id}`);
+			await page.goto(`${baseURL ?? ''}/work/needs-resolution/${seeded.question.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByText('Question Brief', { exact: true })).toBeVisible();
-			await expect(page.getByTestId('question-primary-answer')).toContainText(
-				'Approve the safe internal workspace setup path'
-			);
-			await expect(page.getByTestId('question-brief-sections')).toContainText('Objective');
-			await expect(page.getByTestId('question-brief-sections')).toContainText('Approval Gate');
+			if (testInfo.project.name === 'mobile-chrome') {
+				await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+				await expect(page.getByTestId('mobile-work-agent-note')).toContainText(
+					'Approve the safe internal workspace setup path'
+				);
+				await expect(page.getByTestId('mobile-work-brief')).toContainText('Objective');
+				await expect(page.getByTestId('mobile-work-brief')).toContainText('Approval Gate');
+				await expect(page.getByTestId('mobile-work-brief')).not.toContainText('## Objective');
+			} else {
+				await expect(page.getByText('Resolution brief', { exact: true })).toBeVisible();
+				await expect(page.getByTestId('question-primary-answer')).toContainText(
+					'Approve the safe internal workspace setup path'
+				);
+				await expect(page.getByTestId('question-brief-sections')).toContainText('Objective');
+				await expect(page.getByTestId('question-brief-sections')).toContainText('Approval Gate');
 
-			const history = page.locator('details#legacy-version-history');
-			await expect(history).toHaveCount(1);
-			await expect(history).not.toHaveAttribute('open', '');
-			await expect(page.getByTestId('question-brief-sections')).not.toContainText('## Objective');
+				const history = page.locator('details#legacy-version-history');
+				await expect(history).toHaveCount(1);
+				await expect(history).not.toHaveAttribute('open', '');
+				await expect(page.getByTestId('question-brief-sections')).not.toContainText('## Objective');
+			}
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}
@@ -553,7 +1090,9 @@ test.describe('work overview executive status board', () => {
 
 			await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
 			await expect(page.getByTestId('recent-activity-list')).toHaveCount(1);
-			await expect(page.getByTestId('recent-activity-list')).toContainText(seeded.question.title);
+			await expect(page.getByTestId('recent-activity-list')).toContainText(/E2E /);
+			await expect(page.getByTestId('recent-activity-list')).toContainText(/\b(Created|Updated)\b/);
+			await expect(page.getByText(/existing work item/i)).toHaveCount(0);
 			await expect(page.getByText(/\blinked\b/i)).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);

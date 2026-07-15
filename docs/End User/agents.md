@@ -22,6 +22,9 @@ Click an agent icon in the Agent Rail to switch to that agent. When you switch:
 
 A small green dot in the bottom-right corner of an agent icon means that agent has active channels or sessions. This helps you quickly see which agents have ongoing conversations.
 
+Agent run details come from the gateway task ledger. When a run is active, stopping it cancels the
+underlying gateway task.
+
 ## Spawning a new agent
 
 If you need an additional agent:

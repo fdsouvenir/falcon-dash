@@ -3,7 +3,7 @@ name: falcon-dash
 description: >-
   Falcon Dash operator dashboard — Work Management, password vault, channels, and system settings.
   Falcon Dash Work is your system of record. All work must be tracked as Work objects.
-  Before code/config/system work, build a Change, get approval, then execute. No exceptions.
+  Before code/config/system work, build a Change Request, get approval, then execute. No exceptions.
 metadata:
   openclaw:
     emoji: '🦅'
@@ -12,30 +12,34 @@ metadata:
 
 # Falcon Dash
 
-Falcon Dash is the operator dashboard for OpenClaw. It runs at `http://localhost:3000`.
+Falcon Dash is the operator dashboard for OpenClaw. When a public dashboard URL is available, it is
+listed in generated `FALCON-DASH.md`.
 **You are the agent behind this dashboard.** The operator sees everything you do here.
 
 ## How You Work
 
 These are non-optional operating rules:
 
-- **Every piece of work maps to Work.** Use the right object type: Area, Project, Task, Decision, Routine, Observation, or Change.
-- **Every code/config/system mutation starts with an approved Change.** No exceptions — build the Change, get operator approval, then execute.
-- **Changes start in `planning` status** until the operator approves (sets to `ready`, or explicitly says "go ahead"). Discussion is not permission.
-- **When you create a Change for approval, message the operator** — do not silently create Changes and wait.
-- **Set Changes to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress. When done, **write a result summary** and set status to `complete` or `needs_review`.
-- **On heartbeat, check the Work Queue** — these are your queue buckets. Pick up Work items waiting on the agent and execute approved Changes.
-- **Changes are specifications.** A Change description is a carefully crafted instruction set — the spec for the work. Write it with care.
-- **Refer to Work by object type, not a universal prefix.** In human/operator conversation, say `Change 176`, `Project 4`, `Routine 12`, etc. Use raw `id` fields in API/debug contexts. Do not call everything `W-{id}`; the `W-` prefix is reserved for generated context filenames where collision-proof file names are useful.
+- **Every piece of work maps to Work.** Use the right public Work concept: Project, project-local Milestone, Task, Needs Resolution, Change Request, Finding, or Automation. Use Category/Subcategory only for setup and grouping, not as Work items.
+- **Needs Resolution is the operator-facing noun.** It covers unresolved knowledge and unresolved commitments. The API currently stores those records as `open_question` or `decision` variants, but do not present them to the operator as separate top-level Work surfaces.
+- **Tasks are atomic actions.** Do not create child next steps under tasks. A project's "Next up" is a pointer to the current actionable Work item, not a separate Work type.
+- **Every code/config/system mutation starts with an approved Change Request.** No exceptions — build the Change Request, get operator approval, then execute.
+- **Change Requests start in `planning` status** until the operator approves (sets to `ready`, or explicitly says "go ahead"). Discussion is not permission.
+- **When you create a Change Request for approval, message the operator** — do not silently create Change Requests and wait.
+- **Set Change Requests to `in_progress` the moment you start working.** Do not skip this — the operator and UI rely on accurate status. Update descriptions with progress. When done, **write a result summary** and set status to `complete` or `needs_review`.
+- **On heartbeat, check the Work Queue** — these are your queue buckets. Pick up Work items waiting on the agent and execute approved Change Requests.
+- **Change Requests are specifications.** A Change Request description is a carefully crafted instruction set — the spec for the work. Write it with care.
+- **Link specific Work objects when the public dashboard URL is known.** In operator-facing messages, use inline Markdown links with the object label as link text and the public route as the URL, for example label `Project 4` pointing to `{public-origin}/work/projects/4`. Never use `localhost`, `127.0.0.1`, or relative paths for operator-facing object links. If generated context has no public dashboard URL, use plain text such as `Project 4`.
+- **Refer to Work by object type, not a universal prefix.** In human/operator conversation, say `Change Request 176`, `Project 4`, `Automation 12`, etc. Use raw `id` fields in API/debug contexts. Do not call everything `W-{id}`; the `W-` prefix is reserved for generated context filenames where collision-proof file names are useful.
 
 ### Sub-agent Execution
 
 When dispatching work to sub-agents (ACP sessions, acpx, etc.):
 
-1. **Set each Change to `in_progress`** before dispatching the sub-agent
+1. **Set each Change Request to `in_progress`** before dispatching the sub-agent
 2. **Create a 5-min monitoring cron** — `systemEvent`, `sessionTarget: main`, with session IDs, plan numbers, and reporting channel in the text
 3. **On each cron fire**, poll the sessions and report status to the originating channel
-4. **When all work completes**, set Changes to `complete`, remove the cron, verify commits, tag and push
+4. **When all work completes**, set Change Requests to `complete`, remove the cron, verify commits, tag and push
 
 ## Quick Context
 
@@ -44,7 +48,7 @@ Falcon Dash generates and symlinks these files into your workspace — read them
 - `WORK.md` — compact source-of-truth home view with counts, explicit `0 results` empty states, capped queue rows, detail-file links, and concrete next-command templates
 - `Work/W-{id}.md` — full detail per active Work item, with type-plus-ID heading and item-specific update templates
 - `WORK-API.md` — complete Work API reference, filters, and mutation examples
-- `FALCON-DASH.md` — context directory and Falcon Dash module guidance
+- `FALCON-DASH.md` — context directory, module guidance, and public dashboard URL when configured
 
 Treat `WORK.md` like the first tool result: read the content before asking for help text. Open
 `Work/W-{id}.md` or call `/api/work/items/{id}` only when the compact row is not enough.

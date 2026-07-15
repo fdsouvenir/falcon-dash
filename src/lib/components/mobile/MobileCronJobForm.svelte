@@ -13,9 +13,7 @@
 	let description = $state(job?.description ?? '');
 	let scheduleType = $state<'cron' | 'interval' | 'one-shot'>(job?.scheduleType ?? 'cron');
 	let schedule = $state(job?.schedule ?? '*/5 * * * *');
-	let payloadType = $state<'system-event' | 'agent-turn'>(
-		(job?.payloadType as 'system-event' | 'agent-turn') ?? 'system-event'
-	);
+	let payloadType = $state<CronJobInput['payloadType']>(job?.payloadType ?? 'system-event');
 	let sessionTarget = $state(job?.sessionTarget ?? '');
 	let showAdvanced = $state(false);
 	let saving = $state(false);
@@ -35,7 +33,10 @@
 			scheduleType,
 			schedule,
 			payloadType,
-			sessionTarget: sessionTarget.trim() || undefined
+			sessionTarget: sessionTarget.trim() || undefined,
+			sessionKey: job?.sessionKey,
+			existingSchedule: job?.rawSchedule,
+			existingPayload: job?.rawPayload
 		};
 		let ok: boolean;
 		if (job) {
@@ -194,7 +195,11 @@
 						<label class="mb-1 block text-[length:var(--text-body)] font-medium text-white/80">
 							Payload Type
 						</label>
-						<div class="grid grid-cols-2 gap-2">
+						<div
+							class="grid gap-2"
+							class:grid-cols-3={job?.payloadType === 'command'}
+							class:grid-cols-2={job?.payloadType !== 'command'}
+						>
 							<button
 								onclick={() => (payloadType = 'system-event')}
 								class="min-h-[44px] rounded-lg border text-[length:var(--text-body)] font-medium transition-colors {payloadType ===
@@ -213,6 +218,17 @@
 							>
 								Agent Turn
 							</button>
+							{#if job?.payloadType === 'command'}
+								<button
+									onclick={() => (payloadType = 'command')}
+									class="min-h-[44px] rounded-lg border text-[length:var(--text-body)] font-medium transition-colors {payloadType ===
+									'command'
+										? 'border-status-info bg-status-info-bg text-status-info'
+										: 'border-surface-border bg-surface-1 text-status-muted active:bg-surface-3'}"
+								>
+									Command
+								</button>
+							{/if}
 						</div>
 					</div>
 

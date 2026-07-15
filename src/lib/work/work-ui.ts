@@ -1,11 +1,12 @@
 export const workTypes = [
 	'project',
-	'change',
-	'decision',
+	'milestone',
 	'task',
-	'routine',
-	'observation',
-	'area'
+	'open_question',
+	'decision',
+	'change_request',
+	'finding',
+	'automation'
 ] as const;
 
 export const workStatuses = [
@@ -25,11 +26,63 @@ export const workStatuses = [
 export type WorkItemType = (typeof workTypes)[number];
 export type WorkStatus = (typeof workStatuses)[number];
 export type WorkPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type WorkChangeEntityType =
+	| WorkItemType
+	| 'category'
+	| 'subcategory'
+	| 'evidence'
+	| 'blocker';
+export type WorkChangeAction =
+	| 'created'
+	| 'updated'
+	| 'deleted'
+	| 'moved'
+	| 'completed'
+	| 'answered'
+	| 'approved'
+	| 'attached';
+
+export interface WorkChange {
+	field: string;
+	label: string;
+	from: unknown;
+	to: unknown;
+}
+
+export interface WorkChangeLogEntry {
+	id: number;
+	occurred_at: number;
+	actor: string;
+	source: string;
+	entity_type: WorkChangeEntityType;
+	entity_id: string;
+	entity_title: string | null;
+	action: WorkChangeAction;
+	project_id: number | null;
+	parent_item_id: number | null;
+	area_id: string | null;
+	summary: string;
+	changes: WorkChange[];
+	metadata: Record<string, unknown>;
+}
+
+export interface WorkCategory {
+	id: string;
+	title: string;
+	description: string | null;
+	parent_category_id: string | null;
+	status: 'active' | 'paused' | 'archived';
+	kind: 'category' | 'subcategory';
+	created_at: number;
+	updated_at: number;
+}
 
 export interface WorkItem {
 	id: number;
 	type: WorkItemType;
 	area_id: string | null;
+	category_id?: string | null;
+	subcategory_id?: string | null;
 	parent_item_id: number | null;
 	title: string;
 	description: string | null;
@@ -44,6 +97,51 @@ export interface WorkItem {
 	scheduled_at: string | null;
 	stale_after: string | null;
 	result: string | null;
+	goal?: string | null;
+	definition_of_done?: string | null;
+	why_it_matters?: string | null;
+	scope?: string | null;
+	non_scope?: string | null;
+	health?: 'on_track' | 'at_risk' | 'blocked' | 'unknown' | null;
+	operator?: string | null;
+	start_date?: string | null;
+	target_date?: string | null;
+	actual_completed_date?: string | null;
+	current_next_item_id?: number | null;
+	last_meaningful_update_at?: number | null;
+	milestone_marker?: string | null;
+	task_action?: string | null;
+	question_text?: string | null;
+	answerer?: string | null;
+	blocked_item_id?: number | null;
+	proposed_answer?: string | null;
+	answer?: string | null;
+	answered_at?: number | null;
+	decision_question?: string | null;
+	options?: string[] | null;
+	recommended_option?: string | null;
+	consequence_of_no_decision?: string | null;
+	decision?: string | null;
+	decided_by?: string | null;
+	decided_at?: number | null;
+	change_scope?: string | null;
+	systems_touched?: string[] | null;
+	risk?: string | null;
+	rollback_notes?: string | null;
+	verification_plan?: string | null;
+	approval_state?: string | null;
+	execution_state?: string | null;
+	trigger_type?: 'cron' | 'heartbeat' | 'webhook' | 'manual' | null;
+	schedule?: string | null;
+	enabled?: number | null;
+	last_run_at?: number | null;
+	next_run_at?: number | null;
+	last_result?: string | null;
+	failure_count?: number | null;
+	generated_work_policy?: string | null;
+	backing_ref?: string | null;
+	finding_text?: string | null;
+	source_refs?: string[] | null;
 	legacy_project_id: number | null;
 	legacy_plan_id: number | null;
 	created_at: number;
@@ -51,15 +149,38 @@ export interface WorkItem {
 	last_activity_at: number;
 }
 
+export type WorkBlockerSource = 'work_item' | 'person' | 'system' | 'external';
+
+export type WorkBlockerStatus = 'active' | 'resolved';
+
+export interface WorkBlockerLink {
+	id: number;
+	project_id: number | null;
+	blocked_item_id: number;
+	blocked_item_title: string | null;
+	blocked_item_type: WorkItemType | null;
+	blocker_source: WorkBlockerSource;
+	blocker_item_id: number | null;
+	blocker_item_title: string | null;
+	blocker_item_type: WorkItemType | null;
+	external_label: string | null;
+	reason: string | null;
+	unblock_action: string | null;
+	status: WorkBlockerStatus;
+	created_at: number;
+	updated_at: number;
+	resolved_at: number | null;
+}
+
 export interface WorkQueue {
 	nextActions: WorkItem[];
 	needsOperator?: WorkItem[];
 	waitingOnOperator?: WorkItem[];
-	waitingOnFred?: WorkItem[];
 	waitingOnAgent: WorkItem[];
 	waitingOnExternal?: WorkItem[];
 	needsReview: WorkItem[];
-	scheduledRoutines: WorkItem[];
+	failedAutomations?: WorkItem[];
+	scheduledAutomations: WorkItem[];
 	staleCleanup: WorkItem[];
 	blockedRisky: WorkItem[];
 }
@@ -103,6 +224,22 @@ export interface TypeConfig {
 	tone: string;
 }
 
+export const resolutionTypes: WorkItemType[] = ['open_question', 'decision'];
+
+export const resolutionConfig: TypeConfig = {
+	type: 'open_question',
+	path: 'needs-resolution',
+	label: 'Needs resolution',
+	singular: 'Resolution',
+	title: 'Needs resolution',
+	summary: 'Questions to answer and choices to make, grouped as one resolution queue.',
+	primaryLabel: 'Resolution',
+	secondaryLabel: 'Owner',
+	tertiaryLabel: 'Impact',
+	empty: 'No items need resolution in this view.',
+	tone: 'text-status-warning'
+};
+
 export const typeConfigs: TypeConfig[] = [
 	{
 		type: 'project',
@@ -118,8 +255,60 @@ export const typeConfigs: TypeConfig[] = [
 		tone: 'text-status-info'
 	},
 	{
-		type: 'change',
-		path: 'changes',
+		type: 'milestone',
+		path: 'milestones',
+		label: 'Milestones',
+		singular: 'Milestone',
+		title: 'Milestones',
+		summary: 'Progress markers and checkpoints inside active project briefs.',
+		primaryLabel: 'Marker',
+		secondaryLabel: 'Project',
+		tertiaryLabel: 'Target',
+		empty: 'No milestones match this view.',
+		tone: 'text-status-info'
+	},
+	{
+		type: 'task',
+		path: 'tasks',
+		label: 'Tasks',
+		singular: 'Task',
+		title: 'Tasks',
+		summary: 'Specific executable work with owner, due state, waiting state, and parent context.',
+		primaryLabel: 'Task',
+		secondaryLabel: 'Parent',
+		tertiaryLabel: 'Due',
+		empty: 'No tasks match this view.',
+		tone: 'text-status-active'
+	},
+	{
+		type: 'open_question',
+		path: 'open-questions',
+		label: 'Open questions',
+		singular: 'Open question',
+		title: 'Open questions',
+		summary: 'Unresolved knowledge that blocks confident project movement.',
+		primaryLabel: 'Question',
+		secondaryLabel: 'Can answer',
+		tertiaryLabel: 'Blocks',
+		empty: 'No open questions match this view.',
+		tone: 'text-status-warning'
+	},
+	{
+		type: 'decision',
+		path: 'decisions',
+		label: 'Decisions',
+		singular: 'Decision',
+		title: 'Decisions',
+		summary: 'Choices or approvals that need commitment, options, and a recommendation.',
+		primaryLabel: 'Decision',
+		secondaryLabel: 'Recommendation',
+		tertiaryLabel: 'No decision cost',
+		empty: 'No decisions match this view.',
+		tone: 'text-status-warning'
+	},
+	{
+		type: 'change_request',
+		path: 'change-requests',
 		label: 'Change requests',
 		singular: 'Change request',
 		title: 'Change requests',
@@ -131,72 +320,50 @@ export const typeConfigs: TypeConfig[] = [
 		tone: 'text-status-purple'
 	},
 	{
-		type: 'decision',
-		path: 'decisions',
-		label: 'Questions',
-		singular: 'Question',
-		title: 'Questions',
-		summary: 'Choices that need an answer before related work can move with confidence.',
-		primaryLabel: 'Question',
-		secondaryLabel: 'Recommendation',
-		tertiaryLabel: 'Impact',
-		empty: 'No questions match this view.',
-		tone: 'text-status-warning'
-	},
-	{
-		type: 'task',
-		path: 'tasks',
-		label: 'Tasks',
-		singular: 'Task',
-		title: 'Tasks',
-		summary: 'Actionable units with owner, due state, waiting state, and parent context.',
-		primaryLabel: 'Action',
-		secondaryLabel: 'Parent',
-		tertiaryLabel: 'Due',
-		empty: 'No tasks match this view.',
-		tone: 'text-status-active'
-	},
-	{
-		type: 'routine',
-		path: 'routines',
-		label: 'Routines',
-		singular: 'Routine',
-		title: 'Routines',
-		summary: 'Recurring checks and upkeep work with cadence, next run, and latest result.',
-		primaryLabel: 'Cadence',
+		type: 'automation',
+		path: 'automations',
+		label: 'Automations',
+		singular: 'Automation',
+		title: 'Automations',
+		summary: 'Recurring or triggered work backed by cron, heartbeat, webhook, or manual runs.',
+		primaryLabel: 'Trigger',
 		secondaryLabel: 'Next run',
 		tertiaryLabel: 'Last result',
-		empty: 'No routines match this view.',
+		empty: 'No automations match this view.',
 		tone: 'text-status-active'
 	},
 	{
-		type: 'observation',
-		path: 'observations',
-		label: 'Observations',
-		singular: 'Observation',
-		title: 'Observations',
+		type: 'finding',
+		path: 'findings',
+		label: 'Findings',
+		singular: 'Finding',
+		title: 'Findings',
 		summary: 'A feed of captured findings, events, and evidence from active work.',
 		primaryLabel: 'Finding',
 		secondaryLabel: 'Source',
 		tertiaryLabel: 'Captured',
-		empty: 'No observations match this view.',
+		empty: 'No findings match this view.',
 		tone: 'text-status-muted'
-	},
-	{
-		type: 'area',
-		path: 'areas',
-		label: 'Areas',
-		singular: 'Area',
-		title: 'Areas',
-		summary:
-			'Operating domains that collect related projects, change requests, routines, and questions.',
-		primaryLabel: 'Domain',
-		secondaryLabel: 'Open work',
-		tertiaryLabel: 'Recent activity',
-		empty: 'No areas match this view.',
-		tone: 'text-status-info'
 	}
 ];
+
+export const standaloneTypeConfigs: TypeConfig[] = typeConfigs.filter(
+	(config) => config.type !== 'milestone'
+);
+
+export const navigationTypeConfigs: TypeConfig[] = [
+	...standaloneTypeConfigs.filter(
+		(config) => config.type !== 'open_question' && config.type !== 'decision'
+	),
+	resolutionConfig
+].sort((a, b) => {
+	const order = ['project', 'task', 'open_question', 'change_request', 'automation', 'finding'];
+	return order.indexOf(a.type) - order.indexOf(b.type);
+});
+
+export function isStandaloneWorkType(type: WorkItemType): boolean {
+	return type !== 'milestone';
+}
 
 export const openStatuses = new Set<WorkStatus>([
 	'backlog',
@@ -214,10 +381,34 @@ export function configForType(type: WorkItemType): TypeConfig {
 }
 
 export function typeFromSection(section: string | undefined): WorkItemType {
-	return typeConfigs.find((config) => config.path === section)?.type ?? 'project';
+	const legacySectionAliases: Record<string, WorkItemType> = {
+		tasks: 'task',
+		task: 'task',
+		'next-steps': 'task',
+		'next-step': 'task',
+		routines: 'automation',
+		routine: 'automation',
+		observations: 'finding',
+		observation: 'finding',
+		changes: 'change_request',
+		change: 'change_request',
+		'needs-resolution': 'open_question',
+		'need-resolution': 'open_question',
+		resolutions: 'open_question',
+		resolution: 'open_question',
+		questions: 'open_question',
+		question: 'open_question',
+		spaces: 'project',
+		space: 'project',
+		areas: 'project',
+		area: 'project'
+	};
+	if (section && legacySectionAliases[section]) return legacySectionAliases[section];
+	return standaloneTypeConfigs.find((config) => config.path === section)?.type ?? 'project';
 }
 
 export function pathForType(type: WorkItemType): string {
+	if (resolutionTypes.includes(type)) return resolutionConfig.path;
 	return configForType(type).path;
 }
 
@@ -230,27 +421,84 @@ export function sentenceCase(value: string): string {
 	return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-export function formatDate(value: number | string | null | undefined): string {
+export function formatDate(
+	value: number | string | null | undefined,
+	locale?: Intl.LocalesArgument,
+	now: Date = new Date()
+): string {
 	if (!value) return 'Not set';
-	const date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
-	if (Number.isNaN(date.valueOf())) return 'Not set';
-	return new Intl.DateTimeFormat(undefined, {
+	const date = workDate(value);
+	if (!date) return 'Not set';
+	return new Intl.DateTimeFormat(locale, {
 		month: 'short',
 		day: 'numeric',
-		year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+		year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
 	}).format(date);
 }
 
 export function formatDateTime(value: number | string | null | undefined): string {
 	if (!value) return 'Not set';
-	const date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
-	if (Number.isNaN(date.valueOf())) return 'Not set';
+	const date = workDate(value);
+	if (!date) return 'Not set';
 	return new Intl.DateTimeFormat(undefined, {
 		month: 'short',
 		day: 'numeric',
 		hour: 'numeric',
 		minute: '2-digit'
 	}).format(date);
+}
+
+export function isWorkDateOverdue(
+	value: number | string | null | undefined,
+	now: Date = new Date()
+): boolean {
+	if (!value) return false;
+	const date = workDate(value);
+	if (!date) return false;
+	if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		const today = new Date(now);
+		today.setHours(0, 0, 0, 0);
+		return date.valueOf() < today.valueOf();
+	}
+	return date.valueOf() < now.valueOf();
+}
+
+export function scheduleDateForItem(
+	value: Pick<
+		WorkItem,
+		'type' | 'due_date' | 'target_date' | 'scheduled_at' | 'next_run_at' | 'stale_after'
+	>
+): number | string | null {
+	if (value.type === 'automation') {
+		return (
+			value.next_run_at ??
+			value.scheduled_at ??
+			value.due_date ??
+			value.target_date ??
+			value.stale_after
+		);
+	}
+	return (
+		value.due_date ??
+		value.target_date ??
+		value.scheduled_at ??
+		value.next_run_at ??
+		value.stale_after
+	);
+}
+
+function workDate(value: number | string): Date | null {
+	let date: Date;
+	if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		const [year, month, day] = value.split('-').map(Number);
+		date = new Date(year, month - 1, day);
+		if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+			return null;
+		}
+	} else {
+		date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
+	}
+	return Number.isNaN(date.valueOf()) ? null : date;
 }
 
 export function statusTone(status: WorkStatus): string {
@@ -279,5 +527,6 @@ export function waitingLabel(value: string | null): string {
 }
 
 export function itemDisplayId(item: WorkItem): string {
+	if (resolutionTypes.includes(item.type)) return `Needs resolution ${item.id}`;
 	return `${configForType(item.type).singular} ${item.id}`;
 }

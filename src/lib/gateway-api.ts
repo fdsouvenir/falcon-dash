@@ -1,4 +1,4 @@
-import { writable, readonly, type Readable } from 'svelte/store';
+import { get, writable, readonly, type Readable } from 'svelte/store';
 
 export class GatewayRpcError extends Error {
 	readonly code: string;
@@ -199,3 +199,23 @@ class GatewayEventManager {
 }
 
 export const gatewayEvents = new GatewayEventManager();
+
+/** Resolve method availability from hello-ok instead of inferring it from the frame protocol. */
+export async function gatewaySupportsMethod(method: string): Promise<boolean> {
+	const current = get(gatewayEvents.snapshot);
+	if (current) return current.features.methods.includes(method);
+
+	return await new Promise<boolean>((resolve, reject) => {
+		let unsubscribe = () => {};
+		const timeout = setTimeout(() => {
+			unsubscribe();
+			reject(new Error('Timed out waiting for gateway capabilities'));
+		}, 5000);
+		unsubscribe = gatewayEvents.snapshot.subscribe((snapshot) => {
+			if (!snapshot) return;
+			clearTimeout(timeout);
+			unsubscribe();
+			resolve(snapshot.features.methods.includes(method));
+		});
+	});
+}

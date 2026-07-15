@@ -134,7 +134,7 @@ export function previewWorkMigration(
 		}))
 	];
 
-	const observations = snapshot.activities.map((activity) => ({
+	const findings = snapshot.activities.map((activity) => ({
 		legacy_type: 'activity',
 		legacy_id: String(activity.id),
 		title: `${activity.action} ${activity.target_type}`,
@@ -147,7 +147,7 @@ export function previewWorkMigration(
 		plans: snapshot.plans.length,
 		planVersions: snapshot.planVersions.length,
 		planDependencies: snapshot.planDependencies.length,
-		observations: observations.length,
+		findings: findings.length,
 		items: items.length
 	};
 	for (const item of items) counts[item.type] = (counts[item.type] ?? 0) + 1;
@@ -159,7 +159,7 @@ export function previewWorkMigration(
 		counts,
 		areas,
 		items,
-		observations,
+		findings,
 		warnings,
 		self_review: buildSelfReview(snapshot, counts, warnings)
 	};
@@ -281,24 +281,22 @@ export function applyWorkMigration(
 				.get(String(activity.id)) as { work_id: string } | undefined;
 			if (existing) continue;
 
-			const result = targetDb
-				.prepare(
-					`INSERT INTO work_observations
-					 (title, summary, source_type, source_ref, observed_at, created_at)
-					 VALUES (?, ?, ?, ?, ?, ?)`
-				)
-				.run(
-					`${activity.action} ${activity.target_type}`,
-					renderActivitySummary(activity),
-					'legacy_pm',
-					`pm:activity:${activity.id}`,
-					activity.created_at,
-					Math.floor(Date.now() / 1000)
-				);
-			const observationId = result.lastInsertRowid as number;
-			mapLegacy(targetDb, 'activity', String(activity.id), 'observation', String(observationId));
+			const parent =
+				projectMap.get(activity.project_id) ?? getWorkItemByLegacy('project', activity.project_id);
+			const finding = createWorkItem({
+				type: 'finding',
+				parent_item_id: parent?.id ?? null,
+				area_id: parent?.area_id ?? null,
+				title: `${activity.action} ${activity.target_type}`,
+				description: renderActivitySummary(activity),
+				status: 'complete',
+				finding_text: renderActivitySummary(activity),
+				source_refs: [`pm:activity:${activity.id}`],
+				actor: 'migration'
+			});
+			mapLegacy(targetDb, 'activity', String(activity.id), 'work_item', String(finding.id));
 			addEvidenceRef({
-				observation_id: observationId,
+				work_item_id: finding.id,
 				source_type: 'legacy_pm',
 				source_ref: `pm:activity:${activity.id}`,
 				summary: activity.details ?? activity.target_title
@@ -381,18 +379,21 @@ function classifyPlan(plan: LegacyPlan): WorkItemType {
 		/\b(morning brief|heartbeat|cron|sweep|routine|recurring|scan)\b/.test(title) ||
 		(/\b(sweep|scan|cron|heartbeat)\b/.test(text) && plan.status === 'assigned')
 	) {
-		return 'routine';
+		return 'automation';
 	}
-	if (plan.status === 'needs_review') return 'decision';
 	if (/\b(decide|decision|review|approve|approval|select|choose|feedback)\b/.test(text)) {
 		return 'decision';
 	}
+	if (/\b(which|what|whether|does|can|how|unknown|unclear|question|clarify)\b/.test(text)) {
+		return 'open_question';
+	}
+	if (plan.status === 'needs_review') return 'open_question';
 	if (
 		/\b(change|schema|migration|deploy|deployment|config|code|implementation|refactor|slice)\b/.test(
 			text
 		)
 	) {
-		return 'change';
+		return 'change_request';
 	}
 	return 'task';
 }
@@ -417,7 +418,7 @@ function mapProjectStatus(status: string): WorkStatus {
 }
 
 function mapPlanStatus(plan: LegacyPlan): WorkStatus {
-	if (classifyPlan(plan) === 'routine' && plan.status === 'assigned') return 'scheduled';
+	if (classifyPlan(plan) === 'automation' && plan.status === 'assigned') return 'scheduled';
 	switch (plan.status) {
 		case 'planning':
 			return 'planning';
@@ -559,14 +560,22 @@ function buildSelfReview(
 		`Legacy categories mapped to Work areas: ${snapshot.categories.length}.`,
 		`Legacy subcategories mapped to child Work areas: ${snapshot.subcategories.length}.`,
 		`Legacy projects mapped to Work project items: ${snapshot.projects.length}.`,
-		`Legacy plans mapped to Work change/task/decision/routine items: ${snapshot.plans.length}.`,
+		`Legacy plans mapped to Work v2 items: ${snapshot.plans.length}.`,
 		`Legacy plan dependencies mapped to Work depends_on relationships: ${snapshot.planDependencies.length}.`,
 		`Legacy plan versions preserved inside migrated Work item body: ${snapshot.planVersions.length}.`,
-		`Legacy activities mapped to observations/evidence: ${snapshot.activities.length}.`,
+		`Legacy activities mapped to findings/evidence: ${snapshot.activities.length}.`,
 		`Mapped Work item type counts: ${JSON.stringify(
 			Object.fromEntries(
 				Object.entries(counts).filter(([key]) =>
-					['project', 'change', 'task', 'decision', 'routine', 'observation'].includes(key)
+					[
+						'project',
+						'change_request',
+						'task',
+						'open_question',
+						'decision',
+						'automation',
+						'finding'
+					].includes(key)
 				)
 			)
 		)}.`

@@ -81,6 +81,10 @@ describe('Work reconciliation', () => {
 			type: 'decision',
 			parent_item_id: project.id,
 			title: 'Choose and approve Miami flight booking',
+			decision_question: 'Should the Miami flight booking be approved?',
+			options: ['Approve booking', 'Keep searching'],
+			recommended_option: 'Approve booking',
+			consequence_of_no_decision: 'The trip remains unconfirmed.',
 			status: 'needs_review',
 			waiting_on: 'operator',
 			actor: 'agent'
@@ -188,17 +192,23 @@ describe('Work reconciliation', () => {
 			actor: 'agent'
 		});
 		const finding = createWorkItem({
-			type: 'observation',
+			type: 'finding',
 			parent_item_id: project.id,
 			title: 'Flight confirmation found',
 			status: 'complete',
 			description: 'Confirmation email says the flight was booked.',
+			finding_text: 'Confirmation email says the flight was booked.',
+			source_refs: ['email:flight-confirmation'],
 			actor: 'agent'
 		});
 		const decision = createWorkItem({
 			type: 'decision',
 			parent_item_id: project.id,
 			title: 'Choose flight',
+			decision_question: 'Which flight should be chosen?',
+			options: ['Choose the confirmed flight', 'Choose another flight'],
+			recommended_option: 'Choose the confirmed flight',
+			consequence_of_no_decision: 'The itinerary remains unresolved.',
 			status: 'needs_review',
 			waiting_on: 'operator',
 			actor: 'agent'
@@ -269,6 +279,10 @@ describe('Work reconciliation', () => {
 			type: 'decision',
 			parent_item_id: project.id,
 			title: 'Old question',
+			decision_question: 'Should the old question remain open?',
+			options: ['Close it', 'Keep it open'],
+			recommended_option: 'Close it',
+			consequence_of_no_decision: 'The project retains stale resolution work.',
 			status: 'needs_review',
 			waiting_on: 'operator',
 			actor: 'agent'

@@ -236,23 +236,30 @@ Discord-like channel system. `ensureDefaultChannel()` creates a `#general` chann
 
 ## Utility stores
 
-| Store            | File                | Purpose                                            |
-| ---------------- | ------------------- | -------------------------------------------------- |
-| `heartbeat`      | `heartbeat.ts`      | Agent health monitoring state                      |
-| `cron`           | `cron.ts`           | Cron job management state                          |
-| `toast`          | `toast.ts`          | Toast notification queue (`addToast()`)            |
-| `notifications`  | `notifications.ts`  | Notification center (sound, browser notifications) |
-| `discord`        | `discord.ts`        | Discord sync status                                |
-| `diagnostics`    | `diagnostics.ts`    | Connection health metrics (`tickHealth`)           |
-| `token`          | `token.ts`          | Gateway token and URL persistence (localStorage)   |
-| `viewport`       | `viewport.ts`       | `isMobile` responsive detection                    |
-| `exec-approvals` | `exec-approvals.ts` | Exec approval request queue                        |
-| `agent-identity` | `agent-identity.ts` | Agent identity info and connection state           |
-| `canvas`         | `canvas.ts`         | CanvasStore (surfaces, bridge status)              |
-| `pinned-apps`    | `pinned-apps.ts`    | Pinned custom app panels                           |
-| `editor`         | `editor.ts`         | Document editor state                              |
-| `files`          | `files.ts`          | Document browser state                             |
-| `passwords`      | `passwords.ts`      | Password vault state                               |
+| Store           | File               | Purpose                                            |
+| --------------- | ------------------ | -------------------------------------------------- |
+| `heartbeat`     | `heartbeat.ts`     | Agent health monitoring state                      |
+| `cron`          | `cron.ts`          | Cron job management state                          |
+| `toast`         | `toast.ts`         | Toast notification queue (`addToast()`)            |
+| `notifications` | `notifications.ts` | Notification center (sound, browser notifications) |
+| `discord`       | `discord.ts`       | Discord sync status                                |
+| `diagnostics`   | `diagnostics.ts`   | Connection health metrics (`tickHealth`)           |
+
+Protocol-v4 feature stores normalize gateway-owned nested records at their boundary. The cron
+store maps discriminated `schedule`/`payload` objects and nested run `state`, parses human interval
+durations into integer milliseconds, emits the same nested shape for edits, and translates
+`cron.runs.entries` statuses into the UI model. Agent-turn jobs default to an `isolated` target;
+system-event jobs use `main`. The heartbeat store treats `last-heartbeat` as one nullable event, and
+the agent lifecycle store converts numeric task-ledger timestamps to ISO strings before display.
+| `token` | `token.ts` | Gateway token and URL persistence (localStorage) |
+| `viewport` | `viewport.ts` | `isMobile` responsive detection |
+| `exec-approvals` | `exec-approvals.ts` | Exec approval request queue |
+| `agent-identity` | `agent-identity.ts` | Agent identity info and connection state |
+| `canvas` | `canvas.ts` | CanvasStore (surfaces, bridge status) |
+| `pinned-apps` | `pinned-apps.ts` | Pinned custom app panels |
+| `editor` | `editor.ts` | Document editor state |
+| `files` | `files.ts` | Document browser state |
+| `passwords` | `passwords.ts` | Password vault state |
 
 ## Patterns
 

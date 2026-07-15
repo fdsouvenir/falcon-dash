@@ -3,7 +3,7 @@ import { openStatuses, type WorkItem, type WorkItemType, type WorkStatus } from 
 export type ProjectHealthLabel =
 	| 'Blocked'
 	| 'Overdue'
-	| 'Needs decision'
+	| 'Needs resolution'
 	| 'Needs attention'
 	| 'No date'
 	| 'On track';
@@ -59,10 +59,11 @@ export type ProjectPortfolioPulse = {
 
 const openWorkTypes: Array<[WorkItemType, string, string]> = [
 	['task', 'task', 'tasks'],
-	['decision', 'question', 'questions'],
-	['change', 'change', 'changes'],
-	['routine', 'routine', 'routines'],
-	['observation', 'observation', 'observations']
+	['open_question', 'open question', 'open questions'],
+	['decision', 'decision', 'decisions'],
+	['change_request', 'change request', 'change requests'],
+	['automation', 'automation', 'automations'],
+	['finding', 'finding', 'findings']
 ];
 
 const defaultOpenTitles = [
@@ -87,13 +88,18 @@ const defaultCollapsedTitles = [
 const healthLabels: ProjectHealthLabel[] = [
 	'Blocked',
 	'Overdue',
-	'Needs decision',
+	'Needs resolution',
 	'Needs attention',
 	'No date',
 	'On track'
 ];
 
-const actionableChildTypes = new Set<WorkItemType>(['task', 'decision', 'change', 'routine']);
+const actionableChildTypes = new Set<WorkItemType>([
+	'task',
+	'open_question',
+	'decision',
+	'change_request'
+]);
 
 export const workFocusDefinitions: WorkFocusDefinition[] = [
 	{
@@ -113,7 +119,7 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 	{
 		type: 'project',
 		key: 'needs-decision',
-		label: 'Needs decision',
+		label: 'Needs resolution',
 		primary: true,
 		description: 'Projects waiting on operator review or an open question'
 	},
@@ -153,74 +159,110 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 		description: 'Projects with an on-track health label'
 	},
 	{
-		type: 'change',
+		type: 'change_request',
 		key: 'needs-approval',
 		label: 'Needs approval',
 		primary: true,
 		description: 'Change requests waiting for approval or review'
 	},
 	{
-		type: 'change',
+		type: 'change_request',
 		key: 'waiting-operator',
 		label: 'Waiting on you',
 		primary: true,
 		description: 'Change requests waiting on the operator'
 	},
 	{
-		type: 'change',
+		type: 'change_request',
 		key: 'waiting-agent',
 		label: 'Waiting on agent',
 		primary: true,
 		description: 'Change requests waiting on agent follow-through'
 	},
 	{
-		type: 'change',
+		type: 'change_request',
 		key: 'blocked',
 		label: 'Blocked',
 		primary: true,
 		description: 'Change requests marked blocked'
 	},
 	{
-		type: 'change',
+		type: 'change_request',
 		key: 'recent',
 		label: 'Recent',
 		primary: true,
 		description: 'Change requests updated in the last 7 days'
 	},
 	{
-		type: 'decision',
+		type: 'open_question',
 		key: 'needs-answer',
 		label: 'Needs answer',
 		primary: true,
 		description: 'Questions waiting on operator input'
 	},
 	{
-		type: 'decision',
+		type: 'open_question',
 		key: 'needs-review',
 		label: 'Needs review',
 		primary: true,
 		description: 'Questions marked for review'
 	},
 	{
-		type: 'decision',
+		type: 'open_question',
 		key: 'waiting-agent',
 		label: 'Waiting on agent',
 		primary: true,
 		description: 'Questions waiting on agent follow-through'
 	},
 	{
-		type: 'decision',
+		type: 'open_question',
 		key: 'high-impact',
 		label: 'High impact',
 		primary: true,
 		description: 'Questions with high or urgent priority'
 	},
 	{
-		type: 'decision',
+		type: 'open_question',
 		key: 'answered',
 		label: 'Answered',
 		primary: true,
 		description: 'Closed or answered questions',
+		statusMode: 'all'
+	},
+	{
+		type: 'decision',
+		key: 'needs-answer',
+		label: 'Needs answer',
+		primary: true,
+		description: 'Commitments waiting on operator input'
+	},
+	{
+		type: 'decision',
+		key: 'needs-review',
+		label: 'Needs review',
+		primary: true,
+		description: 'Decisions marked for review'
+	},
+	{
+		type: 'decision',
+		key: 'waiting-agent',
+		label: 'Waiting on agent',
+		primary: true,
+		description: 'Decisions waiting on agent follow-through'
+	},
+	{
+		type: 'decision',
+		key: 'high-impact',
+		label: 'High impact',
+		primary: true,
+		description: 'Decisions with high or urgent priority'
+	},
+	{
+		type: 'decision',
+		key: 'answered',
+		label: 'Decided',
+		primary: true,
+		description: 'Closed or answered decisions',
 		statusMode: 'all'
 	},
 	{
@@ -263,77 +305,77 @@ export const workFocusDefinitions: WorkFocusDefinition[] = [
 		key: 'no-parent',
 		label: 'No parent',
 		primary: false,
-		description: 'Tasks not attached to a parent project or change'
+		description: 'Tasks not attached to a parent project or change request'
 	},
 	{
-		type: 'routine',
+		type: 'automation',
 		key: 'scheduled-soon',
 		label: 'Scheduled soon',
 		primary: true,
-		description: 'Routines scheduled in the next 14 days'
+		description: 'Automations scheduled in the next 14 days'
 	},
 	{
-		type: 'routine',
+		type: 'automation',
 		key: 'overdue-run',
 		label: 'Overdue run',
 		primary: true,
-		description: 'Routines with a missed scheduled run'
+		description: 'Automations with a missed scheduled run'
 	},
 	{
-		type: 'routine',
+		type: 'automation',
 		key: 'blocked',
 		label: 'Blocked',
 		primary: true,
-		description: 'Routines marked blocked'
+		description: 'Automations marked blocked'
 	},
 	{
-		type: 'routine',
+		type: 'automation',
 		key: 'no-cadence',
 		label: 'No cadence',
 		primary: true,
-		description: 'Routines without a cadence value'
+		description: 'Automations without a cadence value'
 	},
 	{
-		type: 'routine',
+		type: 'automation',
 		key: 'recent-result',
 		label: 'Recent result',
 		primary: true,
-		description: 'Routines updated in the last 7 days'
+		description: 'Automations updated in the last 7 days'
 	},
 	{
-		type: 'observation',
+		type: 'finding',
 		key: 'needs-triage',
 		label: 'Needs triage',
 		primary: true,
-		description: 'Observations waiting on review or operator triage'
+		description: 'Findings waiting on review or operator triage'
 	},
 	{
-		type: 'observation',
+		type: 'finding',
 		key: 'linked-to-work',
 		label: 'Linked to work',
 		primary: true,
-		description: 'Observations attached to another Work item'
+		description: 'Findings attached to another Work item'
 	},
 	{
-		type: 'observation',
+		type: 'finding',
 		key: 'unlinked',
 		label: 'Unlinked',
 		primary: true,
-		description: 'Observations without a parent Work item'
+		description: 'Findings without a parent Work item'
 	},
 	{
-		type: 'observation',
+		type: 'finding',
 		key: 'recent',
 		label: 'Recent',
 		primary: true,
-		description: 'Observations captured in the last 7 days'
+		description: 'Findings captured in the last 7 days'
 	},
 	{
-		type: 'observation',
+		type: 'finding',
 		key: 'source',
 		label: 'Source',
 		primary: false,
-		description: 'Observations filtered by source owner or area'
+		description: 'Findings filtered by source owner or area'
 	}
 ];
 
@@ -382,7 +424,7 @@ export function projectPortfolioPulse(
 		],
 		[
 			'needs-decision',
-			'Needs decision',
+			'Needs resolution',
 			`${basePath}?focus=needs-decision`,
 			'text-status-warning',
 			'Waiting on operator judgment'
@@ -436,12 +478,12 @@ export function matchesWorkFocus(
 	const definition = focusDefinitionForType(item.type, focus);
 	if (!definition) return true;
 	if (item.type === 'project') return matchesProjectFocus(item, definition.key, items, now);
-	if (item.type === 'change') return matchesChangeFocus(item, definition.key, now);
-	if (item.type === 'decision') return matchesDecisionFocus(item, definition.key);
+	if (item.type === 'change_request') return matchesChangeFocus(item, definition.key, now);
+	if (item.type === 'open_question' || item.type === 'decision')
+		return matchesDecisionFocus(item, definition.key);
 	if (item.type === 'task') return matchesTaskFocus(item, definition.key, now);
-	if (item.type === 'routine') return matchesRoutineFocus(item, definition.key, now);
-	if (item.type === 'observation')
-		return matchesObservationFocus(item, definition.key, now, options);
+	if (item.type === 'automation') return matchesAutomationFocus(item, definition.key, now);
+	if (item.type === 'finding') return matchesFindingFocus(item, definition.key, now, options);
 	return true;
 }
 
@@ -518,12 +560,12 @@ export function riskFlagsFor(
 			openStatuses.has(candidate.status) &&
 			(candidate.status === 'needs_review' ||
 				candidate.waiting_on === 'operator' ||
-				(candidate.type === 'decision' && candidate.status !== 'complete'))
+				(['open_question', 'decision'].includes(candidate.type) && candidate.status !== 'complete'))
 	);
 	if (needsDecision.length > 0) {
 		flags.push({
 			key: 'needs-decision-related',
-			label: 'Needs decision',
+			label: 'Needs resolution',
 			detail: `${needsDecision.length} related ${needsDecision.length === 1 ? 'item needs' : 'items need'} operator review.`,
 			tone: 'text-status-warning'
 		});
@@ -545,7 +587,8 @@ export function projectHealth(
 	children: WorkItem[],
 	now = Date.now()
 ): ProjectHealth {
-	if (project.status === 'blocked' || children.some((child) => child.status === 'blocked')) {
+	const currentNext = projectCurrentNextItem(project, children);
+	if (currentNext && currentNextBlocked(currentNext)) {
 		return { label: 'Blocked', tone: 'text-status-danger', rank: 0 };
 	}
 	if (isItemOverdue(project, now) || children.some((child) => isItemOverdue(child, now))) {
@@ -560,9 +603,9 @@ export function projectHealth(
 				openStatuses.has(child.status) &&
 				(child.status === 'needs_review' ||
 					child.waiting_on === 'operator' ||
-					(child.type === 'decision' && child.status !== 'complete'))
+					(['open_question', 'decision'].includes(child.type) && child.status !== 'complete'))
 		);
-	if (needsDecision) return { label: 'Needs decision', tone: 'text-status-warning', rank: 2 };
+	if (needsDecision) return { label: 'Needs resolution', tone: 'text-status-warning', rank: 2 };
 
 	const needsAttention =
 		project.priority === 'urgent' ||
@@ -593,17 +636,18 @@ export function projectOpenWork(project: WorkItem, children: WorkItem[]): string
 			return `${count} ${count === 1 ? singular : plural}`;
 		})
 		.filter(Boolean);
-	return parts.length ? parts.join(' · ') : 'No tracked next steps';
+	return parts.length ? parts.join(' · ') : 'No tracked tasks';
 }
 
 export function projectNextMove(project: WorkItem, children: WorkItem[]): string {
-	const blockers = literalBlockersFor(project, children);
-	if (blockers[0]) return `Clear: ${blockers[0].title}`;
+	const currentNext = projectCurrentNextItem(project, children);
+	if (currentNext && currentNextBlocked(currentNext)) return `Clear: ${currentNext.title}`;
+	if (currentNext) return currentNext.title;
 
 	const decision = children.find(
 		(child) =>
 			openStatuses.has(child.status) &&
-			(child.type === 'decision' ||
+			(['open_question', 'decision'].includes(child.type) ||
 				child.status === 'needs_review' ||
 				child.waiting_on === 'operator')
 	);
@@ -612,8 +656,24 @@ export function projectNextMove(project: WorkItem, children: WorkItem[]): string
 	const dated = projectUpcomingItem(project, children);
 	if (dated && dated.id !== project.id) return `Move next dated work: ${dated.title}`;
 
-	const task = children.find((child) => openStatuses.has(child.status) && child.type === 'task');
-	return firstText(project.next_action, task?.next_action, task?.title, 'No operator action set');
+	return firstText(project.next_action, 'No operator action set');
+}
+
+export function projectCurrentNextItem(project: WorkItem, children: WorkItem[]): WorkItem | null {
+	if (project.current_next_item_id) {
+		const linked = children.find((child) => child.id === project.current_next_item_id);
+		if (linked && openStatuses.has(linked.status) && actionableChildTypes.has(linked.type)) {
+			return linked;
+		}
+	}
+	const actionable = children.filter(
+		(child) => openStatuses.has(child.status) && actionableChildTypes.has(child.type)
+	);
+	return actionable.find((child) => !currentNextBlocked(child)) ?? actionable[0] ?? null;
+}
+
+export function currentNextBlocked(item: WorkItem): boolean {
+	return item.status === 'blocked' || item.status === 'waiting';
 }
 
 export function projectUpcomingItem(project: WorkItem, children: WorkItem[]): WorkItem | null {
@@ -650,9 +710,7 @@ export function isProjectStale(project: WorkItem, children: WorkItem[], now = Da
 export function projectHasNoNextMove(project: WorkItem, children: WorkItem[]): boolean {
 	if (!openStatuses.has(project.status)) return false;
 	if (project.next_action?.trim()) return false;
-	return !children.some(
-		(child) => openStatuses.has(child.status) && actionableChildTypes.has(child.type)
-	);
+	return !projectCurrentNextItem(project, children);
 }
 
 export function matchesProjectFocus(
@@ -665,7 +723,8 @@ export function matchesProjectFocus(
 	const children = projectChildren(project, items);
 	const health = projectHealth(project, children, now);
 	if (focus === 'blocked') {
-		return project.status === 'blocked' || children.some((child) => child.status === 'blocked');
+		const currentNext = projectCurrentNextItem(project, children);
+		return Boolean(currentNext && currentNextBlocked(currentNext));
 	}
 	if (focus === 'overdue') {
 		return isItemOverdue(project, now) || children.some((child) => isItemOverdue(child, now));
@@ -789,7 +848,7 @@ function matchesTaskFocus(item: WorkItem, focus: string, now: number): boolean {
 	return true;
 }
 
-function matchesRoutineFocus(item: WorkItem, focus: string, now: number): boolean {
+function matchesAutomationFocus(item: WorkItem, focus: string, now: number): boolean {
 	if (focus === 'scheduled-soon') return isWithinDays(item.scheduled_at, 14, now);
 	if (focus === 'overdue-run') return isItemOverdue(item, now);
 	if (focus === 'blocked') return item.status === 'blocked';
@@ -799,7 +858,7 @@ function matchesRoutineFocus(item: WorkItem, focus: string, now: number): boolea
 	return true;
 }
 
-function matchesObservationFocus(
+function matchesFindingFocus(
 	item: WorkItem,
 	focus: string,
 	now: number,
@@ -813,7 +872,7 @@ function matchesObservationFocus(
 	if (focus === 'recent') return isRecentActivity(item, 7, now);
 	if (focus === 'source') {
 		if (!options.source) return true;
-		return observationSource(item) === options.source;
+		return findingSource(item) === options.source;
 	}
 	return true;
 }
@@ -827,7 +886,7 @@ function projectNeedsDecision(project: WorkItem, children: WorkItem[]): boolean 
 				openStatuses.has(child.status) &&
 				(child.status === 'needs_review' ||
 					child.waiting_on === 'operator' ||
-					(child.type === 'decision' && child.status !== 'complete'))
+					(['open_question', 'decision'].includes(child.type) && child.status !== 'complete'))
 		)
 	);
 }
@@ -838,7 +897,7 @@ function projectChildren(project: WorkItem, items: WorkItem[]): WorkItem[] {
 
 function projectHealthTone(label: ProjectHealthLabel): string {
 	if (label === 'Blocked' || label === 'Overdue') return 'text-status-danger';
-	if (label === 'Needs decision' || label === 'Needs attention') return 'text-status-warning';
+	if (label === 'Needs resolution' || label === 'Needs attention') return 'text-status-warning';
 	if (label === 'On track') return 'text-status-active';
 	return 'text-on-surface-variant';
 }
@@ -855,7 +914,7 @@ function isRecentActivity(item: WorkItem, days: number, now: number): boolean {
 	return ageMs >= 0 && ageMs <= days * 24 * 60 * 60 * 1000;
 }
 
-function observationSource(item: WorkItem): string {
+function findingSource(item: WorkItem): string {
 	return firstText(item.owner, item.area_id, 'Work');
 }
 
