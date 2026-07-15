@@ -116,9 +116,42 @@ export interface CronJobInput {
 	sessionTarget?: string;
 }
 
+/**
+ * Map the form's CronJobInput to the gateway protocol v4 `cron.add` shape.
+ * v4 replaced the flat `{scheduleType, schedule(string), payloadType}` with a
+ * discriminated `schedule` object and a `payload` body.
+ */
+function toCronAddParams(input: CronJobInput): Record<string, unknown> {
+	let schedule: Record<string, unknown>;
+	if (input.scheduleType === 'interval') {
+		schedule = { kind: 'every', everyMs: Number(input.schedule) };
+	} else if (input.scheduleType === 'one-shot') {
+		schedule = { kind: 'at', at: input.schedule };
+	} else {
+		schedule = { kind: 'cron', expr: input.schedule };
+	}
+
+	// The form has no dedicated payload-body field; use the description (or name)
+	// as the system-event text / agent-turn message.
+	const body = input.description?.trim() || input.name;
+	const payload =
+		input.payloadType === 'agent-turn'
+			? { kind: 'agentTurn', message: body }
+			: { kind: 'systemEvent', text: body };
+
+	return {
+		name: input.name,
+		description: input.description,
+		sessionTarget: input.sessionTarget ?? 'main',
+		wakeMode: 'next-heartbeat',
+		schedule,
+		payload
+	};
+}
+
 export async function createCronJob(input: CronJobInput): Promise<boolean> {
 	try {
-		await rpc('cron.create', input as unknown as Record<string, unknown>);
+		await rpc('cron.add', toCronAddParams(input));
 		await loadCronJobs();
 		return true;
 	} catch (err) {
@@ -143,7 +176,7 @@ export async function updateCronJob(
 
 export async function deleteCronJob(id: string): Promise<boolean> {
 	try {
-		await rpc('cron.delete', { id });
+		await rpc('cron.remove', { id });
 		await loadCronJobs();
 		return true;
 	} catch (err) {

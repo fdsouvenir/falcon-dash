@@ -252,7 +252,11 @@ function resolveGraphCascades(items: WorkItem[], relationships: WorkRelationship
 		const blockers = requiredOpenBlockers(item.id, relationships, byId);
 		if (blockers.length > 0) continue;
 		const nextStatus =
-			item.type === 'decision' ? 'needs_review' : item.type === 'routine' ? 'scheduled' : 'ready';
+			item.type === 'decision'
+				? 'needs_review'
+				: item.type === 'automation'
+					? 'scheduled'
+					: 'ready';
 		updateWorkItem(item.id, {
 			status: nextStatus,
 			waiting_on: null,
@@ -285,7 +289,7 @@ function findStaleRiskCandidates(
 	);
 	if (
 		trigger &&
-		trigger.type === 'observation' &&
+		trigger.type === 'finding' &&
 		closedStatuses.has(trigger.status) &&
 		openQuestions.length > 0 &&
 		!connectedIds.has(trigger.id)
@@ -397,11 +401,12 @@ function deriveNextMove(project: WorkItem, children: WorkItem[]): string {
 	if (decision) return `Decide: ${decision.title}`;
 	const action = openChildren.find(
 		(item) =>
-			['task', 'change'].includes(item.type) && ['ready', 'in_progress'].includes(item.status)
+			['task', 'change_request'].includes(item.type) &&
+			['ready', 'in_progress'].includes(item.status)
 	);
 	if (action) return action.next_action ?? action.title;
 	const scheduled = openChildren.find(
-		(item) => item.type === 'routine' || item.scheduled_at || item.due_date
+		(item) => item.type === 'automation' || item.scheduled_at || item.due_date
 	);
 	if (scheduled) return `Track: ${scheduled.title}`;
 	return project.next_action?.trim() || 'No operator action set';

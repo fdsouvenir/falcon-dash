@@ -37,17 +37,19 @@
 	>([]);
 	let agentsData = $state<{
 		active?: Array<{
-			runId: string;
-			task: string;
-			model: string;
+			taskId: string;
+			runId?: string;
+			task?: string;
+			model?: string;
 			tokens?: number;
 			cost?: number;
 			startedAt?: number;
 		}>;
 		history?: Array<{
-			runId: string;
-			task: string;
-			model: string;
+			taskId: string;
+			runId?: string;
+			task?: string;
+			model?: string;
 			tokens?: number;
 			cost?: number;
 			completedAt?: number;
@@ -126,19 +128,36 @@
 		const errors: string[] = [];
 
 		await Promise.allSettled([
-			rpc<{ uptime?: number; model?: string; sessions?: number }>('info.status')
+			// v4: `status` replaces `info.status`. Model/session count live under
+			// the `sessions` block; gateway uptime comes from the snapshot instead.
+			rpc<{ sessions?: { count?: number; defaults?: { model?: string } } }>('status')
 				.then((r) => {
-					gatewayStatus = { uptime: r.uptime, currentModel: r.model, sessionCount: r.sessions };
+					gatewayStatus = {
+						currentModel: r.sessions?.defaults?.model,
+						sessionCount: r.sessions?.count
+					};
 				})
-				.catch(() => errors.push('info.status')),
-			rpc<{
-				providers?: Array<{ name: string; tokens: number; cost?: number }>;
-				total?: { tokens: number; cost?: number };
-			}>('info.usage')
-				.then((r) => {
-					usageData = r;
+				.catch(() => errors.push('status')),
+			// v4: `usage.cost` gives lifetime totals; `usage.status` gives the
+			// per-provider list. Combine them into the panel's shape.
+			Promise.all([
+				rpc<{ totals?: { totalTokens?: number; totalCost?: number } }>('usage.cost'),
+				rpc<{ providers?: Array<{ displayName?: string; provider: string }> }>('usage.status')
+			])
+				.then(([cost, status]) => {
+					usageData = {
+						providers: (status.providers ?? []).map((p) => ({
+							name: p.displayName ?? p.provider,
+							tokens: 0
+						})),
+						total: {
+							tokens: cost.totals?.totalTokens ?? 0,
+							cost: cost.totals?.totalCost
+						}
+					};
 				})
-				.catch(() => errors.push('info.usage')),
+				.catch(() => errors.push('usage')),
+			// v4: `node.list` (singular) replaces `nodes.list`.
 			rpc<{
 				nodes: Array<{
 					id: string;
@@ -147,42 +166,52 @@
 					capabilities?: string[];
 					deviceType?: string;
 				}>;
-			}>('nodes.list')
+			}>('node.list')
 				.then((r) => {
 					nodesData = r.nodes || [];
 				})
-				.catch(() => errors.push('nodes.list')),
+				.catch(() => errors.push('node.list')),
+			// v4: agent runs live in the task ledger. `agents.list` only returns
+			// configured agents, so active/recent runs come from `tasks.list`.
 			rpc<{
-				active?: Array<{
-					runId: string;
-					task: string;
-					model: string;
-					tokens?: number;
-					cost?: number;
-					startedAt?: number;
+				tasks?: Array<{
+					id: string;
+					status: string;
+					title?: string;
+					runtime?: string;
+					runId?: string;
+					createdAt?: number | string;
+					startedAt?: number | string;
 				}>;
-				history?: Array<{
-					runId: string;
-					task: string;
-					model: string;
-					tokens?: number;
-					cost?: number;
-					completedAt?: number;
-				}>;
-			}>('agents.list')
+			}>('tasks.list')
 				.then((r) => {
-					agentsData = r;
+					const tasks = r.tasks ?? [];
+					const toItem = (t: (typeof tasks)[number]) => ({
+						taskId: t.id,
+						runId: t.runId,
+						task: t.title,
+						model: t.runtime,
+						startedAt: Number(t.startedAt ?? t.createdAt) || undefined
+					});
+					agentsData = {
+						active: tasks
+							.filter((t) => t.status === 'queued' || t.status === 'running')
+							.map(toItem),
+						history: tasks
+							.filter((t) => t.status !== 'queued' && t.status !== 'running')
+							.map(toItem)
+					};
 				})
-				.catch(() => errors.push('agents.list'))
+				.catch(() => errors.push('tasks.list'))
 		]);
 
 		rpcErrors = errors;
 		loadingRpc = false;
 	}
 
-	async function stopAgent(runId: string) {
+	async function stopAgent(taskId: string) {
 		try {
-			await rpc('agents.stop', { runId });
+			await rpc('tasks.cancel', { taskId });
 			addToast('Agent stopped', 'success');
 			loadRpcData();
 		} catch {
@@ -719,7 +748,7 @@
 							<span class="ml-1 font-mono text-status-muted">{agentsData.active.length}</span>
 						</h4>
 						<div class="space-y-1.5">
-							{#each agentsData.active as agent (agent.runId)}
+							{#each agentsData.active as agent (agent.taskId)}
 								<div
 									class="flex items-start justify-between rounded border border-surface-border/30 bg-surface-1/40 px-2.5 py-2"
 								>
@@ -738,7 +767,7 @@
 										</div>
 									</div>
 									<button
-										onclick={() => stopAgent(agent.runId)}
+										onclick={() => stopAgent(agent.taskId)}
 										class="ml-2 rounded bg-red-900/40 px-1.5 py-0.5 text-[length:var(--text-badge)] text-red-400 transition-colors hover:bg-red-900/70"
 									>
 										Stop
@@ -769,7 +798,7 @@
 							</svg>
 						</summary>
 						<div class="space-y-1 border-t border-surface-border px-3.5 py-2.5">
-							{#each agentsData.history.slice(0, 10) as agent (agent.runId)}
+							{#each agentsData.history.slice(0, 10) as agent (agent.taskId)}
 								<div
 									class="flex items-center gap-2 rounded border border-surface-border/20 bg-surface-1/30 px-2.5 py-1.5"
 								>

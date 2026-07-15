@@ -8,6 +8,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		const type = url.searchParams.get('type') as WorkItemType | null;
 		const status = url.searchParams.get('status') as WorkStatus | null;
 		const areaId = url.searchParams.get('area_id');
+		const categoryId = url.searchParams.get('category_id');
+		const subcategoryId = url.searchParams.get('subcategory_id');
 		const parentItemIdParam = url.searchParams.get('parent_item_id');
 		const includeClosed = url.searchParams.get('includeClosed') === 'true';
 		const limitParam = url.searchParams.get('limit');
@@ -15,6 +17,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			type: type ?? undefined,
 			status: status ?? undefined,
 			area_id: areaId ?? undefined,
+			category_id: categoryId ?? undefined,
+			subcategory_id: subcategoryId ?? undefined,
 			parent_item_id:
 				parentItemIdParam === null
 					? undefined
@@ -33,7 +37,11 @@ export const GET: RequestHandler = async ({ url }) => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const item = createWorkItem({ ...body, actor: body.actor ?? 'agent' });
+		const item = createWorkItem({
+			...body,
+			area_id: body.area_id ?? body.subcategory_id ?? body.category_id,
+			actor: body.actor ?? 'agent'
+		});
 		return json(item, { status: 201 });
 	} catch (err) {
 		return handleWorkError(err);

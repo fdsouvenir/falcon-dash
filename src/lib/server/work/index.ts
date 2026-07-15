@@ -11,18 +11,29 @@ export {
 	WorkError,
 	addEvidenceRef,
 	createWorkRelationship,
-	createWorkItem,
 	deleteWorkRelationship,
+	createWorkBlockerLink,
+	createWorkItem,
+	deleteWorkBlockerLink,
+	deleteWorkCategory,
+	getWorkBlockerLink,
 	getWorkArea,
+	getWorkCategory,
 	getWorkItem,
 	getWorkItemByLegacy,
 	listWorkAreas,
+	listWorkBlockerLinks,
+	listWorkChangeLog,
+	listWorkCategories,
 	listWorkItems,
 	listWorkQueue,
 	listWorkRelationships,
 	listWorkRelationshipsForItems,
+	recordWorkChangeLog,
+	updateWorkBlockerLink,
 	updateWorkItem,
-	upsertWorkArea
+	upsertWorkArea,
+	upsertWorkCategory
 } from './crud.js';
 export { applyWorkMigration, isWorkSourceOfTruth, previewWorkMigration } from './migration.js';
 export { generateWorkContext, generateWorkItemContext } from './context.js';
@@ -40,6 +51,16 @@ export { emitWorkEvent, getRecentWorkEvents, getWorkStateVersion, onWorkEvent } 
 export { getFalconDashModules, FALCON_DASH_MODULES } from './module.js';
 export type {
 	WorkArea,
+	WorkBlockerLink,
+	WorkBlockerSource,
+	WorkBlockerStatus,
+	WorkCategory,
+	WorkCategoryDeleteResult,
+	WorkCategoryKind,
+	WorkChange,
+	WorkChangeAction,
+	WorkChangeEntityType,
+	WorkChangeLogEntry,
 	WorkContextResponse,
 	WorkEvidenceRef,
 	WorkItem,

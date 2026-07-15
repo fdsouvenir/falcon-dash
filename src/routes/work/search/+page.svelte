@@ -5,10 +5,11 @@
 	import {
 		formatDateTime,
 		formatStatus,
+		isStandaloneWorkType,
 		itemDisplayId,
 		pathForType,
 		statusTone,
-		typeConfigs,
+		standaloneTypeConfigs,
 		type WorkItem
 	} from '$lib/work/work-ui.js';
 	import { Search } from '@lucide/svelte';
@@ -23,7 +24,7 @@
 	const results = $derived.by(() => {
 		if (!normalizedQuery) return [];
 		return items
-			.filter((item) => item.status !== 'archived')
+			.filter((item) => item.status !== 'archived' && isStandaloneWorkType(item.type))
 			.map((item) => ({ item, match: matchText(item, normalizedQuery) }))
 			.filter((entry) => entry.match)
 			.sort((a, b) => b.item.last_activity_at - a.item.last_activity_at);
@@ -53,7 +54,7 @@
 	}
 
 	function typeLabel(item: WorkItem): string {
-		return typeConfigs.find((config) => config.type === item.type)?.singular ?? item.type;
+		return standaloneTypeConfigs.find((config) => config.type === item.type)?.singular ?? item.type;
 	}
 
 	function matchText(item: WorkItem, needle: string): string {

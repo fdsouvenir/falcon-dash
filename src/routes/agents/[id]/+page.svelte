@@ -128,10 +128,10 @@
 		}
 	}
 
-	async function handleStop(runId: string) {
+	async function handleStop(taskId: string) {
 		stopping = true;
 		try {
-			await stopAgent(runId);
+			await stopAgent(taskId);
 			addToast('Agent stopped', 'success');
 		} catch (err) {
 			addToast(`Failed to stop: ${err}`, 'error');
@@ -307,7 +307,7 @@
 						</div>
 					{:else}
 						<div class="space-y-2">
-							{#each activeAgents as run (run.runId)}
+							{#each activeAgents as run (run.taskId)}
 								<div
 									class="flex items-center justify-between rounded-lg border border-surface-border/60 bg-surface-2/40 p-3"
 								>
@@ -327,7 +327,7 @@
 										</div>
 									</div>
 									<button
-										onclick={() => handleStop(run.runId)}
+										onclick={() => handleStop(run.taskId)}
 										disabled={stopping}
 										class="ml-3 rounded-lg bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
 									>

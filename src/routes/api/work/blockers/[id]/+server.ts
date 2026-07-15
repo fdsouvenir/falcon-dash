@@ -1,13 +1,18 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { getWorkItem, updateWorkItem, WorkError } from '$lib/server/work/index.js';
+import {
+	deleteWorkBlockerLink,
+	getWorkBlockerLink,
+	updateWorkBlockerLink,
+	WorkError
+} from '$lib/server/work/index.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	try {
 		const id = Number(params.id);
-		const item = getWorkItem(id);
-		if (!item) throw new WorkError('WORK_NOT_FOUND', `Work item ${id} not found`);
-		return json(item);
+		const blocker = getWorkBlockerLink(id);
+		if (!blocker) throw new WorkError('WORK_NOT_FOUND', `Blocker link ${id} not found`);
+		return json(blocker);
 	} catch (err) {
 		return handleWorkError(err);
 	}
@@ -17,13 +22,23 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	try {
 		const id = Number(params.id);
 		const body = await request.json();
-		const item = updateWorkItem(id, {
+		const blocker = updateWorkBlockerLink(id, {
 			...body,
-			area_id: body.area_id ?? body.subcategory_id ?? body.category_id,
 			actor: body.actor ?? 'agent'
 		});
-		if (!item) throw new WorkError('WORK_NOT_FOUND', `Work item ${id} not found`);
-		return json(item);
+		if (!blocker) throw new WorkError('WORK_NOT_FOUND', `Blocker link ${id} not found`);
+		return json(blocker);
+	} catch (err) {
+		return handleWorkError(err);
+	}
+};
+
+export const DELETE: RequestHandler = async ({ params }) => {
+	try {
+		const id = Number(params.id);
+		const blocker = deleteWorkBlockerLink(id);
+		if (!blocker) throw new WorkError('WORK_NOT_FOUND', `Blocker link ${id} not found`);
+		return json({ deleted: true, id });
 	} catch (err) {
 		return handleWorkError(err);
 	}
