@@ -239,6 +239,11 @@ Work-specific context, migration, and API behavior live in [Work management](wor
 
 ## Settings components
 
+Cron and heartbeat editors must reflect gateway capabilities rather than assuming every connected
+gateway exposes the same mutation surface. Preserve opaque schedule, payload, session, and timing
+metadata when editing existing cron jobs; keep a failed editor open and surface the store error
+when a protocol cannot apply a requested heartbeat setting.
+
 ### SettingsPage (`src/lib/components/settings/SettingsPage.svelte`)
 
 Tab-based settings interface. Available tabs:

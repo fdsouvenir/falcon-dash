@@ -40,8 +40,12 @@ interface TaskSummary {
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 
-function asTimestamp(value: string | number | undefined): string | undefined {
-	return value === undefined ? undefined : String(value);
+export function asTimestamp(value: string | number | undefined): string | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value === 'string') return value;
+	const milliseconds = value < 1_000_000_000_000 ? value * 1000 : value;
+	const date = new Date(milliseconds);
+	return Number.isNaN(date.valueOf()) ? undefined : date.toISOString();
 }
 
 export interface AgentLifecycleState {

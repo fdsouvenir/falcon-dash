@@ -22,10 +22,15 @@ Gateway 2026.6.10 serves **protocol v4**; Falcon Dash hardcoded v3 and could not
 - **Device signing is still v2.** The gateway and its own control-ui both sign with the `v2|deviceId|clientId|clientMode|role|scopes|signedAt|token|nonce` format. No v3 sign-string exists in the installed gateway — do NOT speculatively emit v3 or connect auth breaks.
 - **Many RPC methods were renamed or reshaped.** Confirmed against the installed binary + live `hello-ok.features.methods`:
   - `cron.create`→`cron.add`, `cron.delete`→`cron.remove`. **`cron.add` also reshaped:** `schedule` is now a discriminated object (`{kind:'cron',expr}` / `{kind:'every',everyMs}` / `{kind:'at',at}`), plus required `payload` (`{kind:'systemEvent',text}` / `{kind:'agentTurn',message}`), `sessionTarget`, and `wakeMode`. `cron.remove/update/run` accept `id` (anyOf `id`/`jobId`).
+    `cron.list` keeps runtime times/status under `job.state`; `cron.update.patch` uses the same nested
+    schedule/payload objects; and `cron.runs` returns `{entries}` with `ok`/`error`/`skipped` statuses.
+    Human interval input must be parsed into integer milliseconds. `systemEvent` requires `main`,
+    while `agentTurn` requires `isolated`, `current`, or `session:<id>`.
   - `agents-files.get/set`→`agents.files.get/set` AND params changed: `{agentId, name}` (not `path`); content is at `payload.file.content`.
   - `agents.stop` removed → `tasks.cancel {taskId}` (or `sessions.abort {sessionKey, runId}`).
   - `agents.list` now returns **configured agents** (`{agents:[...]}`), NOT runs. Agent runs live in the **task ledger**: `tasks.list` → `{tasks: TaskSummary[]}` (status `queued`/`running` = active). `tasks.cancel {taskId}` stops a run.
   - `heartbeat.status` removed. Heartbeat enabled/interval come from the `status` payload (`status.heartbeat.agents[]`); enable/disable via `set-heartbeats {enabled}` (global toggle only — interval/activeHours/deliveryTarget have no granular v4 RPC, they're gateway config). Template via `agents.files.*`.
+    `last-heartbeat` returns one nullable event (`{ts,status,...}`), not an executions collection.
   - `info.status`→`status` (session count at `sessions.count`; no uptime field — use the hello-ok snapshot `uptimeMs`). `info.usage`→`usage.cost` (totals) + `usage.status` (provider list). `nodes.list`→`node.list`.
   - `skills.uninstall` removed (no RPC replacement; removal is a gateway config edit).
   - `config.get` dropped path-scoping (`{path:'heartbeat'}` is rejected); call with `{}` for the full config.

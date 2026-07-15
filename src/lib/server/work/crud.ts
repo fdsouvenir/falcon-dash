@@ -373,45 +373,53 @@ export function createWorkItem(data: CreateWorkItemInput): WorkItem {
 	const type = assertType(data.type);
 	const status = assertStatus(data.status ?? defaultStatusForType(type));
 	validateTypedDetails(type, data);
-	const result = db
-		.prepare(
-			`INSERT INTO work_items (
+	const created = db.transaction(() => {
+		const result = db
+			.prepare(
+				`INSERT INTO work_items (
 			 type, area_id, parent_item_id, title, description, body, status, owner, waiting_on, priority,
 			 next_action, approval_required, due_date, scheduled_at, stale_after, result,
 			 legacy_project_id, legacy_plan_id, created_at, updated_at, last_activity_at
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		)
-		.run(
-			type,
-			data.area_id ?? null,
-			data.parent_item_id ?? null,
-			data.title,
-			data.description ?? null,
-			data.body ?? null,
-			status,
-			data.owner ?? null,
-			data.waiting_on ?? null,
-			data.priority ?? 'normal',
-			data.next_action ?? null,
-			toApprovalFlag(data.approval_required),
-			data.due_date ?? null,
-			data.scheduled_at ?? null,
-			data.stale_after ?? null,
-			data.result ?? null,
-			data.legacy_project_id ?? null,
-			data.legacy_plan_id ?? null,
-			ts,
-			ts,
-			ts
-		);
-	const id = result.lastInsertRowid as number;
-	upsertTypedDetails(id, type, data);
-	logWorkActivity(id, data.actor ?? 'system', 'created', `Created ${type}`);
-	createWorkVersion(id, data.actor ?? 'system');
-	const created = getWorkItem(id)!;
-	recordWorkItemChange(created, 'created', data.actor ?? 'system', data.source, `Created ${type}`);
-	syncImplicitBlockerLinksForItem(created);
-	emitWorkEvent({ type: 'work.changed', entity: 'item', id, actor: data.actor ?? 'system' });
+			)
+			.run(
+				type,
+				data.area_id ?? null,
+				data.parent_item_id ?? null,
+				data.title,
+				data.description ?? null,
+				data.body ?? null,
+				status,
+				data.owner ?? null,
+				data.waiting_on ?? null,
+				data.priority ?? 'normal',
+				data.next_action ?? null,
+				toApprovalFlag(data.approval_required),
+				data.due_date ?? null,
+				data.scheduled_at ?? null,
+				data.stale_after ?? null,
+				data.result ?? null,
+				data.legacy_project_id ?? null,
+				data.legacy_plan_id ?? null,
+				ts,
+				ts,
+				ts
+			);
+		const id = result.lastInsertRowid as number;
+		upsertTypedDetails(id, type, data);
+		logWorkActivity(id, data.actor ?? 'system', 'created', `Created ${type}`);
+		createWorkVersion(id, data.actor ?? 'system');
+		const item = getWorkItem(id)!;
+		recordWorkItemChange(item, 'created', data.actor ?? 'system', data.source, `Created ${type}`);
+		syncImplicitBlockerLinksForItem(item);
+		return item;
+	})();
+	emitWorkEvent({
+		type: 'work.changed',
+		entity: 'item',
+		id: created.id,
+		actor: data.actor ?? 'system'
+	});
 	return created;
 }
 
@@ -449,22 +457,26 @@ export function updateWorkItem(id: number, data: UpdateWorkItemInput): WorkItem 
 	if (data.result !== undefined) set('result', data.result);
 
 	values.push(id);
-	db.prepare(`UPDATE work_items SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-	upsertTypedDetails(id, nextType, { ...current, ...data, type: nextType });
-	logWorkActivity(id, data.actor ?? 'system', 'updated', summarizeWorkUpdate(current, data));
-	createWorkVersion(id, data.actor ?? 'system');
-	const updated = getWorkItem(id);
+	const updated = db.transaction(() => {
+		db.prepare(`UPDATE work_items SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+		upsertTypedDetails(id, nextType, { ...current, ...data, type: nextType });
+		logWorkActivity(id, data.actor ?? 'system', 'updated', summarizeWorkUpdate(current, data));
+		createWorkVersion(id, data.actor ?? 'system');
+		const item = getWorkItem(id);
+		if (!item) return undefined;
+		const changes = diffWorkRecords(current, item, itemChangeFields);
+		recordWorkItemChange(
+			item,
+			actionForItemChanges(current, item, changes),
+			data.actor ?? 'system',
+			data.source,
+			summarizeChangeLog(changes, 'Updated'),
+			changes
+		);
+		syncImplicitBlockerLinksForItem(item);
+		return item;
+	})();
 	if (!updated) return undefined;
-	const changes = diffWorkRecords(current, updated, itemChangeFields);
-	recordWorkItemChange(
-		updated,
-		actionForItemChanges(current, updated, changes),
-		data.actor ?? 'system',
-		data.source,
-		summarizeChangeLog(changes, 'Updated'),
-		changes
-	);
-	syncImplicitBlockerLinksForItem(updated);
 	emitWorkEvent({ type: 'work.changed', entity: 'item', id, actor: data.actor ?? 'system' });
 	return updated;
 }

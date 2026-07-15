@@ -11,10 +11,12 @@ import {
 	createWorkItem,
 	deleteWorkBlockerLink,
 	deleteWorkCategory,
+	getWorkDb,
 	getWorkItem,
 	listWorkBlockerLinks,
 	listWorkChangeLog,
 	listWorkCategories,
+	listWorkItems,
 	resetWorkSchemaForTests,
 	updateWorkBlockerLink,
 	updateWorkItem,
@@ -144,6 +146,11 @@ describe('Work change log', () => {
 			  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
 			  last_activity_at INTEGER NOT NULL DEFAULT (unixepoch())
 			);
+			CREATE TABLE work_activity (
+			  id INTEGER PRIMARY KEY AUTOINCREMENT,
+			  work_item_id INTEGER REFERENCES work_items(id) ON DELETE CASCADE,
+			  action TEXT NOT NULL
+			);
 			INSERT INTO work_items (id, type, title, description, next_action)
 			VALUES
 			  (1, 'area', 'Legacy area', 'A legacy grouping item', 'Review the grouping'),
@@ -152,6 +159,7 @@ describe('Work change log', () => {
 			  (4, 'change', 'Legacy change', 'A requested change', 'Verify it'),
 			  (5, 'decision', 'Who owns this?', 'Clarify the owner', NULL),
 			  (6, 'decision', 'Choose an option', 'Approve one option', 'Approve');
+			INSERT INTO work_activity (work_item_id, action) VALUES (2, 'legacy activity');
 		`);
 		oldDb.close();
 
@@ -169,6 +177,39 @@ describe('Work change log', () => {
 			title: 'Legacy area',
 			description: 'A legacy grouping item',
 			goal: 'A legacy grouping item'
+		});
+		expect(getWorkDb().pragma('foreign_key_check')).toEqual([]);
+		expect(
+			getWorkDb().prepare('SELECT action FROM work_activity WHERE work_item_id = 2').get()
+		).toEqual({ action: 'legacy activity' });
+	});
+
+	it('rolls back base rows when typed detail writes fail', () => {
+		expect(() =>
+			createWorkItem({
+				type: 'automation',
+				title: 'Invalid automation',
+				trigger_type: 'unsupported' as 'cron'
+			})
+		).toThrow();
+		expect(listWorkItems({ includeClosed: true }).map((item) => item.title)).not.toContain(
+			'Invalid automation'
+		);
+
+		const automation = createWorkItem({
+			type: 'automation',
+			title: 'Valid automation',
+			trigger_type: 'cron'
+		});
+		expect(() =>
+			updateWorkItem(automation.id, {
+				title: 'Partially updated automation',
+				trigger_type: 'unsupported' as 'cron'
+			})
+		).toThrow();
+		expect(getWorkItem(automation.id)).toMatchObject({
+			title: 'Valid automation',
+			trigger_type: 'cron'
 		});
 	});
 

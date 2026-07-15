@@ -1,5 +1,5 @@
 import { writable, readonly, type Readable, type Writable } from 'svelte/store';
-import { rpc, gatewayEvents } from '$lib/gateway-api.js';
+import { rpc, gatewayEvents, gatewaySupportsMethod } from '$lib/gateway-api.js';
 
 export interface HeartbeatConfig {
 	enabled: boolean;
@@ -37,6 +37,32 @@ let eventUnsub: (() => void) | null = null;
 // Agent the heartbeat config/template operations target. Resolved from the
 // gateway `status.heartbeat.defaultAgentId` on load; defaults to 'main'.
 let heartbeatAgentId = 'main';
+// `set-heartbeats` controls a process-local runtime flag that is not exposed by
+// the v4 status payload. Preserve the last acknowledged value for this client.
+let runtimeHeartbeatEnabled: boolean | null = null;
+let runtimeHeartbeatGatewayIdentity: string | null = null;
+let runtimeHeartbeatBootEpoch: number | null = null;
+
+// Preserve the process-local flag across transient WebSocket reconnects, but
+// discard it when the gateway endpoint or inferred process boot time changes.
+gatewayEvents.snapshot.subscribe((snapshot) => {
+	if (!snapshot) return;
+	const identity = [
+		snapshot.server.host,
+		snapshot.snapshot.configPath ?? '',
+		snapshot.snapshot.stateDir ?? ''
+	].join('|');
+	const bootEpoch =
+		typeof snapshot.snapshot.uptimeMs === 'number' ? Date.now() - snapshot.snapshot.uptimeMs : null;
+	const processChanged =
+		(runtimeHeartbeatGatewayIdentity !== null && runtimeHeartbeatGatewayIdentity !== identity) ||
+		(runtimeHeartbeatBootEpoch !== null &&
+			bootEpoch !== null &&
+			Math.abs(runtimeHeartbeatBootEpoch - bootEpoch) > 10_000);
+	if (processChanged) runtimeHeartbeatEnabled = null;
+	runtimeHeartbeatGatewayIdentity = identity;
+	runtimeHeartbeatBootEpoch = bootEpoch;
+});
 
 const HEARTBEAT_TEMPLATE_FILE = 'HEARTBEAT.md';
 
@@ -49,6 +75,14 @@ interface StatusHeartbeatAgent {
 }
 interface StatusPayload {
 	heartbeat?: { defaultAgentId?: string; agents?: StatusHeartbeatAgent[] };
+}
+
+interface GatewayHeartbeatEvent {
+	ts: number;
+	status: 'sent' | 'ok-empty' | 'ok-token' | 'skipped' | 'failed';
+	to?: string;
+	preview?: string;
+	reason?: string;
 }
 
 /**
@@ -71,21 +105,28 @@ function deriveStatus(config: HeartbeatConfig | null): HeartbeatStatus | null {
 export async function loadHeartbeatConfig(): Promise<void> {
 	_isLoading.set(true);
 	_error.set(null);
-	// Gateway protocol v4: heartbeat enabled/interval come from the `status`
-	// payload (per-agent), the template lives in the agent workspace file, and
-	// the last run comes from `last-heartbeat`. These are independent so one
-	// failing RPC doesn't blank the others.
-	const [statusResult, lastRunResult] = await Promise.allSettled([
-		rpc<StatusPayload>('status', {}),
-		rpc<{ executions?: HeartbeatExecution[] }>('last-heartbeat', {})
-	]);
+	try {
+		if (!(await gatewaySupportsMethod('agents.files.get'))) {
+			const [configResult, statusResult, templateResult] = await Promise.all([
+				rpc<{ heartbeat: HeartbeatConfig }>('config.get', { path: 'heartbeat' }),
+				rpc<HeartbeatStatus>('heartbeat.status', {}),
+				rpc<{ content: string }>('agents-files.get', { path: HEARTBEAT_TEMPLATE_FILE })
+			]);
+			_config.set(configResult.heartbeat ?? null);
+			_status.set(statusResult ?? null);
+			_template.set(templateResult.content ?? '');
+			return;
+		}
 
-	let lastRun: number | null = null;
-	if (lastRunResult.status === 'fulfilled') {
-		lastRun = lastRunResult.value.executions?.[0]?.timestamp ?? null;
-	}
+		// Gateway v4 exposes per-agent scheduling config, while the process-local
+		// pause flag is only acknowledged by `set-heartbeats`.
+		const [statusResult, lastRunResult] = await Promise.allSettled([
+			rpc<StatusPayload>('status', {}),
+			rpc<GatewayHeartbeatEvent | null>('last-heartbeat', {})
+		]);
+		const lastRun = lastRunResult.status === 'fulfilled' ? (lastRunResult.value?.ts ?? null) : null;
+		if (statusResult.status !== 'fulfilled') throw statusResult.reason;
 
-	if (statusResult.status === 'fulfilled') {
 		const hb = statusResult.value.heartbeat;
 		heartbeatAgentId = hb?.defaultAgentId ?? heartbeatAgentId;
 		const agent =
@@ -93,23 +134,16 @@ export async function loadHeartbeatConfig(): Promise<void> {
 		const prev = currentConfig();
 		const config: HeartbeatConfig | null = agent
 			? {
-					enabled: agent.enabled,
+					enabled: runtimeHeartbeatEnabled ?? agent.enabled,
 					intervalMinutes: Math.round(agent.everyMs / 60_000),
 					lastRun,
-					// activeHours/deliveryTarget are not exposed by v4 core status;
-					// preserve any previously loaded values or fall back to defaults.
 					activeHours: prev?.activeHours ?? { start: '00:00', end: '23:59', timezone: 'UTC' },
 					deliveryTarget: prev?.deliveryTarget ?? 'last'
 				}
 			: null;
 		_config.set(config);
 		_status.set(deriveStatus(config));
-	} else {
-		_error.set((statusResult.reason as Error).message);
-	}
 
-	// Load the template now that heartbeatAgentId is resolved.
-	try {
 		const fileResult = await rpc<{ file?: { content?: string } }>('agents.files.get', {
 			agentId: heartbeatAgentId,
 			name: HEARTBEAT_TEMPLATE_FILE
@@ -117,9 +151,9 @@ export async function loadHeartbeatConfig(): Promise<void> {
 		_template.set(fileResult.file?.content ?? '');
 	} catch (err) {
 		_error.set((err as Error).message);
+	} finally {
+		_isLoading.set(false);
 	}
-
-	_isLoading.set(false);
 }
 
 let _configValue: HeartbeatConfig | null = null;
@@ -130,9 +164,15 @@ function currentConfig(): HeartbeatConfig | null {
 
 export async function updateHeartbeatConfig(patch: Partial<HeartbeatConfig>): Promise<boolean> {
 	try {
+		if (!(await gatewaySupportsMethod('set-heartbeats'))) {
+			await rpc('config.patch', { path: 'heartbeat', value: patch });
+			await loadHeartbeatConfig();
+			return true;
+		}
 		// Gateway protocol v4 only exposes enable/disable via `set-heartbeats`.
 		if (patch.enabled !== undefined) {
-			await rpc('set-heartbeats', { enabled: patch.enabled });
+			const result = await rpc<{ enabled?: boolean }>('set-heartbeats', { enabled: patch.enabled });
+			runtimeHeartbeatEnabled = result.enabled ?? patch.enabled;
 		}
 		// Interval/activeHours/deliveryTarget are gateway config (or falcon-dash
 		// plugin) settings with no granular v4 RPC; surface that rather than
@@ -141,10 +181,10 @@ export async function updateHeartbeatConfig(patch: Partial<HeartbeatConfig>): Pr
 			(k) => patch[k] !== undefined
 		);
 		if (unsupported.length > 0) {
+			await loadHeartbeatConfig();
 			_error.set(
 				`Editing ${unsupported.join(', ')} is not supported by gateway protocol v4 core; configure it in the gateway config.`
 			);
-			await loadHeartbeatConfig();
 			return false;
 		}
 		await loadHeartbeatConfig();
@@ -157,11 +197,15 @@ export async function updateHeartbeatConfig(patch: Partial<HeartbeatConfig>): Pr
 
 export async function saveHeartbeatTemplate(content: string): Promise<boolean> {
 	try {
-		await rpc('agents.files.set', {
-			agentId: heartbeatAgentId,
-			name: HEARTBEAT_TEMPLATE_FILE,
-			content
-		});
+		if (await gatewaySupportsMethod('agents.files.set')) {
+			await rpc('agents.files.set', {
+				agentId: heartbeatAgentId,
+				name: HEARTBEAT_TEMPLATE_FILE,
+				content
+			});
+		} else {
+			await rpc('agents-files.set', { path: HEARTBEAT_TEMPLATE_FILE, content });
+		}
 		_template.set(content);
 		return true;
 	} catch (err) {
@@ -190,7 +234,26 @@ export interface HeartbeatExecution {
 	checked: string[];
 	surfaced: string[];
 	summary: string;
-	status: 'success' | 'error';
+	status: 'success' | 'error' | 'skipped';
+}
+
+export function mapHeartbeatEvent(event: GatewayHeartbeatEvent): HeartbeatExecution {
+	return {
+		id: `heartbeat-${event.ts}`,
+		timestamp: event.ts,
+		checked: [],
+		surfaced: event.preview ? [event.preview] : [],
+		summary: event.preview ?? event.reason ?? event.status,
+		status: event.status === 'failed' ? 'error' : event.status === 'skipped' ? 'skipped' : 'success'
+	};
+}
+
+export function normalizeHeartbeatHistory(
+	result: GatewayHeartbeatEvent | { executions?: HeartbeatExecution[] } | null
+): HeartbeatExecution[] {
+	if (!result) return [];
+	if ('ts' in result) return [mapHeartbeatEvent(result)];
+	return result.executions ?? [];
 }
 
 const _executions: Writable<HeartbeatExecution[]> = writable([]);
@@ -202,8 +265,11 @@ export const heartbeatExecutionsLoading: Readable<boolean> = readonly(_execution
 export async function loadHeartbeatHistory(): Promise<void> {
 	_executionsLoading.set(true);
 	try {
-		const result = await rpc<{ executions: HeartbeatExecution[] }>('last-heartbeat', {});
-		_executions.set(result.executions ?? []);
+		const result = await rpc<GatewayHeartbeatEvent | { executions?: HeartbeatExecution[] } | null>(
+			'last-heartbeat',
+			{}
+		);
+		_executions.set(normalizeHeartbeatHistory(result));
 	} catch (err) {
 		_error.set((err as Error).message);
 		_executions.set([]);

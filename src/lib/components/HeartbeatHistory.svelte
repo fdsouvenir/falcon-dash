@@ -53,6 +53,8 @@
 						<div class="flex items-center gap-2">
 							{#if exec.status === 'success'}
 								<span class="h-2 w-2 rounded-full bg-green-500"></span>
+							{:else if exec.status === 'skipped'}
+								<span class="h-2 w-2 rounded-full bg-status-muted"></span>
 							{:else}
 								<span class="h-2 w-2 rounded-full bg-red-500"></span>
 							{/if}

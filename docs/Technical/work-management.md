@@ -55,7 +55,9 @@ internally and are exposed through `/api/work/categories` using the user-facing
 settings gear instead of putting categories in the primary Work navigation. Settings renders a
 clean grouped directory; top-level category creation, nested subcategory creation, edits, and
 deletes happen in the contextual drawer. Deleting a category or subcategory removes it from the
-directory and unassigns linked Work items instead of archiving the category record.
+directory and unassigns linked Work items instead of archiving the category record. Item updates
+preserve the difference between an omitted category field and an explicit `null`, so selecting
+“None” reliably clears an assignment.
 
 ## ID Reference Convention
 
@@ -232,6 +234,10 @@ Work item reads join only the detail table that matches the row's `type`. This p
 type-detail rows left behind by old local development data from leaking project fields onto tasks
 or other item types.
 
+Base item rows, type-specific details, activity, versions, change-log records, and implicit blocker
+links are written in one SQLite transaction. A constraint failure in any typed detail therefore
+rolls the entire create or update back instead of leaving a visible partial item.
+
 ## Migration
 
 Migration reads the archived PM database as an external read-only source and writes into the Work
@@ -248,3 +254,6 @@ Mapping rules:
 - activity -> Work `finding` plus evidence ref
 
 Migration preview includes counts, warnings, and a self-review block before apply.
+Legacy in-place Work schema upgrades keep `legacy_alter_table` enabled while foreign keys are
+temporarily disabled so dependent tables continue to target the replacement `work_items` table;
+the migration regression suite verifies the preserved rows with `PRAGMA foreign_key_check`.

@@ -549,6 +549,67 @@ test.describe('work overview executive status board', () => {
 		}
 	});
 
+	test('clears an existing Work category through the item API', async ({ request }) => {
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E clear category ${Date.now()}`
+		});
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E categorized project ${Date.now()}`,
+			status: 'in_progress',
+			area_id: category.id
+		});
+
+		try {
+			const response = await request.patch(`/api/work/items/${project.id}`, {
+				data: { actor: 'playwright', area_id: null }
+			});
+			expect(response.ok()).toBe(true);
+			expect(await response.json()).toMatchObject({
+				id: project.id,
+				area_id: null,
+				category_id: null,
+				subcategory_id: null
+			});
+		} finally {
+			await archiveWorkItems(request, [project]);
+			await deleteWorkCategories(request, [category]);
+		}
+	});
+
+	test('prefers a populated category alias over a null subcategory alias', async ({ request }) => {
+		const category = await createWorkCategory(request, {
+			kind: 'category',
+			title: `E2E category alias ${Date.now()}`
+		});
+		const project = await createWorkItem(request, {
+			type: 'project',
+			title: `E2E category alias project ${Date.now()}`,
+			status: 'in_progress'
+		});
+
+		try {
+			const response = await request.patch(`/api/work/items/${project.id}`, {
+				data: {
+					actor: 'playwright',
+					category_id: category.id,
+					subcategory_id: null
+				}
+			});
+			expect(response.ok()).toBe(true);
+			expect(await response.json()).toMatchObject({
+				id: project.id,
+				area_id: category.id,
+				category_id: category.id,
+				subcategory_id: null
+			});
+		} finally {
+			await archiveWorkItems(request, [project]);
+			await deleteWorkCategories(request, [category]);
+		}
+	});
+
 	test('renders settings as a grouped directory with top-level category creation', async ({
 		page,
 		request,

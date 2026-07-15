@@ -4,6 +4,26 @@ This document covers the OpenClaw Gateway protocol (v3–v4) as implemented by F
 
 > **Protocol v4 (2026.6.x):** Falcon Dash negotiates a **range** (`minProtocol: 3, maxProtocol: 4`) and reads the selected version from `hello-ok.protocol`. v4 renamed/reshaped many RPC methods and events — see `docs/LEARNINGS.md` → "Gateway protocol v4 migration" for the authoritative list (cron, agents.files, tasks ledger, heartbeat, status/usage, session events).
 
+The v4 adapters are bidirectional: cron list records are flattened from nested schedule, payload,
+and state fields for the forms, while create and update requests rebuild the required discriminated
+objects. Human intervals such as `5m` are converted to integer `everyMs`; agent-turn payloads use
+isolated/current/named-session targets rather than `main`. Cron history reads `entries` (`ok`,
+`error`, or `skipped`), `last-heartbeat` is a single nullable event, and numeric task-ledger times
+are normalized as timestamps rather than decimal date strings.
+Cron edits preserve payload bodies and optional schedule metadata such as timezone, stagger, and
+interval anchor values that the current forms do not expose.
+Named `session:` targets retain their opaque gateway IDs, and skipped heartbeat events remain a
+distinct neutral state rather than being reported as successful executions.
+Realtime cron lifecycle events normalize v4 actions (`added`, `removed`, `started`, `finished`, and
+`scheduled`) and their nested job metadata while retaining v3 aliases during range negotiation.
+The same negotiated fallback preserves v3 flat cron records, run-history envelopes, mutation method
+names, heartbeat configuration methods, and heartbeat execution envelopes.
+RPC method selection is feature-detected from `hello-ok.features.methods` after the snapshot arrives;
+the negotiated frame protocol is not used as a proxy for method availability.
+Cron listing follows the v4 pagination cursor to completion. The v4 heartbeat runtime pause state is
+kept from the acknowledged `set-heartbeats` response because per-agent status only describes
+configuration, not that process-local switch.
+
 See also:
 
 - [Architecture overview](architecture.md) -- system-level context
