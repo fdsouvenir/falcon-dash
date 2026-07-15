@@ -421,27 +421,84 @@ export function sentenceCase(value: string): string {
 	return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-export function formatDate(value: number | string | null | undefined): string {
+export function formatDate(
+	value: number | string | null | undefined,
+	locale?: Intl.LocalesArgument,
+	now: Date = new Date()
+): string {
 	if (!value) return 'Not set';
-	const date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
-	if (Number.isNaN(date.valueOf())) return 'Not set';
-	return new Intl.DateTimeFormat(undefined, {
+	const date = workDate(value);
+	if (!date) return 'Not set';
+	return new Intl.DateTimeFormat(locale, {
 		month: 'short',
 		day: 'numeric',
-		year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+		year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
 	}).format(date);
 }
 
 export function formatDateTime(value: number | string | null | undefined): string {
 	if (!value) return 'Not set';
-	const date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
-	if (Number.isNaN(date.valueOf())) return 'Not set';
+	const date = workDate(value);
+	if (!date) return 'Not set';
 	return new Intl.DateTimeFormat(undefined, {
 		month: 'short',
 		day: 'numeric',
 		hour: 'numeric',
 		minute: '2-digit'
 	}).format(date);
+}
+
+export function isWorkDateOverdue(
+	value: number | string | null | undefined,
+	now: Date = new Date()
+): boolean {
+	if (!value) return false;
+	const date = workDate(value);
+	if (!date) return false;
+	if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		const today = new Date(now);
+		today.setHours(0, 0, 0, 0);
+		return date.valueOf() < today.valueOf();
+	}
+	return date.valueOf() < now.valueOf();
+}
+
+export function scheduleDateForItem(
+	value: Pick<
+		WorkItem,
+		'type' | 'due_date' | 'target_date' | 'scheduled_at' | 'next_run_at' | 'stale_after'
+	>
+): number | string | null {
+	if (value.type === 'automation') {
+		return (
+			value.next_run_at ??
+			value.scheduled_at ??
+			value.due_date ??
+			value.target_date ??
+			value.stale_after
+		);
+	}
+	return (
+		value.due_date ??
+		value.target_date ??
+		value.scheduled_at ??
+		value.next_run_at ??
+		value.stale_after
+	);
+}
+
+function workDate(value: number | string): Date | null {
+	let date: Date;
+	if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		const [year, month, day] = value.split('-').map(Number);
+		date = new Date(year, month - 1, day);
+		if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+			return null;
+		}
+	} else {
+		date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
+	}
+	return Number.isNaN(date.valueOf()) ? null : date;
 }
 
 export function statusTone(status: WorkStatus): string {

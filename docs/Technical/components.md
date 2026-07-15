@@ -118,6 +118,11 @@ pages. Section list rows follow a breakpoint-specific contract:
 - On mobile detail routes, `WorkSurface` delegates to `MobileWorkDetail.svelte`. The mobile view
   supports every v2 Work type, uses typed fields for its brief and next move, and keeps its agent
   composer above the shell navigation.
+- Mobile Work briefs render persisted Markdown with raw HTML disabled, preserve native Markdown
+  blocks, fenced code, and double-dollar-delimited math, keep ordinary currency literal, bundle
+  KaTeX styles and fonts locally for the normal-route CSP, compare date-only deadlines in local
+  calendar time and timestamp schedules against the current instant, and prefer an automation's
+  structured `next_run_at` over its general scheduling fields.
 - The quick inspector is not rendered below `xl`; desktop section pages keep the title on its own
   line above search, type-specific primary filter chips, compact More filters, and refresh. That
   full header stays fixed in the list frame while only the row list scrolls.

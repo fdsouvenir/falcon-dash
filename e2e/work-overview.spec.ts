@@ -956,20 +956,26 @@ test.describe('work overview executive status board', () => {
 		page,
 		request,
 		baseURL
-	}) => {
+	}, testInfo) => {
 		const seeded = await seedUrgentOverdueProject(request);
 		try {
 			await page.goto(`${baseURL ?? ''}/work/projects/${seeded.project.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
+			if (testInfo.project.name === 'mobile-chrome') {
+				await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Work details' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Project Status' })).toHaveCount(0);
+			} else {
+				await expect(page.getByRole('heading', { name: 'Project Status' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Project details' })).toHaveCount(0);
+				await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
+				await expect(page.getByRole('heading', { name: 'Automations' })).toHaveCount(0);
+				await expect(page.getByRole('heading', { name: 'Findings and evidence' })).toHaveCount(0);
+			}
 			await expect(page.getByText('Overdue').first()).toBeVisible();
 			await expect(page.getByText('Urgent').first()).toBeVisible();
 			await expect(page.getByTestId('project-blocker-panel')).toHaveCount(0);
-			await expect(page.getByRole('heading', { name: 'Project plan' })).toBeVisible();
-			await expect(page.getByRole('heading', { name: 'Automations' })).toHaveCount(0);
-			await expect(page.getByRole('heading', { name: 'Findings and evidence' })).toHaveCount(0);
 			await expect(page.getByRole('link').filter({ hasText: seeded.project.title })).toHaveCount(0);
 		} finally {
 			await archiveWorkItems(request, seeded.items);
@@ -980,23 +986,33 @@ test.describe('work overview executive status board', () => {
 		page,
 		request,
 		baseURL
-	}) => {
+	}, testInfo) => {
 		const seeded = await seedLongQuestion(request);
 		try {
 			await page.goto(`${baseURL ?? ''}/work/needs-resolution/${seeded.question.id}`);
 
 			await expect(page.getByTestId('work-detail-page')).toBeVisible();
-			await expect(page.getByText('Resolution brief', { exact: true })).toBeVisible();
-			await expect(page.getByTestId('question-primary-answer')).toContainText(
-				'Approve the safe internal workspace setup path'
-			);
-			await expect(page.getByTestId('question-brief-sections')).toContainText('Objective');
-			await expect(page.getByTestId('question-brief-sections')).toContainText('Approval Gate');
+			if (testInfo.project.name === 'mobile-chrome') {
+				await expect(page.locator('[data-mobile-work-detail="true"]')).toBeVisible();
+				await expect(page.getByTestId('mobile-work-agent-note')).toContainText(
+					'Approve the safe internal workspace setup path'
+				);
+				await expect(page.getByTestId('mobile-work-brief')).toContainText('Objective');
+				await expect(page.getByTestId('mobile-work-brief')).toContainText('Approval Gate');
+				await expect(page.getByTestId('mobile-work-brief')).not.toContainText('## Objective');
+			} else {
+				await expect(page.getByText('Resolution brief', { exact: true })).toBeVisible();
+				await expect(page.getByTestId('question-primary-answer')).toContainText(
+					'Approve the safe internal workspace setup path'
+				);
+				await expect(page.getByTestId('question-brief-sections')).toContainText('Objective');
+				await expect(page.getByTestId('question-brief-sections')).toContainText('Approval Gate');
 
-			const history = page.locator('details#legacy-version-history');
-			await expect(history).toHaveCount(1);
-			await expect(history).not.toHaveAttribute('open', '');
-			await expect(page.getByTestId('question-brief-sections')).not.toContainText('## Objective');
+				const history = page.locator('details#legacy-version-history');
+				await expect(history).toHaveCount(1);
+				await expect(history).not.toHaveAttribute('open', '');
+				await expect(page.getByTestId('question-brief-sections')).not.toContainText('## Objective');
+			}
 		} finally {
 			await archiveWorkItems(request, seeded.items);
 		}

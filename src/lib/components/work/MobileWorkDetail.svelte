@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import {
 		configForType,
 		formatDate,
 		formatDateTime,
 		formatStatus,
 		itemDisplayId,
+		isWorkDateOverdue,
 		openStatuses,
 		pathForType,
+		scheduleDateForItem,
 		sentenceCase,
 		statusTone,
 		waitingLabel,
@@ -136,6 +139,7 @@
 			);
 		if (value.type === 'open_question')
 			return firstText(
+				value.body,
 				value.question_text,
 				value.why_it_matters,
 				value.description,
@@ -166,13 +170,10 @@
 	}
 
 	function itemSchedule(value: WorkItem): string {
-		const date =
-			value.due_date ??
-			value.target_date ??
-			value.scheduled_at ??
-			value.next_run_at ??
-			value.stale_after;
-		return date ? formatDate(date) : 'No date set';
+		const date = scheduleDateForItem(value);
+		if (!date) return 'No date set';
+		const isOverdue = openStatuses.has(value.status) && isWorkDateOverdue(date);
+		return isOverdue ? `Overdue - ${formatDate(date)}` : formatDate(date);
 	}
 
 	function buildNextSteps(value: WorkItem, related: WorkItem[]): NextStep[] {
@@ -448,9 +449,9 @@
 
 		<section data-testid="mobile-work-brief">
 			<h2 class="text-sm font-semibold text-on-surface">Brief</h2>
-			<p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant">
-				{compactText(detailLead(item), 700)}
-			</p>
+			<div class="mt-2 text-sm leading-6 text-on-surface-variant">
+				<MarkdownRenderer content={detailLead(item)} allowRawHtml={false} />
+			</div>
 		</section>
 
 		<section data-testid="mobile-work-activity">

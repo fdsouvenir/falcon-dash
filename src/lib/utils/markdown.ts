@@ -53,6 +53,15 @@ const baseProcessor = unified()
 	.use(rehypeSanitize, sanitizeSchema)
 	.use(rehypeStringify);
 
+/** Markdown pipeline for persisted content that must not interpret embedded HTML. */
+const safeProcessor = unified()
+	.use(remarkParse)
+	.use(remarkGfm)
+	.use(remarkMath, { singleDollarTextMath: false })
+	.use(remarkRehype)
+	.use(rehypeSanitize, sanitizeSchema)
+	.use(rehypeStringify);
+
 /** Fast regex check for math delimiters */
 export function hasMath(markdown: string): boolean {
 	return /\$\$|\$[^$]|\\\[|\\\(/.test(markdown);
@@ -61,48 +70,55 @@ export function hasMath(markdown: string): boolean {
 /** Cached math processor (with rehype-katex) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mathProcessor: any = null;
-let mathProcessorLoading = false;
-
-/** Inject KaTeX CSS into document head (once) */
-let katexCssInjected = false;
-function injectKatexCss() {
-	if (katexCssInjected || typeof document === 'undefined') return;
-	katexCssInjected = true;
-	const link = document.createElement('link');
-	link.rel = 'stylesheet';
-	link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-	link.crossOrigin = 'anonymous';
-	document.head.appendChild(link);
-}
+let mathProcessorPromise: Promise<ReturnType<typeof unified>> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let safeMathProcessor: any = null;
+let safeMathProcessorPromise: Promise<ReturnType<typeof unified>> | null = null;
 
 /** Dynamically load and cache the math-enhanced processor */
 export async function getMathProcessor(): Promise<ReturnType<typeof unified>> {
 	if (mathProcessor) return mathProcessor;
-	if (mathProcessorLoading) {
-		// Wait for the in-flight load
-		return new Promise((resolve) => {
-			const check = setInterval(() => {
-				if (mathProcessor) {
-					clearInterval(check);
-					resolve(mathProcessor);
-				}
-			}, 50);
-		});
+	if (!mathProcessorPromise) {
+		mathProcessorPromise = import('rehype-katex')
+			.then(({ default: rehypeKatex }) => {
+				mathProcessor = unified()
+					.use(remarkParse)
+					.use(remarkGfm)
+					.use(remarkMath)
+					.use(remarkRehype, { allowDangerousHtml: true })
+					.use(rehypeRaw)
+					.use(rehypeKatex)
+					.use(rehypeSanitize, sanitizeSchema)
+					.use(rehypeStringify);
+				return mathProcessor;
+			})
+			.finally(() => {
+				mathProcessorPromise = null;
+			});
 	}
-	mathProcessorLoading = true;
-	const { default: rehypeKatex } = await import('rehype-katex');
-	injectKatexCss();
-	mathProcessor = unified()
-		.use(remarkParse)
-		.use(remarkGfm)
-		.use(remarkMath)
-		.use(remarkRehype, { allowDangerousHtml: true })
-		.use(rehypeRaw)
-		.use(rehypeKatex)
-		.use(rehypeSanitize, sanitizeSchema)
-		.use(rehypeStringify);
-	mathProcessorLoading = false;
-	return mathProcessor;
+	return mathProcessorPromise;
+}
+
+export async function getSafeMathProcessor(): Promise<ReturnType<typeof unified>> {
+	if (safeMathProcessor) return safeMathProcessor;
+	if (!safeMathProcessorPromise) {
+		safeMathProcessorPromise = import('rehype-katex')
+			.then(({ default: rehypeKatex }) => {
+				safeMathProcessor = unified()
+					.use(remarkParse)
+					.use(remarkGfm)
+					.use(remarkMath, { singleDollarTextMath: false })
+					.use(remarkRehype)
+					.use(rehypeKatex)
+					.use(rehypeSanitize, sanitizeSchema)
+					.use(rehypeStringify);
+				return safeMathProcessor;
+			})
+			.finally(() => {
+				safeMathProcessorPromise = null;
+			});
+	}
+	return safeMathProcessorPromise;
 }
 
 /**
@@ -127,7 +143,16 @@ export function renderMarkdownSync(markdown: string): string {
 			return String(mathProcessor.processSync(processed));
 		}
 		// Trigger async load — next render will pick it up
-		getMathProcessor();
+		void getMathProcessor().catch(() => undefined);
 	}
 	return String(baseProcessor.processSync(processed));
+}
+
+/** Render Markdown while dropping raw HTML nodes from persisted or otherwise untrusted content. */
+export function renderMarkdownSafeSync(markdown: string): string {
+	if (hasMath(markdown)) {
+		if (safeMathProcessor) return String(safeMathProcessor.processSync(markdown));
+		void getSafeMathProcessor().catch(() => undefined);
+	}
+	return String(safeProcessor.processSync(markdown));
 }
