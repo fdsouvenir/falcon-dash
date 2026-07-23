@@ -147,8 +147,12 @@ export function authorizationEffectiveness(
 }
 
 export function authorizationsFor(db: Database.Database, subjectId: string): AuthorizationRow[] {
+	// Tiebreak same-millisecond grants by id sequence so "latest" is stable.
 	return db
-		.prepare(`SELECT * FROM authorizations WHERE subject_id = ? ORDER BY granted_at DESC`)
+		.prepare(
+			`SELECT * FROM authorizations WHERE subject_id = ?
+			 ORDER BY granted_at DESC, LENGTH(entity_id) DESC, entity_id DESC`
+		)
 		.all(subjectId) as AuthorizationRow[];
 }
 

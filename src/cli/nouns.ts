@@ -386,16 +386,15 @@ export async function workCommand(args: string[]): Promise<string> {
 		return runGet(parsed.type, args.slice(1));
 	}
 	if (sub === 'search') {
-		const { positional, flags } = parseArgs(args.slice(1), { limit: 'number' });
+		const { positional, flags } = parseArgs(args.slice(1), { limit: 'number', type: 'string' });
 		const query = positional.join(' ');
-		if (!query) throw new CliError('usage', 'Usage: falcon work search <query>');
-		const params = new URLSearchParams({ q: query, active: 'true' });
+		if (!query)
+			throw new CliError('usage', 'Usage: falcon work search <query> [--type task|project|…]');
+		const params = new URLSearchParams({ q: query });
 		if (flags.limit !== undefined) params.set('limit', String(flags.limit));
-		const data = await apiGet(`/api/v3/objects/task?${params}`);
-		return render(
-			{ query, total: data.total, count: data.count, items: data.items },
-			outputOptions(flags)
-		);
+		if (flags.type !== undefined) params.set('type', String(flags.type));
+		const data = await apiGet(`/api/v3/search?${params}`);
+		return render({ query, count: data.count, results: data.results }, outputOptions(flags));
 	}
 	throw new CliError('usage', 'Usage: falcon work list|get|search', {
 		suggestions: [
@@ -404,6 +403,20 @@ export async function workCommand(args: string[]): Promise<string> {
 			'falcon work search "deploy"'
 		]
 	});
+}
+
+/** `falcon queue` — full server-computed buckets with totals. */
+export async function queueCommand(args: string[]): Promise<string> {
+	const { flags } = parseArgs(args, {});
+	const data = await apiGet('/api/v3/queue');
+	return render(data.queue as Record<string, unknown>, outputOptions(flags));
+}
+
+/** `falcon brief` — bounded session-start context. */
+export async function briefCommand(args: string[]): Promise<string> {
+	const { flags } = parseArgs(args, {});
+	const data = await apiGet('/api/v3/brief');
+	return render(data.brief as Record<string, unknown>, outputOptions(flags));
 }
 
 /** `falcon history <id>` — Event Log timeline for one object. */

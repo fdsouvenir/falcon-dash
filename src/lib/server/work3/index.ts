@@ -143,6 +143,13 @@ export type {
 	AuthorizationEffectiveness
 } from './read/governance-derived.js';
 export { projectHealth, projectProgress, milestoneScheduleState } from './read/project-derived.js';
+export {
+	computeQueue,
+	computeBrief,
+	materialRecentChanges,
+	searchWork
+} from './read/aggregates.js';
+export type { Work3Queue, QueueBucket } from './read/aggregates.js';
 export type {
 	ProjectHealth,
 	ProjectProgress,

@@ -1,314 +1,160 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import type { ActionData, PageData } from './$types.js';
+	import Nav from './Nav.svelte';
+	import type { PageData } from './$types.js';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
-	const statusOptions = [
-		'backlog',
-		'ready',
-		'in_progress',
-		'waiting',
-		'in_review',
-		'completed',
-		'cancelled'
-	];
+	/* eslint-disable @typescript-eslint/no-explicit-any -- aggregate rows are dynamic records */
+	const queue = $derived(data.queue as Record<string, any>);
 
-	function actionabilityClass(actionability: unknown): string {
-		switch (actionability) {
-			case 'blocked':
-				return 'text-red-400';
-			case 'waiting':
-				return 'text-amber-400';
-			case 'actionable':
-				return 'text-emerald-400';
-			case 'terminal':
-				return 'text-status-muted';
-			default:
-				return 'text-white/70';
-		}
+	function workHref(id: string, type: string): string {
+		if (type === 'task') return resolve('/work3/tasks/[id]', { id });
+		if (type === 'question') return resolve('/work3/questions/[id]', { id });
+		if (type === 'decision') return resolve('/work3/decisions/[id]', { id });
+		if (type === 'change_request') return resolve('/work3/changes/[id]', { id });
+		if (type === 'project') return resolve('/work3/projects/[id]', { id });
+		if (type === 'finding') return resolve('/work3/findings/[id]', { id });
+		if (type === 'automaton') return resolve('/work3/automata/[id]', { id });
+		return resolve('/work3/browse');
 	}
+
+	const sections: Array<{ key: string; title: string; tone: string; empty: string }> = [
+		{
+			key: 'needs_fred',
+			title: 'Needs Fred',
+			tone: 'border-amber-800',
+			empty: 'Nothing needs your attention.'
+		},
+		{
+			key: 'actionable_now',
+			title: 'Agent can act',
+			tone: 'border-emerald-900',
+			empty: 'No actionable Work is queued.'
+		},
+		{
+			key: 'blocked_risk',
+			title: 'Blocked risk',
+			tone: 'border-red-900',
+			empty: 'Nothing is blocked.'
+		},
+		{
+			key: 'waiting_on_agent',
+			title: 'Waiting on agent',
+			tone: 'border-surface-border',
+			empty: 'Nothing waits on an agent.'
+		},
+		{
+			key: 'waiting_on_external',
+			title: 'Waiting on external',
+			tone: 'border-surface-border',
+			empty: 'Nothing waits on external parties.'
+		},
+		{
+			key: 'awaiting_review',
+			title: 'Awaiting Review',
+			tone: 'border-surface-border',
+			empty: 'No submitted revisions await review.'
+		},
+		{
+			key: 'changes_needing_authorization_or_verification',
+			title: 'Changes: authorization / verification',
+			tone: 'border-surface-border',
+			empty: 'No Changes need authority or verification.'
+		},
+		{
+			key: 'unhealthy_automata',
+			title: 'Automation health',
+			tone: 'border-red-900',
+			empty: 'All Automata are healthy.'
+		},
+		{
+			key: 'needs_reconciliation',
+			title: 'Reconciliation',
+			tone: 'border-amber-800',
+			empty: 'No inconsistencies detected.'
+		}
+	];
 </script>
 
-<svelte:head><title>Work v3</title></svelte:head>
+<svelte:head><title>Mission Control — Work v3</title></svelte:head>
 
-<div class="mx-auto max-w-5xl space-y-6 p-6">
-	<div class="flex items-baseline justify-between">
-		<h1 class="text-xl font-semibold text-white">Work v3</h1>
-		<p class="text-xs text-status-muted">{data.taskTotal} task(s)</p>
-	</div>
-
-	{#if form?.error}
-		<div class="rounded border border-red-800 bg-red-950/40 px-4 py-2 text-sm text-red-300">
-			<span class="font-mono text-xs">{form.error.code}</span> — {form.error.message}
-			{#if form.error.alternatives?.length}
-				<span class="text-xs text-red-400">Try: {form.error.alternatives.join(', ')}</span>
-			{/if}
-		</div>
-	{/if}
+<div class="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+	<h1 class="text-xl font-semibold text-white">Mission Control</h1>
+	<Nav />
 
 	<div class="grid gap-4 md:grid-cols-2">
-		<form
-			method="POST"
-			action="?/create_task"
-			use:enhance
-			class="space-y-2 rounded border border-surface-border bg-surface-1 p-4"
-		>
-			<h2 class="text-sm font-medium text-white">New Task</h2>
-			<input
-				name="title"
-				placeholder="Action-oriented title"
-				value={form?.form === 'task' ? (form.values?.title ?? '') : ''}
-				class="w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-			/>
-			<div class="flex gap-2">
-				<select
-					name="area_id"
-					class="rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
+		{#each sections as section (section.key)}
+			{@const bucketData = queue[section.key]}
+			<div class="rounded border {section.tone} bg-surface-1">
+				<div
+					class="flex items-baseline justify-between border-b border-surface-border/60 px-4 py-2"
 				>
-					{#each data.areas as area (area.id)}
-						<option value={area.id}>{area.title}</option>
-					{/each}
-				</select>
-				<select
-					name="priority"
-					class="rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-				>
-					<option value="">priority…</option>
-					{#each ['low', 'normal', 'high', 'urgent'] as priority (priority)}
-						<option value={priority}>{priority}</option>
-					{/each}
-				</select>
-				<input
-					name="owner"
-					placeholder="owner"
-					class="w-28 rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-				/>
-			</div>
-			<input
-				name="summary"
-				placeholder="Concise summary (optional)"
-				value={form?.form === 'task' ? (form.values?.summary ?? '') : ''}
-				class="w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-			/>
-			<button
-				class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-			>
-				Create Task
-			</button>
-		</form>
-
-		<form
-			method="POST"
-			action="?/create_area"
-			use:enhance
-			class="space-y-2 rounded border border-surface-border bg-surface-1 p-4"
-		>
-			<h2 class="text-sm font-medium text-white">New Area</h2>
-			<input
-				name="title"
-				placeholder="Sphere of responsibility"
-				value={form?.form === 'area' ? (form.values?.title ?? '') : ''}
-				class="w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-			/>
-			<input
-				name="summary"
-				placeholder="Summary (optional)"
-				class="w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-			/>
-			<button
-				class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-			>
-				Create Area
-			</button>
-			<p class="text-xs text-status-muted">
-				Areas: {#each data.areas as area, index (area.id)}{index > 0 ? ', ' : ''}{area.title}
-					({area.active_work_count}){/each}
-			</p>
-		</form>
-	</div>
-
-	<form method="GET" class="flex gap-2">
-		<select
-			name="status"
-			class="rounded border border-surface-border bg-surface-2 px-3 py-1.5 text-sm text-white"
-		>
-			<option value="">all statuses</option>
-			{#each statusOptions as status (status)}
-				<option value={status} selected={data.statusFilter === status}>{status}</option>
-			{/each}
-		</select>
-		<select
-			name="area"
-			class="rounded border border-surface-border bg-surface-2 px-3 py-1.5 text-sm text-white"
-		>
-			<option value="">all areas</option>
-			{#each data.areas as area (area.id)}
-				<option value={area.id} selected={data.areaFilter === area.id}>{area.title}</option>
-			{/each}
-		</select>
-		<button class="rounded border border-surface-border px-3 py-1.5 text-sm text-white/80">
-			Filter
-		</button>
-	</form>
-
-	<div class="rounded border border-surface-border bg-surface-1">
-		{#if data.tasks.length === 0}
-			<p class="px-4 py-6 text-sm text-status-muted">
-				No tasks match. Nothing requires attention here.
-			</p>
-		{:else}
-			<table class="w-full text-left text-sm">
-				<thead>
-					<tr class="text-xs text-status-muted">
-						<th class="px-4 py-2 font-medium">ID</th>
-						<th class="px-4 py-2 font-medium">Title</th>
-						<th class="px-4 py-2 font-medium">Status</th>
-						<th class="px-4 py-2 font-medium">Actionability</th>
-						<th class="px-4 py-2 font-medium">Owner</th>
-						<th class="px-4 py-2 font-medium">Priority</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.tasks as task (task.id)}
-						<tr class="border-t border-surface-border/60 hover:bg-surface-2/40">
-							<td class="px-4 py-2"
-								><a
+					<h2 class="text-sm font-medium text-white">{section.title}</h2>
+					<span class="text-xs text-status-muted">{bucketData.total}</span>
+				</div>
+				{#if bucketData.items.length === 0}
+					<p class="px-4 py-3 text-sm text-status-muted">{section.empty}</p>
+				{:else}
+					<ul class="divide-y divide-surface-border/40">
+						{#each bucketData.items as item, index (item.id ?? index)}
+							<li class="px-4 py-2 text-sm">
+								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- workHref wraps resolve() -->
+								<a
 									class="text-blue-400 hover:underline"
-									href={resolve('/work3/tasks/[id]', { id: String(task.id) })}>{task.id}</a
-								></td
-							>
-							<td class="px-4 py-2 text-white">{task.title}</td>
-							<td class="px-4 py-2 text-white/80">{task.status}</td>
-							<td class="px-4 py-2 {actionabilityClass(task.actionability)}">
-								{task.actionability}{#if task.blocker_summary}<span
-										class="block text-xs text-red-400/80">{task.blocker_summary}</span
-									>{/if}
-							</td>
-							<td class="px-4 py-2 text-white/70">{task.owner ?? '—'}</td>
-							<td class="px-4 py-2 text-white/70">{task.priority ?? '—'}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		{/if}
+									href={workHref(String(item.id), String(item.type))}
+								>
+									{item.title ?? item.id}
+								</a>
+								{#if item.status || item.execution_state}
+									<span class="ml-2 text-xs text-status-muted"
+										>{item.status ?? item.execution_state}</span
+									>
+								{/if}
+								{#if item.why}
+									<span class="block text-xs text-status-muted">{item.why}</span>
+								{/if}
+							</li>
+						{/each}
+						{#if bucketData.total > bucketData.items.length}
+							<li class="px-4 py-1.5 text-xs text-status-muted">
+								+{bucketData.total - bucketData.items.length} more in
+								<a class="text-blue-400 hover:underline" href={resolve('/work3/browse')}>Browse</a>
+							</li>
+						{/if}
+					</ul>
+				{/if}
+			</div>
+		{/each}
 	</div>
 
 	<div class="rounded border border-surface-border bg-surface-1">
 		<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-			Projects
+			Material recent changes
 		</div>
-		{#if data.projects.length === 0}
-			<p class="px-4 py-3 text-sm text-status-muted">No projects.</p>
+		{#if data.recentChanges.length === 0}
+			<p class="px-4 py-3 text-sm text-status-muted">No material changes yet.</p>
 		{:else}
-			<ul class="divide-y divide-surface-border/60">
-				{#each data.projects as project (project.id)}
+			<ul class="divide-y divide-surface-border/40">
+				{#each data.recentChanges as change (change.id)}
 					<li class="px-4 py-2 text-sm">
-						<a
-							class="text-blue-400 hover:underline"
-							href={resolve('/work3/projects/[id]', { id: String(project.id) })}>{project.id}</a
-						>
-						<span class="ml-2 text-white/80">{project.title}</span>
-						<span class="ml-2 text-xs text-status-muted">
-							{project.status} · {project.health} · next {project.current_next_item_id ?? '—'}
+						<span class="text-white/80">{change.summary}</span>
+						{#if change.authority_act}
+							<span class="ml-2 rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300"
+								>authority act</span
+							>
+						{/if}
+						<span class="block text-xs text-status-muted">
+							{new Date(change.at as number).toLocaleString()} · {change.actor}
+							{#if (change.authority_sources as unknown[] | undefined)?.length}
+								· source: {(change.authority_sources as Array<Record<string, unknown>>)
+									.map((source) => source.label ?? `${source.kind}:${source.ref}`)
+									.join(' · ')}
+							{/if}
 						</span>
 					</li>
 				{/each}
 			</ul>
 		{/if}
-	</div>
-
-	<div class="rounded border border-surface-border bg-surface-1">
-		<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-			Change Requests
-		</div>
-		{#if data.changes.length === 0}
-			<p class="px-4 py-3 text-sm text-status-muted">No change requests.</p>
-		{:else}
-			<ul class="divide-y divide-surface-border/60">
-				{#each data.changes as change (change.id)}
-					<li class="px-4 py-2 text-sm">
-						<a
-							class="text-blue-400 hover:underline"
-							href={resolve('/work3/changes/[id]', { id: String(change.id) })}>{change.id}</a
-						>
-						<span class="ml-2 text-white/80">{change.title}</span>
-						<span class="ml-2 text-xs text-status-muted">
-							exec {change.execution_state} · verify {change.verification_state} · auth {(
-								change.authorization as { state?: string }
-							)?.state}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
-
-	<div class="grid gap-4 md:grid-cols-3">
-		<div class="rounded border border-surface-border bg-surface-1">
-			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-				Open Questions ({data.questionTotal})
-			</div>
-			{#if data.questions.length === 0}
-				<p class="px-4 py-3 text-sm text-status-muted">No open questions.</p>
-			{:else}
-				<ul class="divide-y divide-surface-border/60">
-					{#each data.questions as question (question.id)}
-						<li class="px-4 py-2 text-sm">
-							<a
-								class="text-blue-400 hover:underline"
-								href={resolve('/work3/questions/[id]', { id: String(question.id) })}
-								>{question.id}</a
-							>
-							<span class="ml-2 text-white/80">{question.question}</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-		<div class="rounded border border-surface-border bg-surface-1">
-			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-				Decisions
-			</div>
-			{#if data.decisions.length === 0}
-				<p class="px-4 py-3 text-sm text-status-muted">No decisions.</p>
-			{:else}
-				<ul class="divide-y divide-surface-border/60">
-					{#each data.decisions as decision (decision.id)}
-						<li class="px-4 py-2 text-sm">
-							<a
-								class="text-blue-400 hover:underline"
-								href={resolve('/work3/decisions/[id]', { id: String(decision.id) })}
-								>{decision.id}</a
-							>
-							<span class="ml-2 text-white/80">{decision.title}</span>
-							<span class="ml-1 text-xs text-status-muted">({decision.status})</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-		<div class="rounded border border-surface-border bg-surface-1">
-			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-				Current Findings
-			</div>
-			{#if data.findings.length === 0}
-				<p class="px-4 py-3 text-sm text-status-muted">No findings.</p>
-			{:else}
-				<ul class="divide-y divide-surface-border/60">
-					{#each data.findings as finding (finding.id)}
-						<li class="px-4 py-2 text-sm">
-							<a
-								class="text-blue-400 hover:underline"
-								href={resolve('/work3/findings/[id]', { id: String(finding.id) })}>{finding.id}</a
-							>
-							<span class="ml-2 text-white/80">{finding.title}</span>
-							<span class="ml-1 text-xs text-status-muted">({finding.confidence})</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
 	</div>
 </div>

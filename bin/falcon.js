@@ -3219,16 +3219,15 @@ async function workCommand(args) {
 		return runGet(parsed.type, args.slice(1));
 	}
 	if (sub === 'search') {
-		const { positional, flags } = parseArgs(args.slice(1), { limit: 'number' });
+		const { positional, flags } = parseArgs(args.slice(1), { limit: 'number', type: 'string' });
 		const query = positional.join(' ');
-		if (!query) throw new CliError('usage', 'Usage: falcon work search <query>');
-		const params = new URLSearchParams({ q: query, active: 'true' });
+		if (!query)
+			throw new CliError('usage', 'Usage: falcon work search <query> [--type task|project|\u2026]');
+		const params = new URLSearchParams({ q: query });
 		if (flags.limit !== void 0) params.set('limit', String(flags.limit));
-		const data = await apiGet(`/api/v3/objects/task?${params}`);
-		return render(
-			{ query, total: data.total, count: data.count, items: data.items },
-			outputOptions(flags)
-		);
+		if (flags.type !== void 0) params.set('type', String(flags.type));
+		const data = await apiGet(`/api/v3/search?${params}`);
+		return render({ query, count: data.count, results: data.results }, outputOptions(flags));
 	}
 	throw new CliError('usage', 'Usage: falcon work list|get|search', {
 		suggestions: [
@@ -3237,6 +3236,16 @@ async function workCommand(args) {
 			'falcon work search "deploy"'
 		]
 	});
+}
+async function queueCommand(args) {
+	const { flags } = parseArgs(args, {});
+	const data = await apiGet('/api/v3/queue');
+	return render(data.queue, outputOptions(flags));
+}
+async function briefCommand(args) {
+	const { flags } = parseArgs(args, {});
+	const data = await apiGet('/api/v3/brief');
+	return render(data.brief, outputOptions(flags));
 }
 async function historyCommand(args) {
 	const { positional, flags } = parseArgs(args, { limit: 'number', event_type: 'string' });
@@ -3326,6 +3335,8 @@ Commands:
   milestone list | get | create | achieve | cancel | reopen
   link      create | remove | assign \u2014 typed relationships + project assignment
   automaton list | get | create | activate | pause | update | delete | restore
+  queue     server-computed buckets (actionable, needs Fred, blocked, \u2026)
+  brief     bounded session-start context
   history   <id> \u2014 Event Log timeline
   sources   check \u2014 resolve a source reference
 
@@ -3385,6 +3396,8 @@ await runAxiCli({
 		link: (args) => nounCommand('link')(args),
 		automaton: (args) => nounCommand('automaton')(args),
 		history: (args) => historyCommand(args),
+		queue: (args) => queueCommand(args),
+		brief: (args) => briefCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},
 	getCommandHelp: (command) => {

@@ -1,7 +1,15 @@
 import { runAxiCli } from 'axi-sdk-js';
 import { CliError, exitCodeFor } from './errors.js';
 import { apiGet } from './http.js';
-import { commandHelp, historyCommand, nounCommand, sourcesCommand, workCommand } from './nouns.js';
+import {
+	briefCommand,
+	commandHelp,
+	historyCommand,
+	nounCommand,
+	queueCommand,
+	sourcesCommand,
+	workCommand
+} from './nouns.js';
 import { render } from './render.js';
 
 /**
@@ -30,6 +38,8 @@ Commands:
   milestone list | get | create | achieve | cancel | reopen
   link      create | remove | assign — typed relationships + project assignment
   automaton list | get | create | activate | pause | update | delete | restore
+  queue     server-computed buckets (actionable, needs Fred, blocked, …)
+  brief     bounded session-start context
   history   <id> — Event Log timeline
   sources   check — resolve a source reference
 
@@ -92,6 +102,8 @@ await runAxiCli({
 		link: (args) => nounCommand('link')(args),
 		automaton: (args) => nounCommand('automaton')(args),
 		history: (args) => historyCommand(args),
+		queue: (args) => queueCommand(args),
+		brief: (args) => briefCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},
 	getCommandHelp: (command) => {
