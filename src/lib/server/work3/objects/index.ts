@@ -7,6 +7,10 @@ import { registerQuestionCommands } from './question.js';
 import { registerDecisionCommands } from './decision.js';
 import { registerFindingCommands } from './finding.js';
 import { registerKnowledgeReaders } from './knowledge-readers.js';
+import { registerPlanCommands } from './plan.js';
+import { registerReviewCommands } from './review.js';
+import { registerChangeCommands } from './change.js';
+import { registerGovernanceReaders } from './governance-readers.js';
 
 export { loadArea, requireActiveArea } from './area.js';
 export { loadTask, legalCommandsFor, TASK_STATUSES, TASK_PRIORITIES } from './task.js';
@@ -19,6 +23,18 @@ export { loadDecision, currentPackage, packageHistory } from './decision.js';
 export type { DecisionRow, DecisionPackageRow } from './decision.js';
 export { loadFinding, FINDING_CONFIDENCES } from './finding.js';
 export type { FindingRow } from './finding.js';
+export { loadPlan, currentPlanRevision, latestDraftRevision, planRevisions } from './plan.js';
+export type { PlanRow, PlanRevisionRow } from './plan.js';
+export { REVIEW_OUTCOMES } from './review.js';
+export {
+	loadChange,
+	currentChangeRevision,
+	changeSubjectState,
+	effectiveAuthorization,
+	EXECUTION_STATES,
+	VERIFICATION_STATES
+} from './change.js';
+export type { ChangeRow, ChangeRevisionRow } from './change.js';
 
 /**
  * Register all v3 object commands and readers. Idempotent per registry state —
@@ -32,6 +48,10 @@ export function registerWork3Objects(): void {
 	registerQuestionCommands();
 	registerDecisionCommands();
 	registerFindingCommands();
+	registerPlanCommands();
+	registerReviewCommands();
+	registerChangeCommands();
 	registerSliceReaders();
 	registerKnowledgeReaders();
+	registerGovernanceReaders();
 }

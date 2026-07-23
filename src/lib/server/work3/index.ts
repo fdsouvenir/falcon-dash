@@ -76,7 +76,18 @@ export {
 	currentPackage,
 	packageHistory,
 	loadFinding,
-	FINDING_CONFIDENCES
+	FINDING_CONFIDENCES,
+	loadPlan,
+	currentPlanRevision,
+	latestDraftRevision,
+	planRevisions,
+	REVIEW_OUTCOMES,
+	loadChange,
+	currentChangeRevision,
+	changeSubjectState,
+	effectiveAuthorization,
+	EXECUTION_STATES,
+	VERIFICATION_STATES
 } from './objects/index.js';
 export type {
 	TaskRow,
@@ -86,7 +97,11 @@ export type {
 	AnswerRow,
 	DecisionRow,
 	DecisionPackageRow,
-	FindingRow
+	FindingRow,
+	PlanRow,
+	PlanRevisionRow,
+	ChangeRow,
+	ChangeRevisionRow
 } from './objects/index.js';
 export {
 	activeBlockersFor,
@@ -95,6 +110,20 @@ export {
 	taskActionability,
 	activeWorkCountForArea
 } from './read/derived.js';
+export {
+	reviewDisposition,
+	reviewsFor,
+	hasRequiredComments,
+	authorizationsFor,
+	authorizationEffectiveness,
+	scopeFingerprint
+} from './read/governance-derived.js';
+export type {
+	ReviewRow,
+	ReviewDisposition,
+	AuthorizationRow,
+	AuthorizationEffectiveness
+} from './read/governance-derived.js';
 
 export { resolveWork3SourceRef, setSourceKindResolver } from './sources.js';
 export type { SourceResolution } from './sources.js';

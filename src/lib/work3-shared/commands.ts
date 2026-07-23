@@ -7,7 +7,18 @@
 export interface Work3CommandMeta {
 	name: string;
 	/** Entity type the command targets; null for creation commands. */
-	target: 'task' | 'area' | 'blocker' | 'question' | 'decision' | 'finding' | null;
+	target:
+		| 'task'
+		| 'area'
+		| 'blocker'
+		| 'question'
+		| 'decision'
+		| 'finding'
+		| 'plan'
+		| 'review'
+		| 'authorization'
+		| 'change_request'
+		| null;
 	summary: string;
 	/** Required payload fields. */
 	required: string[];
@@ -297,6 +308,187 @@ export const WORK3_COMMANDS: Work3CommandMeta[] = [
 		summary: 'Retract a Finding (requires reason; corrective sources when applicable)',
 		required: ['reason'],
 		optional: ['source_refs']
+	},
+	// Plan
+	{
+		name: 'create_plan',
+		target: null,
+		summary: 'Create a Plan (draft revision 1) attached to a piece of Work',
+		required: ['work_item_id', 'title', 'steps'],
+		optional: ['summary', 'assumptions', 'risks', 'out_of_scope', 'validation_checks']
+	},
+	{
+		name: 'update_plan',
+		target: 'plan',
+		summary: 'Edit the draft revision in place (drafts only — submitted Plans are immutable)',
+		required: [],
+		optional: [
+			'title',
+			'summary',
+			'steps',
+			'assumptions',
+			'risks',
+			'out_of_scope',
+			'validation_checks'
+		]
+	},
+	{
+		name: 'submit_plan',
+		target: 'plan',
+		summary:
+			'Submit the draft revision (immutable from now; supersedes the prior submitted revision)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'revise_plan',
+		target: 'plan',
+		summary: 'Create a linked draft replacement for the submitted revision',
+		required: [],
+		optional: ['summary', 'steps', 'assumptions', 'risks', 'out_of_scope', 'validation_checks']
+	},
+	{
+		name: 'withdraw_plan',
+		target: 'plan',
+		summary: 'Withdraw the current Plan revision (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	// Review
+	{
+		name: 'create_review',
+		target: null,
+		summary: 'Record an immutable Review of an exact subject revision',
+		required: ['subject_id', 'subject_revision', 'outcome', 'summary'],
+		optional: ['comments', 'source_refs']
+	},
+	// Change Request + Authorization
+	{
+		name: 'create_change',
+		target: null,
+		summary: 'Create a Change Request with its complete authority-ready package and Plan',
+		required: [
+			'area_id',
+			'title',
+			'scope_allowed',
+			'targets',
+			'risk',
+			'acceptance_criteria',
+			'plan'
+		],
+		optional: ['summary', 'scope_prohibited', 'safety']
+	},
+	{
+		name: 'revise_change',
+		target: 'change_request',
+		summary: 'Replace the authority-ready package (invalidates pinned Authorization)',
+		required: ['scope_allowed', 'targets', 'risk', 'acceptance_criteria'],
+		optional: ['scope_prohibited', 'safety']
+	},
+	{
+		name: 'authorize_change',
+		target: 'change_request',
+		summary: 'Grant Authorization pinned to the exact Change + Plan revisions and scope',
+		required: [],
+		optional: ['conditions', 'expires_at', 'one_time', 'authority_source', 'source_refs']
+	},
+	{
+		name: 'revoke_authorization',
+		target: 'authorization',
+		summary: 'Revoke an Authorization (requires reason and human authority basis)',
+		required: ['reason'],
+		optional: ['authority_source']
+	},
+	{
+		name: 'start_change',
+		target: 'change_request',
+		summary: 'Begin controlled execution (requires valid Authorization, unblocked)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'pause_change',
+		target: 'change_request',
+		summary: 'Pause execution deliberately',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'resume_change',
+		target: 'change_request',
+		summary: 'Resume paused execution (authorization rechecked)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'succeed_execution',
+		target: 'change_request',
+		summary: 'Record successful execution (requires result summary; consumes one-time authority)',
+		required: ['result_summary'],
+		optional: []
+	},
+	{
+		name: 'fail_execution',
+		target: 'change_request',
+		summary: 'Record execution failure (requires failure summary)',
+		required: ['failure_summary'],
+		optional: []
+	},
+	{
+		name: 'retry_change',
+		target: 'change_request',
+		summary: 'Retry failed execution (legal only inside current Authorization)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'cancel_change',
+		target: 'change_request',
+		summary: 'Cancel the Change (requires a reason; preserves history)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'start_verification',
+		target: 'change_request',
+		summary: 'Begin verifying acceptance criteria (execution must have succeeded)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'pass_verification',
+		target: 'change_request',
+		summary: 'Pass verification (every criterion satisfied with sources, or waived)',
+		required: [],
+		optional: ['criteria_evidence']
+	},
+	{
+		name: 'fail_verification',
+		target: 'change_request',
+		summary: 'Fail verification (requires summary of what failed)',
+		required: ['summary'],
+		optional: []
+	},
+	{
+		name: 'waive_verification',
+		target: 'change_request',
+		summary: 'Waive verification with authority and rationale (authority-creating)',
+		required: ['reason'],
+		optional: ['authority_source']
+	},
+	{
+		name: 'start_rollback',
+		target: 'change_request',
+		summary: 'Begin rolling back an executed Change (history preserved)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'complete_rollback',
+		target: 'change_request',
+		summary: 'Record completed rollback (execution becomes rolled_back)',
+		required: ['summary'],
+		optional: []
 	}
 ];
 

@@ -33,7 +33,18 @@ const JSON_FIELDS = new Set([
 	'working_hypothesis',
 	'source_refs',
 	'targets',
-	'authority_source'
+	'authority_source',
+	'steps',
+	'plan',
+	'conditions',
+	'criteria_evidence',
+	'comments',
+	'scope_allowed',
+	'scope_prohibited',
+	'risk',
+	'safety',
+	'acceptance_criteria',
+	'one_time'
 ]);
 
 /** engine command name → CLI verb, per noun. */
@@ -83,6 +94,37 @@ export const NOUN_VERBS: Record<string, Record<string, string>> = {
 		create: 'create_finding',
 		supersede: 'supersede_finding',
 		retract: 'retract_finding'
+	},
+	plan: {
+		create: 'create_plan',
+		update: 'update_plan',
+		submit: 'submit_plan',
+		revise: 'revise_plan',
+		withdraw: 'withdraw_plan'
+	},
+	review: {
+		create: 'create_review'
+	},
+	authorization: {
+		revoke: 'revoke_authorization'
+	},
+	change: {
+		create: 'create_change',
+		revise: 'revise_change',
+		authorize: 'authorize_change',
+		start: 'start_change',
+		pause: 'pause_change',
+		resume: 'resume_change',
+		succeed: 'succeed_execution',
+		fail: 'fail_execution',
+		retry: 'retry_change',
+		cancel: 'cancel_change',
+		'start-verification': 'start_verification',
+		'pass-verification': 'pass_verification',
+		'fail-verification': 'fail_verification',
+		'waive-verification': 'waive_verification',
+		'start-rollback': 'start_rollback',
+		'complete-rollback': 'complete_rollback'
 	}
 };
 
@@ -92,7 +134,11 @@ const LIST_FILTERS: Record<string, string[]> = {
 	blocker: ['state', 'blocked'],
 	question: ['status', 'area', 'steward', 'priority'],
 	decision: ['status', 'area', 'priority'],
-	finding: ['validity', 'confidence', 'area', 'target']
+	finding: ['validity', 'confidence', 'area', 'target'],
+	plan: ['work_item'],
+	review: ['subject', 'outcome'],
+	authorization: ['subject'],
+	change: ['execution', 'verification', 'area']
 };
 
 function outputOptions(

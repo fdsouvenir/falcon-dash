@@ -195,6 +195,32 @@
 		{/if}
 	</div>
 
+	<div class="rounded border border-surface-border bg-surface-1">
+		<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
+			Change Requests
+		</div>
+		{#if data.changes.length === 0}
+			<p class="px-4 py-3 text-sm text-status-muted">No change requests.</p>
+		{:else}
+			<ul class="divide-y divide-surface-border/60">
+				{#each data.changes as change (change.id)}
+					<li class="px-4 py-2 text-sm">
+						<a
+							class="text-blue-400 hover:underline"
+							href={resolve('/work3/changes/[id]', { id: String(change.id) })}>{change.id}</a
+						>
+						<span class="ml-2 text-white/80">{change.title}</span>
+						<span class="ml-2 text-xs text-status-muted">
+							exec {change.execution_state} · verify {change.verification_state} · auth {(
+								change.authorization as { state?: string }
+							)?.state}
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
 	<div class="grid gap-4 md:grid-cols-3">
 		<div class="rounded border border-surface-border bg-surface-1">
 			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">

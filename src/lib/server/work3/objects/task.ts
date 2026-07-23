@@ -4,6 +4,7 @@ import { allocateEntityId, insertEntity, updateEntityArea } from '../envelope.js
 import { registerCommand, type ExecuteContext } from '../engine/registry.js';
 import { optionalEnum, optionalNumber, optionalString, requireString } from '../engine/validate.js';
 import { activeBlockersFor } from '../read/derived.js';
+import { reviewDisposition } from '../read/governance-derived.js';
 import { requireActiveArea } from './area.js';
 
 /**
@@ -478,6 +479,19 @@ export function registerTaskCommands(): void {
 					'transition_requirements_not_met',
 					'accept_task requires the submitted result_summary',
 					{ details: { missing: ['result_summary'] } }
+				);
+			}
+			// An in_review Task requires an approving Review of the current output
+			// revision before completion (doc 02).
+			const disposition = reviewDisposition(ctx.db, row.entity_id, String(row.output_revision));
+			if (disposition !== 'approved') {
+				throw new Work3Error(
+					'transition_requirements_not_met',
+					`accept_task requires an approving Review of output revision ${row.output_revision} (current disposition: ${disposition})`,
+					{
+						details: { output_revision: row.output_revision, review_disposition: disposition },
+						alternatives: ['create_review']
+					}
 				);
 			}
 			const blockerEvents = invalidateActiveBlockers(ctx, 'completed');

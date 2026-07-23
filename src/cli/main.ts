@@ -21,6 +21,10 @@ Commands:
   question  list | get | create | answer | revise-answer | withdraw | reopen | update
   decision  list | get | create | decide | defer | resume | withdraw | revise | supersede
   finding   list | get | create | supersede | retract
+  plan      list | get | create | update | submit | revise | withdraw
+  review    list | get | create
+  change    list | get | create | authorize | start | pause | resume | succeed | fail | retry | cancel | *-verification | *-rollback
+  authorization  list | get | revoke
   history   <id> — Event Log timeline
   sources   check — resolve a source reference
 
@@ -73,6 +77,10 @@ await runAxiCli({
 		question: (args) => nounCommand('question')(args),
 		decision: (args) => nounCommand('decision')(args),
 		finding: (args) => nounCommand('finding')(args),
+		plan: (args) => nounCommand('plan')(args),
+		review: (args) => nounCommand('review')(args),
+		authorization: (args) => nounCommand('authorization')(args),
+		change: (args) => nounCommand('change')(args),
 		history: (args) => historyCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},
@@ -82,7 +90,20 @@ await runAxiCli({
 			return 'falcon history <id> [--limit N] — Event Log timeline for one object';
 		if (command === 'sources')
 			return 'falcon sources check --kind <kind> --ref <ref> — resolve a source reference';
-		if (['task', 'area', 'blocker', 'question', 'decision', 'finding'].includes(command)) {
+		if (
+			[
+				'task',
+				'area',
+				'blocker',
+				'question',
+				'decision',
+				'finding',
+				'plan',
+				'review',
+				'authorization',
+				'change'
+			].includes(command)
+		) {
 			return commandHelp(command);
 		}
 		return null;

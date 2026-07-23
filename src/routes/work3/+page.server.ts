@@ -43,7 +43,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		limit: 20,
 		offset: 0
 	});
+	const changes = getObjectReader('change_request').list({
+		view: 'list',
+		filters: {},
+		limit: 20,
+		offset: 0
+	});
 	return {
+		changes: changes.items,
 		tasks: tasks.items,
 		taskTotal: tasks.total,
 		areas: areas.items,

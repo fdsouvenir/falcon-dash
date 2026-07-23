@@ -296,13 +296,40 @@ describe('submit_task_for_review / accept_task', () => {
 		});
 	});
 
+	it('requires an approving Review of the current output revision before acceptance', async () => {
+		const id = await taskAt('in_review');
+		await expect(transition('accept_task', id)).rejects.toMatchObject({
+			code: 'transition_requirements_not_met',
+			details: { review_disposition: 'unreviewed' },
+			alternatives: ['create_review']
+		});
+	});
+
 	it('accepts reviewed output and completes with completed_at', async () => {
 		const id = await taskAt('in_review');
+		await cmd('create_review', undefined, {
+			subject_id: id,
+			subject_revision: '1',
+			outcome: 'approved',
+			summary: 'Output looks correct'
+		});
 		const accepted = await transition('accept_task', id);
 		expect(accepted.result).toMatchObject({ status: 'completed' });
 		const row = loadTask(getWork3Db(), id)!;
 		expect(row.completed_at).not.toBeNull();
 		expect(row.result_summary).toBe('Draft ready');
+	});
+
+	it('changes requested returns the Task to in_progress deterministically', async () => {
+		const id = await taskAt('in_review');
+		await cmd('create_review', undefined, {
+			subject_id: id,
+			subject_revision: '1',
+			outcome: 'changes_requested',
+			summary: 'Needs another pass',
+			comments: [{ text: 'Cover the error path', severity: 'required' }]
+		});
+		expect(loadTask(getWork3Db(), id)?.status).toBe('in_progress');
 	});
 
 	it('cannot accept a Task that is not in review', async () => {
