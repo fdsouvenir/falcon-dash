@@ -32,6 +32,30 @@ export type {
 } from './engine/registry.js';
 export { executeCommand } from './engine/execute.js';
 export type { CommandInput } from './engine/execute.js';
+export {
+	humanAuthorityPreGuard,
+	setAuthoritySourceResolver,
+	extractAuthoritySource,
+	HUMAN_AUTHORITY_SOURCE_KINDS
+} from './engine/authority.js';
+export {
+	mintAgentToken,
+	revokeAgentToken,
+	listAgentTokens,
+	resolveBearerActor,
+	getTokenFilePath,
+	getTokenFileDir
+} from './auth.js';
+export { personActorFromRequest, executePersonCommand } from './person.js';
+export {
+	registerObjectReader,
+	getObjectReader,
+	listObjectTypes,
+	validateReadOptions,
+	projectFields,
+	resetObjectReadersForTests
+} from './read/registry.js';
+export type { ObjectReadDefinition, ReadOptions, ReadView } from './read/registry.js';
 export { ulid } from './ulid.js';
 
 import { getWork3Db, getWork3EventsDb } from './db.js';

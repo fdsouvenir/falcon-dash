@@ -13,10 +13,12 @@
 	import CanvasDiagnosticsTab from './CanvasDiagnosticsTab.svelte';
 	import GatewayControlTab from './GatewayControlTab.svelte';
 	import TerminalTab from './TerminalTab.svelte';
+	import AgentTokensTab from './AgentTokensTab.svelte';
 
 	const tabs = [
 		{ id: 'user', label: 'User' },
 		{ id: 'agents', label: 'Agents' },
+		{ id: 'agent-tokens', label: 'Agent Tokens' },
 		{ id: 'preferences', label: 'Preferences' },
 		{ id: 'information', label: 'Information' },
 		{ id: 'config', label: 'Config' },
@@ -69,6 +71,8 @@
 				<UserTab />
 			{:else if activeTab === 'agents'}
 				<AgentsTab />
+			{:else if activeTab === 'agent-tokens'}
+				<AgentTokensTab />
 			{:else if activeTab === 'preferences'}
 				<PreferencesTab />
 			{:else if activeTab === 'information'}
