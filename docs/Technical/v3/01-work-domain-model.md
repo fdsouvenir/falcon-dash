@@ -392,7 +392,7 @@ Key invariants:
 
 - Optimistic mutations require expected_version and fail with a structured version_conflict instead of last-write-wins.
 - Every mutation emits an immutable actor/source-aware audit event with before/after changes and version transition.
-- Actor references use person, agent, system, or service identity with authoritative ID and historical display-label snapshot.
+- Actor references use person, agent, or system identity with authoritative ID and historical display-label snapshot; actor identity is credential identity per the #327 actor model.
 - Some approved/submitted records use immutable revision or supersession semantics beyond the general version counter.
 - Deletion is type-specific rather than one generic deleted_at behavior.
 - AXI projections omit envelope metadata unless explicitly requested or operationally relevant.

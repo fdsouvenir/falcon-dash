@@ -39,6 +39,7 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - Lead with the smallest set of actions that can materially advance Work.
 - Separate `Needs Fred`, `Agent can act`, `Waiting`, `Blocked risk`, and `Automation health`.
 - Show why an item is present and the next relevant action.
+- Authority-creating acts (decisions, authorizations, revocations, verification waivers, criterion waivers) unconditionally appear in the material-recent-changes feed with their claimed human authority source, resolvable to the original instruction (#327 actor model).
 - Routine successful Runs, terminal history, and low-value counts remain out of the first viewport.
 - Empty queues state that nothing requires attention; they do not fill space with generic advice.
 
