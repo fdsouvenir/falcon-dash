@@ -17,6 +17,7 @@ import { render, type RenderOptions } from './render.js';
 
 const NUMBER_FIELDS = new Set([
 	'sequence',
+	'expected_runtime_updated_at_ms',
 	'due_at',
 	'follow_up_at',
 	'target_at',
@@ -51,7 +52,13 @@ const JSON_FIELDS = new Set([
 	'completion_criteria',
 	'parallel_phases_allowed',
 	'parallel',
-	'clear'
+	'clear',
+	'schedule',
+	'payload',
+	'delivery',
+	'policies',
+	'patch',
+	'enabled'
 ]);
 
 /** engine command name → CLI verb, per noun. */
@@ -148,6 +155,14 @@ export const NOUN_VERBS: Record<string, Record<string, string>> = {
 		remove: 'unlink_work',
 		assign: 'assign_to_project'
 	},
+	automaton: {
+		create: 'create_automaton',
+		activate: 'activate_automaton',
+		pause: 'pause_automaton',
+		update: 'update_automaton',
+		delete: 'delete_automaton',
+		restore: 'restore_automaton'
+	},
 	change: {
 		create: 'create_change',
 		revise: 'revise_change',
@@ -181,7 +196,8 @@ const LIST_FILTERS: Record<string, string[]> = {
 	change: ['execution', 'verification', 'area'],
 	project: ['status', 'area', 'archived'],
 	phase: ['project', 'status'],
-	milestone: ['project', 'status']
+	milestone: ['project', 'status'],
+	automaton: ['lifecycle']
 };
 
 function outputOptions(
@@ -273,6 +289,11 @@ async function runVerb(
 				: await currentVersion(meta.target, target);
 	}
 
+	// Automaton-style commands: identity travels in the payload (`id` =
+	// OpenClaw job id), so map the positional argument onto it.
+	if (!meta.target && meta.required.includes('id') && flags.id === undefined && positional[0]) {
+		flags.id = positional[0];
+	}
 	const payload = payloadFromFlags(meta, flags);
 	const success = await apiCommand({
 		command: commandName,

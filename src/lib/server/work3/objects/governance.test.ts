@@ -444,12 +444,12 @@ describe('stale-write recovery (gate 6 partial)', () => {
 	it('the change reader surfaces derived authorization state on every projection', async () => {
 		const change = await authorizedChange();
 		const { getObjectReader } = await import('../read/registry.js');
-		const item = getObjectReader('change_request').get(change.id, {
+		const item = (await getObjectReader('change_request').get(change.id, {
 			view: 'list',
 			filters: {},
 			limit: 1,
 			offset: 0
-		})!;
+		}))!;
 		expect(item.authorization).toMatchObject({ state: 'valid' });
 		expect(item.next_action).toBe('start_change');
 	});

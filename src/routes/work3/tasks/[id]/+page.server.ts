@@ -5,8 +5,8 @@ import { legalCommandsFor, startWork3, type TaskStatus } from '$lib/server/work3
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
 import { executePersonCommand } from '$lib/server/work3/person.js';
 
-function loadTaskDetail(id: string) {
-	return getObjectReader('task').get(id, {
+async function loadTaskDetail(id: string) {
+	return await getObjectReader('task').get(id, {
 		view: 'full',
 		filters: {},
 		limit: 1,
@@ -16,7 +16,7 @@ function loadTaskDetail(id: string) {
 
 export const load: PageServerLoad = async ({ params }) => {
 	startWork3();
-	const task = loadTaskDetail(params.id);
+	const task = await loadTaskDetail(params.id);
 	if (!task) throw httpError(404, `No such task: ${params.id}`);
 	return {
 		task,
@@ -51,7 +51,7 @@ export const actions: Actions = {
 			if (isWork3Error(error)) {
 				// Version conflicts return the current version so the UI can offer
 				// refresh/reapply while preserving what the user typed (doc 05).
-				const current = loadTaskDetail(event.params.id);
+				const current = await loadTaskDetail(event.params.id);
 				return fail(400, {
 					error: error.toShape(),
 					values,

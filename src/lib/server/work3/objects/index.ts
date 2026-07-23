@@ -15,6 +15,8 @@ import { registerProjectCommands } from './project.js';
 import { registerPhaseCommands, registerMilestoneCommands } from './phase-milestone.js';
 import { registerRelationshipCommands } from './relationships.js';
 import { registerProjectReaders } from './project-readers.js';
+import { registerAutomatonCommands } from './automaton.js';
+import { registerAutomatonReader } from './automaton-reader.js';
 
 export { loadArea, requireActiveArea } from './area.js';
 export { loadTask, legalCommandsFor, TASK_STATUSES, TASK_PRIORITIES } from './task.js';
@@ -46,6 +48,14 @@ export type { PhaseRow, MilestoneRow } from './phase-milestone.js';
 export { activeLinks, RELATIONSHIP_TYPES } from './relationships.js';
 export type { RelationshipRow, RelationshipType } from './relationships.js';
 export { reconcileTerminal, invalidateSatisfiesFrom } from './reconcile.js';
+export {
+	loadAutomatonAttrs,
+	automatonHealth,
+	recordRuntimeSnapshot,
+	ensureAutomatonEntity,
+	syncAutomatonsOnce
+} from './automaton.js';
+export type { AutomatonAttrsRow } from './automaton.js';
 
 /**
  * Register all v3 object commands and readers. Idempotent per registry state —
@@ -66,8 +76,10 @@ export function registerWork3Objects(): void {
 	registerPhaseCommands();
 	registerMilestoneCommands();
 	registerRelationshipCommands();
+	registerAutomatonCommands();
 	registerSliceReaders();
 	registerKnowledgeReaders();
 	registerGovernanceReaders();
 	registerProjectReaders();
+	registerAutomatonReader();
 }

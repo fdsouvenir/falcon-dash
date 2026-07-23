@@ -18,6 +18,8 @@ export interface ReadOptions {
 	offset: number;
 }
 
+type MaybePromise<T> = T | Promise<T>;
+
 export interface ObjectReadDefinition {
 	type: string;
 	aliases?: string[];
@@ -25,8 +27,9 @@ export interface ObjectReadDefinition {
 	knownFields: string[];
 	/** Filter keys accepted by list(); unknown filters fail loudly. */
 	knownFilters: string[];
-	list: (options: ReadOptions) => { items: Record<string, unknown>[]; total: number };
-	get: (id: string, options: ReadOptions) => Record<string, unknown> | null;
+	/** May be async (the Automaton reader composes the live gateway record). */
+	list: (options: ReadOptions) => MaybePromise<{ items: Record<string, unknown>[]; total: number }>;
+	get: (id: string, options: ReadOptions) => MaybePromise<Record<string, unknown> | null>;
 }
 
 const readers = new Map<string, ObjectReadDefinition>();

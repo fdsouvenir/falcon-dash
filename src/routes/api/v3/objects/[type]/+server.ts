@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ request, params, url }) => {
 		const reader = getObjectReader(params.type);
 		const options = parseReadOptions(url, 'list');
 		validateReadOptions(reader, options);
-		const { items, total } = reader.list(options);
+		const { items, total } = await reader.list(options);
 		return json({
 			ok: true,
 			type: reader.type,

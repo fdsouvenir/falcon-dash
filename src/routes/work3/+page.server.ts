@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	const statusFilter = url.searchParams.get('status') ?? undefined;
 	const areaFilter = url.searchParams.get('area') ?? undefined;
 
-	const tasks = getObjectReader('task').list({
+	const tasks = await getObjectReader('task').list({
 		view: 'list',
 		filters: {
 			...(statusFilter ? { status: statusFilter } : {}),
@@ -19,37 +19,37 @@ export const load: PageServerLoad = async ({ url }) => {
 		limit: 100,
 		offset: 0
 	});
-	const areas = getObjectReader('area').list({
+	const areas = await getObjectReader('area').list({
 		view: 'list',
 		filters: {},
 		limit: 100,
 		offset: 0
 	});
-	const questions = getObjectReader('question').list({
+	const questions = await getObjectReader('question').list({
 		view: 'list',
 		filters: { status: 'open' },
 		limit: 20,
 		offset: 0
 	});
-	const decisions = getObjectReader('decision').list({
+	const decisions = await getObjectReader('decision').list({
 		view: 'list',
 		filters: {},
 		limit: 20,
 		offset: 0
 	});
-	const findings = getObjectReader('finding').list({
+	const findings = await getObjectReader('finding').list({
 		view: 'list',
 		filters: { validity: 'current' },
 		limit: 20,
 		offset: 0
 	});
-	const projects = getObjectReader('project').list({
+	const projects = await getObjectReader('project').list({
 		view: 'list',
 		filters: {},
 		limit: 20,
 		offset: 0
 	});
-	const changes = getObjectReader('change_request').list({
+	const changes = await getObjectReader('change_request').list({
 		view: 'list',
 		filters: {},
 		limit: 20,

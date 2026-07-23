@@ -6,7 +6,7 @@ import { makeCommandAction } from '$lib/server/work3/ui.js';
 
 export const load: PageServerLoad = async ({ params }) => {
 	startWork3();
-	const project = getObjectReader('project').get(params.id, {
+	const project = await getObjectReader('project').get(params.id, {
 		view: 'full',
 		filters: {},
 		limit: 1,

@@ -29,6 +29,7 @@ Commands:
   phase     list | get | create | activate | complete | skip | reopen
   milestone list | get | create | achieve | cancel | reopen
   link      create | remove | assign — typed relationships + project assignment
+  automaton list | get | create | activate | pause | update | delete | restore
   history   <id> — Event Log timeline
   sources   check — resolve a source reference
 
@@ -89,6 +90,7 @@ await runAxiCli({
 		phase: (args) => nounCommand('phase')(args),
 		milestone: (args) => nounCommand('milestone')(args),
 		link: (args) => nounCommand('link')(args),
+		automaton: (args) => nounCommand('automaton')(args),
 		history: (args) => historyCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},

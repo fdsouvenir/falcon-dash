@@ -7,7 +7,7 @@ import type { SourceRef } from '$lib/work3-shared/types.js';
 
 export const load: PageServerLoad = async ({ params }) => {
 	startWork3();
-	const finding = getObjectReader('finding').get(params.id, {
+	const finding = await getObjectReader('finding').get(params.id, {
 		view: 'full',
 		filters: {},
 		limit: 1,

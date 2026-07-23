@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ request, params, url }) => {
 		const reader = getObjectReader(params.type);
 		const options = parseReadOptions(url, 'detail');
 		validateReadOptions(reader, options);
-		const item = reader.get(params.id, options);
+		const item = await reader.get(params.id, options);
 		if (!item) {
 			throw new Work3Error('not_found', `No such ${reader.type}: ${params.id}`, {
 				details: { type: reader.type, id: params.id }

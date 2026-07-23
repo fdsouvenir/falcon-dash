@@ -694,6 +694,68 @@ export const WORK3_COMMANDS: Work3CommandMeta[] = [
 		summary: 'Assign Work to a Project (and optionally a Phase in that Project), or unassign',
 		required: ['work_id'],
 		optional: ['project_id', 'phase_id']
+	},
+	// Automaton (identity = OpenClaw job id; passed as payload id, not target)
+	{
+		name: 'create_automaton',
+		target: null,
+		summary:
+			'Create an Automaton (OpenClaw runtime object + Falcon attributes; defaults to paused)',
+		required: ['name', 'schedule', 'payload'],
+		optional: [
+			'description',
+			'session_target',
+			'wake_mode',
+			'delivery',
+			'agent_id',
+			'enabled',
+			'area_id',
+			'project_id',
+			'summary',
+			'policies'
+		]
+	},
+	{
+		name: 'activate_automaton',
+		target: null,
+		summary: 'Enable the Automaton (mutates OpenClaw enabled state directly)',
+		required: ['id'],
+		optional: ['expected_runtime_updated_at_ms']
+	},
+	{
+		name: 'pause_automaton',
+		target: null,
+		summary: 'Disable the Automaton (mutates OpenClaw enabled state directly)',
+		required: ['id'],
+		optional: ['expected_runtime_updated_at_ms']
+	},
+	{
+		name: 'update_automaton',
+		target: null,
+		summary: 'Update the same OpenClaw object and/or Falcon attributes (concurrency-guarded)',
+		required: ['id'],
+		optional: [
+			'patch',
+			'expected_runtime_updated_at_ms',
+			'area_id',
+			'project_id',
+			'summary',
+			'policies'
+		]
+	},
+	{
+		name: 'delete_automaton',
+		target: null,
+		summary: 'Delete the runtime component; Falcon preserves the restoration snapshot',
+		required: ['id'],
+		optional: []
+	},
+	{
+		name: 'restore_automaton',
+		target: null,
+		summary: 'Recreate the runtime component from the snapshot; returns paused with lineage',
+		required: ['id'],
+		optional: []
 	}
 ];
 

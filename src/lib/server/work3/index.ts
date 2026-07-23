@@ -96,7 +96,10 @@ export {
 	activeLinks,
 	RELATIONSHIP_TYPES,
 	reconcileTerminal,
-	invalidateSatisfiesFrom
+	invalidateSatisfiesFrom,
+	loadAutomatonAttrs,
+	automatonHealth,
+	syncAutomatonsOnce
 } from './objects/index.js';
 export type {
 	TaskRow,
@@ -147,6 +150,8 @@ export type {
 } from './read/project-derived.js';
 
 export { resolveWork3SourceRef, setSourceKindResolver } from './sources.js';
+export { getCronGateway, setCronGatewayForTests } from './cron-gateway.js';
+export type { CronGatewayApi, CronJob, CronRun } from './cron-gateway.js';
 export type { SourceResolution } from './sources.js';
 
 import { getWork3Db, getWork3EventsDb } from './db.js';
@@ -171,6 +176,37 @@ export function startWork3(): void {
 	// Asserted human-instruction refs must resolve to their native record.
 	setAuthoritySourceResolver(async (ref) => (await resolveWork3SourceRef(ref)).available);
 	startWork3OutboxWorker();
+	subscribeAutomatonRuntimeEvents();
+}
+
+let automatonEventsSubscribed = false;
+
+/**
+ * Follow gateway `cron` events (doc 06): on any job/run change, refresh
+ * snapshots and detect direct deletions. Definition changes are detected by
+ * re-reading and comparing updatedAtMs (the audited `configRevision` token
+ * does not exist in the installed gateway build).
+ */
+function subscribeAutomatonRuntimeEvents(): void {
+	if (automatonEventsSubscribed) return;
+	automatonEventsSubscribed = true;
+	// Dynamic import keeps test environments (no gateway singleton) clean.
+	import('$lib/server/gateway-client.js')
+		.then(({ getGatewayClient }) => {
+			const client = getGatewayClient();
+			let syncScheduled = false;
+			client.onEvent((event: { event: string }) => {
+				if (event.event !== 'cron' || syncScheduled) return;
+				syncScheduled = true;
+				setTimeout(() => {
+					syncScheduled = false;
+					import('./objects/automaton.js')
+						.then((automaton) => automaton.syncAutomatonsOnce())
+						.catch((error) => console.error('[work3] automaton sync failed:', error));
+				}, 500);
+			});
+		})
+		.catch((error) => console.error('[work3] automaton event subscription failed:', error));
 }
 
 export function resetWork3StartedForTests(): void {

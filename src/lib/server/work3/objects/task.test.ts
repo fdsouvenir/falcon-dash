@@ -518,12 +518,12 @@ describe('contradiction rules (template §7)', () => {
 			resolution_condition: 'Service restored'
 		});
 		const { getObjectReader } = await import('../read/registry.js');
-		const item = getObjectReader('task').get(id, {
+		const item = (await getObjectReader('task').get(id, {
 			view: 'list',
 			filters: {},
 			limit: 1,
 			offset: 0
-		})!;
+		}))!;
 		expect(item.status).toBe('waiting');
 		expect(item.actionability).toBe('blocked');
 	});

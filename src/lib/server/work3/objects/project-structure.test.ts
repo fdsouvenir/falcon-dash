@@ -509,12 +509,12 @@ describe('typed relationships', () => {
 	it('definitive empty projections: no relationships means empty arrays, not omissions', async () => {
 		const projectId = await activeProject();
 		const { getObjectReader } = await import('../read/registry.js');
-		const detail = getObjectReader('project').get(projectId, {
+		const detail = (await getObjectReader('project').get(projectId, {
 			view: 'full',
 			filters: {},
 			limit: 1,
 			offset: 0
-		})!;
+		}))!;
 		expect(detail.relationships).toEqual({ incoming: [] });
 		expect(detail.phases).toEqual([]);
 		expect(detail.milestones).toEqual([]);

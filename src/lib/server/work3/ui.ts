@@ -46,7 +46,7 @@ export function makeCommandAction(objectType: string) {
 			return { ok: true, command, noop: result.noop };
 		} catch (error) {
 			if (isWork3Error(error)) {
-				const current = getObjectReader(objectType).get(targetId, {
+				const current = await getObjectReader(objectType).get(targetId, {
 					view: 'detail',
 					filters: {},
 					limit: 1,
