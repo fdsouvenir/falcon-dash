@@ -22,6 +22,7 @@ Falcon Dash v3 is a human-operable, agent-native operator workspace backed by on
 | [03-relationships-provenance-sources.md](03-relationships-provenance-sources.md) | #328         | Typed relationship vocabulary, blockers, source_refs schema, supersession and reconciliation                                                                                                                     |
 | [04-agent-interface-axi.md](04-agent-interface-axi.md)                           | #329         | AXI command surface, TOON/JSON output modes, projections, aggregates, errors, conversational capture path                                                                                                        |
 | [05-operator-ui.md](05-operator-ui.md)                                           | #330         | Information architecture, Mission Control, Project ledger, decision/approval surfaces, rendered acceptance                                                                                                       |
+| [06-implementation-architecture.md](06-implementation-architecture.md)           | #332         | Developer-owned architecture: storage, transition engine, Event Log, auth adapters, API, CLI, Automaton composition, build order                                                                                 |
 
 ## Explicit exclusions
 
