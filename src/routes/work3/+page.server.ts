@@ -25,10 +25,32 @@ export const load: PageServerLoad = async ({ url }) => {
 		limit: 100,
 		offset: 0
 	});
+	const questions = getObjectReader('question').list({
+		view: 'list',
+		filters: { status: 'open' },
+		limit: 20,
+		offset: 0
+	});
+	const decisions = getObjectReader('decision').list({
+		view: 'list',
+		filters: {},
+		limit: 20,
+		offset: 0
+	});
+	const findings = getObjectReader('finding').list({
+		view: 'list',
+		filters: { validity: 'current' },
+		limit: 20,
+		offset: 0
+	});
 	return {
 		tasks: tasks.items,
 		taskTotal: tasks.total,
 		areas: areas.items,
+		questions: questions.items,
+		questionTotal: questions.total,
+		decisions: decisions.items,
+		findings: findings.items,
 		statusFilter: statusFilter ?? '',
 		areaFilter: areaFilter ?? ''
 	};

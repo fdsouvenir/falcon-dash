@@ -6,7 +6,7 @@ import {
 import { parsePublicId } from '../lib/work3-shared/ids.js';
 import { CliError } from './errors.js';
 import { parseArgs, type FlagSpec } from './flags.js';
-import { apiCommand, apiGet, currentVersion } from './http.js';
+import { apiCommand, apiGet, apiPost, currentVersion } from './http.js';
 import { render, type RenderOptions } from './render.js';
 
 /**
@@ -15,7 +15,26 @@ import { render, type RenderOptions } from './render.js';
  * shared manifest so CLI and server cannot drift.
  */
 
-const NUMBER_FIELDS = new Set(['due_at', 'follow_up_at']);
+const NUMBER_FIELDS = new Set([
+	'due_at',
+	'follow_up_at',
+	'target_at',
+	'needed_by',
+	'until',
+	'observed_at'
+]);
+
+/** Structured payload fields passed as JSON strings on the command line. */
+const JSON_FIELDS = new Set([
+	'options',
+	'deciders',
+	'recommendation',
+	'answerable_by',
+	'working_hypothesis',
+	'source_refs',
+	'targets',
+	'authority_source'
+]);
 
 /** engine command name → CLI verb, per noun. */
 export const NOUN_VERBS: Record<string, Record<string, string>> = {
@@ -42,13 +61,38 @@ export const NOUN_VERBS: Record<string, Record<string, string>> = {
 		create: 'create_blocker',
 		resolve: 'resolve_blocker',
 		invalidate: 'invalidate_blocker'
+	},
+	question: {
+		create: 'create_question',
+		update: 'update_question',
+		answer: 'answer_question',
+		'revise-answer': 'revise_answer',
+		withdraw: 'withdraw_question',
+		reopen: 'reopen_question'
+	},
+	decision: {
+		create: 'create_decision',
+		revise: 'revise_decision',
+		decide: 'decide',
+		defer: 'defer_decision',
+		resume: 'resume_decision',
+		withdraw: 'withdraw_decision',
+		supersede: 'supersede_decision'
+	},
+	finding: {
+		create: 'create_finding',
+		supersede: 'supersede_finding',
+		retract: 'retract_finding'
 	}
 };
 
 const LIST_FILTERS: Record<string, string[]> = {
 	task: ['status', 'area', 'owner', 'priority', 'active', 'q'],
 	area: ['state'],
-	blocker: ['state', 'blocked']
+	blocker: ['state', 'blocked'],
+	question: ['status', 'area', 'steward', 'priority'],
+	decision: ['status', 'area', 'priority'],
+	finding: ['validity', 'confidence', 'area', 'target']
 };
 
 function outputOptions(
@@ -78,7 +122,18 @@ function payloadFromFlags(
 ): Record<string, unknown> {
 	const payload: Record<string, unknown> = {};
 	for (const field of [...meta.required, ...meta.optional]) {
-		if (flags[field] !== undefined) payload[field] = flags[field];
+		if (flags[field] === undefined) continue;
+		if (JSON_FIELDS.has(field)) {
+			try {
+				payload[field] = JSON.parse(String(flags[field]));
+			} catch {
+				throw new CliError('usage', `--${field.replaceAll('_', '-')} must be valid JSON`, {
+					suggestions: [`Example: --${field.replaceAll('_', '-')} '["value"]'`]
+				});
+			}
+		} else {
+			payload[field] = flags[field];
+		}
 	}
 	const missing = meta.required.filter((field) => payload[field] === undefined);
 	if (missing.length > 0) {
@@ -239,6 +294,57 @@ export async function workCommand(args: string[]): Promise<string> {
 			'falcon work search "deploy"'
 		]
 	});
+}
+
+/** `falcon history <id>` — Event Log timeline for one object. */
+export async function historyCommand(args: string[]): Promise<string> {
+	const { positional, flags } = parseArgs(args, { limit: 'number', event_type: 'string' });
+	const subject = positional[0];
+	if (!subject)
+		throw new CliError('usage', 'Usage: falcon history <id> [--limit N] [--event-type type]');
+	const params = new URLSearchParams({ subject });
+	if (flags.limit !== undefined) params.set('limit', String(flags.limit));
+	if (flags.event_type !== undefined) params.set('event_type', String(flags.event_type));
+	const data = await apiGet(`/api/v3/history?${params}`);
+	const events = (data.events as Record<string, unknown>[]).map((event) => ({
+		at: event.occurred_at,
+		event: event.event_type,
+		summary: event.summary,
+		actor: (event.actor as Record<string, unknown>)?.label,
+		version: event.version_to
+	}));
+	return render({ subject, count: data.count, events }, outputOptions(flags));
+}
+
+/** `falcon sources check --kind message --ref sessionKey#msgId` — resolve one ref. */
+export async function sourcesCommand(args: string[]): Promise<string> {
+	if (args[0] !== 'check') {
+		throw new CliError(
+			'usage',
+			'Usage: falcon sources check --kind <kind> --ref <ref> [--label …] [--locator …]'
+		);
+	}
+	const { flags } = parseArgs(args.slice(1), {
+		kind: 'string',
+		ref: 'string',
+		label: 'string',
+		locator: 'string'
+	});
+	if (!flags.kind || !flags.ref) {
+		throw new CliError('usage', 'sources check requires --kind and --ref');
+	}
+	const body = {
+		source_refs: [
+			{
+				kind: flags.kind,
+				ref: flags.ref,
+				...(flags.label ? { label: flags.label } : {}),
+				...(flags.locator ? { locator: flags.locator } : {})
+			}
+		]
+	};
+	const data = await apiPost('/api/v3/sources/resolve', body);
+	return render({ results: data.results }, outputOptions(flags));
 }
 
 export function commandHelp(noun: string): string {

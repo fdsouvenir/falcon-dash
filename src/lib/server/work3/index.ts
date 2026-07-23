@@ -67,9 +67,27 @@ export {
 	loadBlocker,
 	TASK_STATUSES,
 	TASK_PRIORITIES,
-	BLOCKER_SOURCE_KINDS
+	BLOCKER_SOURCE_KINDS,
+	loadQuestion,
+	currentAnswer,
+	answerHistory,
+	ANSWER_CONFIDENCES,
+	loadDecision,
+	currentPackage,
+	packageHistory,
+	loadFinding,
+	FINDING_CONFIDENCES
 } from './objects/index.js';
-export type { TaskRow, TaskStatus, BlockerRow } from './objects/index.js';
+export type {
+	TaskRow,
+	TaskStatus,
+	BlockerRow,
+	QuestionRow,
+	AnswerRow,
+	DecisionRow,
+	DecisionPackageRow,
+	FindingRow
+} from './objects/index.js';
 export {
 	activeBlockersFor,
 	activeBlockersForMany,
@@ -78,9 +96,14 @@ export {
 	activeWorkCountForArea
 } from './read/derived.js';
 
+export { resolveWork3SourceRef, setSourceKindResolver } from './sources.js';
+export type { SourceResolution } from './sources.js';
+
 import { getWork3Db, getWork3EventsDb } from './db.js';
 import { startWork3OutboxWorker } from './outbox.js';
 import { registerWork3Objects } from './objects/index.js';
+import { setAuthoritySourceResolver } from './engine/authority.js';
+import { resolveWork3SourceRef } from './sources.js';
 
 let started = false;
 
@@ -95,6 +118,8 @@ export function startWork3(): void {
 	getWork3Db();
 	getWork3EventsDb();
 	registerWork3Objects();
+	// Asserted human-instruction refs must resolve to their native record.
+	setAuthoritySourceResolver(async (ref) => (await resolveWork3SourceRef(ref)).available);
 	startWork3OutboxWorker();
 }
 

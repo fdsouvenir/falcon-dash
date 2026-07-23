@@ -7,7 +7,7 @@
 export interface Work3CommandMeta {
 	name: string;
 	/** Entity type the command targets; null for creation commands. */
-	target: 'task' | 'area' | 'blocker' | null;
+	target: 'task' | 'area' | 'blocker' | 'question' | 'decision' | 'finding' | null;
 	summary: string;
 	/** Required payload fields. */
 	required: string[];
@@ -144,6 +144,159 @@ export const WORK3_COMMANDS: Work3CommandMeta[] = [
 		summary: 'Invalidate a blocker that was wrong or ceased to apply',
 		required: ['reason'],
 		optional: []
+	},
+	// Question
+	{
+		name: 'create_question',
+		target: null,
+		summary: 'Create a Question (missing knowledge that materially affects work)',
+		required: ['question', 'area_id'],
+		optional: [
+			'context',
+			'impact',
+			'priority',
+			'steward',
+			'answerable_by',
+			'working_hypothesis',
+			'target_at'
+		]
+	},
+	{
+		name: 'update_question',
+		target: 'question',
+		summary: 'Edit Question context/impact/steward fields (never lifecycle)',
+		required: [],
+		optional: [
+			'context',
+			'impact',
+			'priority',
+			'steward',
+			'answerable_by',
+			'working_hypothesis',
+			'target_at'
+		]
+	},
+	{
+		name: 'answer_question',
+		target: 'question',
+		summary: 'Answer a Question (immutable answer revision; supported answers need sources)',
+		required: ['answer', 'confidence'],
+		optional: ['source_refs']
+	},
+	{
+		name: 'revise_answer',
+		target: 'question',
+		summary: 'Revise an answer (prior revision preserved; lifecycle stays answered)',
+		required: ['answer', 'confidence'],
+		optional: ['source_refs']
+	},
+	{
+		name: 'withdraw_question',
+		target: 'question',
+		summary: 'Withdraw an unanswered Question (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'reopen_question',
+		target: 'question',
+		summary: 'Reopen an answered/withdrawn Question (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	// Decision
+	{
+		name: 'create_decision',
+		target: null,
+		summary: 'Create a decision-ready Decision directly as pending',
+		required: [
+			'area_id',
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes', 'priority', 'needed_by']
+	},
+	{
+		name: 'revise_decision',
+		target: 'decision',
+		summary: 'Replace a pending/deferred package with a new immutable revision',
+		required: [
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes']
+	},
+	{
+		name: 'decide',
+		target: 'decision',
+		summary: 'Record the immutable Decision outcome (requires human authority basis)',
+		required: ['option_id', 'rationale'],
+		optional: ['authority_source']
+	},
+	{
+		name: 'defer_decision',
+		target: 'decision',
+		summary: 'Defer a pending Decision (requires a reason)',
+		required: ['reason'],
+		optional: ['until']
+	},
+	{
+		name: 'resume_decision',
+		target: 'decision',
+		summary: 'Resume a deferred Decision to pending',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'withdraw_decision',
+		target: 'decision',
+		summary: 'Withdraw a pending/deferred Decision (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'supersede_decision',
+		target: 'decision',
+		summary: 'Create a new pending Decision superseding a decided one',
+		required: [
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes', 'needed_by']
+	},
+	// Finding
+	{
+		name: 'create_finding',
+		target: null,
+		summary: 'Record a durable evidence-backed conclusion (sources required)',
+		required: ['title', 'conclusion', 'confidence', 'source_refs'],
+		optional: ['significance', 'targets', 'observed_at', 'area_id']
+	},
+	{
+		name: 'supersede_finding',
+		target: 'finding',
+		summary: 'Replace a Finding with a corrected one (history preserved)',
+		required: ['title', 'conclusion', 'confidence', 'source_refs'],
+		optional: ['significance', 'targets', 'observed_at', 'area_id']
+	},
+	{
+		name: 'retract_finding',
+		target: 'finding',
+		summary: 'Retract a Finding (requires reason; corrective sources when applicable)',
+		required: ['reason'],
+		optional: ['source_refs']
 	}
 ];
 

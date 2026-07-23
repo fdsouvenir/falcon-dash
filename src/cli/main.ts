@@ -1,7 +1,7 @@
 import { runAxiCli } from 'axi-sdk-js';
 import { CliError, exitCodeFor } from './errors.js';
 import { apiGet } from './http.js';
-import { commandHelp, nounCommand, workCommand } from './nouns.js';
+import { commandHelp, historyCommand, nounCommand, sourcesCommand, workCommand } from './nouns.js';
 import { render } from './render.js';
 
 /**
@@ -14,10 +14,15 @@ const TOP_LEVEL_HELP = `falcon — Falcon Dash Work for agents
 Usage: falcon <command> [args] [flags]
 
 Commands:
-  work     list | get <id> | search <query>
-  task     list | get | create | ready | start | wait | resume | submit | accept | complete | cancel | reopen | update
-  area     list | get | create | update | archive | restore
-  blocker  list | get | create | resolve | invalidate
+  work      list | get <id> | search <query>
+  task      list | get | create | ready | start | wait | resume | submit | accept | complete | cancel | reopen | update
+  area      list | get | create | update | archive | restore
+  blocker   list | get | create | resolve | invalidate
+  question  list | get | create | answer | revise-answer | withdraw | reopen | update
+  decision  list | get | create | decide | defer | resume | withdraw | revise | supersede
+  finding   list | get | create | supersede | retract
+  history   <id> — Event Log timeline
+  sources   check — resolve a source reference
 
 Output flags (all commands): --json, --fields a,b, --full
 Config: FALCON_DASH_URL, FALCON_DASH_TOKEN (or token file under the data dir; FALCON_AGENT_ID selects one)
@@ -64,11 +69,20 @@ await runAxiCli({
 		work: (args) => workCommand(args),
 		task: (args) => nounCommand('task')(args),
 		area: (args) => nounCommand('area')(args),
-		blocker: (args) => nounCommand('blocker')(args)
+		blocker: (args) => nounCommand('blocker')(args),
+		question: (args) => nounCommand('question')(args),
+		decision: (args) => nounCommand('decision')(args),
+		finding: (args) => nounCommand('finding')(args),
+		history: (args) => historyCommand(args),
+		sources: (args) => sourcesCommand(args)
 	},
 	getCommandHelp: (command) => {
 		if (command === 'work') return 'falcon work list|get <id>|search <query> — cross-type reads';
-		if (command === 'task' || command === 'area' || command === 'blocker') {
+		if (command === 'history')
+			return 'falcon history <id> [--limit N] — Event Log timeline for one object';
+		if (command === 'sources')
+			return 'falcon sources check --kind <kind> --ref <ref> — resolve a source reference';
+		if (['task', 'area', 'blocker', 'question', 'decision', 'finding'].includes(command)) {
 			return commandHelp(command);
 		}
 		return null;

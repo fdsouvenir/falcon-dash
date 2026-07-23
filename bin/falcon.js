@@ -1485,6 +1485,9 @@ async function request(path, init = {}) {
 async function apiGet(path) {
 	return await request(path);
 }
+async function apiPost(path, body) {
+	return await request(path, { method: 'POST', body: JSON.stringify(body) });
+}
 async function apiCommand(params) {
 	return await request(`/api/v3/commands/${params.command}`, {
 		method: 'POST',
@@ -1632,6 +1635,159 @@ var WORK3_COMMANDS = [
 		summary: 'Invalidate a blocker that was wrong or ceased to apply',
 		required: ['reason'],
 		optional: []
+	},
+	// Question
+	{
+		name: 'create_question',
+		target: null,
+		summary: 'Create a Question (missing knowledge that materially affects work)',
+		required: ['question', 'area_id'],
+		optional: [
+			'context',
+			'impact',
+			'priority',
+			'steward',
+			'answerable_by',
+			'working_hypothesis',
+			'target_at'
+		]
+	},
+	{
+		name: 'update_question',
+		target: 'question',
+		summary: 'Edit Question context/impact/steward fields (never lifecycle)',
+		required: [],
+		optional: [
+			'context',
+			'impact',
+			'priority',
+			'steward',
+			'answerable_by',
+			'working_hypothesis',
+			'target_at'
+		]
+	},
+	{
+		name: 'answer_question',
+		target: 'question',
+		summary: 'Answer a Question (immutable answer revision; supported answers need sources)',
+		required: ['answer', 'confidence'],
+		optional: ['source_refs']
+	},
+	{
+		name: 'revise_answer',
+		target: 'question',
+		summary: 'Revise an answer (prior revision preserved; lifecycle stays answered)',
+		required: ['answer', 'confidence'],
+		optional: ['source_refs']
+	},
+	{
+		name: 'withdraw_question',
+		target: 'question',
+		summary: 'Withdraw an unanswered Question (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'reopen_question',
+		target: 'question',
+		summary: 'Reopen an answered/withdrawn Question (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	// Decision
+	{
+		name: 'create_decision',
+		target: null,
+		summary: 'Create a decision-ready Decision directly as pending',
+		required: [
+			'area_id',
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes', 'priority', 'needed_by']
+	},
+	{
+		name: 'revise_decision',
+		target: 'decision',
+		summary: 'Replace a pending/deferred package with a new immutable revision',
+		required: [
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes']
+	},
+	{
+		name: 'decide',
+		target: 'decision',
+		summary: 'Record the immutable Decision outcome (requires human authority basis)',
+		required: ['option_id', 'rationale'],
+		optional: ['authority_source']
+	},
+	{
+		name: 'defer_decision',
+		target: 'decision',
+		summary: 'Defer a pending Decision (requires a reason)',
+		required: ['reason'],
+		optional: ['until']
+	},
+	{
+		name: 'resume_decision',
+		target: 'decision',
+		summary: 'Resume a deferred Decision to pending',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'withdraw_decision',
+		target: 'decision',
+		summary: 'Withdraw a pending/deferred Decision (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'supersede_decision',
+		target: 'decision',
+		summary: 'Create a new pending Decision superseding a decided one',
+		required: [
+			'title',
+			'prompt',
+			'consequence_of_no_decision',
+			'deciders',
+			'options',
+			'recommendation'
+		],
+		optional: ['context', 'stakes', 'needed_by']
+	},
+	// Finding
+	{
+		name: 'create_finding',
+		target: null,
+		summary: 'Record a durable evidence-backed conclusion (sources required)',
+		required: ['title', 'conclusion', 'confidence', 'source_refs'],
+		optional: ['significance', 'targets', 'observed_at', 'area_id']
+	},
+	{
+		name: 'supersede_finding',
+		target: 'finding',
+		summary: 'Replace a Finding with a corrected one (history preserved)',
+		required: ['title', 'conclusion', 'confidence', 'source_refs'],
+		optional: ['significance', 'targets', 'observed_at', 'area_id']
+	},
+	{
+		name: 'retract_finding',
+		target: 'finding',
+		summary: 'Retract a Finding (requires reason; corrective sources when applicable)',
+		required: ['reason'],
+		optional: ['source_refs']
 	}
 ];
 function commandMeta(name) {
@@ -2284,7 +2440,24 @@ function render(payload, options = {}) {
 }
 
 // src/cli/nouns.ts
-var NUMBER_FIELDS = /* @__PURE__ */ new Set(['due_at', 'follow_up_at']);
+var NUMBER_FIELDS = /* @__PURE__ */ new Set([
+	'due_at',
+	'follow_up_at',
+	'target_at',
+	'needed_by',
+	'until',
+	'observed_at'
+]);
+var JSON_FIELDS = /* @__PURE__ */ new Set([
+	'options',
+	'deciders',
+	'recommendation',
+	'answerable_by',
+	'working_hypothesis',
+	'source_refs',
+	'targets',
+	'authority_source'
+]);
 var NOUN_VERBS = {
 	area: {
 		create: 'create_area',
@@ -2309,12 +2482,37 @@ var NOUN_VERBS = {
 		create: 'create_blocker',
 		resolve: 'resolve_blocker',
 		invalidate: 'invalidate_blocker'
+	},
+	question: {
+		create: 'create_question',
+		update: 'update_question',
+		answer: 'answer_question',
+		'revise-answer': 'revise_answer',
+		withdraw: 'withdraw_question',
+		reopen: 'reopen_question'
+	},
+	decision: {
+		create: 'create_decision',
+		revise: 'revise_decision',
+		decide: 'decide',
+		defer: 'defer_decision',
+		resume: 'resume_decision',
+		withdraw: 'withdraw_decision',
+		supersede: 'supersede_decision'
+	},
+	finding: {
+		create: 'create_finding',
+		supersede: 'supersede_finding',
+		retract: 'retract_finding'
 	}
 };
 var LIST_FILTERS = {
 	task: ['status', 'area', 'owner', 'priority', 'active', 'q'],
 	area: ['state'],
-	blocker: ['state', 'blocked']
+	blocker: ['state', 'blocked'],
+	question: ['status', 'area', 'steward', 'priority'],
+	decision: ['status', 'area', 'priority'],
+	finding: ['validity', 'confidence', 'area', 'target']
 };
 function outputOptions(flags, fullCommand) {
 	return {
@@ -2335,7 +2533,18 @@ function payloadSpec(meta) {
 function payloadFromFlags(meta, flags) {
 	const payload = {};
 	for (const field of [...meta.required, ...meta.optional]) {
-		if (flags[field] !== void 0) payload[field] = flags[field];
+		if (flags[field] === void 0) continue;
+		if (JSON_FIELDS.has(field)) {
+			try {
+				payload[field] = JSON.parse(String(flags[field]));
+			} catch {
+				throw new CliError('usage', `--${field.replaceAll('_', '-')} must be valid JSON`, {
+					suggestions: [`Example: --${field.replaceAll('_', '-')} '["value"]'`]
+				});
+			}
+		} else {
+			payload[field] = flags[field];
+		}
 	}
 	const missing = meta.required.filter((field) => payload[field] === void 0);
 	if (missing.length > 0) {
@@ -2476,6 +2685,53 @@ async function workCommand(args) {
 		]
 	});
 }
+async function historyCommand(args) {
+	const { positional, flags } = parseArgs(args, { limit: 'number', event_type: 'string' });
+	const subject = positional[0];
+	if (!subject)
+		throw new CliError('usage', 'Usage: falcon history <id> [--limit N] [--event-type type]');
+	const params = new URLSearchParams({ subject });
+	if (flags.limit !== void 0) params.set('limit', String(flags.limit));
+	if (flags.event_type !== void 0) params.set('event_type', String(flags.event_type));
+	const data = await apiGet(`/api/v3/history?${params}`);
+	const events = data.events.map((event) => ({
+		at: event.occurred_at,
+		event: event.event_type,
+		summary: event.summary,
+		actor: event.actor?.label,
+		version: event.version_to
+	}));
+	return render({ subject, count: data.count, events }, outputOptions(flags));
+}
+async function sourcesCommand(args) {
+	if (args[0] !== 'check') {
+		throw new CliError(
+			'usage',
+			'Usage: falcon sources check --kind <kind> --ref <ref> [--label \u2026] [--locator \u2026]'
+		);
+	}
+	const { flags } = parseArgs(args.slice(1), {
+		kind: 'string',
+		ref: 'string',
+		label: 'string',
+		locator: 'string'
+	});
+	if (!flags.kind || !flags.ref) {
+		throw new CliError('usage', 'sources check requires --kind and --ref');
+	}
+	const body = {
+		source_refs: [
+			{
+				kind: flags.kind,
+				ref: flags.ref,
+				...(flags.label ? { label: flags.label } : {}),
+				...(flags.locator ? { locator: flags.locator } : {})
+			}
+		]
+	};
+	const data = await apiPost('/api/v3/sources/resolve', body);
+	return render({ results: data.results }, outputOptions(flags));
+}
 function commandHelp(noun) {
 	const lines = [`falcon ${noun} \u2014 verbs:`, '  list, get'];
 	for (const [verb, commandName] of Object.entries(NOUN_VERBS[noun])) {
@@ -2501,10 +2757,15 @@ var TOP_LEVEL_HELP = `falcon \u2014 Falcon Dash Work for agents
 Usage: falcon <command> [args] [flags]
 
 Commands:
-  work     list | get <id> | search <query>
-  task     list | get | create | ready | start | wait | resume | submit | accept | complete | cancel | reopen | update
-  area     list | get | create | update | archive | restore
-  blocker  list | get | create | resolve | invalidate
+  work      list | get <id> | search <query>
+  task      list | get | create | ready | start | wait | resume | submit | accept | complete | cancel | reopen | update
+  area      list | get | create | update | archive | restore
+  blocker   list | get | create | resolve | invalidate
+  question  list | get | create | answer | revise-answer | withdraw | reopen | update
+  decision  list | get | create | decide | defer | resume | withdraw | revise | supersede
+  finding   list | get | create | supersede | retract
+  history   <id> \u2014 Event Log timeline
+  sources   check \u2014 resolve a source reference
 
 Output flags (all commands): --json, --fields a,b, --full
 Config: FALCON_DASH_URL, FALCON_DASH_TOKEN (or token file under the data dir; FALCON_AGENT_ID selects one)
@@ -2548,12 +2809,21 @@ await runAxiCli({
 		work: (args) => workCommand(args),
 		task: (args) => nounCommand('task')(args),
 		area: (args) => nounCommand('area')(args),
-		blocker: (args) => nounCommand('blocker')(args)
+		blocker: (args) => nounCommand('blocker')(args),
+		question: (args) => nounCommand('question')(args),
+		decision: (args) => nounCommand('decision')(args),
+		finding: (args) => nounCommand('finding')(args),
+		history: (args) => historyCommand(args),
+		sources: (args) => sourcesCommand(args)
 	},
 	getCommandHelp: (command) => {
 		if (command === 'work')
 			return 'falcon work list|get <id>|search <query> \u2014 cross-type reads';
-		if (command === 'task' || command === 'area' || command === 'blocker') {
+		if (command === 'history')
+			return 'falcon history <id> [--limit N] \u2014 Event Log timeline for one object';
+		if (command === 'sources')
+			return 'falcon sources check --kind <kind> --ref <ref> \u2014 resolve a source reference';
+		if (['task', 'area', 'blocker', 'question', 'decision', 'finding'].includes(command)) {
 			return commandHelp(command);
 		}
 		return null;

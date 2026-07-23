@@ -51,6 +51,13 @@ export async function apiGet(path: string): Promise<Record<string, unknown>> {
 	return (await request(path)) as Record<string, unknown>;
 }
 
+export async function apiPost(path: string, body: unknown): Promise<Record<string, unknown>> {
+	return (await request(path, { method: 'POST', body: JSON.stringify(body) })) as Record<
+		string,
+		unknown
+	>;
+}
+
 export async function apiCommand<TResult = Record<string, unknown>>(params: {
 	command: string;
 	target?: string;

@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import { Work3Error } from '$lib/work3-shared/errors.js';
-import type { SourceRef } from '$lib/work3-shared/types.js';
+import { parseSourceRefs } from '$lib/work3-shared/sources.js';
 import { allocateEntityId, insertEntity, loadEntity } from '../envelope.js';
 import { registerCommand } from '../engine/registry.js';
 import { optionalString, requireEnum, requireString } from '../engine/validate.js';
@@ -37,28 +37,6 @@ export interface BlockerRow {
 
 export function loadBlocker(db: Database.Database, id: string): BlockerRow | null {
 	return (db.prepare('SELECT * FROM blockers WHERE entity_id = ?').get(id) as BlockerRow) ?? null;
-}
-
-function parseSourceRefs(payload: Record<string, unknown>): SourceRef[] {
-	const raw = payload.source_refs;
-	if (raw === undefined) return [];
-	if (!Array.isArray(raw)) {
-		throw new Work3Error('validation_failed', 'source_refs must be an array');
-	}
-	return raw.map((entry) => {
-		if (!entry || typeof entry !== 'object') {
-			throw new Work3Error('validation_failed', 'each source_ref must be an object');
-		}
-		const candidate = entry as Record<string, unknown>;
-		if (typeof candidate.kind !== 'string' || typeof candidate.ref !== 'string') {
-			throw new Work3Error('validation_failed', 'each source_ref requires kind and ref');
-		}
-		return {
-			kind: candidate.kind,
-			ref: candidate.ref,
-			...(typeof candidate.summary === 'string' ? { summary: candidate.summary } : {})
-		};
-	});
 }
 
 export function registerBlockerCommands(): void {
@@ -198,7 +176,7 @@ export function registerBlockerCommands(): void {
 				});
 			}
 			const summary = requireString(ctx.payload, 'summary');
-			const sourceRefs = parseSourceRefs(ctx.payload);
+			const sourceRefs = parseSourceRefs(ctx.payload.source_refs);
 			ctx.db
 				.prepare(
 					`UPDATE blockers SET state = 'resolved', resolved_at = ?, resolved_summary = ?,

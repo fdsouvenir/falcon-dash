@@ -15,14 +15,18 @@ export interface Actor {
 }
 
 /**
- * Compact source reference (doc 01 "lightweight source references").
- * `kind` examples: message, session, tool_call, run, commit, file, url,
- * screenshot, external, human_statement.
+ * Compact source reference (doc 03 schema). `kind` is the native record
+ * family: message, human_statement, file, url, work_event, run, commit,
+ * document, email, external. Secrets never enter source refs.
  */
 export interface SourceRef {
 	kind: string;
 	ref: string;
-	summary?: string;
+	label?: string;
+	captured_at?: number;
+	locator?: string;
+	snapshot_ref?: string;
+	content_hash?: string;
 }
 
 /** Minimal shared entity envelope (doc 01). */

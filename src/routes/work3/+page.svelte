@@ -194,4 +194,71 @@
 			</table>
 		{/if}
 	</div>
+
+	<div class="grid gap-4 md:grid-cols-3">
+		<div class="rounded border border-surface-border bg-surface-1">
+			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
+				Open Questions ({data.questionTotal})
+			</div>
+			{#if data.questions.length === 0}
+				<p class="px-4 py-3 text-sm text-status-muted">No open questions.</p>
+			{:else}
+				<ul class="divide-y divide-surface-border/60">
+					{#each data.questions as question (question.id)}
+						<li class="px-4 py-2 text-sm">
+							<a
+								class="text-blue-400 hover:underline"
+								href={resolve('/work3/questions/[id]', { id: String(question.id) })}
+								>{question.id}</a
+							>
+							<span class="ml-2 text-white/80">{question.question}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		<div class="rounded border border-surface-border bg-surface-1">
+			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
+				Decisions
+			</div>
+			{#if data.decisions.length === 0}
+				<p class="px-4 py-3 text-sm text-status-muted">No decisions.</p>
+			{:else}
+				<ul class="divide-y divide-surface-border/60">
+					{#each data.decisions as decision (decision.id)}
+						<li class="px-4 py-2 text-sm">
+							<a
+								class="text-blue-400 hover:underline"
+								href={resolve('/work3/decisions/[id]', { id: String(decision.id) })}
+								>{decision.id}</a
+							>
+							<span class="ml-2 text-white/80">{decision.title}</span>
+							<span class="ml-1 text-xs text-status-muted">({decision.status})</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		<div class="rounded border border-surface-border bg-surface-1">
+			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
+				Current Findings
+			</div>
+			{#if data.findings.length === 0}
+				<p class="px-4 py-3 text-sm text-status-muted">No findings.</p>
+			{:else}
+				<ul class="divide-y divide-surface-border/60">
+					{#each data.findings as finding (finding.id)}
+						<li class="px-4 py-2 text-sm">
+							<a
+								class="text-blue-400 hover:underline"
+								href={resolve('/work3/findings/[id]', { id: String(finding.id) })}>{finding.id}</a
+							>
+							<span class="ml-2 text-white/80">{finding.title}</span>
+							<span class="ml-1 text-xs text-status-muted">({finding.confidence})</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	</div>
 </div>

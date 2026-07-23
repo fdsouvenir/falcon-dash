@@ -1,4 +1,5 @@
 import { Work3Error } from '$lib/work3-shared/errors.js';
+import { parseSourceRef } from '$lib/work3-shared/sources.js';
 import type { SourceRef } from '$lib/work3-shared/types.js';
 import type { PreGuardContext } from './registry.js';
 
@@ -35,11 +36,11 @@ export function extractAuthoritySource(payload: Record<string, unknown>): Source
 	if (!raw || typeof raw !== 'object') return null;
 	const candidate = raw as Record<string, unknown>;
 	if (typeof candidate.kind !== 'string' || typeof candidate.ref !== 'string') return null;
-	return {
-		kind: candidate.kind,
-		ref: candidate.ref,
-		...(typeof candidate.summary === 'string' ? { summary: candidate.summary } : {})
-	};
+	try {
+		return parseSourceRef(raw);
+	} catch {
+		return null;
+	}
 }
 
 /**
