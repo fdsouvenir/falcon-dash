@@ -144,6 +144,11 @@ function queryTasks(options: ReadOptions): { rows: TaskJoinRow[]; total: number 
 	if (options.filters.active === 'true') {
 		clauses.push(`t.status NOT IN ('completed','cancelled')`);
 	}
+	if (options.filters.q) {
+		clauses.push('(t.title LIKE ? OR t.summary LIKE ?)');
+		const like = `%${options.filters.q}%`;
+		params.push(like, like);
+	}
 	const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
 	const total = (
 		db
@@ -167,7 +172,7 @@ export function registerSliceReaders(): void {
 		type: 'task',
 		aliases: ['tasks'],
 		knownFields: TASK_FIELDS,
-		knownFilters: ['status', 'area', 'owner', 'priority', 'active'],
+		knownFilters: ['status', 'area', 'owner', 'priority', 'active', 'q'],
 		list: (options) => {
 			const { rows, total } = queryTasks(options);
 			const blockers = activeBlockersForMany(
