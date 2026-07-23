@@ -5,6 +5,7 @@ import { startContextScheduler } from '$lib/server/work/context-scheduler.js';
 import { startReconciliationScheduler } from '$lib/server/work/reconciliation-scheduler.js';
 import { startTerminalServer } from '$lib/server/terminal-server.js';
 import { startGatewayClient } from '$lib/server/gateway-client.js';
+import { startWork3 } from '$lib/server/work3/index.js';
 
 Sentry.init({
 	dsn: __SENTRY_DSN__,
@@ -16,6 +17,7 @@ Sentry.init({
 
 startContextScheduler();
 startReconciliationScheduler();
+startWork3();
 
 // Only start standalone terminal server in dev — production uses entry.js wrapper
 // which attaches the terminal WebSocket to the same HTTP server
