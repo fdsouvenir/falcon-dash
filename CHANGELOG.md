@@ -5,6 +5,34 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-07-23
+
+### Added
+
+- Work v3's semantic command engine, typed domain objects, lifecycle guards, optimistic
+  concurrency, provenance, reconciliation, and append-only Event Log
+- Mission Control, Needs Resolution, Projects, Automata, Browse, and type-specific Work detail
+  surfaces for operators
+- Governance records for Plans, Reviews, Authorizations, and Change Requests
+- Agent-native `/api/v3` endpoints with bearer-token identities and a `falcon` CLI supporting TOON
+  and JSON output
+- OpenClaw-backed Automata with definition reconciliation and run history
+- Gateway protocol v4 adapters while retaining protocol v3 compatibility
+
+### Changed
+
+- `/work` now serves Work v3 and uses `work3.db` plus `work3-events.db` as its canonical stores
+- Work context is supplied through the gateway brief plugin instead of the v2 markdown context
+  mirror
+- Search now opens the v3 Browse surface
+
+### Breaking
+
+- Removed the Work v2 UI, server module, context and reconciliation schedulers, and
+  `/api/work/*` endpoints
+- Falcon Dash does not migrate or read v2 Work data in application code. The existing `work.db`
+  remains untouched for any one-time operator-managed disposition.
+
 ## [0.2.0] - 2026-02-16
 
 ### Added
