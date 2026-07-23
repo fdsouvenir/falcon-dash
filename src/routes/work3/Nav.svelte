@@ -19,7 +19,6 @@
 
 <nav class="flex flex-wrap gap-1 overflow-x-auto border-b border-surface-border pb-2">
 	{#each destinations as destination (destination.href)}
-		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- hrefs come from resolve() above -->
 		<a
 			href={destination.href}
 			class="whitespace-nowrap rounded px-3 py-1.5 text-sm {isActive(destination)

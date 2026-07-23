@@ -99,7 +99,6 @@
 					<ul class="divide-y divide-surface-border/40">
 						{#each bucketData.items as item, index (item.id ?? index)}
 							<li class="px-4 py-2 text-sm">
-								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- workHref wraps resolve() -->
 								<a
 									class="text-blue-400 hover:underline"
 									href={workHref(String(item.id), String(item.type))}

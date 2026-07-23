@@ -84,7 +84,6 @@
 		</p>
 		{#if project.current_next_item_id}
 			<p class="mt-1 text-sm text-blue-300">
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- workHref wraps resolve() -->
 				Next:
 				<a class="hover:underline" href={workHref(project.current_next_item_id)}
 					>{project.current_next_item_id}</a
@@ -198,7 +197,6 @@
 			<ul class="divide-y divide-surface-border/60">
 				{#each project.work as item (item.id)}
 					<li class="flex items-center gap-2 px-4 py-2 text-sm">
-						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- workHref wraps resolve() -->
 						<a class="text-blue-400 hover:underline" href={workHref(item.id)}>{item.id}</a>
 						<span class="text-white/80">{item.title}</span>
 						<span class="text-xs text-status-muted">{item.status}</span>
