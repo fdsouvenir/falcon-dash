@@ -15,11 +15,13 @@ test('desktop shell smoke', async ({ page, baseURL }, testInfo) => {
 
 	await page.goto(`${baseURL ?? ''}/`);
 
-	await expect(page.locator('aside')).toBeVisible();
-	await expect(page.getByText('Navigation')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Dashboard' }).first()).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Approvals' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Channels' })).toBeVisible();
+	await expect(page).toHaveURL(/\/work$/);
+	const moduleNavigation = page.getByRole('navigation', { name: 'Falcon Dash modules' });
+	await expect(moduleNavigation).toBeVisible();
+	await expect(moduleNavigation.getByRole('button', { name: 'Vault' })).toBeVisible();
+	await expect(moduleNavigation.getByRole('button', { name: 'Channels' })).toBeVisible();
+	await expect(moduleNavigation.getByRole('button', { name: 'Labs' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Work' })).toBeVisible();
 });
 
 test('mobile shell smoke', async ({ page, baseURL }, testInfo) => {
@@ -27,11 +29,11 @@ test('mobile shell smoke', async ({ page, baseURL }, testInfo) => {
 
 	await page.goto(`${baseURL ?? ''}/`);
 
-	await expect(page.getByText('Dashboard')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Home' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Projects' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Channels' })).toBeVisible();
+	await expect(page).toHaveURL(/\/work$/);
+	for (const module of ['Work', 'Vault', 'Channels', 'Labs']) {
+		await expect(page.getByRole('link', { name: module, exact: true }).last()).toBeVisible();
+	}
+	await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
 });
 
 test('settings route smoke', async ({ page, baseURL }, testInfo) => {
@@ -39,12 +41,12 @@ test('settings route smoke', async ({ page, baseURL }, testInfo) => {
 
 	if (testInfo.project.name === 'mobile-chrome') {
 		await expect(page.getByText('Settings')).toBeVisible();
-		await expect(page.getByRole('button', { name: /User/i })).toBeVisible();
-		await expect(page.getByRole('button', { name: /Agents/i })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'User Your profile' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Agents System instructions' })).toBeVisible();
 		return;
 	}
 
 	await expect(page.getByRole('button', { name: 'User' })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Agents' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Projects' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Agent Tokens' })).toBeVisible();
 });

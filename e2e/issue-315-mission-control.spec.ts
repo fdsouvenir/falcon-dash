@@ -1,28 +1,14 @@
 import { expect, test } from './fixtures';
 
-test.describe('issue #315 mission control homepage', () => {
-	test('renders the operator dashboard surface', async ({ gotoHome, page }) => {
+test.describe('issue #315 default operator workspace', () => {
+	test('redirects the homepage to Work v3 Mission Control', async ({ gotoHome, page }) => {
 		await gotoHome();
 
-		await expect(
-			page.getByRole('heading', { name: /gateway, agents, channels, and approvals/i })
-		).toBeVisible();
-		await expect(page.getByText('Operator Dashboard')).toBeVisible();
-		await expect(page.getByRole('heading', { name: /configured operators/i })).toBeVisible();
-		await expect(
-			page.getByRole('heading', {
-				name: /approval queue unavailable|queue is clear|queue needs attention/i
-			})
-		).toBeVisible();
-		await expect(
-			page.getByRole('heading', {
-				name: /channels unavailable|channels ready|channels need attention/i
-			})
-		).toBeVisible();
-		await expect(page.getByRole('heading', { name: /open a workspace/i })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
-		await expect(page.getByText('Mission Control')).toHaveCount(0);
-		await expect(page.getByText(/high-value operator workflows/i)).toHaveCount(0);
+		await expect(page).toHaveURL(/\/work$/);
+		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Needs Fred' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Agent can act' })).toBeVisible();
+		await expect(page.getByText('Material recent changes')).toBeVisible();
 	});
 
 	test('stays usable at mobile width', async ({ gotoHome, page }) => {
@@ -30,15 +16,14 @@ test.describe('issue #315 mission control homepage', () => {
 
 		await gotoHome();
 
-		await expect(
-			page.getByRole('heading', { name: /gateway, agents, channels, and approvals/i })
-		).toBeVisible();
-		await expect(page.getByRole('heading', { name: /configured operators/i })).toBeVisible();
-		await expect(page.getByRole('heading', { name: /open a workspace/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
+		for (const module of ['Work', 'Vault', 'Channels', 'Labs']) {
+			await expect(page.getByRole('link', { name: module, exact: true }).last()).toBeVisible();
+		}
 
-		const hasHorizontalOverflow = await page.evaluate(() => {
-			return document.documentElement.scrollWidth > window.innerWidth + 1;
-		});
+		const hasHorizontalOverflow = await page.evaluate(
+			() => document.documentElement.scrollWidth > window.innerWidth + 1
+		);
 
 		expect(hasHorizontalOverflow).toBe(false);
 	});

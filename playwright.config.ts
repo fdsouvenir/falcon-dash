@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { resolve } from 'node:path';
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const playwrightDataDir = resolve('test-results/playwright-data');
 
 export default defineConfig({
 	testDir: './e2e',
@@ -35,6 +37,10 @@ export default defineConfig({
 				command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
 				url: `${baseURL}/api/ready`,
 				reuseExistingServer: !process.env.CI,
-				timeout: 120_000
+				timeout: 120_000,
+				env: {
+					...process.env,
+					FALCON_DASH_DATA_DIR: playwrightDataDir
+				}
 			}
 });
