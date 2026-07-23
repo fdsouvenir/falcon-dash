@@ -16,6 +16,7 @@ import { render, type RenderOptions } from './render.js';
  */
 
 const NUMBER_FIELDS = new Set([
+	'sequence',
 	'due_at',
 	'follow_up_at',
 	'target_at',
@@ -44,7 +45,13 @@ const JSON_FIELDS = new Set([
 	'risk',
 	'safety',
 	'acceptance_criteria',
-	'one_time'
+	'one_time',
+	'scope_included',
+	'scope_excluded',
+	'completion_criteria',
+	'parallel_phases_allowed',
+	'parallel',
+	'clear'
 ]);
 
 /** engine command name → CLI verb, per noun. */
@@ -108,6 +115,39 @@ export const NOUN_VERBS: Record<string, Record<string, string>> = {
 	authorization: {
 		revoke: 'revoke_authorization'
 	},
+	project: {
+		create: 'create_project',
+		update: 'update_project',
+		plan: 'plan_project',
+		activate: 'activate_project',
+		pause: 'pause_project',
+		complete: 'complete_project',
+		cancel: 'cancel_project',
+		reopen: 'reopen_project',
+		archive: 'archive_project',
+		restore: 'restore_project',
+		'set-next': 'set_current_next_item',
+		'waive-criterion': 'waive_completion_criterion',
+		'health-override': 'set_project_health_override'
+	},
+	phase: {
+		create: 'create_phase',
+		activate: 'activate_phase',
+		complete: 'complete_phase',
+		skip: 'skip_phase',
+		reopen: 'reopen_phase'
+	},
+	milestone: {
+		create: 'create_milestone',
+		achieve: 'achieve_milestone',
+		cancel: 'cancel_milestone',
+		reopen: 'reopen_milestone'
+	},
+	link: {
+		create: 'link_work',
+		remove: 'unlink_work',
+		assign: 'assign_to_project'
+	},
 	change: {
 		create: 'create_change',
 		revise: 'revise_change',
@@ -138,7 +178,10 @@ const LIST_FILTERS: Record<string, string[]> = {
 	plan: ['work_item'],
 	review: ['subject', 'outcome'],
 	authorization: ['subject'],
-	change: ['execution', 'verification', 'area']
+	change: ['execution', 'verification', 'area'],
+	project: ['status', 'area', 'archived'],
+	phase: ['project', 'status'],
+	milestone: ['project', 'status']
 };
 
 function outputOptions(
@@ -290,8 +333,8 @@ export function nounCommand(noun: string): (args: string[]) => Promise<string> {
 			});
 		}
 		const rest = args.slice(1);
-		if (verb === 'list') return runList(noun, rest);
-		if (verb === 'get') return runGet(noun, rest);
+		if (verb === 'list' && LIST_FILTERS[noun]) return runList(noun, rest);
+		if (verb === 'get' && LIST_FILTERS[noun]) return runGet(noun, rest);
 		const commandName = NOUN_VERBS[noun][verb];
 		if (!commandName) {
 			throw new CliError('usage', `Unknown verb for ${noun}: ${verb}`, {

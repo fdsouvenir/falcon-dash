@@ -12,6 +12,7 @@ import {
 } from '../engine/validate.js';
 import { appendRevision, currentRevision, revisionHistory } from '../revisions.js';
 import { requireActiveArea } from './area.js';
+import { invalidateSatisfiesFrom, reconcileTerminal } from './reconcile.js';
 import { TASK_PRIORITIES } from './task.js';
 
 /**
@@ -350,9 +351,10 @@ export function registerQuestionCommands(): void {
 				source_refs: sourceRefs
 			};
 			const blockerEvents = autoResolveQuestionBlockers(ctx, revision.id);
+			const reconcileEvents = reconcileTerminal(ctx, row.entity_id, 'answered');
 			return {
 				result: { id: row.entity_id, status: 'answered', answer_id: revision.id },
-				events: [answerEvent, ...blockerEvents]
+				events: [answerEvent, ...blockerEvents, ...reconcileEvents]
 			};
 		}
 	});
@@ -440,6 +442,7 @@ export function registerQuestionCommands(): void {
 					`UPDATE questions SET status = 'withdrawn', withdrawn_at = ?, withdraw_reason = ? WHERE entity_id = ?`
 				)
 				.run(ctx.now, reason, row.entity_id);
+			const reconcileEvents = reconcileTerminal(ctx, row.entity_id, 'withdrawn');
 			return {
 				result: { id: row.entity_id, status: 'withdrawn' },
 				events: [
@@ -449,7 +452,8 @@ export function registerQuestionCommands(): void {
 						subject_id: row.entity_id,
 						summary: `Withdrew Question ${row.entity_id}: ${reason}`,
 						payload: { reason }
-					}
+					},
+					...reconcileEvents
 				]
 			};
 		}
@@ -474,9 +478,15 @@ export function registerQuestionCommands(): void {
 					`UPDATE questions SET status = 'open', withdrawn_at = NULL, withdraw_reason = NULL WHERE entity_id = ?`
 				)
 				.run(row.entity_id);
+			const satisfiesEvents = invalidateSatisfiesFrom(
+				ctx,
+				row.entity_id,
+				`Question ${row.entity_id} reopened — its answer no longer stands as proof`
+			);
 			return {
 				result: { id: row.entity_id, status: 'open' },
 				events: [
+					...satisfiesEvents,
 					{
 						event_type: 'question_reopened',
 						subject_type: 'question',

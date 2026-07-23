@@ -11,6 +11,10 @@ import { registerPlanCommands } from './plan.js';
 import { registerReviewCommands } from './review.js';
 import { registerChangeCommands } from './change.js';
 import { registerGovernanceReaders } from './governance-readers.js';
+import { registerProjectCommands } from './project.js';
+import { registerPhaseCommands, registerMilestoneCommands } from './phase-milestone.js';
+import { registerRelationshipCommands } from './relationships.js';
+import { registerProjectReaders } from './project-readers.js';
 
 export { loadArea, requireActiveArea } from './area.js';
 export { loadTask, legalCommandsFor, TASK_STATUSES, TASK_PRIORITIES } from './task.js';
@@ -35,6 +39,13 @@ export {
 	VERIFICATION_STATES
 } from './change.js';
 export type { ChangeRow, ChangeRevisionRow } from './change.js';
+export { loadProject, projectCriteria, satisfiedCriteria } from './project.js';
+export type { ProjectRow, CompletionCriterion } from './project.js';
+export { loadPhase, loadMilestone } from './phase-milestone.js';
+export type { PhaseRow, MilestoneRow } from './phase-milestone.js';
+export { activeLinks, RELATIONSHIP_TYPES } from './relationships.js';
+export type { RelationshipRow, RelationshipType } from './relationships.js';
+export { reconcileTerminal, invalidateSatisfiesFrom } from './reconcile.js';
 
 /**
  * Register all v3 object commands and readers. Idempotent per registry state —
@@ -51,7 +62,12 @@ export function registerWork3Objects(): void {
 	registerPlanCommands();
 	registerReviewCommands();
 	registerChangeCommands();
+	registerProjectCommands();
+	registerPhaseCommands();
+	registerMilestoneCommands();
+	registerRelationshipCommands();
 	registerSliceReaders();
 	registerKnowledgeReaders();
 	registerGovernanceReaders();
+	registerProjectReaders();
 }

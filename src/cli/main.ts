@@ -25,6 +25,10 @@ Commands:
   review    list | get | create
   change    list | get | create | authorize | start | pause | resume | succeed | fail | retry | cancel | *-verification | *-rollback
   authorization  list | get | revoke
+  project   list | get | create | plan | activate | pause | complete | cancel | reopen | set-next | waive-criterion
+  phase     list | get | create | activate | complete | skip | reopen
+  milestone list | get | create | achieve | cancel | reopen
+  link      create | remove | assign — typed relationships + project assignment
   history   <id> — Event Log timeline
   sources   check — resolve a source reference
 
@@ -81,6 +85,10 @@ await runAxiCli({
 		review: (args) => nounCommand('review')(args),
 		authorization: (args) => nounCommand('authorization')(args),
 		change: (args) => nounCommand('change')(args),
+		project: (args) => nounCommand('project')(args),
+		phase: (args) => nounCommand('phase')(args),
+		milestone: (args) => nounCommand('milestone')(args),
+		link: (args) => nounCommand('link')(args),
 		history: (args) => historyCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},

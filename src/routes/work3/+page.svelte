@@ -197,6 +197,30 @@
 
 	<div class="rounded border border-surface-border bg-surface-1">
 		<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
+			Projects
+		</div>
+		{#if data.projects.length === 0}
+			<p class="px-4 py-3 text-sm text-status-muted">No projects.</p>
+		{:else}
+			<ul class="divide-y divide-surface-border/60">
+				{#each data.projects as project (project.id)}
+					<li class="px-4 py-2 text-sm">
+						<a
+							class="text-blue-400 hover:underline"
+							href={resolve('/work3/projects/[id]', { id: String(project.id) })}>{project.id}</a
+						>
+						<span class="ml-2 text-white/80">{project.title}</span>
+						<span class="ml-2 text-xs text-status-muted">
+							{project.status} · {project.health} · next {project.current_next_item_id ?? '—'}
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
+	<div class="rounded border border-surface-border bg-surface-1">
+		<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
 			Change Requests
 		</div>
 		{#if data.changes.length === 0}

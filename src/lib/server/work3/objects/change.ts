@@ -15,6 +15,7 @@ import {
 import { ulid } from '../ulid.js';
 import { requireActiveArea } from './area.js';
 import { createPlanInternal, currentPlanRevision } from './plan.js';
+import { reconcileTerminal } from './reconcile.js';
 
 /**
  * Change Request (docs 01–02): the authority envelope for controlled mutation.
@@ -691,7 +692,8 @@ export function registerChangeCommands(): void {
 					{
 						result_summary: resultSummary
 					}
-				)
+				),
+				...reconcileTerminal(ctx, row.entity_id, 'succeeded')
 			];
 			// consumed represents one-time authority (doc 01).
 			if (authorization.one_time === 1) {
@@ -840,7 +842,8 @@ export function registerChangeCommands(): void {
 				events: [
 					changeEvent(ctx, 'change_cancelled', `Cancelled Change ${row.entity_id}: ${reason}`, {
 						reason
-					})
+					}),
+					...reconcileTerminal(ctx, row.entity_id, 'cancelled')
 				]
 			};
 		}

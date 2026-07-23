@@ -87,7 +87,16 @@ export {
 	changeSubjectState,
 	effectiveAuthorization,
 	EXECUTION_STATES,
-	VERIFICATION_STATES
+	VERIFICATION_STATES,
+	loadProject,
+	projectCriteria,
+	satisfiedCriteria,
+	loadPhase,
+	loadMilestone,
+	activeLinks,
+	RELATIONSHIP_TYPES,
+	reconcileTerminal,
+	invalidateSatisfiesFrom
 } from './objects/index.js';
 export type {
 	TaskRow,
@@ -101,7 +110,13 @@ export type {
 	PlanRow,
 	PlanRevisionRow,
 	ChangeRow,
-	ChangeRevisionRow
+	ChangeRevisionRow,
+	ProjectRow,
+	CompletionCriterion,
+	PhaseRow,
+	MilestoneRow,
+	RelationshipRow,
+	RelationshipType
 } from './objects/index.js';
 export {
 	activeBlockersFor,
@@ -124,6 +139,12 @@ export type {
 	AuthorizationRow,
 	AuthorizationEffectiveness
 } from './read/governance-derived.js';
+export { projectHealth, projectProgress, milestoneScheduleState } from './read/project-derived.js';
+export type {
+	ProjectHealth,
+	ProjectProgress,
+	MilestoneScheduleState
+} from './read/project-derived.js';
 
 export { resolveWork3SourceRef, setSourceKindResolver } from './sources.js';
 export type { SourceResolution } from './sources.js';

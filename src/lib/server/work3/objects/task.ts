@@ -5,6 +5,7 @@ import { registerCommand, type ExecuteContext } from '../engine/registry.js';
 import { optionalEnum, optionalNumber, optionalString, requireString } from '../engine/validate.js';
 import { activeBlockersFor } from '../read/derived.js';
 import { reviewDisposition } from '../read/governance-derived.js';
+import { invalidateSatisfiesFrom, reconcileTerminal } from './reconcile.js';
 import { requireActiveArea } from './area.js';
 
 /**
@@ -494,7 +495,10 @@ export function registerTaskCommands(): void {
 					}
 				);
 			}
-			const blockerEvents = invalidateActiveBlockers(ctx, 'completed');
+			const blockerEvents = [
+				...invalidateActiveBlockers(ctx, 'completed'),
+				...reconcileTerminal(ctx, row.entity_id, 'completed')
+			];
 			clearWaiting(ctx);
 			ctx.db
 				.prepare(`UPDATE tasks SET status = 'completed', completed_at = ? WHERE entity_id = ?`)
@@ -538,7 +542,10 @@ export function registerTaskCommands(): void {
 					{ details: { missing: ['result_summary'] } }
 				);
 			}
-			const blockerEvents = invalidateActiveBlockers(ctx, 'completed');
+			const blockerEvents = [
+				...invalidateActiveBlockers(ctx, 'completed'),
+				...reconcileTerminal(ctx, row.entity_id, 'completed')
+			];
 			clearWaiting(ctx);
 			ctx.db
 				.prepare(
@@ -578,7 +585,10 @@ export function registerTaskCommands(): void {
 				);
 			}
 			const reason = requireString(ctx.payload, 'reason');
-			const blockerEvents = invalidateActiveBlockers(ctx, 'cancelled');
+			const blockerEvents = [
+				...invalidateActiveBlockers(ctx, 'cancelled'),
+				...reconcileTerminal(ctx, row.entity_id, 'cancelled')
+			];
 			clearWaiting(ctx);
 			ctx.db
 				.prepare(
@@ -614,6 +624,11 @@ export function registerTaskCommands(): void {
 				throw transitionError(row, 'reopen_task', TERMINAL);
 			}
 			const reason = requireString(ctx.payload, 'reason');
+			const satisfiesEvents = invalidateSatisfiesFrom(
+				ctx,
+				row.entity_id,
+				`Task ${row.entity_id} reopened — its result no longer stands as proof`
+			);
 			ctx.db
 				.prepare(
 					`UPDATE tasks SET status = 'ready', completed_at = NULL, cancelled_at = NULL,
@@ -626,7 +641,8 @@ export function registerTaskCommands(): void {
 					taskEvent(ctx, 'task_reopened', `Reopened Task ${row.entity_id}: ${reason}`, {
 						reason,
 						prior_status: row.status
-					})
+					}),
+					...satisfiesEvents
 				]
 			};
 		}

@@ -1969,6 +1969,208 @@ var WORK3_COMMANDS = [
 		summary: 'Record completed rollback (execution becomes rolled_back)',
 		required: ['summary'],
 		optional: []
+	},
+	// Project
+	{
+		name: 'create_project',
+		target: null,
+		summary: 'Create a Project (bounded outcome with an explicit finish line) as draft',
+		required: ['title', 'area_id'],
+		optional: [
+			'summary',
+			'desired_outcome',
+			'why_it_matters',
+			'scope_included',
+			'scope_excluded',
+			'completion_criteria',
+			'owner',
+			'target_at',
+			'parallel_phases_allowed'
+		]
+	},
+	{
+		name: 'update_project',
+		target: 'project',
+		summary: 'Edit Project definition fields (never lifecycle)',
+		required: [],
+		optional: [
+			'title',
+			'summary',
+			'desired_outcome',
+			'why_it_matters',
+			'scope_included',
+			'scope_excluded',
+			'completion_criteria',
+			'owner',
+			'target_at'
+		]
+	},
+	{
+		name: 'plan_project',
+		target: 'project',
+		summary: 'Move a draft Project to planned (outcome, scope, owner, criteria required)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'activate_project',
+		target: 'project',
+		summary:
+			'Activate a planned/paused Project (needs a submitted Plan or plan_not_required reason)',
+		required: [],
+		optional: ['plan_not_required_reason']
+	},
+	{
+		name: 'pause_project',
+		target: 'project',
+		summary: 'Pause an active Project deliberately',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'complete_project',
+		target: 'project',
+		summary:
+			'Complete a Project (all criteria satisfied/waived, next item cleared, outcome summary)',
+		required: ['outcome_summary'],
+		optional: []
+	},
+	{
+		name: 'cancel_project',
+		target: 'project',
+		summary: 'Cancel a Project (requires reason and disposition of active child Work)',
+		required: ['reason', 'child_disposition'],
+		optional: []
+	},
+	{
+		name: 'reopen_project',
+		target: 'project',
+		summary: 'Reopen a terminal Project to active (reason + new current next item)',
+		required: ['reason', 'current_next_item_id'],
+		optional: []
+	},
+	{
+		name: 'archive_project',
+		target: 'project',
+		summary: 'Archive a Project (visibility only; lifecycle outcome preserved)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'restore_project',
+		target: 'project',
+		summary: 'Clear a Project archive flag',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'set_current_next_item',
+		target: 'project',
+		summary: 'Point the Project at its authoritative current next item (or clear it)',
+		required: [],
+		optional: ['item_id']
+	},
+	{
+		name: 'waive_completion_criterion',
+		target: 'project',
+		summary: 'Waive a completion criterion (authority-creating; requires reason)',
+		required: ['criterion_id', 'reason'],
+		optional: ['authority_source']
+	},
+	{
+		name: 'set_project_health_override',
+		target: 'project',
+		summary: 'Override derived health (requires reason and expiry) or clear the override',
+		required: [],
+		optional: ['health', 'reason', 'expires_at', 'clear']
+	},
+	// Phase
+	{
+		name: 'create_phase',
+		target: null,
+		summary: 'Create a Phase (ordered project-local planning section)',
+		required: ['project_id', 'title'],
+		optional: ['summary', 'sequence', 'target_at']
+	},
+	{
+		name: 'activate_phase',
+		target: 'phase',
+		summary:
+			'Activate a Phase (completes/parallels the previously active one; empty Phases cannot activate)',
+		required: [],
+		optional: ['parallel']
+	},
+	{
+		name: 'complete_phase',
+		target: 'phase',
+		summary: 'Complete a Phase (all required Phase Work must be terminal)',
+		required: [],
+		optional: []
+	},
+	{
+		name: 'skip_phase',
+		target: 'phase',
+		summary: 'Skip a Phase (requires reason and disposition of unfinished Work)',
+		required: ['reason'],
+		optional: ['work_disposition']
+	},
+	{
+		name: 'reopen_phase',
+		target: 'phase',
+		summary: 'Reopen a completed/skipped Phase (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	// Milestone
+	{
+		name: 'create_milestone',
+		target: null,
+		summary: 'Create a Milestone (zero-duration checkpoint with an observable success condition)',
+		required: ['project_id', 'title', 'success_condition'],
+		optional: ['summary', 'sequence', 'target_at']
+	},
+	{
+		name: 'achieve_milestone',
+		target: 'milestone',
+		summary: 'Achieve a Milestone (source references required unless explicitly waived)',
+		required: [],
+		optional: ['source_refs', 'waive_sources_reason']
+	},
+	{
+		name: 'cancel_milestone',
+		target: 'milestone',
+		summary: 'Cancel a Milestone (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	{
+		name: 'reopen_milestone',
+		target: 'milestone',
+		summary: 'Reopen an achieved/cancelled Milestone (requires a reason)',
+		required: ['reason'],
+		optional: []
+	},
+	// Relationships
+	{
+		name: 'link_work',
+		target: null,
+		summary: 'Create a typed semantic link (duplicates are idempotent no-ops)',
+		required: ['rel_type', 'source_id', 'target_id'],
+		optional: ['criterion_id', 'source_refs']
+	},
+	{
+		name: 'unlink_work',
+		target: null,
+		summary: 'Remove a semantic link (audited; history preserved)',
+		required: ['link_id'],
+		optional: ['reason']
+	},
+	{
+		name: 'assign_to_project',
+		target: null,
+		summary: 'Assign Work to a Project (and optionally a Phase in that Project), or unassign',
+		required: ['work_id'],
+		optional: ['project_id', 'phase_id']
 	}
 ];
 function commandMeta(name) {
@@ -2622,6 +2824,7 @@ function render(payload, options = {}) {
 
 // src/cli/nouns.ts
 var NUMBER_FIELDS = /* @__PURE__ */ new Set([
+	'sequence',
 	'due_at',
 	'follow_up_at',
 	'target_at',
@@ -2648,7 +2851,13 @@ var JSON_FIELDS = /* @__PURE__ */ new Set([
 	'risk',
 	'safety',
 	'acceptance_criteria',
-	'one_time'
+	'one_time',
+	'scope_included',
+	'scope_excluded',
+	'completion_criteria',
+	'parallel_phases_allowed',
+	'parallel',
+	'clear'
 ]);
 var NOUN_VERBS = {
 	area: {
@@ -2710,6 +2919,39 @@ var NOUN_VERBS = {
 	authorization: {
 		revoke: 'revoke_authorization'
 	},
+	project: {
+		create: 'create_project',
+		update: 'update_project',
+		plan: 'plan_project',
+		activate: 'activate_project',
+		pause: 'pause_project',
+		complete: 'complete_project',
+		cancel: 'cancel_project',
+		reopen: 'reopen_project',
+		archive: 'archive_project',
+		restore: 'restore_project',
+		'set-next': 'set_current_next_item',
+		'waive-criterion': 'waive_completion_criterion',
+		'health-override': 'set_project_health_override'
+	},
+	phase: {
+		create: 'create_phase',
+		activate: 'activate_phase',
+		complete: 'complete_phase',
+		skip: 'skip_phase',
+		reopen: 'reopen_phase'
+	},
+	milestone: {
+		create: 'create_milestone',
+		achieve: 'achieve_milestone',
+		cancel: 'cancel_milestone',
+		reopen: 'reopen_milestone'
+	},
+	link: {
+		create: 'link_work',
+		remove: 'unlink_work',
+		assign: 'assign_to_project'
+	},
 	change: {
 		create: 'create_change',
 		revise: 'revise_change',
@@ -2739,7 +2981,10 @@ var LIST_FILTERS = {
 	plan: ['work_item'],
 	review: ['subject', 'outcome'],
 	authorization: ['subject'],
-	change: ['execution', 'verification', 'area']
+	change: ['execution', 'verification', 'area'],
+	project: ['status', 'area', 'archived'],
+	phase: ['project', 'status'],
+	milestone: ['project', 'status']
 };
 function outputOptions(flags, fullCommand) {
 	return {
@@ -2864,8 +3109,8 @@ function nounCommand(noun) {
 			});
 		}
 		const rest = args.slice(1);
-		if (verb === 'list') return runList(noun, rest);
-		if (verb === 'get') return runGet(noun, rest);
+		if (verb === 'list' && LIST_FILTERS[noun]) return runList(noun, rest);
+		if (verb === 'get' && LIST_FILTERS[noun]) return runGet(noun, rest);
 		const commandName = NOUN_VERBS[noun][verb];
 		if (!commandName) {
 			throw new CliError('usage', `Unknown verb for ${noun}: ${verb}`, {
@@ -2995,6 +3240,10 @@ Commands:
   review    list | get | create
   change    list | get | create | authorize | start | pause | resume | succeed | fail | retry | cancel | *-verification | *-rollback
   authorization  list | get | revoke
+  project   list | get | create | plan | activate | pause | complete | cancel | reopen | set-next | waive-criterion
+  phase     list | get | create | activate | complete | skip | reopen
+  milestone list | get | create | achieve | cancel | reopen
+  link      create | remove | assign \u2014 typed relationships + project assignment
   history   <id> \u2014 Event Log timeline
   sources   check \u2014 resolve a source reference
 
@@ -3048,6 +3297,10 @@ await runAxiCli({
 		review: (args) => nounCommand('review')(args),
 		authorization: (args) => nounCommand('authorization')(args),
 		change: (args) => nounCommand('change')(args),
+		project: (args) => nounCommand('project')(args),
+		phase: (args) => nounCommand('phase')(args),
+		milestone: (args) => nounCommand('milestone')(args),
+		link: (args) => nounCommand('link')(args),
 		history: (args) => historyCommand(args),
 		sources: (args) => sourcesCommand(args)
 	},

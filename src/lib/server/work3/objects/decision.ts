@@ -6,6 +6,7 @@ import { registerCommand, type ExecuteContext } from '../engine/registry.js';
 import { optionalEnum, optionalNumber, optionalString, requireString } from '../engine/validate.js';
 import { appendRevision, currentRevision, revisionHistory } from '../revisions.js';
 import { requireActiveArea } from './area.js';
+import { reconcileTerminal } from './reconcile.js';
 import { TASK_PRIORITIES } from './task.js';
 
 /**
@@ -337,6 +338,7 @@ export function registerDecisionCommands(): void {
 					`UPDATE decisions SET status = 'decided', outcome = ?, decided_at = ? WHERE entity_id = ?`
 				)
 				.run(JSON.stringify(outcome), ctx.now, row.entity_id);
+			const reconcileEvents = reconcileTerminal(ctx, row.entity_id, 'decided');
 			return {
 				result: { id: row.entity_id, status: 'decided', option_id: selected.id },
 				events: [
@@ -347,7 +349,8 @@ export function registerDecisionCommands(): void {
 						summary: `Decided ${row.entity_id}: ${selected.label}`,
 						payload: { option_id: selected.id, package_id: pkg.id, rationale },
 						source_refs: authoritySource ? [authoritySource] : []
-					}
+					},
+					...reconcileEvents
 				]
 			};
 		}
@@ -451,6 +454,7 @@ export function registerDecisionCommands(): void {
 					`UPDATE decisions SET status = 'withdrawn', withdrawn_at = ?, withdraw_reason = ? WHERE entity_id = ?`
 				)
 				.run(ctx.now, reason, row.entity_id);
+			const reconcileEvents = reconcileTerminal(ctx, row.entity_id, 'withdrawn');
 			return {
 				result: { id: row.entity_id, status: 'withdrawn' },
 				events: [
@@ -460,7 +464,8 @@ export function registerDecisionCommands(): void {
 						subject_id: row.entity_id,
 						summary: `Withdrew Decision ${row.entity_id}: ${reason}`,
 						payload: { reason }
-					}
+					},
+					...reconcileEvents
 				]
 			};
 		}
