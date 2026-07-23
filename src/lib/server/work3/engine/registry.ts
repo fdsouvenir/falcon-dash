@@ -71,11 +71,11 @@ export interface CommandDefinition<TResult = unknown> {
 
 const registry = new Map<string, CommandDefinition>();
 
-export function registerCommand<TResult>(definition: CommandDefinition<TResult>): void {
+export function registerCommand(definition: CommandDefinition): void {
 	if (registry.has(definition.name)) {
 		throw new Error(`work3 command registered twice: ${definition.name}`);
 	}
-	registry.set(definition.name, definition as CommandDefinition);
+	registry.set(definition.name, definition);
 }
 
 export function getCommand(name: string): CommandDefinition | undefined {
