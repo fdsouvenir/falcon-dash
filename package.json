@@ -49,7 +49,6 @@
 		"analyze": "ANALYZE=true vite build",
 		"agent:loop": "node scripts/agent-loop.mjs",
 		"console:sweep": "node scripts/console-sweep.mjs",
-		"seed:work": "node scripts/seed-work-dev.mjs",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:docs": "node scripts/check-doc-freshness.mjs",

@@ -37,16 +37,13 @@ describe('Falcon Material foundation', () => {
 		expect(iconButton).toContain('size-10');
 	});
 
-	it('keeps cards tonal and mobile Work detail free of status dashboards', () => {
+	it('keeps cards tonal', () => {
+		// The v2 mobile Work detail this test also covered was removed with the
+		// v3 cutover (#342); its replacement pages are plain route templates.
 		const card = source('./card/card.svelte');
-		const mobileDetail = source('../work/MobileWorkDetail.svelte');
 
 		expect(card).toContain('bg-surface-container');
 		expect(card).toContain('shadow-none');
 		expect(card).not.toContain('shadow-sm');
-		expect(mobileDetail).not.toContain('Project Status');
-		expect(mobileDetail).not.toContain('metric');
-		expect(mobileDetail).toContain('data-mobile-work-detail');
-		expect(mobileDetail).toContain('mobile-work-agent-composer');
 	});
 });

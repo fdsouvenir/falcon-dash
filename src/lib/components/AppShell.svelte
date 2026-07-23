@@ -83,7 +83,7 @@
 			shellSearch = '';
 			return;
 		}
-		if (path === '/work/search') shellSearch = page.url.searchParams.get('q') ?? '';
+		if (path === '/work/browse') shellSearch = page.url.searchParams.get('q') ?? '';
 	});
 
 	type ModuleHref = (typeof modules)[number]['href'] | '/work';
@@ -169,7 +169,7 @@
 			<div class="hidden h-5 w-px bg-outline-variant lg:block"></div>
 			{#if activeModule.label === 'Work'}
 				<form
-					action={resolve('/work/search')}
+					action={resolve('/work/browse')}
 					method="GET"
 					class="hidden min-w-0 items-center gap-2 rounded-md border border-outline-variant/70 bg-surface-container-low px-2 py-1 text-on-surface-variant md:flex"
 					role="search"

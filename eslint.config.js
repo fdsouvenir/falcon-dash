@@ -32,7 +32,7 @@ export default ts.config(
 	{
 		// work3 pages navigate exclusively through resolve()-derived helper
 		// functions; the rule cannot see through the indirection.
-		files: ['src/routes/work3/**/*.svelte'],
+		files: ['src/routes/work/**/*.svelte'],
 		rules: {
 			'svelte/no-navigation-without-resolve': 'off'
 		}
