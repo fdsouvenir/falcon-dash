@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Governance records for Plans, Reviews, Authorizations, and Change Requests
 - Agent-native `/api/v3` endpoints with bearer-token identities and a `falcon` CLI supporting TOON
   and JSON output
-- OpenClaw-backed Automata with definition reconciliation and run history
+- OpenClaw-backed Automata composed read-through from the live runtime record (no mirrored
+  state or drift semantics), with native run history and recoverable deletion
 - Gateway protocol v4 adapters while retaining protocol v3 compatibility
 
 ### Changed
