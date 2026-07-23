@@ -1,6 +1,6 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
-	"version": "2.1.0",
+	"version": "3.0.0",
 	"description": "Web dashboard for the OpenClaw AI platform",
 	"repository": {
 		"type": "git",
