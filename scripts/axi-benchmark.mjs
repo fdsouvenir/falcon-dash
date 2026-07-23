@@ -49,4 +49,6 @@ const first = falcon(['task', 'list', '--active', 'true', '--fields', 'id,title,
 record('v3 CLI TOON: list --fields id,title,status', first);
 
 console.table(rows);
-console.log('\nLower is better. v3 TOON list should beat v2 JSON while keeping enough to act (doc 04).');
+console.log(
+	'\nLower is better. v3 TOON list should beat v2 JSON while keeping enough to act (doc 04).'
+);
