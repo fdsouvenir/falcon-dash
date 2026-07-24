@@ -309,17 +309,20 @@ export function changedRecentlySummary(
 	}
 	const ids = [...subjects];
 	const byType: Record<string, number> = {};
+	let total = 0;
 	if (ids.length) {
 		const rows = db
 			.prepare(`SELECT id, type FROM entities WHERE id IN (${ids.map(() => '?').join(',')})`)
 			.all(...ids) as Array<{ id: string; type: string }>;
-		const typeById = new Map(rows.map((row) => [row.id, row.type]));
-		for (const id of ids) {
-			const type = typeById.get(id) ?? 'work';
-			byType[type] = (byType[type] ?? 0) + 1;
+		// Only count subjects that resolve to live entities — event subjects
+		// without an entity row (child records, removed rows) aren't
+		// operator-meaningful "changed things".
+		for (const row of rows) {
+			byType[row.type] = (byType[row.type] ?? 0) + 1;
+			total += 1;
 		}
 	}
-	return { total: ids.length, by_type: byType };
+	return { total, by_type: byType };
 }
 
 /** Authority-creating event types — unconditionally in the material feed. */

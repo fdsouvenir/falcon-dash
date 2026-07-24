@@ -109,14 +109,26 @@
 		return workHref(item.type, item.id ?? '');
 	}
 
+	// Short scannable reason for the row meta line — long rationale prose
+	// (Decision consequences, blocker reasons) belongs on the detail page.
 	function reasonText(item: QueueItem): string {
-		return item.why ?? formatStatus(item.status ?? item.execution_state) ?? '';
+		if (item.type === 'decision') {
+			return item.status === 'deferred' ? 'Deferred' : 'Needs decision';
+		}
+		if (item.type === 'question' || item.type === 'open_question') return 'Needs answer';
+		if (item.status === 'in_review') return 'Needs review';
+		const reason = item.why ?? formatStatus(item.status ?? item.execution_state) ?? '';
+		return reason.length > 80 ? `${reason.slice(0, 77)}…` : reason;
 	}
 
 	function typeBreakdown(byType: Record<string, number>, empty: string): string {
-		const parts = Object.entries(byType)
-			.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+		const entries = Object.entries(byType).sort(
+			(left, right) => right[1] - left[1] || left[0].localeCompare(right[0])
+		);
+		const parts = entries
+			.slice(0, 4)
 			.map(([type, count]) => `${count} ${typeLabel(type).toLowerCase()}${count === 1 ? '' : 's'}`);
+		if (entries.length > 4) parts.push(`+${entries.length - 4} more`);
 		return parts.join(' · ') || empty;
 	}
 
