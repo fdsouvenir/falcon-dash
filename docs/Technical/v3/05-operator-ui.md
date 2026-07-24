@@ -64,7 +64,11 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 ### Human decision and approval surfaces
 
 - Question view emphasizes prompt, impact, investigation context, sources, and authoritative answer.
+- Question context is split into keyboard-operable native disclosure sections; the current answer
+  keeps confidence and sources together while immutable answer revisions remain inspectable.
 - Decision view presents the decision-ready package: stakes, options, recommendation, consequence of delay, and prior superseded decisions.
+- A pending or deferred Decision uses one radio-card outcome form. The recommended option is
+  labeled but never preselected or treated as the recorded outcome.
 - Review view shows exact subject revision, content/diff, criteria, sources, and one immutable outcome.
 - Authorization view shows exact governed subject/Plan revisions, scope, conditions, expiration/consumption, and source of Fred’s approval.
 - Review and Authorization must never be visually conflated.
@@ -73,7 +77,9 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 - Change Request shows execution, verification, and Authorization as separate facts with a derived overall summary.
 - The current Plan revision is readable beside its Review disposition and supersession history.
-- Execution controls appear only when the exact revision has valid Authorization.
+- Execution controls remain visible when the exact revision lacks valid Authorization, but are
+  disabled with the unmet Authorization state shown inline. This makes the guard explainable
+  without implying that Review disposition grants permission.
 - Failure, retry, verification, waiver, rollback, and cancellation preserve prior attempts and require their defined metadata.
 
 ### Automata
@@ -88,6 +94,8 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 - Detail views expose meaningful blockers, dependencies, supersession, criteria links, and sources in context.
 - Sources use `Sources` or `Verified by`, not an Evidence administration surface.
+- Source resolution failure is rendered as an explicit unavailable state with its reason; the UI
+  never drops an unresolved reference from an authoritative answer or Finding.
 - Default views summarize relationship/source counts; expansion reveals native links and history.
 - The Event Log is presented as an auditable timeline without becoming the editable source of current state.
 

@@ -1,6 +1,6 @@
 import { error as httpError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types.js';
-import { resolveWork3SourceRef, startWork3 } from '$lib/server/work3/index.js';
+import { resolveWork3SourceRefs, startWork3 } from '$lib/server/work3/index.js';
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
 import { makeCommandAction } from '$lib/server/work3/ui.js';
 import type { SourceRef } from '$lib/work3-shared/types.js';
@@ -17,10 +17,14 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	// Resolve sources for the "source unavailable" UI state (doc 03).
 	const refs = (finding.source_refs as SourceRef[]) ?? [];
-	const resolutions = await Promise.all(refs.map((ref) => resolveWork3SourceRef(ref)));
+	const { resolutions, omitted } = await resolveWork3SourceRefs(refs);
 	return {
 		finding,
-		sources: refs.map((ref, index) => ({ ...ref, ...resolutions[index] }))
+		sources: refs.slice(0, resolutions.length).map((ref, index) => ({
+			...ref,
+			...resolutions[index]
+		})),
+		sourcesOmitted: omitted
 	};
 };
 

@@ -70,21 +70,60 @@ describe('Work UI material guardrails', () => {
 			finding: readFileSync(
 				new URL('../../../routes/work/findings/[id]/+page.svelte', import.meta.url),
 				'utf-8'
+			),
+			task: readFileSync(
+				new URL('../../../routes/work/tasks/[id]/+page.svelte', import.meta.url),
+				'utf-8'
 			)
 		};
 
-		for (const [name, source] of Object.entries(routes)) {
-			expect(source, name).toContain('<CommandForm');
+		for (const [name, source] of Object.entries(routes).filter(([name]) => name !== 'project')) {
 			expect(source, name).toContain('<CommandFeedback');
+			expect(source, name).toContain('<CommandBar');
+			expect(source, name).toContain('<PageHeader');
+			expect(source, name).not.toMatch(/(?:text|bg|border)-(?:blue|emerald|red|amber|sky)-\d/);
+			expect(source, name).not.toContain('transition-all');
+			expect(source, name).not.toContain('shadow-sm');
 		}
 		expect(routes.question).not.toMatch(
 			/value="(?:answer_question|revise_answer|withdraw_question)"/
 		);
 		expect(routes.question).toContain('parseQuestionSections');
+		expect(routes.question).toContain("question.status === 'answered'");
+		expect(routes.question).toContain("'Retained answer'");
+		expect(routes.question).toContain("'Latest retained'");
+		expect(routes.question).toContain('answer_history ?? [])].reverse()');
 		expect(routes.decision).not.toMatch(/value="(?:decide|withdraw_decision)"/);
-		expect(routes.decision).toContain('confirmationSubject');
+		expect(routes.decision).toContain('<CommandForm');
+		expect(routes.decision).toContain('choiceFields={optionChoices}');
 		expect(routes.change).not.toContain('<form');
+		expect(routes.change).toContain("guarded('start_change', 'Start')");
+		expect(routes.change).toContain("guarded('succeed_execution', 'Complete')");
+		expect(routes.change).toContain('unavailable — Authorization ${authorizationState}');
+		expect(routes.change).toContain(
+			'Evaluations of quality and readiness — never execution authority.'
+		);
+		expect(routes.change).toContain('authorization.scope_fingerprint');
+		expect(routes.change).toContain('authorization.conditions');
+		expect(routes.change).toContain('review.submitted_at');
 		expect(routes.finding).not.toContain('value="retract_finding"');
+		expect(routes.finding).toContain('<SourceRefs');
+		expect(routes.project).toContain('<CommandForm');
+
+		const questionLoader = readFileSync(
+			new URL('../../../routes/work/questions/[id]/+page.server.ts', import.meta.url),
+			'utf-8'
+		);
+		expect(questionLoader).toContain('resolveWork3SourceRefs');
+		expect(questionLoader).toContain('answerSources');
+		expect(questionLoader).toContain('answerSourcesOmitted');
+	});
+
+	it('renders source availability explicitly', () => {
+		const sourceRefs = componentSources.find((entry) => entry.name === 'SourceRefs.svelte')?.source;
+		expect(sourceRefs).toContain('source.available === true');
+		expect(sourceRefs).toContain('source.available === false');
+		expect(sourceRefs).toContain('source.reason');
 	});
 
 	it('routes automaton mutations through the confirmation-aware form', () => {

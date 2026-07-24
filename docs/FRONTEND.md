@@ -41,6 +41,10 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   command manifest, `CommandFeedback` owns structured failure and stale-version recovery, and
   `StatusBadge` maps each object vocabulary through `src/lib/work3/tones.ts`. Do not restore
   per-route command-label maps, raw form controls, or a universal status map.
+- Work object detail pages must keep guarded commands visible with an inline disabled reason,
+  distinguish Reviews from Authorizations, and render unresolved source references explicitly.
+  Decision option selection belongs in the shared radio-card field support rather than one form
+  per option.
 - Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
   their own copies of the Work navigation.
 - Mission Control leads with four linked queue totals, then uses compact Work rows and tonal

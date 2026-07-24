@@ -205,6 +205,20 @@ The client may format server projections, but it must not rederive lifecycle, he
 actionability, Authorization effectiveness, or reconciliation state. Reviews and Authorizations
 remain visually and semantically distinct.
 
+Question, Decision, Change Request, Finding, and Task detail routes share the Work page header,
+semantic status badges, command feedback, command bar, source references, and immutable timeline.
+Decision outcomes are recorded through one accessible radio-card command form. Guarded Change
+execution commands stay visible but disabled with the server-derived Authorization state. Source
+references retain resolved availability and failure reasons so missing native evidence remains
+auditable. URL resolution permits only public HTTP(S) destinations, validates every redirect, and
+rejects loopback, private, link-local, and multicast addresses. The outbound HTTP(S) request is
+pinned to the exact address that passed validation to prevent DNS rebinding. File resolution is
+limited to the package-derived application root, OpenClaw-owned roots, and non-root
+`FALCON_DASH_SOURCE_ROOTS` entries, including post-symlink validation. Commands accept at most 50
+source references; existing display data is resolved four at a time with a four-second
+batch deadline and reports timed-out or omitted references explicitly. The short-lived display
+cache uses a 256-entry LRU bound and actively evicts expired entries.
+
 Mission Control consumes the server-computed queue buckets directly. Each bucket reports `total`,
 `by_type`, and at most eight compact `items`; `by_type` is computed from the full bucket before the
 item bound is applied. The combined `at_risk` bucket deduplicates object identities across blocked

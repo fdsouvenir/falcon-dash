@@ -28,6 +28,16 @@
 		values?: Record<string, string>;
 	}
 
+	interface ChoiceField {
+		label?: string;
+		options: Array<{
+			value: string;
+			label: string;
+			description?: string;
+			recommended?: boolean;
+		}>;
+	}
+
 	interface Props {
 		command: string;
 		targetId?: string;
@@ -40,6 +50,7 @@
 		presetValues?: Record<string, string>;
 		forceRequired?: string[];
 		confirmationSubject?: string;
+		choiceFields?: Record<string, ChoiceField>;
 	}
 
 	let {
@@ -53,9 +64,11 @@
 		compact = false,
 		presetValues = {},
 		forceRequired = [],
-		confirmationSubject
+		confirmationSubject,
+		choiceFields = {}
 	}: Props = $props();
 
+	const formId = $props.id();
 	const meta = $derived(commandMeta(command));
 	const requiredFields = $derived(
 		[...new Set([...(meta?.required ?? []), ...forceRequired])].filter(
@@ -145,7 +158,11 @@
 			const prefix = hint.kind === 'json' ? 'payload_json_' : 'payload_';
 			const value = formData.get(`${prefix}${field}`);
 			if (typeof value === 'string' && value.trim()) {
-				details.push({ label: fieldLabel(field), value });
+				const choice = choiceFields[field]?.options.find((option) => option.value === value);
+				details.push({
+					label: fieldLabel(field),
+					value: choice ? `${choice.label} (${choice.value})` : value
+				});
 			}
 		}
 		return details;
@@ -187,51 +204,96 @@
 {#snippet commandField(field: string, required: boolean)}
 	{@const hint = fieldHint(field)}
 	{@const name = `${hint.kind === 'json' ? 'payload_json_' : 'payload_'}${field}`}
-	<Field
-		label={fieldLabel(field)}
-		{required}
-		hint={hint.kind === 'json' ? 'Enter valid JSON.' : undefined}
-	>
-		{#snippet children(context)}
-			{#if hint.kind === 'textarea' || hint.kind === 'json'}
-				<Textarea
-					id={context.id}
-					{name}
-					value={preserved(field)}
-					required={context.required}
-					aria-describedby={context.describedBy}
-					aria-invalid={context.invalid}
-					class={hint.monospace ? 'font-mono text-[length:var(--text-mono)]' : undefined}
-					placeholder={hint.placeholder}
-					rows={hint.kind === 'json' ? 4 : 3}
-				/>
-			{:else if hint.kind === 'select'}
-				<Select
-					id={context.id}
-					{name}
-					value={preserved(field)}
-					required={context.required}
-					aria-describedby={context.describedBy}
-					aria-invalid={context.invalid}
-				>
-					<option value="">Select {fieldLabel(field).toLowerCase()}…</option>
-					{#each hint.options ?? [] as option (option.value)}
-						<option value={option.value}>{option.label}</option>
-					{/each}
-				</Select>
-			{:else}
-				<Input
-					id={context.id}
-					{name}
-					type={hint.kind === 'datetime-local' ? 'datetime-local' : 'text'}
-					value={preserved(field)}
-					required={context.required}
-					aria-describedby={context.describedBy}
-					aria-invalid={context.invalid}
-				/>
-			{/if}
-		{/snippet}
-	</Field>
+	{@const choice = choiceFields[field]}
+	{#if choice}
+		<fieldset class="space-y-2">
+			<legend class="text-[length:var(--text-label)] font-semibold text-on-surface">
+				{choice.label ?? fieldLabel(field)}{required ? ' *' : ''}
+			</legend>
+			<div class="grid gap-2">
+				{#each choice.options as option, index (option.value)}
+					<label
+						class="falcon-focus touch-target flex cursor-pointer gap-3 rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant bg-surface-container-high p-3 has-[input:checked]:border-primary has-[input:checked]:bg-primary-container"
+					>
+						<input
+							id={`${formId}-${field}-${index}`}
+							type="radio"
+							{name}
+							value={option.value}
+							checked={preserved(field) === option.value}
+							{required}
+							class="mt-1 size-4 shrink-0 accent-primary"
+						/>
+						<span class="min-w-0">
+							<span class="flex flex-wrap items-center gap-2 font-medium text-on-surface">
+								{option.label}
+								{#if option.recommended}
+									<span
+										class="rounded-full bg-status-purple-bg px-2 py-0.5 text-[length:var(--text-badge)] font-semibold text-status-purple"
+									>
+										Recommended
+									</span>
+								{/if}
+							</span>
+							{#if option.description}
+								<span
+									class="mt-1 block text-[length:var(--text-label)] leading-relaxed text-on-surface-variant"
+								>
+									{option.description}
+								</span>
+							{/if}
+						</span>
+					</label>
+				{/each}
+			</div>
+		</fieldset>
+	{:else}
+		<Field
+			label={fieldLabel(field)}
+			{required}
+			hint={hint.kind === 'json' ? 'Enter valid JSON.' : undefined}
+		>
+			{#snippet children(context)}
+				{#if hint.kind === 'textarea' || hint.kind === 'json'}
+					<Textarea
+						id={context.id}
+						{name}
+						value={preserved(field)}
+						required={context.required}
+						aria-describedby={context.describedBy}
+						aria-invalid={context.invalid}
+						class={hint.monospace ? 'font-mono text-[length:var(--text-mono)]' : undefined}
+						placeholder={hint.placeholder}
+						rows={hint.kind === 'json' ? 4 : 3}
+					/>
+				{:else if hint.kind === 'select'}
+					<Select
+						id={context.id}
+						{name}
+						value={preserved(field)}
+						required={context.required}
+						aria-describedby={context.describedBy}
+						aria-invalid={context.invalid}
+					>
+						<option value="">Select {fieldLabel(field).toLowerCase()}…</option>
+						{#each hint.options ?? [] as option (option.value)}
+							<option value={option.value}>{option.label}</option>
+						{/each}
+					</Select>
+				{:else}
+					<Input
+						id={context.id}
+						{name}
+						type={hint.kind === 'datetime-local' ? 'datetime-local' : 'text'}
+						value={preserved(field)}
+						required={context.required}
+						aria-describedby={context.describedBy}
+						aria-invalid={context.invalid}
+					/>
+				{/if}
+			{/snippet}
+		</Field>
+	{/if}
 	{#if !required && canClear(field)}
 		<label
 			class="falcon-focus touch-target inline-flex cursor-pointer items-center gap-2 rounded text-[length:var(--text-label)] text-on-surface-variant"

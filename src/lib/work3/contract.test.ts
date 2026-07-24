@@ -49,6 +49,15 @@ describe('Work UI contract maps', () => {
 		});
 	});
 
+	it('encodes Decision package collections as structured fields', () => {
+		for (const field of ['deciders', 'options', 'recommendation']) {
+			expect(fieldHint(field), field).toMatchObject({
+				kind: 'json',
+				monospace: true
+			});
+		}
+	});
+
 	it('gives every semantic command an operator-facing label', () => {
 		for (const command of WORK3_COMMANDS) {
 			const label = commandLabel(command.name);

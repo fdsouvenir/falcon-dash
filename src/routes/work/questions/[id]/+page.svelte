@@ -1,145 +1,272 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { CommandFeedback, CommandForm } from '$lib/components/work/index.js';
+	import {
+		CommandBar,
+		CommandFeedback,
+		DataRow,
+		PageHeader,
+		Section,
+		SourceRefs,
+		StatusBadge,
+		Timeline
+	} from '$lib/components/work/index.js';
+	import type { SourceRef as Work3SourceRef } from '$lib/work3-shared/types.js';
 	import { parseQuestionSections } from '$lib/work3/sections.js';
 	import type { ActionData, PageData } from './$types.js';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	type SourceRef = Work3SourceRef & {
+		available?: boolean;
+		reason?: string;
+	};
 
-	/* eslint-disable @typescript-eslint/no-explicit-any -- reader projections are dynamic records */
-	const question = $derived(data.question as Record<string, any>);
+	interface QuestionDetail {
+		id: string;
+		question: string;
+		status: string;
+		priority?: string | null;
+		version: number;
+		context?: string | null;
+		impact?: string | null;
+		steward?: string | null;
+		answerable_by?: string[];
+		working_hypothesis?: { text?: string; confidence?: string } | null;
+		target_at?: number | null;
+		area_id?: string | null;
+		answer?: {
+			id: string;
+			answer: string;
+			answerer?: string;
+			confidence?: string;
+			answered_at?: number;
+			source_refs?: SourceRef[];
+		} | null;
+		answer_history?: Array<{
+			id: string;
+			answer: string;
+			answerer?: string;
+			confidence?: string;
+			created_at?: number;
+			supersedes?: string | null;
+			is_current?: boolean;
+		}>;
+		history?: Array<{
+			id?: string;
+			occurred_at?: number;
+			summary?: string;
+			event_type?: string;
+			version_from?: number | null;
+			version_to?: number | null;
+			actor?: { label?: string; kind?: string };
+			authority_act?: boolean;
+			source_refs?: unknown[];
+		}>;
+	}
+
+	let { data, form }: { data: PageData; form: ActionData } = $props();
+	const question = $derived(data.question as unknown as QuestionDetail);
+	const answerSources = $derived(data.answerSources as SourceRef[]);
+	const answerSourcesOmitted = $derived(data.answerSourcesOmitted as number);
+	const answerHistory = $derived([...(question.answer_history ?? [])].reverse());
 	const questionSections = $derived(parseQuestionSections(question.context ?? ''));
+	const answerIsAuthoritative = $derived(question.status === 'answered');
+	const commands = $derived.by(() => {
+		switch (question.status) {
+			case 'open':
+				return ['answer_question', 'withdraw_question'];
+			case 'answered':
+				return ['revise_answer', 'reopen_question'];
+			case 'withdrawn':
+				return ['reopen_question'];
+			default:
+				return [];
+		}
+	});
+
+	function dateLabel(value?: number | null): string {
+		return value ? new Date(value).toLocaleString() : 'Not set';
+	}
 </script>
 
-<svelte:head><title>{question.id} — Question</title></svelte:head>
+<svelte:head><title>{question.question} — Question</title></svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-5 p-6">
-	<div>
-		<a href={resolve('/work')} class="text-xs text-blue-400 hover:underline">← Work v3</a>
-		<div class="mt-1 flex items-baseline gap-3">
-			<h1 class="text-lg font-semibold text-white">{question.question}</h1>
-			<span class="font-mono text-xs text-status-muted">{question.id} · v{question.version}</span>
-		</div>
-		<p class="text-sm text-white/70">
-			<span class="font-medium">{question.status}</span>
-			{#if question.priority}· {question.priority}{/if}
-			{#if question.steward}· steward {question.steward}{/if}
-		</p>
-		{#if question.impact}<p class="mt-1 text-sm text-amber-200/90">
-				Impact: {question.impact}
-			</p>{/if}
-		{#if question.working_hypothesis}
-			<p class="mt-1 text-sm text-status-muted">
-				Hypothesis ({question.working_hypothesis.confidence}): {question.working_hypothesis.text}
-			</p>
-		{/if}
-	</div>
-
-	{#if question.context}
-		<section class="space-y-2" aria-label="Question brief">
-			{#each questionSections as section (section.id)}
-				<details
-					open={section.defaultOpen}
-					class="rounded border border-surface-border bg-surface-1 px-4 py-3"
-				>
-					<summary class="cursor-pointer text-sm font-medium text-white">{section.title}</summary>
-					<p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
-						{section.content}
-					</p>
-				</details>
-			{/each}
-		</section>
-	{/if}
+<div class="mx-auto max-w-5xl space-y-5">
+	<PageHeader
+		eyebrow="Question"
+		title={question.question}
+		id={question.id}
+		version={question.version}
+		status={question.status}
+		statusType="question"
+		backHref={resolve('/work/browse?type=question')}
+		backLabel="Browse questions"
+	>
+		{#snippet metadata()}
+			<div class="flex flex-wrap items-center gap-2 pt-1">
+				{#if question.priority}
+					<StatusBadge
+						type="priority"
+						value={question.priority}
+						label={`${question.priority} priority`}
+					/>
+				{/if}
+				{#if question.steward}
+					<span class="text-[length:var(--text-label)] text-on-surface-variant">
+						Steward: {question.steward}
+					</span>
+				{/if}
+			</div>
+		{/snippet}
+	</PageHeader>
 
 	<CommandFeedback form={form as never} />
 
-	{#if question.answer}
-		<div class="rounded border border-emerald-800/60 bg-emerald-950/20 p-4">
-			<p class="text-xs font-medium uppercase tracking-wide text-emerald-400">
-				Answer · {question.answer.confidence} · {question.answer.answerer}
+	{#if question.impact}
+		<aside
+			class="rounded-[var(--md-sys-shape-corner-large)] border border-status-warning/45 bg-status-warning-bg px-5 py-4 text-status-warning"
+			aria-label="Question impact"
+		>
+			<p
+				class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.14em]"
+			>
+				Why this needs an answer
 			</p>
-			<p class="mt-1 text-sm text-white">{question.answer.answer}</p>
-			{#if question.answer.source_refs?.length}
-				<p class="mt-2 text-xs text-status-muted">
-					Sources: {question.answer.source_refs
-						.map((ref: Record<string, unknown>) => ref.label ?? ref.ref)
-						.join(' · ')}
-				</p>
+			<p class="mt-2 text-[length:var(--text-body)] leading-relaxed">{question.impact}</p>
+		</aside>
+	{/if}
+
+	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.75fr)]">
+		<div class="space-y-5">
+			<Section
+				title="Question brief"
+				description="The decision context, risks, and evidence boundary behind the prompt."
+			>
+				<div class="space-y-3">
+					{#each questionSections as briefSection (briefSection.id)}
+						<details
+							open={briefSection.defaultOpen}
+							class="group rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant/70 bg-surface-container-high"
+						>
+							<summary
+								class="falcon-focus touch-target cursor-pointer rounded-[var(--md-sys-shape-corner-medium)] px-4 py-3 font-semibold text-on-surface"
+							>
+								{briefSection.title}
+							</summary>
+							<p
+								class="whitespace-pre-wrap border-t border-outline-variant/60 px-4 py-3 text-[length:var(--text-body)] leading-relaxed text-on-surface-variant"
+							>
+								{briefSection.content}
+							</p>
+						</details>
+					{/each}
+				</div>
+			</Section>
+
+			{#if question.answer}
+				<Section
+					title={answerIsAuthoritative ? 'Authoritative answer' : 'Retained answer'}
+					description={answerIsAuthoritative
+						? 'The current answer revision. Earlier revisions remain visible below.'
+						: 'This answer was invalidated when the Question reopened. It remains only as history.'}
+					accent={answerIsAuthoritative ? 'info' : 'purple'}
+				>
+					<div class="space-y-4">
+						<div class="flex flex-wrap items-center gap-2">
+							<StatusBadge
+								type="review"
+								value={question.answer.confidence}
+								label={`${question.answer.confidence ?? 'unknown'} confidence`}
+							/>
+							<span class="text-[length:var(--text-label)] text-on-surface-variant">
+								{question.answer.answerer ?? 'Unknown answerer'} ·
+								{dateLabel(question.answer.answered_at)}
+							</span>
+						</div>
+						<p
+							class="whitespace-pre-wrap text-[length:var(--text-body)] leading-relaxed text-on-surface"
+						>
+							{question.answer.answer}
+						</p>
+						<SourceRefs
+							sources={answerSources}
+							title="Answer sources"
+							omittedCount={answerSourcesOmitted}
+						/>
+					</div>
+				</Section>
+			{/if}
+
+			{#if answerHistory.length}
+				<Section
+					title="Answer revision history"
+					description="Immutable answer revisions, newest authority first."
+				>
+					<ol class="divide-y divide-outline-variant/60">
+						{#each answerHistory as revision (revision.id)}
+							<li class="py-4 first:pt-0 last:pb-0">
+								<div class="flex flex-wrap items-center gap-2">
+									<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
+										{revision.id}
+									</span>
+									{#if revision.is_current}
+										<StatusBadge
+											type="question"
+											value={answerIsAuthoritative ? 'answered' : 'open'}
+											label={answerIsAuthoritative ? 'Current' : 'Latest retained'}
+										/>
+									{/if}
+								</div>
+								<p class="mt-2 whitespace-pre-wrap text-on-surface">{revision.answer}</p>
+								<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
+									{revision.answerer ?? 'Unknown answerer'} · {revision.confidence ?? 'unknown'} confidence
+									· {dateLabel(revision.created_at)}
+								</p>
+							</li>
+						{/each}
+					</ol>
+				</Section>
+			{/if}
+
+			{#if question.history?.length}
+				<Section title="Timeline" description="Immutable command history and version transitions.">
+					<Timeline events={question.history} />
+				</Section>
 			{/if}
 		</div>
-	{/if}
 
-	<div class="space-y-3 rounded border border-surface-border bg-surface-1 p-4">
-		<h2 class="text-sm font-medium text-white">Actions</h2>
-		{#if question.status === 'open' || question.status === 'answered'}
-			<CommandForm
-				command={question.status === 'answered' ? 'revise_answer' : 'answer_question'}
-				targetId={question.id}
-				expectedVersion={question.version}
-				form={form as never}
-				compact
-			/>
-		{/if}
-		{#if question.status === 'open'}
-			<CommandForm
-				command="withdraw_question"
-				targetId={question.id}
-				expectedVersion={question.version}
-				form={form as never}
-				compact
-			/>
-		{:else}
-			<form method="POST" action="?/command" use:enhance class="flex gap-2">
-				<input type="hidden" name="command" value="reopen_question" />
-				<input type="hidden" name="expected_version" value={question.version} />
-				<input
-					name="payload_reason"
-					placeholder="reason (required)"
-					class="w-64 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-				/>
-				<button
-					class="rounded border border-surface-border px-3 py-1.5 text-sm text-white/80 hover:bg-surface-2"
-					>Reopen</button
+		<div class="space-y-5">
+			{#if question.working_hypothesis}
+				<Section
+					title="Working hypothesis"
+					description="A provisional explanation, not the authoritative answer."
+					accent="purple"
 				>
-			</form>
-		{/if}
+					<p class="text-[length:var(--text-body)] leading-relaxed text-on-surface">
+						{question.working_hypothesis.text ?? 'No hypothesis text recorded.'}
+					</p>
+					<p class="mt-2 text-[length:var(--text-label)] text-on-surface-variant">
+						{question.working_hypothesis.confidence ?? 'Unknown'} confidence
+					</p>
+				</Section>
+			{/if}
+
+			<Section title="Operating context" description="Ownership, answerability, and timing.">
+				<dl>
+					<DataRow label="Steward" value={question.steward ?? 'Unassigned'} />
+					<DataRow
+						label="Answerable by"
+						value={question.answerable_by?.join(', ') || 'No answerers named'}
+					/>
+					<DataRow label="Target" value={dateLabel(question.target_at)} />
+					<DataRow label="Area" value={question.area_id ?? 'Not assigned'} mono />
+				</dl>
+			</Section>
+		</div>
 	</div>
 
-	{#if question.answer_history?.length > 1}
-		<div class="rounded border border-surface-border bg-surface-1">
-			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-				Answer history
-			</div>
-			<ul class="divide-y divide-surface-border/60">
-				{#each question.answer_history as revision (revision.id)}
-					<li class="px-4 py-2 text-sm">
-						<span class="text-white/80">{revision.answer}</span>
-						<span class="block text-xs text-status-muted">
-							{new Date(revision.created_at).toLocaleString()} · {revision.answerer} · {revision.confidence}
-							{#if revision.is_current}· current{/if}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
-
-	{#if question.history?.length}
-		<div class="rounded border border-surface-border bg-surface-1">
-			<div class="border-b border-surface-border px-4 py-2 text-sm font-medium text-white">
-				Timeline
-			</div>
-			<ul class="divide-y divide-surface-border/60">
-				{#each question.history as event (event.id)}
-					<li class="px-4 py-2 text-sm">
-						<span class="text-white/80">{event.summary}</span>
-						<span class="block text-xs text-status-muted">
-							{new Date(event.occurred_at).toLocaleString()} · {event.actor.label}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
+	<CommandBar
+		{commands}
+		targetId={question.id}
+		expectedVersion={question.version}
+		form={form as never}
+	/>
 </div>

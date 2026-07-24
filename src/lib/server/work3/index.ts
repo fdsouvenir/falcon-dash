@@ -156,10 +156,10 @@ export type {
 	MilestoneScheduleState
 } from './read/project-derived.js';
 
-export { resolveWork3SourceRef, setSourceKindResolver } from './sources.js';
+export { resolveWork3SourceRef, resolveWork3SourceRefs, setSourceKindResolver } from './sources.js';
 export { getCronGateway, setCronGatewayForTests } from './cron-gateway.js';
 export type { CronGatewayApi, CronJob, CronRun } from './cron-gateway.js';
-export type { SourceResolution } from './sources.js';
+export type { SourceResolution, SourceResolutionBatch } from './sources.js';
 
 import { getWork3Db, getWork3EventsDb } from './db.js';
 import { startWork3OutboxWorker } from './outbox.js';

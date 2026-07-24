@@ -42,10 +42,13 @@ Each Work type has a distinct detail experience rather than a generic record car
 - Questions lead with the prompt and impact, section long context into a scannable brief, and keep
   the authoritative answer, confidence, revisions, and sources together.
 - Decisions present stakes, consequence of delay, options, recommendation, deciders, and
-  supersession lineage before asking for a selection and rationale.
+  supersession lineage before asking for one radio-card selection and rationale. A recommendation
+  is labeled but does not choose itself.
 - Change Requests show execution, verification, and Authorization as separate facts. Reviews are
-  evaluations; they are never presented as permission to execute.
-- Findings show conclusion, significance, confidence, validity, sources, and supersession.
+  evaluations; they are never presented as permission to execute. A guarded execution control
+  remains visible and explains which Authorization state prevents it.
+- Findings show conclusion, significance, confidence, validity, sources, and supersession. A
+  source that cannot be resolved stays visible with its unavailable reason.
 - Projects use a ledger: Status, Route, Proof, Current work, and History, with the operating brief
   pinned alongside it on wide screens.
 - Automata operate on the same OpenClaw-backed object and show runtime unavailability as a health
