@@ -220,6 +220,10 @@ Needs Resolution carries exact submitted Plan revision IDs into Review forms and
 versions into Authorization forms. Its four sections post semantic commands to the owning object
 route, except targetless Review creation, which is restricted to the resolution route.
 
+At mobile width, the shared Command Bar replaces the desktop form grid with a sticky action bar.
+Its bottom sheet renders exactly one selected manifest-driven form, preserves disabled-guard copy,
+and automatically reopens the command associated with structured failed-form values.
+
 Question, Decision, Change Request, Finding, and Task detail routes share the Work page header,
 semantic status badges, command feedback, command bar, source references, and immutable timeline.
 Decision outcomes are recorded through one accessible radio-card command form. Guarded Change

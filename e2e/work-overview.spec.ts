@@ -66,9 +66,10 @@ test.describe('Work v3 cutover', () => {
 		await expect(page.getByRole('heading', { name: 'All indexed Work' })).toBeVisible();
 
 		await page.goto(`${baseURL ?? ''}/work/browse?type=task`);
-		await expect(page.getByRole('navigation', { name: 'Focus filters' })).toBeVisible();
+		const focusFilters = page.getByRole('navigation', { name: 'Focus filters' });
+		await expect(focusFilters).toBeVisible();
 		for (const focus of ['All', 'Overdue', 'Blocked', 'Waiting on you', 'In review', 'Ready']) {
-			await expect(page.getByRole('link', { name: new RegExp(`^${focus}`) })).toBeVisible();
+			await expect(focusFilters.getByRole('link', { name: new RegExp(`^${focus}`) })).toBeVisible();
 		}
 	});
 
@@ -87,17 +88,33 @@ test.describe('Work v3 cutover', () => {
 
 	test('keeps Work v3 usable at mobile width', async ({ page, baseURL }, testInfo) => {
 		test.skip(testInfo.project.name !== 'mobile-chrome', 'Mobile-only Work assertion');
+		await page.setViewportSize({ width: 390, height: 844 });
 
-		await page.goto(`${baseURL ?? ''}/work`);
-
-		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
 		for (const destination of workDestinations) {
-			await expect(page.getByRole('link', { name: destination.heading }).first()).toBeVisible();
+			const response = await page.goto(`${baseURL ?? ''}${destination.path}`);
+			expect(response?.status(), destination.path).toBe(200);
+			await expect(
+				page.getByRole('heading', { name: destination.heading, exact: true })
+			).toBeVisible();
+
+			const hasHorizontalOverflow = await page.evaluate(
+				() => document.documentElement.scrollWidth > window.innerWidth + 1
+			);
+			expect(hasHorizontalOverflow, destination.path).toBe(false);
 		}
 
-		const hasHorizontalOverflow = await page.evaluate(
-			() => document.documentElement.scrollWidth > window.innerWidth + 1
-		);
-		expect(hasHorizontalOverflow).toBe(false);
+		await page.goto(`${baseURL ?? ''}/work`);
+		const statTiles = page.locator('[data-work-stat-tile]');
+		await expect(statTiles).toHaveCount(4);
+		const first = await statTiles.nth(0).boundingBox();
+		const second = await statTiles.nth(1).boundingBox();
+		expect(first?.y).toBe(second?.y);
+		expect(first?.x).not.toBe(second?.x);
+
+		await page.goto(`${baseURL ?? ''}/work/browse`);
+		const search = await page.getByRole('textbox', { name: 'Search terms' }).boundingBox();
+		const submit = await page.getByRole('button', { name: 'Search' }).boundingBox();
+		expect(search?.height).toBeGreaterThanOrEqual(48);
+		expect(submit?.height).toBeGreaterThanOrEqual(48);
 	});
 });

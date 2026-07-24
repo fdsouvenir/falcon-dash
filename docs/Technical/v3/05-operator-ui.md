@@ -144,6 +144,9 @@ The route implementation centralizes those contracts in `src/lib/components/work
 are generated from `work3-shared/commands.ts`, failures use one structured feedback surface, and
 object statuses use per-domain tone maps rather than a universal lifecycle palette. The shared Work
 layout owns the five-destination navigation so detail routes remain focused on their object.
+At mobile width, each Command Bar becomes a sticky, safe-area-aware action bar and opens one
+selected command form in a focus-trapped bottom sheet. Guarded commands remain selectable so their
+unmet reason stays visible. Failed submissions reopen the matching form with the submitted values.
 
 ### Rendered acceptance
 

@@ -364,6 +364,10 @@ samp,
 	.falcon-focus:focus-visible {
 		outline-color: var(--ring);
 	}
+
+	.falcon-focus:has(:focus-visible) {
+		outline-color: var(--ring);
+	}
 }
 
 /* Mobile utilities */
@@ -383,6 +387,17 @@ samp,
 
 body.sheet-open {
 	overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 
 /* Compact mode */

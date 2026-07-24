@@ -80,7 +80,7 @@
 		description="Outcome health, target pressure, and the next moves across active Projects."
 	/>
 
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
 		<StatTile
 			label="Open Projects"
 			value={openProjects.length}

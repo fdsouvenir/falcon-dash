@@ -88,6 +88,10 @@ Consequential actions require confirmation. When a command is present but unavai
 explains the unmet guard. If an object changes while a form is open, Falcon Dash preserves the
 entered values, reports the current version, and offers a refresh-and-reapply path.
 
+On a small screen, semantic actions collapse into a sticky action bar above the Falcon navigation.
+Opening it presents one selected command form in a bottom sheet; other legal or guarded commands
+remain available as touch-sized choices without filling the object page with forms.
+
 The history timeline records the actor, event, version transition, and sources across the Project,
 its assigned Work, Plans, Reviews, Authorizations, structure, and proof links. Evidence is visible
 on every source-bearing event; authority-creating acts are called out with their claimed human

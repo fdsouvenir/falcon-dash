@@ -57,8 +57,17 @@ describe('Falcon Material foundation', () => {
 			expect(control).toContain('bg-surface-container');
 			expect(control).toContain('rounded-[var(--md-sys-shape-corner-small)]');
 			expect(control).toContain('falcon-focus');
+			expect(control).toContain('touch-target');
 			expect(control).not.toMatch(/(?:bg|text|border)-(?:blue|emerald|red|amber|sky)-\d/);
 		}
+	});
+
+	it('provides visible nested focus and reduced-motion fallbacks', () => {
+		const css = source('../../../app.css');
+
+		expect(css).toContain('.falcon-focus:has(:focus-visible)');
+		expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+		expect(css).toContain('transition-duration: 0.01ms !important');
 	});
 
 	it('uses semantic modal surfaces on desktop and mobile', () => {

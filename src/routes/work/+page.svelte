@@ -149,7 +149,7 @@
 		</p>
 	</header>
 
-	<section aria-label="Queue summary" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+	<section aria-label="Queue summary" class="grid grid-cols-2 gap-3 xl:grid-cols-4">
 		<StatTile
 			label="Needs your call"
 			value={queue.needs_fred.total}

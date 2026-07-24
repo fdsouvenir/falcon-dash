@@ -231,7 +231,7 @@
 
 	<CommandFeedback form={form as never} />
 
-	<div class="grid gap-4 md:grid-cols-3" aria-label="Change state">
+	<div class="grid grid-cols-2 gap-4 md:grid-cols-3" aria-label="Change state">
 		<StatTile
 			label="Execution"
 			value={change.execution_state.replaceAll('_', ' ')}

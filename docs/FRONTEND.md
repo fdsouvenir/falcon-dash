@@ -47,6 +47,11 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   distinguish Reviews from Authorizations, and render unresolved source references explicitly.
   Decision option selection belongs in the shared radio-card field support rather than one form
   per option.
+- On mobile, `CommandBar` renders a sticky action bar above the shell navigation and opens the
+  selected manifest-driven form in the focus-trapped `BottomSheet`. Preserve failed form input by
+  reopening the matching command. Keep Work controls at least 48px, render summary `StatTile`
+  groups in two columns at 390px, honor safe-area insets, and rely on the global reduced-motion and
+  `.falcon-focus` fallbacks.
 - Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
   their own copies of the Work navigation.
 - Mission Control leads with four linked queue totals, then uses compact Work rows and tonal

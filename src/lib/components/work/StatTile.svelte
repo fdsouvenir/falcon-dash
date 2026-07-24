@@ -27,6 +27,7 @@
 <svelte:element
 	this={href ? 'a' : 'div'}
 	{href}
+	data-work-stat-tile
 	class={cn(
 		'group relative block min-h-32 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container p-4 shadow-none',
 		href && 'falcon-focus touch-target hover:bg-surface-container-high'

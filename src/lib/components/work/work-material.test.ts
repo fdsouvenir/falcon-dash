@@ -218,4 +218,32 @@ describe('Work UI material guardrails', () => {
 		expect(resolution.toString()).toContain('Review does not grant execution authority');
 		expect(resolution.toString()).toContain('This is not Review');
 	});
+
+	it('keeps mobile Work actions compact, touch-safe, and sheet-based', () => {
+		const commandBar = componentSources.find((entry) => entry.name === 'CommandBar.svelte')?.source;
+		const pageHeader = componentSources.find((entry) => entry.name === 'PageHeader.svelte')?.source;
+		const layout = readFileSync(new URL('../../../routes/work/+layout.svelte', import.meta.url));
+		const overview = readFileSync(new URL('../../../routes/work/+page.svelte', import.meta.url));
+		const projects = readFileSync(
+			new URL('../../../routes/work/projects/+page.svelte', import.meta.url)
+		);
+		const automata = readFileSync(
+			new URL('../../../routes/work/automata/+page.svelte', import.meta.url)
+		);
+
+		expect(commandBar).toContain('BottomSheet');
+		expect(commandBar).toContain('isMobile');
+		expect(commandBar).toContain('data-command-bar-mobile');
+		expect(commandBar).toContain('data-command-sheet');
+		expect(commandBar).toContain('class="sticky bottom-[');
+		expect(commandBar).toContain('formCommand');
+		expect(commandBar).toContain('formMatchesItem');
+		expect(commandBar).toContain('values?.target_id !== targetId');
+		expect(pageHeader).toContain('break-all');
+		expect(layout.toString()).toContain('var(--safe-left)');
+		expect(layout.toString()).toContain('var(--safe-right)');
+		for (const source of [overview, projects, automata]) {
+			expect(source.toString()).toContain('grid grid-cols-2 gap-3');
+		}
+	});
 });

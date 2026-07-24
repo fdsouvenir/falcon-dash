@@ -67,7 +67,7 @@
 		</div>
 	{/if}
 
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 		<StatTile label="Active" value={active} description="Enabled in OpenClaw." tone="active" />
 		<StatTile label="Paused" value={paused} description="Present but disabled." tone="warning" />
 		<StatTile

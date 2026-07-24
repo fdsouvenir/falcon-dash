@@ -56,7 +56,7 @@
 				{#if status}<StatusBadge type={statusType} value={status} />{/if}
 			</div>
 			{#if id}
-				<p class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
+				<p class="break-all font-mono text-[length:var(--text-label)] text-on-surface-variant">
 					{id}{version !== undefined ? ` · v${version}` : ''}
 				</p>
 			{/if}
