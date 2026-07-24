@@ -193,6 +193,18 @@ A periodic sweep scans active projects for stale-risk signals and routes them in
 steward path. It does not perform semantic cleanup itself, and it respects per-project cooldowns,
 one active reconciliation session per root project, and a max-projects-per-sweep cap.
 
+## Work v3 Operator UI
+
+The Work v3 route shell exposes Mission Control, Projects, Needs Resolution, Automata, and Browse.
+Detail routes issue semantic commands through a shared manifest-driven form; they never patch
+lifecycle fields directly. Structured command failures preserve submitted values, date/time form
+values are normalized to epoch milliseconds at the UI adapter boundary, and nullable fields use
+an explicit clear value rather than treating an empty string as a mutation.
+
+The client may format server projections, but it must not rederive lifecycle, health,
+actionability, Authorization effectiveness, or reconciliation state. Reviews and Authorizations
+remain visually and semantically distinct.
+
 ## Context Generation
 
 `src/lib/server/work/context-writer.ts` writes Work-owned context:

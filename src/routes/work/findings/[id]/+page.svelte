@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { CommandFeedback, CommandForm } from '$lib/components/work/index.js';
 	import type { ActionData, PageData } from './$types.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -36,18 +36,7 @@
 			</p>{/if}
 	</div>
 
-	{#if form && 'error' in form && form.error}
-		<div class="rounded border border-red-800 bg-red-950/40 px-4 py-2 text-sm text-red-300">
-			<span class="font-mono text-xs">{form.error.code}</span> — {form.error.message}
-		</div>
-	{:else if form && 'ok' in form && form.ok}
-		<div
-			class="rounded border border-emerald-800 bg-emerald-950/40 px-4 py-2 text-sm text-emerald-300"
-		>
-			{form.command}
-			{form.noop ? 'was already done (no-op)' : 'applied'}.
-		</div>
-	{/if}
+	<CommandFeedback form={form as never} />
 
 	<div class="rounded border border-surface-border bg-surface-1 p-4">
 		<h2 class="text-sm font-medium text-white">Sources</h2>
@@ -71,19 +60,13 @@
 
 	{#if finding.validity === 'current'}
 		<div class="rounded border border-surface-border bg-surface-1 p-4">
-			<form method="POST" action="?/command" use:enhance class="flex gap-2">
-				<input type="hidden" name="command" value="retract_finding" />
-				<input type="hidden" name="expected_version" value={finding.version} />
-				<input
-					name="payload_reason"
-					placeholder="retraction reason (required)"
-					class="w-72 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-				/>
-				<button
-					class="rounded border border-red-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/40"
-					>Retract</button
-				>
-			</form>
+			<CommandForm
+				command="retract_finding"
+				targetId={finding.id}
+				expectedVersion={finding.version}
+				form={form as never}
+				compact
+			/>
 		</div>
 	{/if}
 

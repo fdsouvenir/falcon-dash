@@ -51,13 +51,13 @@ test.describe('Work v3 cutover', () => {
 		}
 	});
 
-	test('exposes v3 capture and search affordances on Browse', async ({ page, baseURL }) => {
+	test('keeps Browse search-only and agent-driven', async ({ page, baseURL }) => {
 		await page.goto(`${baseURL ?? ''}/work/browse`);
 
 		await expect(page.getByPlaceholder('Search all Work…')).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'New Task' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'New Area' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'New Task' })).toHaveCount(0);
+		await expect(page.getByRole('heading', { name: 'New Area' })).toHaveCount(0);
 		await expect(page.getByText(/^Tasks \(0\)$/)).toBeVisible();
 	});
 

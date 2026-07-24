@@ -1,9 +1,10 @@
 import { error as httpError, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types.js';
-import { isWork3Error } from '$lib/work3-shared/errors.js';
+import { isWork3Error, Work3Error } from '$lib/work3-shared/errors.js';
 import { startWork3 } from '$lib/server/work3/index.js';
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
 import { executePersonCommand } from '$lib/server/work3/person.js';
+import { commandLabel, requiresConfirmation } from '$lib/work3/labels.js';
 
 export const load: PageServerLoad = async ({ params }) => {
 	startWork3();
@@ -24,13 +25,23 @@ export const actions: Actions = {
 		startWork3();
 		const form = await event.request.formData();
 		const values = Object.fromEntries(form) as Record<string, string>;
+		if (requiresConfirmation(values.command) && values.confirmed !== 'yes') {
+			return fail(400, {
+				error: new Work3Error(
+					'validation_failed',
+					`${commandLabel(values.command)} requires explicit confirmation`
+				).toShape(),
+				command: values.command
+			});
+		}
 		const payload: Record<string, unknown> = { id: event.params.id };
 		if (values.expected_runtime_updated_at_ms) {
 			payload.expected_runtime_updated_at_ms = Number(values.expected_runtime_updated_at_ms);
 		}
 		for (const [key, value] of Object.entries(values)) {
 			if (key.startsWith('payload_') && value !== '') {
-				payload[key.slice('payload_'.length)] = value;
+				const field = key.slice('payload_'.length);
+				payload[field] = field === 'expected_runtime_updated_at_ms' ? Number(value) : value;
 			}
 		}
 		try {

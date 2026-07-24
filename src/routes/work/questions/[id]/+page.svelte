@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { CommandFeedback, CommandForm } from '$lib/components/work/index.js';
+	import { parseQuestionSections } from '$lib/work3/sections.js';
 	import type { ActionData, PageData } from './$types.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/* eslint-disable @typescript-eslint/no-explicit-any -- reader projections are dynamic records */
 	const question = $derived(data.question as Record<string, any>);
+	const questionSections = $derived(parseQuestionSections(question.context ?? ''));
 </script>
 
 <svelte:head><title>{question.id} — Question</title></svelte:head>
@@ -26,7 +29,6 @@
 		{#if question.impact}<p class="mt-1 text-sm text-amber-200/90">
 				Impact: {question.impact}
 			</p>{/if}
-		{#if question.context}<p class="mt-1 text-sm text-white/80">{question.context}</p>{/if}
 		{#if question.working_hypothesis}
 			<p class="mt-1 text-sm text-status-muted">
 				Hypothesis ({question.working_hypothesis.confidence}): {question.working_hypothesis.text}
@@ -34,18 +36,23 @@
 		{/if}
 	</div>
 
-	{#if form && 'error' in form && form.error}
-		<div class="rounded border border-red-800 bg-red-950/40 px-4 py-2 text-sm text-red-300">
-			<span class="font-mono text-xs">{form.error.code}</span> — {form.error.message}
-		</div>
-	{:else if form && 'ok' in form && form.ok}
-		<div
-			class="rounded border border-emerald-800 bg-emerald-950/40 px-4 py-2 text-sm text-emerald-300"
-		>
-			{form.command}
-			{form.noop ? 'was already done (no-op)' : 'applied'}.
-		</div>
+	{#if question.context}
+		<section class="space-y-2" aria-label="Question brief">
+			{#each questionSections as section (section.id)}
+				<details
+					open={section.defaultOpen}
+					class="rounded border border-surface-border bg-surface-1 px-4 py-3"
+				>
+					<summary class="cursor-pointer text-sm font-medium text-white">{section.title}</summary>
+					<p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
+						{section.content}
+					</p>
+				</details>
+			{/each}
+		</section>
 	{/if}
+
+	<CommandFeedback form={form as never} />
 
 	{#if question.answer}
 		<div class="rounded border border-emerald-800/60 bg-emerald-950/20 p-4">
@@ -66,50 +73,22 @@
 	<div class="space-y-3 rounded border border-surface-border bg-surface-1 p-4">
 		<h2 class="text-sm font-medium text-white">Actions</h2>
 		{#if question.status === 'open' || question.status === 'answered'}
-			<form method="POST" action="?/command" use:enhance class="space-y-2">
-				<input
-					type="hidden"
-					name="command"
-					value={question.status === 'answered' ? 'revise_answer' : 'answer_question'}
-				/>
-				<input type="hidden" name="expected_version" value={question.version} />
-				<textarea
-					name="payload_answer"
-					placeholder="Authoritative answer…"
-					class="w-full rounded border border-surface-border bg-surface-2 px-3 py-2 text-sm text-white"
-					rows="2"
-				></textarea>
-				<div class="flex gap-2">
-					<select
-						name="payload_confidence"
-						class="rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					>
-						{#each ['confirmed', 'supported', 'tentative'] as confidence (confidence)}
-							<option value={confidence}>{confidence}</option>
-						{/each}
-					</select>
-					<button
-						class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-					>
-						{question.status === 'answered' ? 'Revise answer' : 'Answer'}
-					</button>
-				</div>
-			</form>
+			<CommandForm
+				command={question.status === 'answered' ? 'revise_answer' : 'answer_question'}
+				targetId={question.id}
+				expectedVersion={question.version}
+				form={form as never}
+				compact
+			/>
 		{/if}
 		{#if question.status === 'open'}
-			<form method="POST" action="?/command" use:enhance class="flex gap-2">
-				<input type="hidden" name="command" value="withdraw_question" />
-				<input type="hidden" name="expected_version" value={question.version} />
-				<input
-					name="payload_reason"
-					placeholder="reason (required)"
-					class="w-64 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-				/>
-				<button
-					class="rounded border border-red-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/40"
-					>Withdraw</button
-				>
-			</form>
+			<CommandForm
+				command="withdraw_question"
+				targetId={question.id}
+				expectedVersion={question.version}
+				form={form as never}
+				compact
+			/>
 		{:else}
 			<form method="POST" action="?/command" use:enhance class="flex gap-2">
 				<input type="hidden" name="command" value="reopen_question" />

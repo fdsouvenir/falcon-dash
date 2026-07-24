@@ -37,6 +37,12 @@ This document captures Falcon Dash frontend constraints that should stay stable 
 - Use `ConfirmDialog` for destructive, terminal, authority-granting, and execution actions. It
   uses a native dialog on desktop and the focus-trapped `BottomSheet` modal on mobile, and it locks
   dismissal and repeat submission while an asynchronous action is pending.
+- Build Work v3 routes from `src/lib/components/work/`. `CommandForm` reads the shared semantic
+  command manifest, `CommandFeedback` owns structured failure and stale-version recovery, and
+  `StatusBadge` maps each object vocabulary through `src/lib/work3/tones.ts`. Do not restore
+  per-route command-label maps, raw form controls, or a universal status map.
+- Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
+  their own copies of the Work navigation.
 
 ## Shell Model
 
@@ -74,9 +80,9 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   right inspector. Row selection can be cleared by clicking the selected row again; the inspector
   should stay visible with a placeholder instead of collapsing the layout, and it should not become
   a separate scrolling surface.
-- Mobile Work details should prioritize the agent note, actionable next steps, and a persistent
-  agent composer. Keep status and metadata quiet, place secondary facts in a collapsed section, and
-  preserve at least 48px controls except for compact inline text actions.
+- Mobile Work details should prioritize actionable next steps, keep status and metadata quiet, and
+  preserve at least 48px controls except for compact inline text actions. In-product agent
+  communication is a v4 concern; Work v3 does not add an agent composer.
 - In numbered project rows, use a hanging indent so blurbs and next-up badges align with the
   title text rather than the project number.
 - In dense project columns, center narrow numeric counts such as blockers with a small metric

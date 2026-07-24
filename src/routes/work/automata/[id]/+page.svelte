@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { CommandForm } from '$lib/components/work/index.js';
 	import type { ActionData, PageData } from './$types.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -69,61 +69,44 @@
 
 	<div class="flex flex-wrap gap-3 rounded border border-surface-border bg-surface-1 p-4">
 		{#if automaton.lifecycle === 'paused'}
-			<form method="POST" action="?/command" use:enhance>
-				<input type="hidden" name="command" value="activate_automaton" />
-				<input
-					type="hidden"
-					name="expected_runtime_updated_at_ms"
-					value={automaton.runtime_updated_at_ms ?? ''}
-				/>
-				<button
-					class="rounded bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600"
-					>Activate</button
-				>
-			</form>
+			<CommandForm
+				command="activate_automaton"
+				presetValues={{
+					id: automaton.id,
+					...(automaton.runtime_updated_at_ms
+						? { expected_runtime_updated_at_ms: String(automaton.runtime_updated_at_ms) }
+						: {})
+				}}
+				form={form as never}
+				compact
+			/>
 		{:else if automaton.lifecycle === 'active'}
-			<form method="POST" action="?/command" use:enhance>
-				<input type="hidden" name="command" value="pause_automaton" />
-				<input
-					type="hidden"
-					name="expected_runtime_updated_at_ms"
-					value={automaton.runtime_updated_at_ms ?? ''}
-				/>
-				<button
-					class="rounded border border-surface-border px-3 py-1.5 text-sm text-white/80 hover:bg-surface-2"
-					>Pause</button
-				>
-			</form>
+			<CommandForm
+				command="pause_automaton"
+				presetValues={{
+					id: automaton.id,
+					...(automaton.runtime_updated_at_ms
+						? { expected_runtime_updated_at_ms: String(automaton.runtime_updated_at_ms) }
+						: {})
+				}}
+				form={form as never}
+				compact
+			/>
 		{/if}
 		{#if automaton.lifecycle !== 'deleted'}
-			<form
-				method="POST"
-				action="?/command"
-				use:enhance
-				onsubmit={(event) => {
-					if (
-						!confirm(
-							'Delete this Automaton? The runtime job is removed; a restoration snapshot is kept.'
-						)
-					) {
-						event.preventDefault();
-					}
-				}}
-			>
-				<input type="hidden" name="command" value="delete_automaton" />
-				<button
-					class="rounded border border-red-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950/40"
-					>Delete</button
-				>
-			</form>
+			<CommandForm
+				command="delete_automaton"
+				presetValues={{ id: automaton.id }}
+				form={form as never}
+				compact
+			/>
 		{:else if automaton.restorable}
-			<form method="POST" action="?/command" use:enhance>
-				<input type="hidden" name="command" value="restore_automaton" />
-				<button
-					class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500"
-					>Restore (paused)</button
-				>
-			</form>
+			<CommandForm
+				command="restore_automaton"
+				presetValues={{ id: automaton.id }}
+				form={form as never}
+				compact
+			/>
 		{/if}
 	</div>
 

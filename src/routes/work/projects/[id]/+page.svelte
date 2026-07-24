@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { CommandFeedback, CommandForm } from '$lib/components/work/index.js';
 	import type { ActionData, PageData } from './$types.js';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -26,17 +27,6 @@
 				return [];
 		}
 	});
-
-	const commandLabels: Record<string, string> = {
-		plan_project: 'Mark planned',
-		activate_project: 'Activate',
-		pause_project: 'Pause',
-		complete_project: 'Complete project',
-		cancel_project: 'Cancel project',
-		reopen_project: 'Reopen',
-		archive_project: 'Archive',
-		restore_project: 'Restore from archive'
-	};
 
 	function healthColor(health: string): string {
 		if (health === 'on_track') return 'text-emerald-400';
@@ -94,24 +84,7 @@
 		{/if}
 	</div>
 
-	{#if form && 'error' in form && form.error}
-		<div class="rounded border border-red-800 bg-red-950/40 px-4 py-2 text-sm text-red-300">
-			<span class="font-mono text-xs">{form.error.code}</span> — {form.error.message}
-			{#if form.error.details?.missing}<span class="block text-xs"
-					>Missing: {JSON.stringify(form.error.details.missing)}</span
-				>{/if}
-			{#if form.error.alternatives?.length}<span class="block text-xs"
-					>Try: {form.error.alternatives.join(', ')}</span
-				>{/if}
-		</div>
-	{:else if form && 'ok' in form && form.ok}
-		<div
-			class="rounded border border-emerald-800 bg-emerald-950/40 px-4 py-2 text-sm text-emerald-300"
-		>
-			{form.command}
-			{form.noop ? 'was already done (no-op)' : 'applied'}.
-		</div>
-	{/if}
+	<CommandFeedback form={form as never} />
 
 	<!-- Proof: criteria with contribution vs satisfaction distinguished. -->
 	<div class="rounded border border-surface-border bg-surface-1 p-4">
@@ -221,55 +194,13 @@
 	<div class="space-y-3 rounded border border-surface-border bg-surface-1 p-4">
 		<h2 class="text-sm font-medium text-white">Actions</h2>
 		{#each lifecycleCommands as command (command)}
-			<form method="POST" action="?/command" use:enhance class="flex flex-wrap items-center gap-2">
-				<input type="hidden" name="command" value={command} />
-				<input type="hidden" name="expected_version" value={project.version} />
-				{#if command === 'activate_project' && !project.plan_id}
-					<input
-						name="payload_plan_not_required_reason"
-						placeholder="plan-not-required reason"
-						class="w-64 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-				{/if}
-				{#if command === 'complete_project'}
-					<input
-						name="payload_outcome_summary"
-						placeholder="outcome summary (required)"
-						class="w-72 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-				{/if}
-				{#if command === 'cancel_project'}
-					<input
-						name="payload_reason"
-						placeholder="reason"
-						class="w-48 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-					<input
-						name="payload_child_disposition"
-						placeholder="child work disposition"
-						class="w-56 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-				{/if}
-				{#if command === 'reopen_project'}
-					<input
-						name="payload_reason"
-						placeholder="reason"
-						class="w-48 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-					<input
-						name="payload_current_next_item_id"
-						placeholder="new next item id"
-						class="w-40 rounded border border-surface-border bg-surface-2 px-2 py-1 text-sm text-white"
-					/>
-				{/if}
-				<button
-					class="rounded px-3 py-1.5 text-sm font-medium {command === 'cancel_project'
-						? 'border border-red-900 text-red-400 hover:bg-red-950/40'
-						: 'bg-blue-600 text-white hover:bg-blue-500'}"
-				>
-					{commandLabels[command] ?? command}
-				</button>
-			</form>
+			<CommandForm
+				{command}
+				targetId={project.id}
+				expectedVersion={project.version}
+				form={form as never}
+				compact
+			/>
 		{/each}
 	</div>
 

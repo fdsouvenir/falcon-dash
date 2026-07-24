@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import Nav from '../Nav.svelte';
 	import type { PageData } from './$types.js';
 
 	let { data }: { data: PageData } = $props();
@@ -17,7 +16,6 @@
 
 <div class="mx-auto max-w-4xl space-y-5 p-4 md:p-6">
 	<h1 class="text-xl font-semibold text-white">Projects</h1>
-	<Nav />
 
 	<div class="rounded border border-surface-border bg-surface-1">
 		{#if data.projects.length === 0}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import Nav from './Nav.svelte';
 	import type { PageData } from './$types.js';
 
 	let { data }: { data: PageData } = $props();
@@ -81,7 +80,6 @@
 
 <div class="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
 	<h1 class="text-xl font-semibold text-white">Mission Control</h1>
-	<Nav />
 
 	<div class="grid gap-4 md:grid-cols-2">
 		{#each sections as section (section.key)}

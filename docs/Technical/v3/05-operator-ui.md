@@ -90,6 +90,11 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - Keyboard navigation, focus states, labels, contrast, reduced motion, and screen-reader semantics are required.
 - Search and filters fail visibly on unsupported fields rather than silently returning misleading results.
 
+The route implementation centralizes those contracts in `src/lib/components/work/`: command forms
+are generated from `work3-shared/commands.ts`, failures use one structured feedback surface, and
+object statuses use per-domain tone maps rather than a universal lifecycle palette. The shared Work
+layout owns the five-destination navigation so detail routes remain focused on their object.
+
 ### Rendered acceptance
 
 - Validate Mission Control, Project, Decision, Change Request, Automaton, and Browse at representative desktop and mobile viewports.

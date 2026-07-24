@@ -17,13 +17,19 @@
 	}
 </script>
 
-<nav class="flex flex-wrap gap-1 overflow-x-auto border-b border-surface-border pb-2">
+<nav
+	class="flex gap-1 overflow-x-auto rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container p-1 shadow-none"
+	aria-label="Work destinations"
+>
 	{#each destinations as destination (destination.href)}
 		<a
 			href={destination.href}
-			class="whitespace-nowrap rounded px-3 py-1.5 text-sm {isActive(destination)
-				? 'bg-blue-950/60 font-medium text-blue-300'
-				: 'text-white/70 hover:bg-surface-2'}"
+			aria-current={isActive(destination) ? 'page' : undefined}
+			class="falcon-focus touch-target inline-flex shrink-0 items-center whitespace-nowrap rounded-[var(--md-sys-shape-corner-medium)] px-3 py-2 text-[length:var(--text-body)] {isActive(
+				destination
+			)
+				? 'bg-primary font-semibold text-primary-foreground'
+				: 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}"
 		>
 			{destination.label}
 		</a>

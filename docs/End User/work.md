@@ -1,119 +1,61 @@
 # Work
 
-Work is Falcon Dash's operator queue and agent-facing source of truth.
+Work is Falcon Dash's operator control plane and the agent-facing source of truth.
 
-Use `/work` for an executive status board across active projects, items needing resolution,
-blocked or waiting work, near-term dates, and recent activity. Falcon Dash opens to Work by default; `/`
-redirects to `/work`.
+Use `/work` to see what needs a human call, what is at risk, what the agent can act on, what is
+waiting, and which governance or automation states need attention. Falcon Dash opens to Work by
+default; `/` redirects to `/work`.
 
-## What It Shows
+## Destinations
 
-- Executive signals for work needing your call, at-risk work, near-term dates, and recent changes.
-  These signals jump to the matching overview section instead of opening an arbitrary item, and
-  avoid clipped preview snippets that are hard to read at a glance.
-- Purpose-built overview sections for due-next work, operator asks, blocked or waiting work, and a
-  single chronological recent activity log. The due-next section appears before the ask/risk
-  sections so near-term action is visible first.
-- Type-specific pages for projects, tasks, needs resolution, change requests, findings, and
-  automations. Needs Resolution is one operator-facing queue for unanswered knowledge and unmade
-  commitments while preserving the API variants behind the scenes.
-- Desktop type pages with the section title above fixed search/filter controls, type-specific
-  structured rows, a scrollable item list, and a fixed quick inspector on the right. The inspector
-  stays directly under the Work header without its own scroll bar, keeps state controls and quick
-  facts together, and places the details action directly below that state block. Single clicks select and highlight
-  a row in place; clicking it again clears selection; double clicks open that item's standalone
-  detail page.
-- Mobile type pages skip the quick inspector. Tapping a row opens a mobile-first detail page
-  directly. That page leads with the agent's current note and next steps, keeps structured facts in
-  a collapsed Work details section, and pins a message composer above the mobile navigation.
-- Standalone detail pages for individual Work items. These pages show type-aware context, health
-  reasons, blocker context, related work, and read-only narrative fields. Desktop Needs Resolution
-  detail pages use a sectioned Resolution brief so long agent-written Markdown plans remain
-  scannable.
-- A Work integrity panel on detail pages for checking stale state, opening a scoped agent session,
-  and reviewing recent reconciliation runs.
-- Findings feed for captured facts, events, and evidence
-- Work data generated from the new `~/.openclaw/data/falcon-dash/work.db` database
+The Work shell keeps five destinations available on every Work page:
 
-## Pages
+- **Mission Control** — the executive action queue and material recent changes.
+- **Projects** — the portfolio and each Project's route, proof, current work, and history.
+- **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring a human.
+- **Automata** — live OpenClaw automation configuration, health, scheduling, and Run history.
+- **Browse** — search and filters across existing Work and knowledge objects.
 
-- `/work` -- dashboard overview across all Work types
-- `/` -- redirects to `/work`
-- `/work#needs-you`, `/work#at-risk`, `/work#due-next`, `/work#recent` -- focused overview sections
-- `/work/search?q=...` -- read-only search across existing Work records
-- `/work/projects`, `/work/tasks`, `/work/needs-resolution`, `/work/change-requests`,
-  `/work/findings`, `/work/automations` -- type-specific lists optimized for each standalone Work
-  shape. `/work/open-questions` and `/work/decisions` redirect to `/work/needs-resolution`.
-- `/work/settings` -- category and subcategory setup, opened from the Work settings gear
-- `/work/{section}?q=...&status=...&focus=...` -- shareable type-list filters. Projects use
-  project filters such as `focus=blocked`; tasks use due filters such as `focus=due-this-week`;
-  needs resolution uses answer/review filters such as `focus=needs-answer`.
-- `/work/{type}/{id}` -- routeable standalone detail page for one Work item
+Creation is agent-driven. Browse does not provide generic create forms. Project-local Phase and
+Milestone composers are the limited exception because they shape an existing Project's route and
+proof. Work v3 does not include an in-product agent composer.
 
-The top Work search field navigates to `/work/search` and searches existing agent-managed Work
-records. It does not create new work. Direct capture or manual creation controls are intentionally
-absent from the primary Work shell until an explicit capture workflow exists.
+## Object Pages
 
-Desktop quick inspectors and detail pages expose lightweight state controls for status, priority,
-and waiting state. Narrative fields such as title, next action, notes, description, and results are
-shown as agent-managed record content rather than casual text editors.
+Each Work type has a distinct detail experience rather than a generic record card:
 
-Falcon Dash also runs Work integrity reconciliation after Work changes. Deterministic cleanup is
-limited to explicit mechanical graph consequences, such as clearing a blocked task after all
-structured dependencies are closed. The contextual agent remains the project steward for semantic
-cleanup: stale questions, evidence interpretation, project next actions, and operator-facing
-summaries. When stale-risk remains, Falcon Dash opens or reuses an agent session tied to the Work
-item so the agent can resolve the state with the right project context.
+- Tasks show their definition, completion condition, result, operating context, blockers, waiting
+  state, legal lifecycle commands, and command timeline.
+- Questions lead with the prompt and impact, section long context into a scannable brief, and keep
+  the authoritative answer, confidence, revisions, and sources together.
+- Decisions present stakes, consequence of delay, options, recommendation, deciders, and
+  supersession lineage before asking for a selection and rationale.
+- Change Requests show execution, verification, and Authorization as separate facts. Reviews are
+  evaluations; they are never presented as permission to execute.
+- Findings show conclusion, significance, confidence, validity, sources, and supersession.
+- Projects use a ledger: Status, Route, Proof, Current work, and History, with the operating brief
+  pinned alongside it on wide screens.
+- Automata operate on the same OpenClaw-backed object and show runtime unavailability as a health
+  error, not as a fake lifecycle state.
 
-The desktop Projects section is a searchable, filterable project list rather than a list-plus-form
-workspace. Project rows render as separated multi-line rows with a numbered title, short blurb,
-next up, status, coming-up, open-work, blocker, and update columns. Desktop rows highlight on
-hover only, and double-clicking opens the full project page. The project page starts with compact
-Project Status: editable basics like status, health, priority, waiting state, and category, the
-current next up item, and any active blocker relationships. The pinned right rail keeps milestone
-creation and the static operating brief close by without repeating those details. The project list keeps blockers
-lightweight with labels such as "Next up blocked" or "2 later holding up"; the project detail uses
-the same wording and explains each active blocker as a relationship: what is stuck, what is
-blocking it, why, and the next unblock move. Project Plan presents milestones on a continuous rail with due dates and nested
-work rows, not as a separate milestone list plus unrelated tasks. The same blocker context appears
-inline under the affected milestone or work row so it is visible where the stuck work lives.
-Milestones are short checkpoints inside the project, not separate pages; the project right rail
-includes an Add milestone control for a title and one-sentence description. Work that is not
-attached to a milestone appears as project-level work, while automations, findings, and activity
-remain supporting sections.
+## Semantic Actions
 
-Activity is a Work change log, not a loose list of recently touched records. Overview activity shows
-recent Work changes across the module, and project activity filters that same log to the project so
-the feed can say what changed, which object changed, and which fields moved when structured deltas
-are available.
+Buttons issue semantic Work commands; they do not patch fields or write lifecycle state directly.
+The action form is generated from the shared command contract, so required fields and optional
+fields stay consistent with the CLI and API.
 
-Needs Resolution is the visible queue for unresolved knowledge and unresolved commitments. Some
-records are stored as missing-knowledge variants and others as commitment/approval variants with
-options and a recommendation, but the operator sees one queue because both are things that need to
-be resolved. Change requests are reserved for controlled mutation of code, config, systems, data,
-auth, deployment, or automation.
+Consequential actions require confirmation. When a command is present but unavailable, the page
+explains the unmet guard. If an object changes while a form is open, Falcon Dash preserves the
+entered values, reports the current version, and offers a refresh-and-reapply path.
 
-Categories and subcategories are setup records rather than front-and-center Work item lists. Work
-settings presents them as a grouped directory where rows are selected for editing in the right-side
-form. Top-level category and subcategory creation starts from the action strip above that editor;
-when a category is selected, `Add subcategory` preselects it as the parent. Deleting a category or
-subcategory removes that directory entry and leaves any linked Work items unassigned.
+The history timeline records the actor, event, version transition, and sources. Authority-creating
+acts are called out with their claimed human authority source.
 
 ## Agent Contract
 
-Agents should use `/api/work/*` or generated context files:
+Agents use `/api/v3`, the Work CLI, or generated context. Work objects are referenced by their
+type and ID, such as `Change Request c28` or `Project p4`.
 
-- `WORK.md` -- compact current-state home view with queue counts, visible empty states, item
-  summaries, and next-command templates
-- `WORK-API.md` -- endpoint reference and mutation examples
-- `FALCON-DASH.md` -- generated context location and Falcon Dash module guidance
-- `Work/W-{id}.md` -- full detail for one active Work item
-
-In normal conversation and UI copy, refer to items by object type and ID, such as
-`Change Request 176` or `Project 4`. The `W-` prefix is only for generated context filenames.
-When generated `FALCON-DASH.md` includes a public dashboard URL, agents should turn specific
-object references into inline Markdown links such as `[Project 4]({public-origin}/work/projects/4)`.
-If no public URL is configured, agents should keep those references as plain text and never use
-`localhost`, `127.0.0.1`, or relative paths in operator-facing object links.
-
-The former work interface is not part of active Falcon Dash.
+Falcon Dash maintains the authoritative structured state. Clients may format, group, filter, and
+link reader projections, but they must not infer lifecycle, health, actionability, Authorization
+effectiveness, or reconciliation state that the server has not supplied.
