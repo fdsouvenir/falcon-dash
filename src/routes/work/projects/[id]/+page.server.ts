@@ -2,6 +2,7 @@ import { error as httpError } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types.js';
 import { startWork3 } from '$lib/server/work3/index.js';
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
+import { resolveProjectProofSources } from '$lib/server/work3/project-proof-sources.js';
 import { makeCommandAction } from '$lib/server/work3/ui.js';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -13,6 +14,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		offset: 0
 	});
 	if (!project) throw httpError(404, `No such project: ${params.id}`);
+	await resolveProjectProofSources(project);
 	return { project };
 };
 

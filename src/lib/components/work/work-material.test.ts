@@ -37,6 +37,13 @@ describe('Work UI material guardrails', () => {
 		expect(form).toContain('payload_json_');
 		expect(form).toContain('form.values');
 		expect(form).toContain('formMatchesPreset');
+		expect(form).toContain('form.values?.target_id !== targetId');
+		expect(form).toContain('requireAnyOf');
+		expect(form).toContain('requireExactlyOneOf');
+		expect(form).toContain('hasConditionalValue');
+		expect(form).toContain('setCustomValidity');
+		expect(form).toContain('Provide at least one');
+		expect(form).toContain('Provide exactly one');
 		expect(form).toContain('new Date(value).getTime()');
 		expect(form).toContain('formData.set(`display_${field}`, value)');
 		expect(form).toContain('formData.set(key, String(epoch))');
@@ -45,6 +52,14 @@ describe('Work UI material guardrails', () => {
 		expect(form).toContain('ConfirmDialog');
 		expect(form).toContain('resolveConfirmation');
 		expect(form).toContain('await update()');
+		const commandBar = componentSources.find((entry) => entry.name === 'CommandBar.svelte')?.source;
+		const workItemRow = componentSources.find(
+			(entry) => entry.name === 'WorkItemRow.svelte'
+		)?.source;
+		expect(commandBar).toContain('const commandBarId = $props.id()');
+		expect(commandBar).toContain('aria-labelledby={commandBarTitleId}');
+		expect(commandBar).not.toContain('id="command-bar-title"');
+		expect(workItemRow).toContain("type === 'change_request' ? 'change_execution' : type");
 		expect(feedback).toContain("form.error.code === 'version_conflict'");
 		expect(feedback).toContain('invalidateAll');
 	});
@@ -77,7 +92,7 @@ describe('Work UI material guardrails', () => {
 			)
 		};
 
-		for (const [name, source] of Object.entries(routes).filter(([name]) => name !== 'project')) {
+		for (const [name, source] of Object.entries(routes)) {
 			expect(source, name).toContain('<CommandFeedback');
 			expect(source, name).toContain('<CommandBar');
 			expect(source, name).toContain('<PageHeader');
@@ -106,9 +121,39 @@ describe('Work UI material guardrails', () => {
 		expect(routes.change).toContain('authorization.scope_fingerprint');
 		expect(routes.change).toContain('authorization.conditions');
 		expect(routes.change).toContain('review.submitted_at');
+		expect(routes.change).toContain('if (rollbackInProgress) return []');
 		expect(routes.finding).not.toContain('value="retract_finding"');
 		expect(routes.finding).toContain('<SourceRefs');
 		expect(routes.project).toContain('<CommandForm');
+		expect(routes.project).not.toContain('<form');
+		expect(routes.project).toContain('xl:grid-cols-[14rem_minmax(0,1fr)_23rem]');
+		for (const section of ['status', 'route', 'proof', 'current-work', 'history']) {
+			expect(routes.project).toContain(`id="${section}"`);
+		}
+		expect(routes.project).toContain('Add phase');
+		expect(routes.project).toContain('Add milestone');
+		expect(routes.project).toContain('Waive under authority');
+		expect(routes.project).toContain('Contributes');
+		expect(routes.project).toContain('Satisfies');
+		expect(routes.project).toContain('Criterion contribution sources');
+		expect(routes.project).toContain('Milestone contribution sources');
+		expect(routes.project).toContain('Historical achievement sources');
+		expect(routes.project).toContain('Historical satisfactions');
+		expect(routes.project).toContain('Archived Projects do not have a current next item');
+		expect(routes.project).toContain('Reopen the Project before choosing work');
+		expect(routes.project).toContain('!terminalProject && project.current_next_valid');
+		expect(routes.project).toContain("project.archived ? 'Saved current next' : 'Current next'");
+		expect(routes.project).toContain('project.current_next_item_id && !project.archived');
+		expect(routes.project).toContain("milestone.status === 'achieved'");
+		expect(routes.project).toContain('requireExactlyOneOfByCommand');
+		expect(routes.project).toContain('enabled: phase.open_work === 0');
+		expect(routes.project).toContain('must finish first');
+		expect(routes.project).toContain('enabled: phase.work_total > 0');
+		expect(routes.project).toContain('Assign at least one work item before activation');
+		expect(routes.project).toContain('Rollback in progress since');
+		expect(routes.project).toContain('Rollback completed');
+		expect(routes.project).toContain('Project contributions');
+		expect(routes.project).toContain('Clear invalid current next item');
 
 		const questionLoader = readFileSync(
 			new URL('../../../routes/work/questions/[id]/+page.server.ts', import.meta.url),
@@ -117,13 +162,22 @@ describe('Work UI material guardrails', () => {
 		expect(questionLoader).toContain('resolveWork3SourceRefs');
 		expect(questionLoader).toContain('answerSources');
 		expect(questionLoader).toContain('answerSourcesOmitted');
+		const projectLoader = readFileSync(
+			new URL('../../../routes/work/projects/[id]/+page.server.ts', import.meta.url),
+			'utf-8'
+		);
+		expect(projectLoader).toContain('resolveProjectProofSources');
+		expect(routes.project).toContain('milestone.source_refs_omitted ?? 0');
 	});
 
 	it('renders source availability explicitly', () => {
 		const sourceRefs = componentSources.find((entry) => entry.name === 'SourceRefs.svelte')?.source;
+		const timeline = componentSources.find((entry) => entry.name === 'Timeline.svelte')?.source;
 		expect(sourceRefs).toContain('source.available === true');
 		expect(sourceRefs).toContain('source.available === false');
 		expect(sourceRefs).toContain('source.reason');
+		expect(timeline).toContain('event.authority_act');
+		expect(timeline).toContain('Evidence · {sources.join');
 	});
 
 	it('routes automaton mutations through the confirmation-aware form', () => {

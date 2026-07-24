@@ -77,6 +77,9 @@ function authorizationProjection(
 
 /** Next legal command for a Change, from its derived overall situation. */
 function changeNextAction(row: ChangeRow, authorizationState: string): string {
+	if (row.rollback_started_at !== null && row.execution_state !== 'rolled_back') {
+		return 'complete_rollback';
+	}
 	if (row.execution_state === 'not_started') {
 		return authorizationState === 'valid' ? 'start_change' : 'authorize_change';
 	}

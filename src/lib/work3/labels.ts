@@ -99,7 +99,7 @@ const confirmationCommands = new Set([
 	'restore_automaton'
 ]);
 
-export type FieldKind = 'input' | 'textarea' | 'datetime-local' | 'select' | 'json';
+export type FieldKind = 'input' | 'number' | 'textarea' | 'datetime-local' | 'select' | 'json';
 
 export interface FieldHint {
 	kind: FieldKind;
@@ -131,6 +131,14 @@ const jsonFields = new Set([
 
 const textareaPattern =
 	/(reason|summary|answer|rationale|context|impact|outcome|scope|risk|safety|condition|conclusion|significance|question|prompt|stakes|recommendation|description)/;
+const booleanFields = new Set([
+	'clear',
+	'enabled',
+	'one_time',
+	'parallel',
+	'parallel_phases_allowed'
+]);
+const numberFields = new Set(['sequence', 'expected_runtime_updated_at_ms']);
 
 export function commandLabel(command: string): string {
 	return commandLabels[command] ?? humanize(command);
@@ -181,6 +189,16 @@ export function fieldHint(field: string): FieldHint {
 						: undefined
 		};
 	}
+	if (booleanFields.has(field)) {
+		return {
+			kind: 'select',
+			options: [
+				{ value: 'true', label: 'Yes' },
+				{ value: 'false', label: 'No' }
+			]
+		};
+	}
+	if (numberFields.has(field)) return { kind: 'number' };
 	if (field === 'priority') {
 		return {
 			kind: 'select',

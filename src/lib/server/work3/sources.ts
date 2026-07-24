@@ -406,16 +406,18 @@ function resolveCachedSourceRef(ref: SourceRef, signal?: AbortSignal): Promise<S
 
 function resolveBeforeDeadline(
 	resolution: Promise<SourceResolution>,
-	remainingMs: number
+	remainingMs: number,
+	onTimeout: () => void
 ): Promise<SourceResolution> {
 	if (remainingMs <= 0) {
+		onTimeout();
 		return Promise.resolve({ available: false, reason: 'resolution_timeout' });
 	}
 	return new Promise((resolveResult) => {
-		const timer = setTimeout(
-			() => resolveResult({ available: false, reason: 'resolution_timeout' }),
-			remainingMs
-		);
+		const timer = setTimeout(() => {
+			onTimeout();
+			resolveResult({ available: false, reason: 'resolution_timeout' });
+		}, remainingMs);
 		resolution.then(
 			(result) => {
 				clearTimeout(timer);
@@ -452,7 +454,8 @@ export async function resolveWork3SourceRefs(
 			if (index >= selected.length) return;
 			resolutions[index] = await resolveBeforeDeadline(
 				resolveCachedSourceRef(selected[index], deadlineController.signal),
-				deadlineAt - Date.now()
+				deadlineAt - Date.now(),
+				() => deadlineController.abort()
 			);
 		}
 	}

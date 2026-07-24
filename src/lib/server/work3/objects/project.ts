@@ -1,11 +1,13 @@
 import type Database from 'better-sqlite3';
 import { Work3Error } from '$lib/work3-shared/errors.js';
+import type { SourceRef } from '$lib/work3-shared/types.js';
 import { allocateEntityId, insertEntity, loadEntity } from '../envelope.js';
-import { humanAuthorityPreGuard } from '../engine/authority.js';
+import { extractAuthoritySource, humanAuthorityPreGuard } from '../engine/authority.js';
 import { registerCommand, type ExecuteContext } from '../engine/registry.js';
 import { optionalNumber, optionalString, requireString } from '../engine/validate.js';
 import { requireActiveArea } from './area.js';
 import { currentPlanRevision } from './plan.js';
+import { isTerminalProjectWork, type ProjectWorkType } from './project-work.js';
 
 /**
  * Project (docs 01–02): a bounded outcome with an explicit finish line.
@@ -148,45 +150,62 @@ function validateNextItem(ctx: ExecuteContext, projectId: string, itemId: string
 			`${itemId} does not belong to Project ${projectId}`
 		);
 	}
-	const terminal =
+	const state =
 		item.type === 'task'
-			? (
-					ctx.db.prepare('SELECT status FROM tasks WHERE entity_id = ?').get(itemId) as {
-						status: string;
-					}
-				).status
+			? (ctx.db.prepare('SELECT status FROM tasks WHERE entity_id = ?').get(itemId) as {
+					status: string;
+				})
 			: item.type === 'question'
-				? (
-						ctx.db.prepare('SELECT status FROM questions WHERE entity_id = ?').get(itemId) as {
-							status: string;
-						}
-					).status
+				? (ctx.db.prepare('SELECT status FROM questions WHERE entity_id = ?').get(itemId) as {
+						status: string;
+					})
 				: item.type === 'decision'
-					? (
-							ctx.db.prepare('SELECT status FROM decisions WHERE entity_id = ?').get(itemId) as {
-								status: string;
-							}
-						).status
-					: (
-							ctx.db
-								.prepare('SELECT execution_state FROM change_requests WHERE entity_id = ?')
-								.get(itemId) as { execution_state: string }
-						).execution_state;
+					? (ctx.db.prepare('SELECT status FROM decisions WHERE entity_id = ?').get(itemId) as {
+							status: string;
+						})
+					: (ctx.db
+							.prepare(
+								`SELECT execution_state AS status, verification_state AS secondary_state,
+								        rollback_started_at
+									   FROM change_requests WHERE entity_id = ?`
+							)
+							.get(itemId) as {
+							status: string;
+							secondary_state: string;
+							rollback_started_at: number | null;
+						});
+	const status = 'status' in state ? state.status : '';
+	const secondaryState =
+		'secondary_state' in state && typeof state.secondary_state === 'string'
+			? state.secondary_state
+			: null;
+	const rollbackStartedAt =
+		'rollback_started_at' in state && typeof state.rollback_started_at === 'number'
+			? state.rollback_started_at
+			: null;
 	if (
-		[
-			'completed',
-			'cancelled',
-			'answered',
-			'withdrawn',
-			'decided',
-			'succeeded',
-			'rolled_back'
-		].includes(terminal)
+		isTerminalProjectWork(item.type as ProjectWorkType, status, secondaryState, rollbackStartedAt)
 	) {
 		throw new Work3Error(
 			'invariant_violation',
-			`current next item cannot be terminal (${itemId} is ${terminal})`
+			`current next item cannot be terminal (${itemId} is ${status})`
 		);
+	}
+}
+
+function currentNextItemIsValid(ctx: ExecuteContext, row: ProjectRow): boolean {
+	if (row.current_next_item_id === null) return false;
+	try {
+		validateNextItem(ctx, row.entity_id, row.current_next_item_id);
+		return true;
+	} catch (error) {
+		if (
+			error instanceof Work3Error &&
+			(error.code === 'not_found' || error.code === 'invariant_violation')
+		) {
+			return false;
+		}
+		throw error;
 	}
 }
 
@@ -194,14 +213,16 @@ function projectEvent(
 	ctx: ExecuteContext,
 	eventType: string,
 	summary: string,
-	payload: Record<string, unknown> = {}
+	payload: Record<string, unknown> = {},
+	sourceRefs: SourceRef[] = []
 ) {
 	return {
 		event_type: eventType,
 		subject_type: 'project',
 		subject_id: ctx.targetId!,
 		summary,
-		payload
+		payload,
+		source_refs: sourceRefs
 	};
 }
 
@@ -675,11 +696,20 @@ export function registerProjectCommands(): void {
 		requiresTarget: true,
 		execute: (ctx) => {
 			const row = project(ctx);
-			guardNotArchived(row);
-			if (['completed', 'cancelled'].includes(row.status)) {
-				throw new Work3Error('transition_not_allowed', 'Terminal Projects have no next item');
-			}
 			const itemId = optionalString(ctx.payload, 'item_id') ?? null;
+			if (itemId !== null) {
+				guardNotArchived(row);
+				if (['completed', 'cancelled'].includes(row.status)) {
+					throw new Work3Error('transition_not_allowed', 'Terminal Projects have no next item');
+				}
+			}
+			if (itemId === null && row.archived_at !== null && currentNextItemIsValid(ctx, row)) {
+				throw new Work3Error(
+					'transition_not_allowed',
+					'Restore the Project before clearing its valid saved current next item',
+					{ alternatives: ['restore_project'] }
+				);
+			}
 			if (itemId === row.current_next_item_id) {
 				return {
 					result: { id: row.entity_id, current_next_item_id: itemId },
@@ -737,6 +767,7 @@ export function registerProjectCommands(): void {
 				};
 			}
 			criterion.waived = { reason, by: `${ctx.actor.kind}:${ctx.actor.id}`, at: ctx.now };
+			const authoritySource = extractAuthoritySource(ctx.payload);
 			ctx.db
 				.prepare(`UPDATE projects SET completion_criteria = ? WHERE entity_id = ?`)
 				.run(JSON.stringify(criteria), row.entity_id);
@@ -750,7 +781,8 @@ export function registerProjectCommands(): void {
 						{
 							criterion_id: criterionId,
 							reason
-						}
+						},
+						authoritySource ? [authoritySource] : []
 					)
 				]
 			};

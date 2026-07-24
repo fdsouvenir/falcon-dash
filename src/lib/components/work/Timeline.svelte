@@ -38,6 +38,7 @@
 {#if events.length}
 	<ol class="relative ml-2 border-l border-outline-variant">
 		{#each events as event, index (event.id ?? index)}
+			{@const sources = sourceLabels(event.source_refs)}
 			<li class="relative pb-5 pl-5 last:pb-0">
 				<span
 					class="absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-surface-container bg-status-info"
@@ -61,9 +62,13 @@
 				</p>
 				{#if event.authority_act}
 					<p class="mt-1 text-[length:var(--text-label)] text-status-purple">
-						Claimed human authority{sourceLabels(event.source_refs).length
-							? ` · ${sourceLabels(event.source_refs).join(' · ')}`
+						Claimed human authority{sources.length
+							? ` · ${sources.join(' · ')}`
 							: ' · source not recorded'}
+					</p>
+				{:else if sources.length}
+					<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
+						Evidence · {sources.join(' · ')}
 					</p>
 				{/if}
 			</li>

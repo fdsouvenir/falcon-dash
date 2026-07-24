@@ -2,11 +2,12 @@ import type Database from 'better-sqlite3';
 import { Work3Error } from '$lib/work3-shared/errors.js';
 import { parseSourceRefs } from '$lib/work3-shared/sources.js';
 import { loadEntity, updateEntityArea } from '../envelope.js';
-import { registerCommand } from '../engine/registry.js';
+import { registerCommand, type DomainEventInput } from '../engine/registry.js';
 import { optionalString, requireEnum, requireString } from '../engine/validate.js';
 import { ulid } from '../ulid.js';
 import { loadProject, projectCriteria } from './project.js';
-import { loadPhase } from './phase-milestone.js';
+import { loadMilestone, loadPhase } from './phase-milestone.js';
+import { isTerminalProjectWork } from './project-work.js';
 
 /**
  * Typed semantic links (doc 03): a narrow link table, not a knowledge graph.
@@ -81,6 +82,28 @@ export function activeLinks(
 		.all(...params) as RelationshipRow[];
 }
 
+function requireMutableProofTarget(
+	db: Database.Database,
+	targetType: string,
+	targetId: string
+): void {
+	const projectId =
+		targetType === 'project'
+			? targetId
+			: targetType === 'milestone'
+				? loadMilestone(db, targetId)?.project_id
+				: null;
+	if (!projectId) return;
+	const project = loadProject(db, projectId);
+	if (project?.archived_at !== null) {
+		throw new Work3Error(
+			'transition_not_allowed',
+			'Archived Projects reject proof relationship mutations',
+			{ alternatives: ['restore_project'] }
+		);
+	}
+}
+
 /** Would source → target close a depends_on cycle? BFS over active links. */
 function wouldCreateDependencyCycle(
 	db: Database.Database,
@@ -133,11 +156,21 @@ function terminalSupportingState(db: Database.Database, id: string, type: string
 	if (type === 'change_request') {
 		const row = db
 			.prepare(
-				'SELECT execution_state, verification_state FROM change_requests WHERE entity_id = ?'
+				`SELECT execution_state, verification_state, rollback_started_at
+				   FROM change_requests WHERE entity_id = ?`
 			)
-			.get(id) as { execution_state: string; verification_state: string };
+			.get(id) as {
+			execution_state: string;
+			verification_state: string;
+			rollback_started_at: number | null;
+		};
 		return row.execution_state === 'succeeded' &&
-			['passed', 'waived'].includes(row.verification_state)
+			isTerminalProjectWork(
+				'change_request',
+				row.execution_state,
+				row.verification_state,
+				row.rollback_started_at
+			)
 			? 'succeeded+verified'
 			: null;
 	}
@@ -204,6 +237,7 @@ export function registerRelationshipCommands(): void {
 			}
 
 			if (relType === 'satisfies' || relType === 'contributes_to') {
+				requireMutableProofTarget(ctx.db, target.type, targetId);
 				criterionId = optionalString(ctx.payload, 'criterion_id') ?? null;
 				if (target.type === 'project' && criterionId) {
 					const criteria = projectCriteria(loadProject(ctx.db, targetId)!);
@@ -217,6 +251,16 @@ export function registerRelationshipCommands(): void {
 			if (relType === 'satisfies') {
 				if (target.type === 'project' && !criterionId) {
 					throw new Work3Error('validation_failed', 'satisfies → project requires criterion_id');
+				}
+				if (
+					target.type === 'milestone' &&
+					loadMilestone(ctx.db, targetId)?.status === 'cancelled'
+				) {
+					throw new Work3Error(
+						'transition_not_allowed',
+						'Cancelled Milestones reject new satisfaction proof until reopened',
+						{ alternatives: ['reopen_milestone'] }
+					);
 				}
 				// Immutable assertion: terminal supporting result + sources + pinned revision.
 				sourceRevision = terminalSupportingState(ctx.db, sourceId, source.type);
@@ -305,6 +349,10 @@ export function registerRelationshipCommands(): void {
 			if (row.removed_at !== null) {
 				return { result: { id: linkId, removed: true }, events: [], noop: true };
 			}
+			const target = loadEntity(ctx.db, row.target_id);
+			if (target && ['satisfies', 'contributes_to'].includes(row.rel_type)) {
+				requireMutableProofTarget(ctx.db, target.type, target.id);
+			}
 			ctx.db
 				.prepare(`UPDATE relationships SET removed_at = ?, removed_by = ? WHERE id = ?`)
 				.run(ctx.now, `${ctx.actor.kind}:${ctx.actor.id}`, linkId);
@@ -392,6 +440,16 @@ export function registerRelationshipCommands(): void {
 					noop: true
 				};
 			}
+			if (current.project_id && current.project_id !== projectId) {
+				const priorProject = loadProject(ctx.db, current.project_id);
+				if (priorProject?.archived_at !== null) {
+					throw new Work3Error(
+						'transition_not_allowed',
+						'Archived Projects reject assignment changes',
+						{ alternatives: ['restore_project'] }
+					);
+				}
+			}
 			ctx.db
 				.prepare(`UPDATE ${table} SET project_id = ?, phase_id = ? WHERE entity_id = ?`)
 				.run(projectId, phaseId, workId);
@@ -399,24 +457,53 @@ export function registerRelationshipCommands(): void {
 			ctx.db
 				.prepare('UPDATE entities SET version = version + 1, updated_at = ? WHERE id = ?')
 				.run(ctx.now, workId);
+			const events: DomainEventInput[] = [
+				{
+					event_type: 'work_assigned',
+					subject_type: work.type,
+					subject_id: workId,
+					summary: projectId
+						? `Assigned ${workId} to ${projectId}${phaseId ? ` / ${phaseId}` : ''}`
+						: `Unassigned ${workId} from its Project`,
+					version_from: work.version,
+					version_to: work.version + 1,
+					payload: {
+						project_id: projectId,
+						phase_id: phaseId,
+						prior_project_id: current.project_id,
+						prior_phase_id: current.phase_id
+					}
+				}
+			];
+			if (current.project_id && current.project_id !== projectId) {
+				const cleared = ctx.db
+					.prepare(
+						`UPDATE projects SET current_next_item_id = NULL
+						  WHERE entity_id = ? AND current_next_item_id = ?`
+					)
+					.run(current.project_id, workId);
+				if (cleared.changes > 0) {
+					const priorProjectEnvelope = loadEntity(ctx.db, current.project_id)!;
+					ctx.db
+						.prepare('UPDATE entities SET version = version + 1, updated_at = ? WHERE id = ?')
+						.run(ctx.now, current.project_id);
+					events.push({
+						event_type: 'project_next_item_cleared',
+						subject_type: 'project',
+						subject_id: current.project_id,
+						summary: `Cleared current next item on ${current.project_id}: ${workId} was reassigned`,
+						version_from: priorProjectEnvelope.version,
+						version_to: priorProjectEnvelope.version + 1,
+						payload: {
+							cleared_item: workId,
+							new_project_id: projectId
+						}
+					});
+				}
+			}
 			return {
 				result: { id: workId, project_id: projectId, phase_id: phaseId },
-				events: [
-					{
-						event_type: 'work_assigned',
-						subject_type: work.type,
-						subject_id: workId,
-						summary: projectId
-							? `Assigned ${workId} to ${projectId}${phaseId ? ` / ${phaseId}` : ''}`
-							: `Unassigned ${workId} from its Project`,
-						payload: {
-							project_id: projectId,
-							phase_id: phaseId,
-							prior_project_id: current.project_id,
-							prior_phase_id: current.phase_id
-						}
-					}
-				]
+				events
 			};
 		}
 	});

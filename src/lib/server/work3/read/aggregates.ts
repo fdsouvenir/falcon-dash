@@ -144,10 +144,12 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 	// Changes lacking valid Authorization (pre-execution) or verification.
 	const openChanges = db
 		.prepare(
-			`SELECT c.entity_id AS id, c.title, c.execution_state, c.verification_state, c.plan_id
+			`SELECT c.entity_id AS id, c.title, c.execution_state, c.verification_state, c.plan_id,
+			        c.rollback_started_at
 			 FROM change_requests c
 			 WHERE c.execution_state IN ('not_started','failed','paused')
 			    OR (c.execution_state = 'succeeded' AND c.verification_state NOT IN ('passed','waived'))
+			    OR (c.rollback_started_at IS NOT NULL AND c.execution_state <> 'rolled_back')
 			 ORDER BY c.entity_id`
 		)
 		.all() as Array<
@@ -156,10 +158,19 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 			execution_state: string;
 			verification_state: string;
 			plan_id: string | null;
+			rollback_started_at: number | null;
 		}
 	>;
 	const changesNeeding = openChanges
 		.map((change) => {
+			if (change.rollback_started_at !== null && change.execution_state !== 'rolled_back') {
+				return {
+					...change,
+					type: 'change_request',
+					why: 'Rollback in progress',
+					next_action: 'complete_rollback'
+				};
+			}
 			if (change.execution_state === 'succeeded') {
 				return {
 					...change,
@@ -251,6 +262,10 @@ const AUTHORITY_EVENT_TYPES = new Set([
 	'criterion_waived'
 ]);
 
+export function isAuthorityEventType(eventType: string): boolean {
+	return AUTHORITY_EVENT_TYPES.has(eventType);
+}
+
 /** Routine noise excluded from the material feed. */
 const ROUTINE_EVENT_TYPES = new Set([
 	'task_updated',
@@ -263,8 +278,7 @@ const ROUTINE_EVENT_TYPES = new Set([
 export function materialRecentChanges(limit = 20): Array<Record<string, unknown>> {
 	const events = listWork3Events({ limit: 200 });
 	const material = events.filter(
-		(event) =>
-			AUTHORITY_EVENT_TYPES.has(event.event_type) || !ROUTINE_EVENT_TYPES.has(event.event_type)
+		(event) => isAuthorityEventType(event.event_type) || !ROUTINE_EVENT_TYPES.has(event.event_type)
 	);
 	return material.slice(0, limit).map((event) => ({
 		id: event.id,
@@ -273,10 +287,10 @@ export function materialRecentChanges(limit = 20): Array<Record<string, unknown>
 		summary: event.summary,
 		actor: event.actor.label,
 		subject_id: event.subject_id,
-		authority_act: AUTHORITY_EVENT_TYPES.has(event.event_type),
+		authority_act: isAuthorityEventType(event.event_type),
 		// Authority acts carry their claimed human source, resolvable to the
 		// original instruction (doc 05 / #327 actor model).
-		...(AUTHORITY_EVENT_TYPES.has(event.event_type) ? { authority_sources: event.source_refs } : {})
+		...(isAuthorityEventType(event.event_type) ? { authority_sources: event.source_refs } : {})
 	}));
 }
 

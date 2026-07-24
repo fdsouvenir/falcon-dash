@@ -47,6 +47,32 @@ describe('work3 migrations', () => {
 		expect(() => eventsDb.prepare('SELECT COUNT(*) FROM events').get()).not.toThrow();
 	});
 
+	it('indexes every Project Work family by Project and Phase', () => {
+		const db = getWork3Db();
+		const indexNames = (table: string) =>
+			(db.prepare(`PRAGMA index_list('${table}')`).all() as Array<{ name: string }>).map(
+				(index) => index.name
+			);
+
+		expect(indexNames('tasks')).toEqual(
+			expect.arrayContaining(['idx_tasks_project', 'idx_tasks_phase'])
+		);
+		expect(indexNames('questions')).toEqual(
+			expect.arrayContaining(['idx_questions_project', 'idx_questions_phase'])
+		);
+		expect(indexNames('decisions')).toEqual(
+			expect.arrayContaining(['idx_decisions_project', 'idx_decisions_phase'])
+		);
+		expect(indexNames('change_requests')).toEqual(
+			expect.arrayContaining(['idx_change_requests_project', 'idx_change_requests_phase'])
+		);
+		const eventIndexes = (
+			getWork3EventsDb().prepare(`PRAGMA index_list('events')`).all() as Array<{ name: string }>
+		).map((index) => index.name);
+		expect(eventIndexes).toContain('idx_events_subject_id');
+		expect(indexNames('event_outbox')).toContain('idx_event_outbox_assignments');
+	});
+
 	it('is idempotent across reopen', () => {
 		getWork3Db();
 		closeWork3Dbs();

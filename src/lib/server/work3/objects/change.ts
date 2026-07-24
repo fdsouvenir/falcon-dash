@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { Work3Error } from '$lib/work3-shared/errors.js';
 import { parseSourceRefs } from '$lib/work3-shared/sources.js';
+import type { SourceRef } from '$lib/work3-shared/types.js';
 import { allocateEntityId, insertEntity } from '../envelope.js';
 import { humanAuthorityPreGuard, extractAuthoritySource } from '../engine/authority.js';
 import { registerCommand, type ExecuteContext } from '../engine/registry.js';
@@ -15,7 +16,7 @@ import {
 import { ulid } from '../ulid.js';
 import { requireActiveArea } from './area.js';
 import { createPlanInternal, currentPlanRevision } from './plan.js';
-import { reconcileTerminal } from './reconcile.js';
+import { invalidateSatisfiesFrom, reconcileTerminal } from './reconcile.js';
 
 /**
  * Change Request (docs 01–02): the authority envelope for controlled mutation.
@@ -99,6 +100,17 @@ function change(ctx: ExecuteContext): ChangeRow {
 	if (!row)
 		throw new Work3Error('invariant_violation', `Change head row missing for ${ctx.targetId}`);
 	return row;
+}
+
+function noActiveRollbackGuard(ctx: ExecuteContext): void {
+	const row = change(ctx);
+	if (row.rollback_started_at !== null && row.execution_state !== 'rolled_back') {
+		throw new Work3Error(
+			'transition_requirements_not_met',
+			'Only rollback completion is allowed while rollback is in progress',
+			{ alternatives: ['complete_rollback'] }
+		);
+	}
 }
 
 /** Current subject state for authorization-effectiveness checks. */
@@ -231,14 +243,16 @@ function changeEvent(
 	ctx: ExecuteContext,
 	eventType: string,
 	summary: string,
-	payload: Record<string, unknown> = {}
+	payload: Record<string, unknown> = {},
+	sourceRefs: SourceRef[] = []
 ) {
 	return {
 		event_type: eventType,
 		subject_type: 'change_request',
 		subject_id: ctx.targetId!,
 		summary,
-		payload
+		payload,
+		source_refs: sourceRefs
 	};
 }
 
@@ -338,6 +352,7 @@ export function registerChangeCommands(): void {
 			parseChangePackage(payload);
 		},
 		guards: [
+			noActiveRollbackGuard,
 			(ctx) => {
 				const row = change(ctx);
 				if (['succeeded', 'cancelled', 'rolled_back'].includes(row.execution_state)) {
@@ -515,6 +530,7 @@ export function registerChangeCommands(): void {
 				return { result: { id: row.entity_id, state: 'revoked' }, events: [], noop: true };
 			}
 			const reason = requireString(ctx.payload, 'reason');
+			const authoritySource = extractAuthoritySource(ctx.payload);
 			ctx.db
 				.prepare(
 					`UPDATE authorizations SET revoked_at = ?, revoke_reason = ?, revoked_by = ? WHERE entity_id = ?`
@@ -528,7 +544,8 @@ export function registerChangeCommands(): void {
 						subject_type: 'authorization',
 						subject_id: row.entity_id,
 						summary: `Revoked Authorization ${row.entity_id}: ${reason}`,
-						payload: { change_id: row.subject_id, reason }
+						payload: { change_id: row.subject_id, reason },
+						source_refs: authoritySource ? [authoritySource] : []
 					}
 				]
 			};
@@ -540,6 +557,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Begin controlled execution (requires valid Authorization, unblocked)',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'in_progress') {
@@ -598,6 +616,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Pause execution deliberately',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'paused') {
@@ -628,6 +647,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Resume paused execution (authorization rechecked)',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'in_progress') {
@@ -662,6 +682,7 @@ export function registerChangeCommands(): void {
 		validate: (payload) => {
 			requireString(payload, 'result_summary');
 		},
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'succeeded') {
@@ -693,7 +714,9 @@ export function registerChangeCommands(): void {
 						result_summary: resultSummary
 					}
 				),
-				...reconcileTerminal(ctx, row.entity_id, 'succeeded')
+				...(['passed', 'waived'].includes(row.verification_state)
+					? reconcileTerminal(ctx, row.entity_id, 'succeeded')
+					: [])
 			];
 			// consumed represents one-time authority (doc 01).
 			if (authorization.one_time === 1) {
@@ -729,6 +752,7 @@ export function registerChangeCommands(): void {
 		validate: (payload) => {
 			requireString(payload, 'failure_summary');
 		},
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'failed') {
@@ -771,6 +795,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Retry failed execution (legal only inside current Authorization)',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'in_progress') {
@@ -813,6 +838,7 @@ export function registerChangeCommands(): void {
 		validate: (payload) => {
 			requireString(payload, 'reason');
 		},
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.execution_state === 'cancelled') {
@@ -854,6 +880,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Begin verifying acceptance criteria (execution must have succeeded)',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.verification_state === 'in_progress') {
@@ -895,6 +922,7 @@ export function registerChangeCommands(): void {
 		targetType: 'change_request',
 		summary: 'Pass verification (every criterion satisfied with sources, or waived)',
 		requiresTarget: true,
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.verification_state === 'passed') {
@@ -908,6 +936,13 @@ export function registerChangeCommands(): void {
 				throw new Work3Error(
 					'transition_not_allowed',
 					`pass_verification is not allowed from ${row.verification_state}`
+				);
+			}
+			if (row.rollback_started_at !== null) {
+				throw new Work3Error(
+					'transition_requirements_not_met',
+					'Verification cannot pass while rollback is in progress',
+					{ alternatives: ['complete_rollback'] }
 				);
 			}
 			const revision = currentChangeRevision(ctx.db, row.entity_id)!;
@@ -952,6 +987,12 @@ export function registerChangeCommands(): void {
 					}
 				);
 			}
+			const verificationSourceRefs = criteria.flatMap((criterion) => {
+				const entry = status[criterion.id] as { state?: string; source_refs?: unknown } | undefined;
+				return entry?.state === 'satisfied'
+					? parseSourceRefs(entry.source_refs, { required: true })
+					: [];
+			});
 			ctx.db
 				.prepare(
 					`UPDATE change_requests SET verification_state = 'passed', criteria_status = ?, verification_finished_at = ? WHERE entity_id = ?`
@@ -964,8 +1005,10 @@ export function registerChangeCommands(): void {
 						ctx,
 						'change_verification_passed',
 						`Change ${row.entity_id} verification passed`,
-						{ criteria_status: status }
-					)
+						{ criteria_status: status },
+						verificationSourceRefs
+					),
+					...reconcileTerminal(ctx, row.entity_id, 'succeeded')
 				]
 			};
 		}
@@ -979,6 +1022,7 @@ export function registerChangeCommands(): void {
 		validate: (payload) => {
 			requireString(payload, 'summary');
 		},
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.verification_state === 'failed') {
@@ -1023,6 +1067,7 @@ export function registerChangeCommands(): void {
 			requireString(payload, 'reason');
 		},
 		preGuards: [humanAuthorityPreGuard],
+		guards: [noActiveRollbackGuard],
 		execute: (ctx) => {
 			const row = change(ctx);
 			if (row.verification_state === 'waived') {
@@ -1031,6 +1076,20 @@ export function registerChangeCommands(): void {
 					events: [],
 					noop: true
 				};
+			}
+			if (row.execution_state !== 'succeeded') {
+				throw new Work3Error(
+					'transition_requirements_not_met',
+					'Verification can be waived only after successful execution',
+					{ details: { execution_state: row.execution_state } }
+				);
+			}
+			if (row.rollback_started_at !== null) {
+				throw new Work3Error(
+					'transition_requirements_not_met',
+					'Verification cannot be waived while rollback is in progress',
+					{ alternatives: ['complete_rollback'] }
+				);
 			}
 			if (row.verification_state === 'passed') {
 				throw new Work3Error(
@@ -1068,8 +1127,10 @@ export function registerChangeCommands(): void {
 								ctx.actor.kind === 'person'
 									? { kind: 'person_session' }
 									: { kind: 'asserted_instruction', source_ref: authoritySource }
-						}
-					)
+						},
+						authoritySource ? [authoritySource] : []
+					),
+					...reconcileTerminal(ctx, row.entity_id, 'succeeded')
 				]
 			};
 		}
@@ -1105,7 +1166,12 @@ export function registerChangeCommands(): void {
 					rollback_started_at: ctx.now
 				},
 				events: [
-					changeEvent(ctx, 'change_rollback_started', `Rolling back Change ${row.entity_id}`)
+					changeEvent(ctx, 'change_rollback_started', `Rolling back Change ${row.entity_id}`),
+					...invalidateSatisfiesFrom(
+						ctx,
+						row.entity_id,
+						'Change rollback started; prior satisfaction proof is no longer current'
+					)
 				]
 			};
 		}
@@ -1147,7 +1213,8 @@ export function registerChangeCommands(): void {
 						'change_rolled_back',
 						`Change ${row.entity_id} rolled back: ${summary}`,
 						{ summary }
-					)
+					),
+					...reconcileTerminal(ctx, row.entity_id, 'rolled_back')
 				]
 			};
 		}

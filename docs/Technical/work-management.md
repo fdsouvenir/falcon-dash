@@ -219,6 +219,70 @@ source references; existing display data is resolved four at a time with a four-
 batch deadline and reports timed-out or omitted references explicitly. The short-lived display
 cache uses a 256-entry LRU bound and actively evicts expired entries.
 
+Project full reads expose one typed `work` union for Tasks, Questions, Decisions, and Change
+Requests. Every row carries a type tag plus normalized `phase_id`, `due_at`, `waiting_on`, and
+terminal fields; Decision titles come from the current immutable package and Change rows also
+carry verification state. Phase and Project progress, health, and risk flags all use this same
+four-type Work union and each type's terminal semantics. A Change is terminal only after successful
+execution plus passed/waived verification (or cancellation/rollback), and standalone Phase reads
+use that same progress helper. Project- and Phase-scoped lookup indexes cover all four Work tables
+so list and ledger aggregates do not degrade into repeated full-table scans. A
+started-but-incomplete rollback makes a previously verified Change
+open again until rollback completion. Verification cannot be waived before execution succeeds, so
+terminal reconciliation never clears next-work pointers or blockers early; execution success also
+reconciles any persisted legacy pre-execution waiver. Verification cannot pass or be waived during
+an active rollback. Starting rollback invalidates revision-pinned satisfaction links, and new
+satisfaction assertions require the same rollback-aware terminal predicate. Criterion satisfaction
+and waiver counts are disjoint, and full Project reads preserve satisfaction source references and
+pinned source revisions. Project proof sources are resolved in one bounded display batch with
+availability reasons and per-proof omitted counts. Criterion- and Milestone-scoped contributions,
+satisfaction links, achievement evidence, and unscoped Project contributions all retain and render
+their own resolved source references. Milestone-targeted contribution and satisfaction
+relationships are projected with their proof without leaking into similarly named Project
+criteria. Planned Milestones present current
+relationship proof neutrally. Cancelling or reopening a Milestone invalidates its active
+satisfaction assertions; the ledger retains those assertions and their sources as historical proof
+across later re-achievement while only the new generation counts as current. Cancelled Milestones
+also reject fresh satisfaction assertions until they are reopened. The achievement form
+exposes and enforces the server's either-sources-or-waiver contract without hiding those fields in
+optional controls. Unscoped Project contribution links have their own proof block and bounded
+source resolution and remain selectable through the reader field contract. Criterion-waiver events
+persist an agent's human authority source so the Project history preserves the exact claimed
+instruction. Reassigning current-next Work clears the old Project pointer
+transactionally; legacy dangling or terminal pointers derive as missing and remain explicitly
+clearable in the ledger. Null-only cleanup remains available for invalid legacy pointers even when a
+Project is terminal or archived; setting a new pointer still requires a mutable, nonterminal
+Project. Because archiving is visibility-only, a still-valid pointer remains visible as saved
+read-only state, cannot be cleared until restoration, and becomes actionable again after
+restoration. Terminal Projects never present a stored legacy pointer as active current work.
+Blocked counts exclude terminal Work even when a
+stale active Blocker record remains. Project child-command targets are accepted only when their parent ID matches the
+current Project route; same-type commands remain bound to the route object, and targetless Phase or
+Milestone creation payloads must name that same route Project. Project history merges Project,
+Phase, Milestone, assigned Work, attached Plan, Review, Authorization, and proof-relationship
+events into one bounded ledger timeline and classifies authority acts with the same server helper
+as Mission Control. Project- and Phase-attached Plans and their Reviews are static Project history
+subjects. Work-attached governance subjects are time-bounded by their audited Project
+assignment intervals: the ledger includes both assignment boundaries, preserves history after Work
+leaves, and never imports events from before Work joined or after it left. Derived Project mutations
+from targetless reassignment commands record explicit version transitions. Scoped Event Log reads
+join against fixed-size interval batches and merge the bounded results, avoiding SQLite expression
+and parameter limits even when assignment history is large; a cross-type subject/ULID index serves
+that join path. The membership projection overlays unpruned transactional-outbox assignment
+boundaries before deriving intervals, so normal transfer lag or a delayed Event Log cannot widen a
+current or former membership period; a partial assignment-event index bounds that overlay scan.
+The timeline renders source references on every
+source-bearing event, including non-authority achievement and Review evidence; verification waivers
+and Authorization revocations persist an agent's claimed human instruction like every other
+authority act. Reopened or cancelled Milestones retain their old evidence as explicitly historical
+proof. The Project Ledger renders rather than recreates these lifecycle semantics. The shared UI
+action adapter honors a posted child target for Phase/Milestone commands, serializes numeric and
+boolean structure options to their command payload types, and removes route targets and optimistic
+versions from targetless Project-local creation commands. It validates command presence and
+manifest membership before target routing, preserves the canonical `unknown_command` error, and
+rejects unrelated targetless commands posted through detail routes. Archived Projects also reject
+child Phase, Milestone, and proof-relationship mutations server-side until restoration.
+
 Mission Control consumes the server-computed queue buckets directly. Each bucket reports `total`,
 `by_type`, and at most eight compact `items`; `by_type` is computed from the full bucket before the
 item bound is applied. The combined `at_risk` bucket deduplicates object identities across blocked

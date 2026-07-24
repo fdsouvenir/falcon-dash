@@ -58,6 +58,17 @@ describe('Work UI contract maps', () => {
 		}
 	});
 
+	it('maps structure numbers and booleans to typed controls', () => {
+		expect(fieldHint('sequence')).toMatchObject({ kind: 'number' });
+		expect(fieldHint('parallel')).toMatchObject({
+			kind: 'select',
+			options: [
+				{ value: 'true', label: 'Yes' },
+				{ value: 'false', label: 'No' }
+			]
+		});
+	});
+
 	it('gives every semantic command an operator-facing label', () => {
 		for (const command of WORK3_COMMANDS) {
 			const label = commandLabel(command.name);

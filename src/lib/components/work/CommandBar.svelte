@@ -16,6 +16,8 @@
 		action?: string;
 		title?: string;
 		forceRequiredByCommand?: Record<string, string[]>;
+		requireAnyOfByCommand?: Record<string, string[]>;
+		requireExactlyOneOfByCommand?: Record<string, string[]>;
 	}
 
 	let {
@@ -25,8 +27,12 @@
 		form = null,
 		action = '?/command',
 		title = 'Available actions',
-		forceRequiredByCommand = {}
+		forceRequiredByCommand = {},
+		requireAnyOfByCommand = {},
+		requireExactlyOneOfByCommand = {}
 	}: Props = $props();
+	const commandBarId = $props.id();
+	const commandBarTitleId = `${commandBarId}-title`;
 
 	function availability(entry: string | CommandAvailability): CommandAvailability {
 		return typeof entry === 'string' ? { command: entry, enabled: true } : entry;
@@ -35,10 +41,10 @@
 
 <section
 	class="space-y-4 rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container p-4 shadow-none sm:p-5"
-	aria-labelledby="command-bar-title"
+	aria-labelledby={commandBarTitleId}
 >
 	<div>
-		<h2 id="command-bar-title" class="font-semibold text-on-surface">{title}</h2>
+		<h2 id={commandBarTitleId} class="font-semibold text-on-surface">{title}</h2>
 		<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
 			Only semantic Work commands are shown here.
 		</p>
@@ -59,6 +65,8 @@
 						disabled={item.enabled === false}
 						disabledReason={item.reason}
 						forceRequired={forceRequiredByCommand[item.command] ?? []}
+						requireAnyOf={requireAnyOfByCommand[item.command] ?? []}
+						requireExactlyOneOf={requireExactlyOneOfByCommand[item.command] ?? []}
 					/>
 				</div>
 			{/each}

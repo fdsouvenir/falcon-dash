@@ -50,7 +50,10 @@ Each Work type has a distinct detail experience rather than a generic record car
 - Findings show conclusion, significance, confidence, validity, sources, and supersession. A
   source that cannot be resolved stays visible with its unavailable reason.
 - Projects use a ledger: Status, Route, Proof, Current work, and History, with the operating brief
-  pinned alongside it on wide screens.
+  pinned alongside it on wide screens. Status includes server-derived health, progress, current
+  next work, and risk flags. Route manages ordered Phases. Proof distinguishes work that merely
+  contributes from terminal, source-backed satisfaction assertions and explicit authority
+  waivers. Current work groups Tasks, Questions, Decisions, and Change Requests by Phase.
 - Automata operate on the same OpenClaw-backed object and show runtime unavailability as a health
   error, not as a fake lifecycle state.
 
@@ -64,8 +67,19 @@ Consequential actions require confirmation. When a command is present but unavai
 explains the unmet guard. If an object changes while a form is open, Falcon Dash preserves the
 entered values, reports the current version, and offers a refresh-and-reapply path.
 
-The history timeline records the actor, event, version transition, and sources. Authority-creating
-acts are called out with their claimed human authority source.
+The history timeline records the actor, event, version transition, and sources across the Project,
+its assigned Work, Plans, Reviews, Authorizations, structure, and proof links. Evidence is visible
+on every source-bearing event; authority-creating acts are called out with their claimed human
+authority source. When Work moves between Projects, each ledger keeps only the events from the
+periods when that Work belonged to it, including the incoming and outgoing assignment boundaries.
+Pending assignment boundaries take effect immediately even while Event Log transfer is catching
+up.
+
+Project pages are the only Work pages with creation controls. Their collapsed operating-brief
+controls add a Phase or Milestone within the current Project; they do not create generic Work.
+Phase and Milestone lifecycle controls stay attached to the structure they govern, and Milestone
+achievement requests source references. Archiving a Project freezes these child structure
+controls until the Project is restored.
 
 ## Agent Contract
 

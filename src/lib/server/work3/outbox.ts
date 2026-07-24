@@ -1,3 +1,4 @@
+import type { Work3Event } from '$lib/work3-shared/types.js';
 import { getWork3Db, getWork3EventsDb } from './db.js';
 
 /**
@@ -5,7 +6,9 @@ import { getWork3Db, getWork3EventsDb } from './db.js';
  * work3.db into work3-events.db. Interval fallback plus an immediate kick from
  * the post-commit bus emit. ULID event ids make the transfer an
  * insert-or-ignore upsert (the two files share no transaction); delivered rows
- * are pruned after a safety window. Nothing but this worker reads the outbox.
+ * are pruned after a safety window. The Project history read side also overlays
+ * unpruned assignment boundaries so cross-database transfer lag cannot widen a
+ * Work membership interval.
  */
 
 const DEFAULT_INTERVAL_MS = 5_000;
@@ -27,6 +30,46 @@ interface OutboxRow {
 	summary: string;
 	payload_json: string;
 	source_refs_json: string;
+}
+
+function toEvent(row: OutboxRow): Work3Event {
+	return {
+		id: row.id,
+		occurred_at: row.occurred_at,
+		command: row.command,
+		event_type: row.event_type,
+		subject_type: row.subject_type,
+		subject_id: row.subject_id,
+		actor: {
+			kind: row.actor_kind as Work3Event['actor']['kind'],
+			id: row.actor_id,
+			label: row.actor_label
+		},
+		version_from: row.version_from,
+		version_to: row.version_to,
+		summary: row.summary,
+		payload: JSON.parse(row.payload_json) as Record<string, unknown>,
+		source_refs: JSON.parse(row.source_refs_json) as Work3Event['source_refs']
+	};
+}
+
+/** Canonical assignment boundaries not yet pruned from the transactional outbox. */
+export function listProjectAssignmentOutboxEvents(projectId: string): Work3Event[] {
+	const rows = getWork3Db()
+		.prepare(
+			`SELECT id, occurred_at, command, event_type, subject_type, subject_id,
+			        actor_kind, actor_id, actor_label, version_from, version_to,
+			        summary, payload_json, source_refs_json
+			   FROM event_outbox
+			  WHERE event_type = 'work_assigned'
+			    AND (
+			      json_extract(payload_json, '$.project_id') = ?
+			      OR json_extract(payload_json, '$.prior_project_id') = ?
+			    )
+			  ORDER BY id ASC`
+		)
+		.all(projectId, projectId) as OutboxRow[];
+	return rows.map(toEvent);
 }
 
 let timer: ReturnType<typeof setInterval> | null = null;

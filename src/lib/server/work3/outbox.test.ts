@@ -12,6 +12,7 @@ import {
 	getWork3OutboxDiagnostics,
 	insertEntity,
 	kickWork3Outbox,
+	listScopedWork3Events,
 	listWork3Events,
 	registerCommand,
 	transferWork3OutboxOnce
@@ -133,6 +134,30 @@ describe('outbox transfer', () => {
 		await new Promise((resolve) => setImmediate(resolve));
 		await new Promise((resolve) => setImmediate(resolve));
 		expect(listWork3Events({ eventType: 'test_noted' })).toHaveLength(1);
+	});
+
+	it('batches large scoped-history interval sets without exceeding SQLite expression limits', async () => {
+		const noted = await executeCommand<{ id: string }>({
+			command: 'note_test_event',
+			actor: system
+		});
+		transferWork3OutboxOnce();
+
+		const events = listScopedWork3Events({
+			staticSubjectIds: [],
+			subjectIntervals: Array.from({ length: 1_100 }, () => ({
+				subjectId: noted.result.id,
+				startId: null,
+				endId: null
+			})),
+			limit: 100
+		});
+
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			event_type: 'test_noted',
+			subject_id: noted.result.id
+		});
 	});
 });
 

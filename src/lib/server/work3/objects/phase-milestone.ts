@@ -5,6 +5,8 @@ import { allocateEntityId, insertEntity, loadEntity } from '../envelope.js';
 import { registerCommand, type ExecuteContext } from '../engine/registry.js';
 import { optionalNumber, optionalString, requireString } from '../engine/validate.js';
 import { loadProject } from './project.js';
+import { phaseWorkProgress } from './project-work.js';
+import { invalidateSatisfiesTarget } from './reconcile.js';
 
 /**
  * Phase (ordered route structure) and Milestone (independently provable
@@ -64,21 +66,12 @@ function requireProject(ctx: ExecuteContext, projectId: string) {
 	return { envelope, row };
 }
 
-/** Nonterminal Work assigned to a Phase (tasks are the assignable slice type). */
 function phaseOpenWork(db: Database.Database, phaseId: string): number {
-	const row = db
-		.prepare(
-			`SELECT COUNT(*) AS count FROM tasks WHERE phase_id = ? AND status NOT IN ('completed','cancelled')`
-		)
-		.get(phaseId) as { count: number };
-	return row.count;
+	return phaseWorkProgress(db, phaseId).open;
 }
 
 function phaseAssignedWork(db: Database.Database, phaseId: string): number {
-	const row = db.prepare(`SELECT COUNT(*) AS count FROM tasks WHERE phase_id = ?`).get(phaseId) as {
-		count: number;
-	};
-	return row.count;
+	return phaseWorkProgress(db, phaseId).total;
 }
 
 export function registerPhaseCommands(): void {
@@ -140,6 +133,7 @@ export function registerPhaseCommands(): void {
 		requiresTarget: true,
 		execute: (ctx) => {
 			const row = loadPhase(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'active')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (row.status !== 'planned') {
@@ -225,6 +219,7 @@ export function registerPhaseCommands(): void {
 		requiresTarget: true,
 		execute: (ctx) => {
 			const row = loadPhase(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'completed')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (row.status !== 'active') {
@@ -271,6 +266,7 @@ export function registerPhaseCommands(): void {
 		},
 		execute: (ctx) => {
 			const row = loadPhase(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'skipped')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (!['planned', 'active'].includes(row.status)) {
@@ -321,6 +317,7 @@ export function registerPhaseCommands(): void {
 		},
 		execute: (ctx) => {
 			const row = loadPhase(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'planned')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (!['completed', 'skipped'].includes(row.status)) {
@@ -405,6 +402,7 @@ export function registerMilestoneCommands(): void {
 		requiresTarget: true,
 		execute: (ctx) => {
 			const row = loadMilestone(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'achieved')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (row.status !== 'planned') {
@@ -418,6 +416,12 @@ export function registerMilestoneCommands(): void {
 			}
 			const waived = optionalString(ctx.payload, 'waive_sources_reason');
 			const sourceRefs = parseSourceRefs(ctx.payload.source_refs, { required: !waived });
+			if (waived && sourceRefs.length > 0) {
+				throw new Work3Error(
+					'validation_failed',
+					'Provide either source_refs or waive_sources_reason, not both'
+				);
+			}
 			ctx.db
 				.prepare(
 					`UPDATE milestones SET status = 'achieved', achieved_at = ?, source_refs = ?, waived_sources_reason = ? WHERE entity_id = ?`
@@ -430,7 +434,9 @@ export function registerMilestoneCommands(): void {
 						event_type: 'milestone_achieved',
 						subject_type: 'milestone',
 						subject_id: row.entity_id,
-						summary: `Achieved Milestone ${row.entity_id}: ${row.title}`,
+						summary: waived
+							? `Achieved Milestone ${row.entity_id}: ${row.title} — sources waived: ${waived}`
+							: `Achieved Milestone ${row.entity_id}: ${row.title}`,
 						payload: { waived_sources_reason: waived ?? null },
 						source_refs: sourceRefs
 					}
@@ -449,6 +455,7 @@ export function registerMilestoneCommands(): void {
 		},
 		execute: (ctx) => {
 			const row = loadMilestone(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'cancelled')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			if (row.status !== 'planned') {
@@ -463,6 +470,11 @@ export function registerMilestoneCommands(): void {
 					`UPDATE milestones SET status = 'cancelled', cancel_reason = ? WHERE entity_id = ?`
 				)
 				.run(reason, row.entity_id);
+			const invalidationEvents = invalidateSatisfiesTarget(
+				ctx,
+				row.entity_id,
+				`Milestone cancelled: ${reason}`
+			);
 			return {
 				result: { id: row.entity_id, status: 'cancelled' },
 				events: [
@@ -472,7 +484,8 @@ export function registerMilestoneCommands(): void {
 						subject_id: row.entity_id,
 						summary: `Cancelled Milestone ${row.entity_id}: ${reason}`,
 						payload: { reason }
-					}
+					},
+					...invalidationEvents
 				]
 			};
 		}
@@ -488,6 +501,7 @@ export function registerMilestoneCommands(): void {
 		},
 		execute: (ctx) => {
 			const row = loadMilestone(ctx.db, ctx.targetId!)!;
+			requireProject(ctx, row.project_id);
 			if (row.status === 'planned')
 				return { result: { id: row.entity_id, status: row.status }, events: [], noop: true };
 			const reason = requireString(ctx.payload, 'reason');
@@ -496,6 +510,11 @@ export function registerMilestoneCommands(): void {
 					`UPDATE milestones SET status = 'planned', achieved_at = NULL, cancel_reason = NULL, reopen_reason = ? WHERE entity_id = ?`
 				)
 				.run(reason, row.entity_id);
+			const invalidationEvents = invalidateSatisfiesTarget(
+				ctx,
+				row.entity_id,
+				`Milestone reopened from ${row.status}: ${reason}`
+			);
 			return {
 				result: { id: row.entity_id, status: 'planned' },
 				events: [
@@ -505,7 +524,8 @@ export function registerMilestoneCommands(): void {
 						subject_id: row.entity_id,
 						summary: `Reopened Milestone ${row.entity_id}: ${reason}`,
 						payload: { reason, prior_status: row.status }
-					}
+					},
+					...invalidationEvents
 				]
 			};
 		}

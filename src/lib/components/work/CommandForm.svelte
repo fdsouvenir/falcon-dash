@@ -49,8 +49,11 @@
 		compact?: boolean;
 		presetValues?: Record<string, string>;
 		forceRequired?: string[];
+		requireAnyOf?: string[];
+		requireExactlyOneOf?: string[];
 		confirmationSubject?: string;
 		choiceFields?: Record<string, ChoiceField>;
+		submitLabel?: string;
 	}
 
 	let {
@@ -64,8 +67,11 @@
 		compact = false,
 		presetValues = {},
 		forceRequired = [],
+		requireAnyOf = [],
+		requireExactlyOneOf = [],
 		confirmationSubject,
-		choiceFields = {}
+		choiceFields = {},
+		submitLabel
 	}: Props = $props();
 
 	const formId = $props.id();
@@ -77,6 +83,15 @@
 	);
 	const optionalFields = $derived(
 		(meta?.optional ?? []).filter(
+			(field) =>
+				!requiredFields.includes(field) &&
+				!requireAnyOf.includes(field) &&
+				!requireExactlyOneOf.includes(field) &&
+				presetValues[field] === undefined
+		)
+	);
+	const conditionalFields = $derived(
+		[...new Set([...requireAnyOf, ...requireExactlyOneOf])].filter(
 			(field) => !requiredFields.includes(field) && presetValues[field] === undefined
 		)
 	);
@@ -110,6 +125,7 @@
 
 	function formMatchesPreset(): boolean {
 		if (form?.command !== command) return false;
+		if (targetId !== undefined && form.values?.target_id !== targetId) return false;
 		return Object.entries(presetValues).every(([field, value]) => {
 			const hint = fieldHint(field);
 			const prefix = hint.kind === 'json' ? 'payload_json_' : 'payload_';
@@ -131,7 +147,78 @@
 		}
 	}
 
+	function fieldFormName(field: string): string {
+		return `${fieldHint(field).kind === 'json' ? 'payload_json_' : 'payload_'}${field}`;
+	}
+
+	function hasConditionalValue(formData: FormData, field: string): boolean {
+		const value = formData.get(fieldFormName(field));
+		if (typeof value !== 'string' || value.trim() === '') return false;
+		if (fieldHint(field).kind !== 'json') return true;
+		try {
+			const parsed = JSON.parse(value);
+			if (Array.isArray(parsed)) return parsed.length > 0;
+			return parsed !== null && (typeof parsed !== 'object' || Object.keys(parsed).length > 0);
+		} catch {
+			return true;
+		}
+	}
+
+	function clearConditionalValidity() {
+		for (const field of conditionalFields) {
+			const control = formElement?.elements.namedItem(fieldFormName(field));
+			if (
+				control instanceof HTMLInputElement ||
+				control instanceof HTMLTextAreaElement ||
+				control instanceof HTMLSelectElement
+			) {
+				control.setCustomValidity('');
+			}
+		}
+	}
+
 	const enhanceSubmit: SubmitFunction = ({ cancel, formData }) => {
+		clearConditionalValidity();
+		if (
+			requireAnyOf.length > 0 &&
+			!requireAnyOf.some((field) => hasConditionalValue(formData, field))
+		) {
+			cancel();
+			const firstField = requireAnyOf[0];
+			const control = formElement?.elements.namedItem(fieldFormName(firstField));
+			if (
+				control instanceof HTMLInputElement ||
+				control instanceof HTMLTextAreaElement ||
+				control instanceof HTMLSelectElement
+			) {
+				control.setCustomValidity(
+					`Provide ${requireAnyOf.map((field) => fieldLabel(field).toLowerCase()).join(' or ')}.`
+				);
+				control.reportValidity();
+			}
+			return;
+		}
+		const exclusiveValues = requireExactlyOneOf.filter((field) =>
+			hasConditionalValue(formData, field)
+		);
+		if (requireExactlyOneOf.length > 0 && exclusiveValues.length !== 1) {
+			cancel();
+			const firstField = requireExactlyOneOf[0];
+			const control = formElement?.elements.namedItem(fieldFormName(firstField));
+			if (
+				control instanceof HTMLInputElement ||
+				control instanceof HTMLTextAreaElement ||
+				control instanceof HTMLSelectElement
+			) {
+				control.setCustomValidity(
+					`Provide exactly one: ${requireExactlyOneOf
+						.map((field) => fieldLabel(field).toLowerCase())
+						.join(' or ')}.`
+				);
+				control.reportValidity();
+			}
+			return;
+		}
 		if (!confirmationRequired || confirmed) {
 			normalizeDateFields(formData);
 			submitting = true;
@@ -153,7 +240,9 @@
 
 	function confirmationSummary(formData: FormData): Array<{ label: string; value: string }> {
 		const details = confirmationSubject ? [{ label: 'Selection', value: confirmationSubject }] : [];
-		for (const field of requiredFields) {
+		for (const field of [
+			...new Set([...requiredFields, ...requireAnyOf, ...requireExactlyOneOf])
+		]) {
 			const hint = fieldHint(field);
 			const prefix = hint.kind === 'json' ? 'payload_json_' : 'payload_';
 			const value = formData.get(`${prefix}${field}`);
@@ -284,7 +373,11 @@
 					<Input
 						id={context.id}
 						{name}
-						type={hint.kind === 'datetime-local' ? 'datetime-local' : 'text'}
+						type={hint.kind === 'datetime-local'
+							? 'datetime-local'
+							: hint.kind === 'number'
+								? 'number'
+								: 'text'}
 						value={preserved(field)}
 						required={context.required}
 						aria-describedby={context.describedBy}
@@ -315,6 +408,7 @@
 	method="POST"
 	{action}
 	use:enhance={enhanceSubmit}
+	oninput={clearConditionalValidity}
 	class="space-y-3"
 	data-command={command}
 >
@@ -355,6 +449,22 @@
 		{@render commandField(field, true)}
 	{/each}
 
+	{#if conditionalFields.length}
+		<fieldset
+			class="space-y-3 rounded-[var(--md-sys-shape-corner-small)] border border-outline-variant p-3"
+		>
+			<legend class="px-1 text-[length:var(--text-label)] font-semibold text-on-surface">
+				{requireExactlyOneOf.length > 0 ? 'Provide exactly one' : 'Provide at least one'}
+			</legend>
+			<p class="text-[length:var(--text-label)] text-on-surface-variant">
+				{conditionalFields.map((field) => fieldLabel(field)).join(' or ')}
+			</p>
+			{#each conditionalFields as field (field)}
+				{@render commandField(field, false)}
+			{/each}
+		</fieldset>
+	{/if}
+
 	{#if optionalFields.length}
 		<Collapsible>
 			<CollapsibleTrigger
@@ -376,7 +486,7 @@
 		class="touch-target"
 		disabled={disabled || submitting}
 	>
-		{submitting ? 'Working…' : commandLabel(command)}
+		{submitting ? 'Working…' : (submitLabel ?? commandLabel(command))}
 	</Button>
 </form>
 
@@ -384,7 +494,7 @@
 	bind:open={confirmationOpen}
 	title={`${commandLabel(command)}?`}
 	description="This semantic action is consequential and will be recorded in Work history."
-	confirmLabel={commandLabel(command)}
+	confirmLabel={submitLabel ?? commandLabel(command)}
 	{destructive}
 	busy={submitting}
 	onconfirm={confirm}

@@ -13,9 +13,11 @@ export {
 	stopWork3OutboxWorker,
 	transferWork3OutboxOnce,
 	kickWork3Outbox,
-	getWork3OutboxDiagnostics
+	getWork3OutboxDiagnostics,
+	listProjectAssignmentOutboxEvents
 } from './outbox.js';
-export { listWork3Events } from './eventlog.js';
+export { listWork3Events, listProjectAssignmentEvents, listScopedWork3Events } from './eventlog.js';
+export type { EventSubjectInterval } from './eventlog.js';
 export {
 	registerCommand,
 	getCommand,
@@ -142,7 +144,12 @@ export type {
 	AuthorizationRow,
 	AuthorizationEffectiveness
 } from './read/governance-derived.js';
-export { projectHealth, projectProgress, milestoneScheduleState } from './read/project-derived.js';
+export {
+	projectHealth,
+	projectProgress,
+	projectRiskFlags,
+	milestoneScheduleState
+} from './read/project-derived.js';
 export {
 	computeQueue,
 	computeBrief,
@@ -153,6 +160,7 @@ export type { Work3Queue, QueueBucket } from './read/aggregates.js';
 export type {
 	ProjectHealth,
 	ProjectProgress,
+	ProjectRiskFlag,
 	MilestoneScheduleState
 } from './read/project-derived.js';
 

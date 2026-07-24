@@ -276,7 +276,21 @@ describe('Authorization pinning and effectiveness', () => {
 		expect(effectiveAuthorization(getWork3Db(), change.id, Date.now()).state).toBe('expired');
 
 		const fresh = await cmd<{ id: string }>('authorize_change', change.id, {}, person);
-		await cmd('revoke_authorization', fresh.result.id, { reason: 'Scope concerns' }, person);
+		const revoked = await cmd('revoke_authorization', fresh.result.id, {
+			reason: 'Scope concerns',
+			authority_source: {
+				kind: 'human_statement',
+				ref: 'operator:revoke-authorization',
+				label: 'Operator revocation instruction'
+			}
+		});
+		expect(revoked.events[0].source_refs).toEqual([
+			{
+				kind: 'human_statement',
+				ref: 'operator:revoke-authorization',
+				label: 'Operator revocation instruction'
+			}
+		]);
 		expect(effectiveAuthorization(getWork3Db(), change.id, Date.now())).toMatchObject({
 			state: 'revoked',
 			reason: 'Scope concerns'
@@ -342,6 +356,12 @@ describe('Change execution and verification machines', () => {
 			}
 		});
 		expect(passed.result).toMatchObject({ verification_state: 'passed' });
+		expect(
+			passed.events.find((event) => event.event_type === 'change_verification_passed')?.source_refs
+		).toEqual([
+			{ kind: 'file', ref: '/var/log/gw.log', label: 'Gateway log' },
+			{ kind: 'url', ref: 'https://status.example', label: 'Status page' }
+		]);
 		const row = loadChange(getWork3Db(), change.id)!;
 		expect(row.execution_state).toBe('succeeded');
 		expect(row.verification_state).toBe('passed');
@@ -370,6 +390,12 @@ describe('Change execution and verification machines', () => {
 
 	it('waive_verification is authority-creating and records the waiver', async () => {
 		const change = await authorizedChange();
+		await expect(
+			cmd('waive_verification', change.id, { reason: 'too early' }, person)
+		).rejects.toMatchObject({
+			code: 'transition_requirements_not_met',
+			details: { execution_state: 'not_started' }
+		});
 		await cmd('start_change', change.id);
 		await cmd('succeed_execution', change.id, { result_summary: 'done' });
 		await cmd('start_verification', change.id);
@@ -378,22 +404,128 @@ describe('Change execution and verification machines', () => {
 		).rejects.toMatchObject({
 			code: 'authority_required'
 		});
-		await cmd('waive_verification', change.id, { reason: 'Manually spot-checked' }, person);
+		const waived = await cmd('waive_verification', change.id, {
+			reason: 'Manually spot-checked',
+			authority_source: {
+				kind: 'human_statement',
+				ref: 'operator:waive-verification',
+				label: 'Operator verification-waiver instruction'
+			}
+		});
+		expect(
+			waived.events.find((event) => event.event_type === 'change_verification_waived')?.source_refs
+		).toEqual([
+			{
+				kind: 'human_statement',
+				ref: 'operator:waive-verification',
+				label: 'Operator verification-waiver instruction'
+			}
+		]);
 		const row = loadChange(getWork3Db(), change.id)!;
 		expect(row.verification_state).toBe('waived');
 		const status = JSON.parse(row.criteria_status) as Record<string, { state: string }>;
 		expect(Object.values(status).every((entry) => entry.state === 'waived')).toBe(true);
+
+		await cmd('start_rollback', change.id);
+		await cmd('complete_rollback', change.id, { summary: 'restored previous token' });
+		const repeated = await cmd(
+			'waive_verification',
+			change.id,
+			{ reason: 'already waived' },
+			person
+		);
+		expect(repeated.noop).toBe(true);
+	});
+
+	it('reconciles persisted pre-execution waivers when execution succeeds', async () => {
+		const change = await authorizedChange();
+		const project = await cmd<{ id: string }>('create_project', undefined, {
+			area_id: areaId,
+			title: 'Legacy waiver recovery',
+			desired_outcome: 'Reconcile the terminal Change',
+			scope_included: ['legacy record'],
+			owner: 'agent:main',
+			completion_criteria: [{ id: 'cc1', text: 'Change is complete' }]
+		});
+		await cmd('plan_project', project.result.id);
+		await cmd('activate_project', project.result.id, {
+			plan_not_required_reason: 'Recovery fixture'
+		});
+		await cmd('assign_to_project', undefined, {
+			work_id: change.id,
+			project_id: project.result.id
+		});
+		await cmd('set_current_next_item', project.result.id, { item_id: change.id });
+		getWork3Db()
+			.prepare(`UPDATE change_requests SET verification_state = 'waived' WHERE entity_id = ?`)
+			.run(change.id);
+
+		await cmd('start_change', change.id);
+		const succeeded = await cmd('succeed_execution', change.id, {
+			result_summary: 'Applied cleanly'
+		});
+		expect(succeeded.events.some((event) => event.event_type === 'project_next_item_cleared')).toBe(
+			true
+		);
+		expect(
+			(
+				getWork3Db()
+					.prepare('SELECT current_next_item_id FROM projects WHERE entity_id = ?')
+					.get(project.result.id) as { current_next_item_id: string | null }
+			).current_next_item_id
+		).toBeNull();
 	});
 
 	it('rollback preserves execution history', async () => {
 		const change = await authorizedChange();
 		await cmd('start_change', change.id);
 		await cmd('succeed_execution', change.id, { result_summary: 'applied' });
+		await cmd('start_verification', change.id);
 		await cmd('start_rollback', change.id);
+		const { getObjectReader } = await import('../read/registry.js');
+		const rollingBack = (await getObjectReader('change_request').get(change.id, {
+			view: 'list',
+			filters: {},
+			limit: 1,
+			offset: 0
+		}))!;
+		expect(rollingBack.next_action).toBe('complete_rollback');
+		await expect(
+			cmd('pass_verification', change.id, {
+				criteria_evidence: {
+					c1: [{ kind: 'file', ref: '/tmp/c1' }],
+					c2: [{ kind: 'file', ref: '/tmp/c2' }]
+				}
+			})
+		).rejects.toMatchObject({
+			code: 'transition_requirements_not_met',
+			alternatives: ['complete_rollback']
+		});
+		await expect(
+			cmd('waive_verification', change.id, { reason: 'Rollback wins' }, person)
+		).rejects.toMatchObject({
+			code: 'transition_requirements_not_met',
+			alternatives: ['complete_rollback']
+		});
 		await cmd('complete_rollback', change.id, { summary: 'restored previous token' });
 		const row = loadChange(getWork3Db(), change.id)!;
 		expect(row.execution_state).toBe('rolled_back');
 		expect(row.result_summary).toBe('applied'); // original outcome preserved
+
+		const failed = await authorizedChange();
+		await cmd('start_change', failed.id);
+		await cmd('fail_execution', failed.id, { failure_summary: 'deployment failed' });
+		await cmd('start_rollback', failed.id);
+		for (const [command, payload] of [
+			['retry_change', {}],
+			['cancel_change', { reason: 'Do not bypass rollback' }],
+			['revise_change', changePayload()]
+		] as const) {
+			await expect(cmd(command, failed.id, payload)).rejects.toMatchObject({
+				code: 'transition_requirements_not_met',
+				alternatives: ['complete_rollback']
+			});
+		}
 	});
 
 	it('cancel requires a reason and is terminal-guarded', async () => {

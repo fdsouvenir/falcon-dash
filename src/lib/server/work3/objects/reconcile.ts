@@ -123,3 +123,40 @@ export function invalidateSatisfiesFrom(
 	}
 	return events;
 }
+
+/**
+ * Milestone lifecycle invalidation: proof asserted against an earlier
+ * Milestone generation stays auditable but cannot become current again after
+ * cancellation or reopening.
+ */
+export function invalidateSatisfiesTarget(
+	ctx: ExecuteContext,
+	targetId: string,
+	reason: string
+): DomainEventInput[] {
+	const links = ctx.db
+		.prepare(
+			`SELECT id, source_id, criterion_id FROM relationships
+			 WHERE target_id = ? AND rel_type = 'satisfies' AND removed_at IS NULL AND invalidated_at IS NULL`
+		)
+		.all(targetId) as Array<{ id: string; source_id: string; criterion_id: string | null }>;
+	const events: DomainEventInput[] = [];
+	for (const link of links) {
+		ctx.db
+			.prepare(`UPDATE relationships SET invalidated_at = ?, invalidated_reason = ? WHERE id = ?`)
+			.run(ctx.now, reason, link.id);
+		events.push({
+			event_type: 'satisfies_invalidated',
+			subject_type: 'relationship',
+			subject_id: link.id,
+			summary: `Invalidated satisfies assertion ${link.id} (${link.source_id} → ${targetId}): ${reason}`,
+			payload: {
+				source_id: link.source_id,
+				target_id: targetId,
+				criterion_id: link.criterion_id,
+				reason
+			}
+		});
+	}
+	return events;
+}

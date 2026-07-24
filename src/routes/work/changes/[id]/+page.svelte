@@ -117,8 +117,12 @@
 	const plan = $derived(data.plan as unknown as PlanDetail | null);
 	const authorizationState = $derived(change.authorization?.state ?? 'missing');
 	const authorized = $derived(authorizationState === 'valid');
+	const rollbackInProgress = $derived(
+		change.rollback_started_at != null && change.execution_state !== 'rolled_back'
+	);
 
 	const executionCommands = $derived.by<CommandAvailability[]>(() => {
+		if (rollbackInProgress) return [];
 		const guarded = (command: string, verb: string): CommandAvailability => ({
 			command,
 			enabled: authorized,
@@ -150,6 +154,7 @@
 	});
 
 	const verificationCommands = $derived.by<CommandAvailability[]>(() => {
+		if (rollbackInProgress) return [];
 		if (change.execution_state !== 'succeeded' && change.verification_state === 'not_started') {
 			return [];
 		}
@@ -171,9 +176,7 @@
 
 	const commands = $derived([
 		...executionCommands,
-		...(change.rollback_started_at && change.execution_state !== 'rolled_back'
-			? [{ command: 'complete_rollback' }]
-			: []),
+		...(rollbackInProgress ? [{ command: 'complete_rollback' }] : []),
 		...verificationCommands
 	]);
 

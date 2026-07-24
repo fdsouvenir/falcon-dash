@@ -41,6 +41,8 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   command manifest, `CommandFeedback` owns structured failure and stale-version recovery, and
   `StatusBadge` maps each object vocabulary through `src/lib/work3/tones.ts`. Do not restore
   per-route command-label maps, raw form controls, or a universal status map.
+- Repeated shared regions must use component-local IDs (for example, Svelte `$props.id()`) for
+  `aria-labelledby`; never hard-code an ID that can repeat inside a Project ledger loop.
 - Work object detail pages must keep guarded commands visible with an inline disabled reason,
   distinguish Reviews from Authorizations, and render unresolved source references explicitly.
   Decision option selection belongs in the shared radio-card field support rather than one form
@@ -95,18 +97,16 @@ These fit Falcon Dash better than generic landing-page or dashboard-card mosaics
   title text rather than the project number.
 - In dense project columns, center narrow numeric counts such as blockers with a small metric
   anchor; reserve right alignment for date/time values.
-- Project detail pages should use the project ledger pattern: low header chrome with last update in
-  the upper-right, left section index on desktop, a compact Project Status section for editable
-  status/health/priority/waiting/category basics, current next up, and active blocker
-  relationships, a milestone-contained project plan, and a pinned right rail for static operating
-  brief context plus lightweight project-local milestone creation. The project plan should use a
-  continuous milestone rail with nested work rows and in-context due dates; avoid a separate
-  global date bar unless the page becomes a true timeline/Gantt surface. Do not repeat status,
-  health, priority, dates, or category in the right rail.
-  Do not render milestones, tasks, Needs Resolution items, and change requests as unrelated type
-  lists inside a project page. Milestones are not standalone browse/detail records in the UI; show
-  them only as short headings inside a project plan, with project-page creation limited to a title
-  and one-sentence description.
+- Project detail pages use the v3 Project Ledger: a five-section anchor rail on wide screens,
+  Status/Route/Proof/Current work/History in the center, and a sticky operating brief on the right.
+  Status renders server-derived health, progress, current next work, and risk flags. Route owns
+  Phase progress and lifecycle. Proof keeps criteria satisfaction, contribution links, waivers,
+  Milestones, schedules, and source-backed achievement together. Current work groups typed Tasks,
+  Questions, Decisions, and Changes by Phase instead of presenting unrelated type lists.
+- Project lifecycle actions belong to the header. Phase and Milestone lifecycle actions stay
+  attached to their respective rows. The operating brief may contain collapsed Phase and
+  Milestone composers; these are the only Work v3 operator-UI creation controls. Do not duplicate
+  lifecycle, health, schedule, or progress derivation in the client.
 - Prefer restrained transitions that improve state clarity, sheets, or affordances.
 - Remove animation that does not help scanning or interaction.
 

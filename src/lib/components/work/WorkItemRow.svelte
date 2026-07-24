@@ -26,7 +26,9 @@
 			>
 				{typeLabel(type)}
 			</span>
-			{#if status}<StatusBadge {type} value={status} />{/if}
+			{#if status}
+				<StatusBadge type={type === 'change_request' ? 'change_execution' : type} value={status} />
+			{/if}
 		</div>
 		{#if href === null}
 			<p class="mt-1 break-words font-medium text-on-surface">{title}</p>

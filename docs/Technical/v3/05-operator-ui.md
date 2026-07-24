@@ -54,12 +54,24 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 ### Project ledger
 
-- Header: outcome, lifecycle, health, progress, Area, current-next, and material blockers.
-- Route: ordered Phases with lifecycle and required Work progress.
-- Proof: Milestones and completion criteria with contribution versus satisfaction clearly distinguished.
-- Current work: actionable Tasks, Questions, Decisions, Changes, and Plans in Project context.
+- Header: outcome and lifecycle, with the complete lifecycle command bar available from the
+  header disclosure.
+- Status: server-derived health, progress, current-next, and independent risk flags for blocked
+  next work, blocked items, target/milestone schedule, missing next work, and open criteria.
+- Route: ordered Phases with lifecycle and required Work progress across Tasks, Questions,
+  Decisions, and Change Requests.
+- Proof: Milestones and completion criteria with contribution versus satisfaction clearly
+  distinguished. Criterion waivers are confirmed authority acts; Milestone achievement requests
+  sources.
+- Current work: typed Tasks, Questions, Decisions, and Changes grouped by Phase in Project
+  context, with an explicit set-as-next action for eligible items.
 - History: lifecycle events, supersession, Reviews, Authorizations, sources, and completed outcomes.
 - Editing current-next is explicit and cannot point to terminal or unrelated Work.
+- Desktop uses the three-column Project Ledger (section rail, ledger, sticky operating brief).
+  The rail hides and the operating brief stacks at narrower widths. Collapsed Phase and Milestone
+  composers in the brief are the only operator-UI creation controls.
+- An archived Project is a read-only ledger: ordinary Project, Phase, Milestone, and proof
+  mutations stay hidden and are rejected by the server until restoration.
 
 ### Human decision and approval surfaces
 

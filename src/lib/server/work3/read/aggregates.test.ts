@@ -26,6 +26,7 @@ import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '
 
 let context: Work3TestContext;
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
+const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
 
 let areaId: string;
 
@@ -158,6 +159,40 @@ describe('queue buckets', () => {
 		expect(queue.actionable_now.total).toBe(12);
 		expect(queue.actionable_now.items.length).toBeLessThanOrEqual(8);
 		expect(queue.actionable_now.by_type).toEqual({ task: 12 });
+	});
+
+	it('keeps unfinished Change rollbacks visible with their required action', async () => {
+		const change = await cmd<{ id: string; plan_id: string }>('create_change', undefined, {
+			area_id: areaId,
+			title: 'Rollback the deployment',
+			scope_allowed: ['deployment'],
+			targets: { systems: ['gateway'] },
+			risk: { level: 'low' },
+			acceptance_criteria: [{ id: 'c1', text: 'Gateway is healthy' }],
+			plan: { title: 'Deployment plan', steps: ['Deploy', 'Verify'] }
+		});
+		await cmd('submit_plan', change.result.plan_id);
+		await cmd('authorize_change', change.result.id, {}, person);
+		await cmd('start_change', change.result.id);
+		await cmd('succeed_execution', change.result.id, { result_summary: 'Deployed' });
+		await cmd('start_verification', change.result.id);
+		await cmd('pass_verification', change.result.id, {
+			criteria_evidence: {
+				c1: [{ kind: 'url', ref: 'https://gateway.example/health' }]
+			}
+		});
+		await cmd('start_rollback', change.result.id);
+
+		const queue = await computeQueue();
+		expect(queue.changes_needing_authorization_or_verification.items).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: change.result.id,
+					why: 'Rollback in progress',
+					next_action: 'complete_rollback'
+				})
+			])
+		);
 	});
 
 	it('surfaces reconciliation problems: active projects without a next item', async () => {
