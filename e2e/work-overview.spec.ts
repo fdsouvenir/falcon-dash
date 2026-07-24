@@ -23,12 +23,7 @@ test.describe('Work v3 cutover', () => {
 			await expect(page.getByRole('link', { name: destination.heading }).first()).toBeVisible();
 		}
 
-		for (const heading of [
-			'Due next',
-			'Needs your call',
-			'At risk and waiting',
-			'Recent activity'
-		]) {
+		for (const heading of ['Due next', 'Needs your call', 'Agent activity', 'Recent activity']) {
 			await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 		}
 

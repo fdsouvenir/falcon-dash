@@ -12,4 +12,5 @@ export { default as StatTile } from './StatTile.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
 export { default as Timeline } from './Timeline.svelte';
 export { default as WaitingBanner } from './WaitingBanner.svelte';
+export { default as WorkGlyph } from './WorkGlyph.svelte';
 export { default as WorkItemRow } from './WorkItemRow.svelte';

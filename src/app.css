@@ -5,6 +5,43 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Falcon type: Geist for UI, Geist Mono for data (self-hosted, docs/DESIGN.md) ── */
+@font-face {
+	font-family: 'Geist';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/geist.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Geist';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('/fonts/geist-medium.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Geist';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('/fonts/geist-semibold.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Geist Mono';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/geist-mono.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Geist Mono';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('/fonts/geist-mono-medium.woff2') format('woff2');
+}
+
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
@@ -83,70 +120,83 @@
 :root {
 	--radius: 0.5rem;
 
-	/* ── Shadcn base tokens (existing) ── */
-	--background: #071422;
-	--foreground: #eff6f3;
-	--card: #102033;
-	--card-foreground: #eff6f3;
-	--popover: #13263a;
-	--popover-foreground: #eff6f3;
-	--primary: #9ddcf8;
-	--primary-foreground: #071422;
-	--secondary: #b9c7bd;
-	--secondary-foreground: #172635;
-	--muted: #33485c;
-	--muted-foreground: #bccac7;
-	--accent: #d5f1e4;
-	--accent-foreground: #102033;
-	--destructive: #ffb8b0;
-	--border: #2f4254;
-	--input: #2f4254;
-	--ring: #9ddcf8;
-	--sidebar: #06111e;
-	--sidebar-foreground: #eff6f3;
-	--sidebar-primary: #9ddcf8;
-	--sidebar-primary-foreground: #071422;
-	--sidebar-accent: #203349;
-	--sidebar-accent-foreground: #eff6f3;
-	--sidebar-border: #2f4254;
-	--sidebar-ring: #9ddcf8;
+	/* ── Shadcn base tokens (Falcon "warm charcoal / raptor amber" scheme, docs/DESIGN.md) ── */
+	--background: #131315;
+	--foreground: #e5e1e4;
+	--card: #1b1b1d;
+	--card-foreground: #e5e1e4;
+	--popover: #1f1f21;
+	--popover-foreground: #e5e1e4;
+	--primary: #f7bf59;
+	--primary-foreground: #422c00;
+	--secondary: #c8c6ca;
+	--secondary-foreground: #303033;
+	--muted: #2a2a2c;
+	--muted-foreground: #9b9a94;
+	--accent: #2a2a2c;
+	--accent-foreground: #e5e1e4;
+	--destructive: #ffb4ab;
+	--border: #353437;
+	--input: #353437;
+	--ring: #f7bf59;
+	--sidebar: #0e0e10;
+	--sidebar-foreground: #e5e1e4;
+	--sidebar-primary: #f7bf59;
+	--sidebar-primary-foreground: #422c00;
+	--sidebar-accent: #2a2a2c;
+	--sidebar-accent-foreground: #e5e1e4;
+	--sidebar-border: #353437;
+	--sidebar-ring: #f7bf59;
 
 	/* ── Stitch material tokens ── */
-	--on-background: #eff6f3;
-	--surface: #071422;
-	--on-surface: #eff6f3;
-	--on-surface-variant: #bccac7;
-	--outline: #7f90a0;
-	--outline-variant: #2f4254;
-	--surface-container-lowest: #06111e;
-	--surface-container-low: #0c1b2c;
-	--surface-container: #102033;
-	--surface-container-high: #17293d;
-	--surface-container-highest: #203349;
-	--surface-variant: #203349;
-	--primary-container: #16445c;
-	--secondary-container: #25394d;
+	--on-background: #e5e1e4;
+	--surface: #131315;
+	--on-surface: #e5e1e4;
+	--on-surface-variant: #b5aea0;
+	--outline: #9c8f7d;
+	--outline-variant: #4f4536;
+	--surface-container-lowest: #0e0e10;
+	--surface-container-low: #1b1b1d;
+	--surface-container: #1f1f21;
+	--surface-container-high: #2a2a2c;
+	--surface-container-highest: #353437;
+	--surface-variant: #353437;
+	--primary-container: #d9a441;
+	--secondary-container: #47464a;
 
 	/* ── Surface layers (4-level depth system) ── */
-	--surface-0: #071422;
-	--surface-1: #102033;
-	--surface-2: #17293d;
-	--surface-3: #203349;
-	--surface-border: #2f4254;
+	--surface-0: #131315;
+	--surface-1: #1b1b1d;
+	--surface-2: #2a2a2c;
+	--surface-3: #353437;
+	--surface-border: #353437;
 
 	/* ── Semantic status colors ── */
-	--status-active: #83e0a4;
-	--status-active-bg: rgba(131, 224, 164, 0.13);
-	--status-warning: #f6cf7b;
-	--status-warning-bg: rgba(246, 207, 123, 0.14);
-	--status-danger: #ff9f95;
-	--status-danger-bg: rgba(255, 159, 149, 0.13);
-	--status-info: #88d6f7;
-	--status-info-bg: rgba(136, 214, 247, 0.13);
-	--status-muted: #bccac7;
-	--status-muted-bg: rgba(188, 202, 199, 0.1);
-	--status-purple: #c6b8ff;
-	--status-purple-bg: rgba(198, 184, 255, 0.13);
+	--status-active: #5cbb7a;
+	--status-active-bg: rgba(92, 187, 122, 0.13);
+	--status-warning: #f5bd58;
+	--status-warning-bg: rgba(245, 189, 88, 0.14);
+	--status-danger: #d96757;
+	--status-danger-bg: rgba(217, 103, 87, 0.14);
+	--status-info: #7a9cc4;
+	--status-info-bg: rgba(122, 156, 196, 0.14);
+	--status-muted: #9b9a94;
+	--status-muted-bg: rgba(155, 154, 148, 0.1);
+	--status-purple: #a78bcb;
+	--status-purple-bg: rgba(167, 139, 203, 0.14);
+
+	/* ── Object-type identity hues (glyph tiles ONLY — never text/borders/fills) ── */
+	--work-type-task: #4fb3a9;
+	--work-type-question: #9d8cd6;
+	--work-type-decision: #c77ba4;
+	--work-type-change: #d08a4f;
+	--work-type-finding: #8fae5d;
+	--work-type-project: #6d9bd1;
+	--work-type-plan: #8b98a8;
+	--work-type-milestone: #57b98a;
+	--work-type-automation: #7bb8c9;
+	--work-type-area: #a29a8c;
+	--work-type-blocker: #d96757;
 
 	/* ── Typography scale ── */
 	--text-page-title: 1.35rem;
@@ -200,19 +250,19 @@
 	--md-sys-color-inverse-on-surface: var(--surface);
 
 	--md-sys-typescale-display-large-font:
-		ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	--md-sys-typescale-display-large-size: 3rem;
 	--md-sys-typescale-display-large-line-height: 3.5rem;
-	--md-sys-typescale-display-large-weight: 650;
+	--md-sys-typescale-display-large-weight: 600;
 	--md-sys-typescale-headline-large-size: 2rem;
 	--md-sys-typescale-headline-large-line-height: 2.5rem;
-	--md-sys-typescale-headline-large-weight: 650;
+	--md-sys-typescale-headline-large-weight: 600;
 	--md-sys-typescale-title-large-size: var(--text-page-title);
 	--md-sys-typescale-title-large-line-height: 1.25;
-	--md-sys-typescale-title-large-weight: 650;
+	--md-sys-typescale-title-large-weight: 600;
 	--md-sys-typescale-title-medium-size: var(--text-card-title);
 	--md-sys-typescale-title-medium-line-height: 1.45rem;
-	--md-sys-typescale-title-medium-weight: 650;
+	--md-sys-typescale-title-medium-weight: 600;
 	--md-sys-typescale-body-large-size: var(--text-body);
 	--md-sys-typescale-body-large-line-height: 1.55;
 	--md-sys-typescale-body-large-weight: 400;
@@ -221,10 +271,10 @@
 	--md-sys-typescale-body-medium-weight: 400;
 	--md-sys-typescale-label-large-size: var(--text-label);
 	--md-sys-typescale-label-large-line-height: 1.25rem;
-	--md-sys-typescale-label-large-weight: 650;
+	--md-sys-typescale-label-large-weight: 600;
 	--md-sys-typescale-label-medium-size: var(--text-badge);
 	--md-sys-typescale-label-medium-line-height: 1.15rem;
-	--md-sys-typescale-label-medium-weight: 650;
+	--md-sys-typescale-label-medium-weight: 600;
 
 	--md-sys-shape-corner-none: 0;
 	--md-sys-shape-corner-extra-small: 0.25rem;
@@ -261,6 +311,7 @@ body {
 	font-size: var(--text-body);
 	line-height: 1.55;
 	font-family:
+		'Geist',
 		ui-sans-serif,
 		system-ui,
 		-apple-system,
@@ -298,7 +349,8 @@ pre,
 kbd,
 samp,
 .font-mono {
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-variant-numeric: tabular-nums;
 }
 
 /* Safe area insets for notch phones */

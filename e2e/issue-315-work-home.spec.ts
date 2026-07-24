@@ -7,7 +7,7 @@ test.describe('issue #315 default operator workspace', () => {
 		await expect(page).toHaveURL(/\/work$/);
 		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Needs your call', exact: true })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'At risk and waiting' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Agent activity' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
 	});
 

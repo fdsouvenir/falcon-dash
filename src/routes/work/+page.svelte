@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { EmptyState, StatTile, Timeline } from '$lib/components/work/index.js';
+	import { EmptyState, StatTile, Timeline, WorkGlyph } from '$lib/components/work/index.js';
 	import { STATUS_COLORS } from '$lib/components/ui/design-tokens.js';
 	import { typeLabel, workHref } from '$lib/work3/hrefs.js';
 	import { toneFor } from '$lib/work3/tones.js';
@@ -95,10 +95,6 @@
 				? 'change_execution'
 				: (item.type ?? 'task');
 		return STATUS_COLORS[toneFor(toneType, status)].text;
-	}
-
-	function displayId(item: QueueItem): string {
-		return `${typeLabel(item.type ?? 'work')} ${item.id ?? ''}`.trim();
 	}
 
 	function rowHref(item: QueueItem): string | undefined {
@@ -238,19 +234,35 @@
 		}
 	]);
 
-	const riskGroups = $derived.by<PanelGroup[]>(() => [
+	// Blocked work lives with the operator asks: unblocking is Fred's job.
+	const blockedGroup = $derived.by<PanelGroup>(() => ({
+		title: 'Blocked on you',
+		count: queue.blocked_risk.total,
+		items: queue.blocked_risk.items,
+		empty: 'No blocked work',
+		moreHref: browseHref
+	}));
+
+	const agentGroups = $derived.by<PanelGroup[]>(() => [
 		{
-			title: 'Blocked',
-			count: queue.blocked_risk.total,
-			items: queue.blocked_risk.items,
-			empty: 'No blocked work',
+			title: 'Working now',
+			count: queue.actionable_now.total,
+			items: queue.actionable_now.items,
+			empty: 'No agent-ready work',
+			moreHref: browseHref
+		},
+		{
+			title: 'Waiting',
+			count: waitingTotal,
+			items: [...queue.waiting_on_agent.items, ...queue.waiting_on_external.items],
+			empty: 'Nothing waiting',
 			moreHref: browseHref
 		},
 		{
 			title: 'Automations',
 			count: queue.unhealthy_automata.total,
 			items: queue.unhealthy_automata.items,
-			empty: 'Automation is healthy',
+			empty: 'All automations healthy',
 			moreHref: resolve('/work/automations')
 		},
 		{
@@ -258,27 +270,6 @@
 			count: queue.needs_reconciliation.total,
 			items: queue.needs_reconciliation.items,
 			empty: 'Nothing to reconcile',
-			moreHref: browseHref
-		},
-		{
-			title: 'Waiting external',
-			count: queue.waiting_on_external.total,
-			items: queue.waiting_on_external.items,
-			empty: 'No outside dependencies',
-			moreHref: browseHref
-		},
-		{
-			title: 'Waiting on agent',
-			count: queue.waiting_on_agent.total,
-			items: queue.waiting_on_agent.items,
-			empty: 'No agent follow-ups waiting',
-			moreHref: browseHref
-		},
-		{
-			title: 'Agent working',
-			count: queue.actionable_now.total,
-			items: queue.actionable_now.items,
-			empty: 'No agent-ready work',
 			moreHref: browseHref
 		}
 	]);
@@ -291,24 +282,22 @@
 			<svelte:element
 				this={href ? 'a' : 'div'}
 				{href}
-				class="grid gap-2 px-4 py-3 hover:bg-surface-container-high/50 md:grid-cols-[minmax(0,1fr)_8rem] md:items-center {href
+				class="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-high/50 {href
 					? 'falcon-focus'
 					: ''}"
 			>
-				<div class="min-w-0">
-					<div class="flex flex-wrap items-center gap-2 text-[length:var(--text-label)]">
-						<span class={statusToneClass(item)}>{reasonText(item)}</span>
-						<span class="text-on-surface-variant">{displayId(item)}</span>
+				<WorkGlyph type={item.type ?? 'work'} />
+				<div class="min-w-0 flex-1">
+					<div
+						class="flex min-w-0 items-baseline gap-2 overflow-hidden text-[length:var(--text-label)]"
+					>
+						<span class="shrink-0 font-mono text-on-surface-variant/80">{item.id}</span>
+						<span class="min-w-0 truncate {statusToneClass(item)}">{reasonText(item)}</span>
 					</div>
-					<p class="mt-1 truncate text-[length:var(--text-body)] font-semibold text-on-surface">
+					<p class="mt-0.5 truncate text-[length:var(--text-body)] font-semibold text-on-surface">
 						{item.title ?? item.id}
 					</p>
 				</div>
-				<span
-					class="hidden text-right text-[length:var(--text-label)] text-on-surface-variant md:block"
-				>
-					{typeLabel(item.type ?? 'work')}
-				</span>
 			</svelte:element>
 		{:else}
 			<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">{group.empty}</p>
@@ -324,14 +313,17 @@
 	</div>
 {/snippet}
 
-{#snippet groupedPanel(id: string, heading: string, groups: PanelGroup[])}
+{#snippet groupedPanel(id: string, heading: string, groups: PanelGroup[], accent: boolean = false)}
 	<div
 		{id}
 		tabindex="-1"
 		class="scroll-mt-24 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/55 bg-surface-container shadow-none"
 	>
-		<div class="border-b border-outline-variant/45 px-4 py-3">
-			<h2 class="text-lg font-semibold text-on-surface">{heading}</h2>
+		<div class="flex items-center gap-2.5 border-b border-outline-variant/45 px-4 py-3">
+			{#if accent}
+				<span class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span>
+			{/if}
+			<h2 class="text-lg font-semibold {accent ? 'text-primary' : 'text-on-surface'}">{heading}</h2>
 		</div>
 		<div class="divide-y divide-outline-variant/35">
 			{#each groups as group (group.title)}
@@ -381,7 +373,7 @@
 					label="At risk"
 					value={riskTotal}
 					breakdown={riskBreakdown}
-					href="#at-risk"
+					href="#needs-you"
 					tone="danger"
 				/>
 			</div>
@@ -392,7 +384,7 @@
 					value={dueNext.total}
 					breakdown={dueBreakdown}
 					href="#due-next"
-					tone="active"
+					tone="info"
 				/>
 			</div>
 			<div class="signal-cell">
@@ -427,31 +419,40 @@
 							{window.items.length} item{window.items.length === 1 ? '' : 's'}
 						</p>
 					</div>
-					<div class="divide-y divide-outline-variant/30">
+					<div class="divide-y divide-outline-variant/30 px-3 pb-3">
 						{#each window.items.slice(0, 4) as item (item.id)}
 							{@const href = rowHref(item)}
 							<svelte:element
 								this={href ? 'a' : 'div'}
 								{href}
-								class="block px-4 py-3 hover:bg-surface-container-high/50 {href
+								class="block rounded-[var(--md-sys-shape-corner-small)] border border-outline-variant/45 bg-surface-container-low p-3 hover:bg-surface-container-high/50 {href
 									? 'falcon-focus'
 									: ''}"
 							>
-								<div
-									class="flex min-w-0 flex-wrap items-center gap-2 text-[length:var(--text-label)]"
-								>
-									<span class="text-on-surface-variant">{typeLabel(item.type ?? 'work')}</span>
-									<span class={statusToneClass(item)}>
+								<div class="flex min-w-0 items-center gap-2.5">
+									<WorkGlyph type={item.type ?? 'work'} size={24} />
+									<span
+										class="font-mono text-[length:var(--text-label)] text-on-surface-variant/80"
+									>
+										{item.id}
+									</span>
+									<span
+										class="ml-auto rounded-full border border-current/45 px-2 py-0.5 text-[length:var(--text-badge)] font-medium {statusToneClass(
+											item
+										)}"
+									>
 										{formatStatus(item.status ?? item.execution_state)}
 									</span>
 								</div>
 								<p
-									class="mt-1 line-clamp-2 text-[length:var(--text-body)] font-semibold leading-5 text-on-surface"
+									class="mt-2 line-clamp-2 text-[length:var(--text-body)] font-semibold leading-5 text-on-surface"
 								>
 									{item.title ?? item.id}
 								</p>
 								<p
-									class="mt-1 text-[length:var(--text-label)] leading-5 {Number(item.due_at) < now
+									class="mt-1.5 font-mono text-[length:var(--text-label)] leading-5 {Number(
+										item.due_at
+									) < now
 										? 'text-status-danger'
 										: 'text-on-surface-variant'}"
 								>
@@ -459,9 +460,11 @@
 								</p>
 							</svelte:element>
 						{:else}
-							<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">
-								No items in this window.
-							</p>
+							<div
+								class="flex min-h-24 items-center justify-center rounded-[var(--md-sys-shape-corner-small)] border border-dashed border-outline-variant/55"
+							>
+								<p class="text-[length:var(--text-body)] text-on-surface-variant">Nothing due.</p>
+							</div>
 						{/each}
 					</div>
 				</div>
@@ -469,9 +472,9 @@
 		</div>
 	</section>
 
-	<section class="grid gap-4 xl:grid-cols-2" aria-label="Queues">
-		{@render groupedPanel('needs-you', 'Needs your call', needsCallGroups)}
-		{@render groupedPanel('at-risk', 'At risk and waiting', riskGroups)}
+	<section class="grid gap-4 xl:grid-cols-[5fr_4fr]" aria-label="Queues">
+		{@render groupedPanel('needs-you', 'Needs your call', [...needsCallGroups, blockedGroup], true)}
+		{@render groupedPanel('agent-activity', 'Agent activity', agentGroups)}
 	</section>
 
 	<section

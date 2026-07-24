@@ -33,9 +33,9 @@
 			warning: 'text-status-warning',
 			danger: 'text-status-danger',
 			info: 'text-status-info',
-			muted: 'text-on-surface-variant',
+			muted: 'text-on-surface',
 			purple: 'text-status-purple',
-			primary: 'text-primary'
+			primary: 'text-on-surface'
 		}[tone]
 	);
 </script>
@@ -51,7 +51,7 @@
 		href && 'falcon-focus touch-target hover:bg-surface-container-high/50'
 	)}
 >
-	<span class="absolute inset-x-4 top-0 h-0.5 rounded-full {accentClass}" aria-hidden="true"></span>
+	<span class="absolute inset-x-0 top-0 h-0.5 {accentClass}" aria-hidden="true"></span>
 	<div class="flex items-baseline justify-between gap-4">
 		<p class="text-[length:var(--text-body)] font-semibold text-on-surface">{label}</p>
 		<p class="text-3xl font-semibold leading-none tabular-nums {valueClass}">{value}</p>
