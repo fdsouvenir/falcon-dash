@@ -14,6 +14,7 @@ import {
 	setCronGatewayForTests,
 	transferWork3OutboxOnce
 } from '../index.js';
+import { distinctQueueRows } from './aggregates.js';
 import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '../testing.js';
 
 /**
@@ -133,6 +134,7 @@ describe('queue buckets', () => {
 		expect(queue.actionable_now.total).toBe(1);
 		expect(queue.actionable_now.items[0]).toMatchObject({ id: ready.result.id });
 		expect(queue.needs_fred.total).toBe(2);
+		expect(queue.needs_fred.by_type).toEqual({ decision: 1, question: 1 });
 		expect(queue.waiting_on_agent.total).toBe(1);
 		expect(queue.waiting_on_external.total).toBe(1);
 		expect(queue.blocked_risk.total).toBe(1);
@@ -155,6 +157,7 @@ describe('queue buckets', () => {
 		const queue = await computeQueue();
 		expect(queue.actionable_now.total).toBe(12);
 		expect(queue.actionable_now.items.length).toBeLessThanOrEqual(8);
+		expect(queue.actionable_now.by_type).toEqual({ task: 12 });
 	});
 
 	it('surfaces reconciliation problems: active projects without a next item', async () => {
@@ -172,6 +175,17 @@ describe('queue buckets', () => {
 		expect(queue.needs_reconciliation.items.some((item) => item.id === project.result.id)).toBe(
 			true
 		);
+		expect(queue.at_risk.total).toBe(1);
+		expect(queue.at_risk.by_type).toEqual({ project: 1 });
+	});
+
+	it('deduplicates identities across combined risk sources', () => {
+		expect(
+			distinctQueueRows(
+				[{ id: 'job-1', type: 'automaton', title: 'Blocked automaton' }],
+				[{ id: 'job-1', type: 'automaton', title: 'Failing automaton' }]
+			)
+		).toEqual([{ id: 'job-1', type: 'automaton', title: 'Blocked automaton' }]);
 	});
 
 	it('reports gateway unavailability inside the automata bucket instead of failing the queue', async () => {

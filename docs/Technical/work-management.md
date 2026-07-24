@@ -205,6 +205,13 @@ The client may format server projections, but it must not rederive lifecycle, he
 actionability, Authorization effectiveness, or reconciliation state. Reviews and Authorizations
 remain visually and semantically distinct.
 
+Mission Control consumes the server-computed queue buckets directly. Each bucket reports `total`,
+`by_type`, and at most eight compact `items`; `by_type` is computed from the full bucket before the
+item bound is applied. The combined `at_risk` bucket deduplicates object identities across blocked
+risk, unhealthy Automata, and reconciliation before computing either total or type counts. The page
+declares the `work3:queue` dependency and debounces invalidation of that dependency from
+`/api/work3/events`, with silent degradation when EventSource is unavailable.
+
 ## Context Generation
 
 `src/lib/server/work/context-writer.ts` writes Work-owned context:

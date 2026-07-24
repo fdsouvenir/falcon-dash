@@ -20,6 +20,19 @@ Creation is agent-driven. Browse does not provide generic create forms. Project-
 Milestone composers are the limited exception because they shape an existing Project's route and
 proof. Work v3 does not include an in-product agent composer.
 
+## Mission Control
+
+The first row answers four questions: what needs your call, what is at risk, what an agent can act
+on, and what is waiting. Each total links to its detailed section and shows the mix of Work types.
+
+The detailed queue keeps Review separate from Authorization and Verification. Waiting is split
+between agent handoffs and external dependencies. Every empty section gives a definitive state,
+and bounded queues link to Browse for the remaining items.
+
+Mission Control refreshes its queue after Work events while the page is open. If the live stream is
+temporarily unavailable, the current page remains usable and a normal navigation or reload gets the
+latest state.
+
 ## Object Pages
 
 Each Work type has a distinct detail experience rather than a generic record card:

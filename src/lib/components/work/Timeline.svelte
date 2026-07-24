@@ -24,6 +24,15 @@
 		if (!value) return 'Time unavailable';
 		return new Date(value).toLocaleString();
 	}
+
+	function sourceLabels(sources?: unknown[]): string[] {
+		return (sources ?? []).map((source) => {
+			if (!source || typeof source !== 'object') return String(source);
+			const record = source as Record<string, unknown>;
+			if (typeof record.label === 'string') return record.label;
+			return [record.kind, record.ref].filter(Boolean).join(':') || 'Unlabeled source';
+		});
+	}
 </script>
 
 {#if events.length}
@@ -52,9 +61,9 @@
 				</p>
 				{#if event.authority_act}
 					<p class="mt-1 text-[length:var(--text-label)] text-status-purple">
-						Claimed human authority{event.source_refs?.length
-							? ` · ${event.source_refs.length} source${event.source_refs.length === 1 ? '' : 's'}`
-							: ''}
+						Claimed human authority{sourceLabels(event.source_refs).length
+							? ` · ${sourceLabels(event.source_refs).join(' · ')}`
+							: ' · source not recorded'}
 					</p>
 				{/if}
 			</li>

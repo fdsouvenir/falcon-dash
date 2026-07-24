@@ -18,12 +18,14 @@ const BUCKET_LIMIT = 8;
 
 export interface QueueBucket {
 	total: number;
+	by_type: Record<string, number>;
 	items: Array<Record<string, unknown>>;
 }
 
 export interface Work3Queue {
 	actionable_now: QueueBucket;
 	needs_fred: QueueBucket;
+	at_risk: QueueBucket;
 	waiting_on_agent: QueueBucket;
 	waiting_on_external: QueueBucket;
 	blocked_risk: QueueBucket;
@@ -34,7 +36,23 @@ export interface Work3Queue {
 }
 
 function bucket(rows: Array<Record<string, unknown>>): QueueBucket {
-	return { total: rows.length, items: rows.slice(0, BUCKET_LIMIT) };
+	const byType: Record<string, number> = {};
+	for (const row of rows) {
+		const type = typeof row.type === 'string' ? row.type : 'unknown';
+		byType[type] = (byType[type] ?? 0) + 1;
+	}
+	return { total: rows.length, by_type: byType, items: rows.slice(0, BUCKET_LIMIT) };
+}
+
+export function distinctQueueRows(
+	...groups: Array<Array<Record<string, unknown>>>
+): Array<Record<string, unknown>> {
+	const rows = new Map<string, Record<string, unknown>>();
+	for (const row of groups.flat()) {
+		const key = `${String(row.type ?? 'unknown')}:${String(row.id ?? JSON.stringify(row))}`;
+		if (!rows.has(key)) rows.set(key, row);
+	}
+	return [...rows.values()];
 }
 
 /** Waiting-on classification: agent identities vs everything else. */
@@ -213,6 +231,7 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 	return {
 		actionable_now: bucket(actionable),
 		needs_fred: bucket(needsFred),
+		at_risk: bucket(distinctQueueRows(blocked, unhealthyAutomata, reconciliation)),
 		waiting_on_agent: bucket(waitingOnAgent),
 		waiting_on_external: bucket(waitingOnExternal),
 		blocked_risk: bucket(blocked),
@@ -274,14 +293,17 @@ export async function computeBrief(
 	return {
 		actionable_now: {
 			total: queue.actionable_now.total,
+			by_type: queue.actionable_now.by_type,
 			items: queue.actionable_now.items.slice(0, BRIEF_LIMIT)
 		},
 		needs_fred: {
 			total: queue.needs_fred.total,
+			by_type: queue.needs_fred.by_type,
 			items: queue.needs_fred.items.slice(0, BRIEF_LIMIT)
 		},
 		blocked_risk: {
 			total: queue.blocked_risk.total,
+			by_type: queue.blocked_risk.by_type,
 			items: queue.blocked_risk.items.slice(0, BRIEF_LIMIT)
 		},
 		unhealthy_automata: queue.unhealthy_automata,

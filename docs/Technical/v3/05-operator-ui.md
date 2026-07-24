@@ -37,9 +37,18 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 ### Mission Control
 
 - Lead with the smallest set of actions that can materially advance Work.
-- Separate `Needs Fred`, `Agent can act`, `Waiting`, `Blocked risk`, and `Automation health`.
+- Lead with four drill-down totals: `Needs your call`, combined `At risk`, `Agent can act`, and
+  combined `Waiting`. Each total includes the server-supplied object-type breakdown computed before
+  bounded queue rows are sliced.
+- Separate `Needs Fred`, `Blocked risk`, `Governance`, `Waiting`, `Agent can act`,
+  `Automation health`, and `Reconciliation` below the summary.
+- Keep `Awaiting Review` information-toned and visually distinct from warning-toned
+  `Needs Authorization / Verification`; Review never implies permission to execute.
+- Split Waiting into keyboard-operable `Agent` and `External` tabs.
 - Show why an item is present and the next relevant action.
 - Authority-creating acts (decisions, authorizations, revocations, verification waivers, criterion waivers) unconditionally appear in the material-recent-changes feed with their claimed human authority source, resolvable to the original instruction (#327 actor model).
+- Subscribe to `/api/work3/events` and debounce targeted `work3:queue` invalidation. EventSource
+  unavailability is a silent loss of live refresh, not a page failure.
 - Routine successful Runs, terminal history, and low-value counts remain out of the first viewport.
 - Empty queues state that nothing requires attention; they do not fill space with generic advice.
 

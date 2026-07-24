@@ -3,7 +3,8 @@ import { computeQueue, materialRecentChanges, startWork3 } from '$lib/server/wor
 
 /** Mission Control (doc 05): the smallest set of actions that can materially
  * advance Work, plus the material-recent-changes feed. */
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ depends }) => {
+	depends('work3:queue');
 	startWork3();
 	const queue = await computeQueue();
 	return {

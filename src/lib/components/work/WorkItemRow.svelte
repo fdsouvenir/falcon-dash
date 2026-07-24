@@ -8,7 +8,7 @@
 		title: string;
 		status?: string | null;
 		why?: string | null;
-		href?: string;
+		href?: string | null;
 	}
 
 	let { type, id, title, status, why, href }: Props = $props();
@@ -28,17 +28,25 @@
 			</span>
 			{#if status}<StatusBadge {type} value={status} />{/if}
 		</div>
-		<a
-			href={href ?? workHref(type, id)}
-			class="falcon-focus touch-target -ml-1 mt-1 block break-words rounded px-1 font-medium text-on-surface hover:text-primary"
-		>
-			{title}
-		</a>
+		{#if href === null}
+			<p class="mt-1 break-words font-medium text-on-surface">{title}</p>
+		{:else}
+			<a
+				href={href ?? workHref(type, id)}
+				class="falcon-focus touch-target -ml-1 mt-1 block break-words rounded px-1 font-medium text-on-surface hover:text-primary"
+			>
+				{title}
+			</a>
+		{/if}
 		{#if why}
-			<p class="mt-1 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant">
+			<p
+				class="mt-1 line-clamp-3 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant"
+			>
 				{why}
 			</p>
 		{/if}
 	</div>
-	<span class="shrink-0 self-center text-on-surface-variant" aria-hidden="true">→</span>
+	{#if href !== null}
+		<span class="shrink-0 self-center text-on-surface-variant" aria-hidden="true">→</span>
+	{/if}
 </article>

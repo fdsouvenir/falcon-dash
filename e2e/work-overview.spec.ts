@@ -25,19 +25,24 @@ test.describe('Work v3 cutover', () => {
 
 		for (const bucket of [
 			'Needs Fred',
-			'Agent can act',
 			'Blocked risk',
-			'Waiting on agent',
-			'Waiting on external',
+			'Governance',
 			'Awaiting Review',
-			'Changes: authorization / verification',
+			'Needs Authorization / Verification',
+			'Waiting',
+			'Agent can act',
 			'Automation health',
-			'Reconciliation'
+			'Reconciliation',
+			'Material recent changes'
 		]) {
-			await expect(page.getByRole('heading', { name: bucket })).toBeVisible();
+			await expect(page.getByRole('heading', { name: bucket, exact: true })).toBeVisible();
 		}
 
-		await expect(page.getByText('Material recent changes')).toBeVisible();
+		for (const summary of ['Needs your call', 'At risk']) {
+			await expect(page.getByText(summary, { exact: true })).toBeVisible();
+		}
+		await expect(page.getByRole('tab', { name: /Agent/ })).toBeVisible();
+		await expect(page.getByRole('tab', { name: /External/ })).toBeVisible();
 	});
 
 	test('serves every primary Work v3 destination', async ({ page, baseURL }) => {

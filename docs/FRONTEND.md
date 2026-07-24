@@ -43,6 +43,10 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   per-route command-label maps, raw form controls, or a universal status map.
 - Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
   their own copies of the Work navigation.
+- Mission Control leads with four linked queue totals, then uses compact Work rows and tonal
+  sections for priority-ordered drill-downs. Clamp long queue explanations, keep Review visually
+  separate from Authorization/Verification, and use the shared keyboard-operable Tabs for waiting
+  parties rather than rendering two competing first-level panels.
 
 ## Shell Model
 
