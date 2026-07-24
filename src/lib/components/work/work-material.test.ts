@@ -245,8 +245,10 @@ describe('Work UI material guardrails', () => {
 		for (const source of [projects, automata]) {
 			expect(source.toString()).toContain('grid grid-cols-2 gap-3');
 		}
-		// The overview is inbox-first: no stat tiles, counts live inline in section headings.
-		expect(overview.toString()).not.toContain('StatTile');
+		// The overview is the executive dashboard: KPI signal strip + label-rail
+		// grouped panels, hairline-divided single-border zones.
+		expect(overview.toString()).toContain('xl:grid-cols-4');
+		expect(overview.toString()).toContain('md:grid-cols-[11rem_minmax(0,1fr)]');
 		expect(overview.toString()).toContain('sr-only');
 	});
 });

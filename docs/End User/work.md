@@ -22,12 +22,16 @@ proof. Work v3 does not include an in-product agent composer.
 
 ## Work overview
 
-The first row answers four questions: what needs your call, what is at risk, what an agent can act
-on, and what is waiting. Each total links to its detailed section and shows the mix of Work types.
+The signal strip answers four questions: what needs your call, what is at risk, what is due next,
+and what changed recently. Each total links to its detailed section and shows the mix of Work
+types.
 
-The detailed queue keeps Review separate from Authorization and Verification. Waiting is split
-between agent handoffs and external dependencies. Every empty section gives a definitive state,
-and bounded queues link to Browse for the remaining items.
+Below it, "Due next" groups dated work into Today (including anything overdue, in red), This week,
+Next week, and Later. Two grouped panels follow: "Needs your call" (decisions, questions, review
+outputs, plan reviews, and change gates — Review stays separate from Authorization and
+Verification) and "At risk and waiting" (blocked work, unhealthy automations, reconciliation,
+external and agent waits, and what the agent is working on). Every empty group gives a definitive
+state, and bounded groups link onward for the remaining items.
 
 The overview refreshes its queue after Work events while the page is open. If the live stream is
 temporarily unavailable, the current page remains usable and a normal navigation or reload gets the

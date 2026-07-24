@@ -1,13 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { EmptyState, Section, Timeline, WorkItemRow } from '$lib/components/work/index.js';
-	import {
-		Collapsible,
-		CollapsibleContent,
-		CollapsibleTrigger
-	} from '$lib/components/ui/collapsible/index.js';
-	import { Tabs } from '$lib/components/ui/tabs/index.js';
+	import { EmptyState, StatTile, Timeline } from '$lib/components/work/index.js';
+	import { STATUS_COLORS } from '$lib/components/ui/design-tokens.js';
+	import { typeLabel, workHref } from '$lib/work3/hrefs.js';
+	import { toneFor } from '$lib/work3/tones.js';
 	import { connectWorkQueueLive } from '$lib/work3/live.js';
 	import type { PageData } from './$types.js';
 
@@ -18,6 +15,8 @@
 		status?: string;
 		execution_state?: string;
 		why?: string;
+		due_at?: number;
+		project_id?: string;
 	}
 
 	interface QueueBucket {
@@ -36,6 +35,14 @@
 		authority_sources?: unknown[];
 	}
 
+	interface PanelGroup {
+		title: string;
+		count: number;
+		items: QueueItem[];
+		empty: string;
+		moreHref?: string;
+	}
+
 	const linkedTypes = new Set([
 		'task',
 		'question',
@@ -51,14 +58,14 @@
 
 	let { data }: { data: PageData } = $props();
 	const queue = $derived(data.queue as unknown as Record<string, QueueBucket>);
+	const dueNext = $derived(data.dueNext as unknown as QueueBucket);
+	const recentSummary = $derived(
+		data.recentSummary as { total: number; by_type: Record<string, number> }
+	);
 	const browseHref = resolve('/work/browse');
-	const atRisk = $derived(
-		combineBuckets(queue.blocked_risk, queue.unhealthy_automata, queue.needs_reconciliation)
-	);
-	const waitingTotal = $derived(queue.waiting_on_agent.total + queue.waiting_on_external.total);
-	const governanceTotal = $derived(
-		queue.awaiting_review.total + queue.changes_needing_authorization_or_verification.total
-	);
+	const needsResolutionHref = resolve('/work/needs-resolution');
+	const now = Date.now();
+
 	const recentEvents = $derived(
 		(data.recentChanges as unknown as RecentChange[]).map((change) => ({
 			id: change.id,
@@ -70,177 +77,429 @@
 			source_refs: change.authority_sources
 		}))
 	);
-	let waitingTab = $state('agent');
-	let inMotionOpen = $state(false);
 
 	onMount(() => connectWorkQueueLive());
 
-	function combineBuckets(...buckets: QueueBucket[]): QueueBucket {
-		const byType: Record<string, number> = {};
-		for (const bucket of buckets) {
-			for (const [type, count] of Object.entries(bucket.by_type)) {
-				byType[type] = (byType[type] ?? 0) + count;
-			}
+	// --- formatting -----------------------------------------------------------
+
+	function formatStatus(value: string | undefined): string {
+		if (!value) return '';
+		const text = value.replaceAll('_', ' ');
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	}
+
+	function statusToneClass(item: QueueItem): string {
+		const status = item.status ?? item.execution_state;
+		const toneType =
+			item.type === 'change_request' || item.type === 'change'
+				? 'change_execution'
+				: (item.type ?? 'task');
+		return STATUS_COLORS[toneFor(toneType, status)].text;
+	}
+
+	function displayId(item: QueueItem): string {
+		return `${typeLabel(item.type ?? 'work')} ${item.id ?? ''}`.trim();
+	}
+
+	function rowHref(item: QueueItem): string | undefined {
+		if (item.type === 'milestone' && item.project_id) {
+			return workHref('project', item.project_id);
 		}
-		return {
-			total: buckets.reduce((total, bucket) => total + bucket.total, 0),
-			by_type: byType,
-			items: buckets.flatMap((bucket) => bucket.items)
-		};
+		if (!item.type || !linkedTypes.has(item.type)) return undefined;
+		return workHref(item.type, item.id ?? '');
 	}
 
-	function itemStatus(item: QueueItem): string | undefined {
-		return item.status ?? item.execution_state;
+	function reasonText(item: QueueItem): string {
+		return item.why ?? formatStatus(item.status ?? item.execution_state) ?? '';
 	}
 
-	function itemHref(item: QueueItem): null | undefined {
-		return item.type && !linkedTypes.has(item.type) ? null : undefined;
+	function typeBreakdown(byType: Record<string, number>, empty: string): string {
+		const parts = Object.entries(byType)
+			.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+			.map(([type, count]) => `${count} ${typeLabel(type).toLowerCase()}${count === 1 ? '' : 's'}`);
+		return parts.join(' · ') || empty;
 	}
+
+	// --- KPI signals ----------------------------------------------------------
+
+	const waitingTotal = $derived(queue.waiting_on_agent.total + queue.waiting_on_external.total);
+	const riskTotal = $derived(
+		queue.blocked_risk.total +
+			queue.unhealthy_automata.total +
+			queue.needs_reconciliation.total +
+			waitingTotal
+	);
+	const riskBreakdown = $derived.by(() => {
+		const parts: string[] = [];
+		if (queue.blocked_risk.total) parts.push(`${queue.blocked_risk.total} blocked`);
+		if (queue.unhealthy_automata.total)
+			parts.push(
+				`${queue.unhealthy_automata.total} automation${queue.unhealthy_automata.total === 1 ? '' : 's'}`
+			);
+		if (queue.needs_reconciliation.total)
+			parts.push(`${queue.needs_reconciliation.total} to reconcile`);
+		if (waitingTotal) parts.push(`${waitingTotal} waiting`);
+		return parts.join(' · ') || 'Nothing at risk';
+	});
+	const overdueCount = $derived(dueNext.items.filter((item) => Number(item.due_at) < now).length);
+	const dueBreakdown = $derived.by(() => {
+		const byType = typeBreakdown(dueNext.by_type, 'No near-term dates');
+		return overdueCount > 0 ? `${overdueCount} overdue · ${byType}` : byType;
+	});
+
+	// --- Due next windows -----------------------------------------------------
+
+	function endOfDay(base: number, daysAhead = 0): number {
+		const day = new Date(base + daysAhead * 24 * 60 * 60 * 1000);
+		return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999).getTime();
+	}
+	// Week runs through Sunday, like the v2 timeline buckets.
+	const daysUntilSunday = (7 - new Date(now).getDay()) % 7;
+	const todayEnd = endOfDay(now);
+	const weekEnd = endOfDay(now, daysUntilSunday);
+	const nextWeekEnd = endOfDay(now, daysUntilSunday + 7);
+
+	const dueWindows = $derived.by(() => {
+		const windows = [
+			{ title: 'Today', items: [] as QueueItem[] },
+			{ title: 'This week', items: [] as QueueItem[] },
+			{ title: 'Next week', items: [] as QueueItem[] },
+			{ title: 'Later', items: [] as QueueItem[] }
+		];
+		for (const item of dueNext.items) {
+			const due = Number(item.due_at);
+			if (due <= todayEnd) windows[0].items.push(item);
+			else if (due <= weekEnd) windows[1].items.push(item);
+			else if (due <= nextWeekEnd) windows[2].items.push(item);
+			else windows[3].items.push(item);
+		}
+		return windows;
+	});
+
+	function dueDateLabel(item: QueueItem): string {
+		const due = Number(item.due_at);
+		const label = new Date(due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		return `Due ${label}`;
+	}
+
+	// --- Panels ---------------------------------------------------------------
+
+	function ofType(bucket: QueueBucket, type: string): QueueItem[] {
+		return bucket.items.filter((item) => item.type === type);
+	}
+
+	const needsCallGroups = $derived.by<PanelGroup[]>(() => [
+		{
+			title: 'Decisions',
+			count: queue.needs_fred.by_type.decision ?? 0,
+			items: ofType(queue.needs_fred, 'decision'),
+			empty: 'No decisions waiting',
+			moreHref: needsResolutionHref
+		},
+		{
+			title: 'Questions',
+			count: queue.needs_fred.by_type.question ?? 0,
+			items: ofType(queue.needs_fred, 'question'),
+			empty: 'No open questions',
+			moreHref: needsResolutionHref
+		},
+		{
+			title: 'Review outputs',
+			count: queue.needs_fred.by_type.task ?? 0,
+			items: ofType(queue.needs_fred, 'task'),
+			empty: 'No outputs to review',
+			moreHref: needsResolutionHref
+		},
+		{
+			title: 'Plan reviews',
+			count: queue.awaiting_review.total,
+			items: queue.awaiting_review.items,
+			empty: 'No plan reviews waiting',
+			moreHref: needsResolutionHref
+		},
+		{
+			title: 'Authorization / verification',
+			count: queue.changes_needing_authorization_or_verification.total,
+			items: queue.changes_needing_authorization_or_verification.items,
+			empty: 'No change gates waiting',
+			moreHref: needsResolutionHref
+		}
+	]);
+
+	const riskGroups = $derived.by<PanelGroup[]>(() => [
+		{
+			title: 'Blocked',
+			count: queue.blocked_risk.total,
+			items: queue.blocked_risk.items,
+			empty: 'No blocked work',
+			moreHref: browseHref
+		},
+		{
+			title: 'Automations',
+			count: queue.unhealthy_automata.total,
+			items: queue.unhealthy_automata.items,
+			empty: 'Automation is healthy',
+			moreHref: resolve('/work/automations')
+		},
+		{
+			title: 'Reconciliation',
+			count: queue.needs_reconciliation.total,
+			items: queue.needs_reconciliation.items,
+			empty: 'Nothing to reconcile',
+			moreHref: browseHref
+		},
+		{
+			title: 'Waiting external',
+			count: queue.waiting_on_external.total,
+			items: queue.waiting_on_external.items,
+			empty: 'No outside dependencies',
+			moreHref: browseHref
+		},
+		{
+			title: 'Waiting on agent',
+			count: queue.waiting_on_agent.total,
+			items: queue.waiting_on_agent.items,
+			empty: 'No agent follow-ups waiting',
+			moreHref: browseHref
+		},
+		{
+			title: 'Agent working',
+			count: queue.actionable_now.total,
+			items: queue.actionable_now.items,
+			empty: 'No agent-ready work',
+			moreHref: browseHref
+		}
+	]);
 </script>
 
-{#snippet bucketList(bucket: QueueBucket, emptyTitle: string)}
-	{#if bucket.items.length}
-		<div class="-my-2">
-			{#each bucket.items as item, index (item.id ?? index)}
-				<WorkItemRow
-					type={item.type ?? 'work'}
-					id={item.id ?? `unknown-${index}`}
-					title={item.title ?? item.id ?? 'Untitled Work'}
-					status={itemStatus(item)}
-					why={item.why}
-					href={itemHref(item)}
-				/>
-			{/each}
-			{#if bucket.total > bucket.items.length}
-				<a
-					href={browseHref}
-					class="falcon-focus touch-target mt-2 inline-flex rounded text-[length:var(--text-label)] font-semibold text-primary hover:text-primary/80"
+{#snippet groupRows(group: PanelGroup)}
+	<div class="divide-y divide-outline-variant/30 md:border-l md:border-outline-variant/35">
+		{#each group.items.slice(0, 4) as item, index (item.id ?? index)}
+			{@const href = rowHref(item)}
+			<svelte:element
+				this={href ? 'a' : 'div'}
+				{href}
+				class="grid gap-2 px-4 py-3 hover:bg-surface-container-high/50 md:grid-cols-[minmax(0,1fr)_8rem] md:items-center {href
+					? 'falcon-focus'
+					: ''}"
+			>
+				<div class="min-w-0">
+					<div class="flex flex-wrap items-center gap-2 text-[length:var(--text-label)]">
+						<span class={statusToneClass(item)}>{reasonText(item)}</span>
+						<span class="text-on-surface-variant">{displayId(item)}</span>
+					</div>
+					<p class="mt-1 truncate text-[length:var(--text-body)] font-semibold text-on-surface">
+						{item.title ?? item.id}
+					</p>
+				</div>
+				<span
+					class="hidden text-right text-[length:var(--text-label)] text-on-surface-variant md:block"
 				>
-					+{bucket.total - bucket.items.length} more → Browse
-				</a>
-			{/if}
+					{typeLabel(item.type ?? 'work')}
+				</span>
+			</svelte:element>
+		{:else}
+			<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">{group.empty}</p>
+		{/each}
+		{#if group.count > 4 && group.moreHref}
+			<a
+				href={group.moreHref}
+				class="falcon-focus block px-4 py-2 text-[length:var(--text-label)] font-semibold text-primary hover:bg-surface-container-high/50"
+			>
+				+{group.count - 4} more
+			</a>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet groupedPanel(id: string, heading: string, groups: PanelGroup[])}
+	<div
+		{id}
+		tabindex="-1"
+		class="scroll-mt-24 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/55 bg-surface-container shadow-none"
+	>
+		<div class="border-b border-outline-variant/45 px-4 py-3">
+			<h2 class="text-lg font-semibold text-on-surface">{heading}</h2>
 		</div>
-	{:else}
-		<EmptyState title={emptyTitle} compact />
-	{/if}
+		<div class="divide-y divide-outline-variant/35">
+			{#each groups as group (group.title)}
+				<div class="grid gap-0 md:grid-cols-[11rem_minmax(0,1fr)]">
+					<div class="border-b border-outline-variant/25 px-4 py-3 md:border-b-0">
+						<div class="flex items-center justify-between gap-3 md:block">
+							<h3 class="text-[length:var(--text-body)] font-semibold text-on-surface">
+								{group.title}
+							</h3>
+							<span class="text-[length:var(--text-body)] font-semibold text-on-surface md:hidden">
+								{group.count}
+							</span>
+						</div>
+					</div>
+					{@render groupRows(group)}
+				</div>
+			{/each}
+		</div>
+	</div>
 {/snippet}
 
 <svelte:head><title>Work — Falcon Dash</title></svelte:head>
 
-<div class="mx-auto max-w-5xl space-y-5">
+<div class="space-y-4">
 	<h1 class="sr-only">Work</h1>
 
-	<Section
-		id="needs-your-call"
-		title="Needs your call"
-		count={queue.needs_fred.total}
-		accent="warning"
+	<section
+		class="overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/55 bg-surface-container shadow-[0_10px_30px_rgba(0,0,0,0.14)]"
+		aria-label="Signals"
 	>
-		{@render bucketList(queue.needs_fred, 'Nothing needs your call.')}
-	</Section>
-
-	<Section id="at-risk" title="At risk" count={atRisk.total} accent="danger">
-		{@render bucketList(atRisk, 'Nothing at risk.')}
-	</Section>
-
-	{#if governanceTotal > 0}
-		<Section id="governance" title="Governance" count={governanceTotal} accent="purple">
-			<div class="grid gap-4 lg:grid-cols-2">
-				{#if queue.awaiting_review.total > 0}
-					<section aria-labelledby="awaiting-review-title">
-						<h3 id="awaiting-review-title" class="mb-2 font-medium text-on-surface">
-							Awaiting review
-							<span class="font-normal text-on-surface-variant">
-								({queue.awaiting_review.total})
-							</span>
-						</h3>
-						{@render bucketList(queue.awaiting_review, 'No reviews waiting.')}
-					</section>
-				{/if}
-				{#if queue.changes_needing_authorization_or_verification.total > 0}
-					<section aria-labelledby="authorization-verification-title">
-						<h3 id="authorization-verification-title" class="mb-2 font-medium text-on-surface">
-							Needs authorization or verification
-							<span class="font-normal text-on-surface-variant">
-								({queue.changes_needing_authorization_or_verification.total})
-							</span>
-						</h3>
-						{@render bucketList(
-							queue.changes_needing_authorization_or_verification,
-							'No gates waiting.'
-						)}
-					</section>
-				{/if}
-			</div>
-		</Section>
-	{/if}
-
-	<Collapsible bind:open={inMotionOpen}>
-		<section
-			class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container shadow-none"
-			aria-label="In motion"
+		<div
+			class="grid divide-y divide-outline-variant/45 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4"
 		>
-			<h2 class="m-0">
-				<CollapsibleTrigger
-					class="falcon-focus touch-target flex w-full items-center justify-between px-4 py-4 text-left sm:px-5"
-				>
-					<span class="font-semibold text-on-surface">
-						In motion
-						<span class="ml-1.5 font-normal text-on-surface-variant">
-							({queue.actionable_now.total} agent · {waitingTotal} waiting)
-						</span>
-					</span>
-					<span class="text-[length:var(--text-label)] font-semibold text-primary">
-						{inMotionOpen ? 'Collapse' : 'Expand'}
-					</span>
-				</CollapsibleTrigger>
-			</h2>
-			<CollapsibleContent>
-				<div class="space-y-5 border-t border-outline-variant/70 p-4 sm:p-5">
-					<section aria-labelledby="agent-can-act-title">
-						<h3 id="agent-can-act-title" class="mb-2 font-medium text-on-surface">
-							Agent can act
-							<span class="font-normal text-on-surface-variant">
-								({queue.actionable_now.total})
-							</span>
-						</h3>
-						{@render bucketList(queue.actionable_now, 'No agent-ready work.')}
-					</section>
-					<section aria-labelledby="waiting-title">
-						<h3 id="waiting-title" class="mb-2 font-medium text-on-surface">
-							Waiting
-							<span class="font-normal text-on-surface-variant">({waitingTotal})</span>
-						</h3>
-						<Tabs
-							items={[
-								{ value: 'agent', label: 'Agent', count: queue.waiting_on_agent.total },
-								{ value: 'external', label: 'External', count: queue.waiting_on_external.total }
-							]}
-							bind:value={waitingTab}
-							label="Waiting queue"
-						>
-							{#snippet children(activeTab)}
-								{#if activeTab === 'agent'}
-									{@render bucketList(queue.waiting_on_agent, 'Nothing waiting on an agent.')}
-								{:else}
-									{@render bucketList(
-										queue.waiting_on_external,
-										'Nothing waiting on an external party.'
-									)}
-								{/if}
-							{/snippet}
-						</Tabs>
-					</section>
-				</div>
-			</CollapsibleContent>
-		</section>
-	</Collapsible>
+			<div class="signal-cell">
+				<StatTile
+					bare
+					label="Needs your call"
+					value={queue.needs_fred.total}
+					breakdown={typeBreakdown(queue.needs_fred.by_type, 'No operator asks')}
+					href="#needs-you"
+					tone="warning"
+				/>
+			</div>
+			<div class="signal-cell">
+				<StatTile
+					bare
+					label="At risk"
+					value={riskTotal}
+					breakdown={riskBreakdown}
+					href="#at-risk"
+					tone="danger"
+				/>
+			</div>
+			<div class="signal-cell">
+				<StatTile
+					bare
+					label="Due next"
+					value={dueNext.total}
+					breakdown={dueBreakdown}
+					href="#due-next"
+					tone="active"
+				/>
+			</div>
+			<div class="signal-cell">
+				<StatTile
+					bare
+					label="Changed recently"
+					value={recentSummary.total}
+					breakdown={typeBreakdown(recentSummary.by_type, 'No recent updates')}
+					href="#recent"
+					tone="primary"
+				/>
+			</div>
+		</div>
+	</section>
 
-	<Section id="recent-activity" title="Recent activity">
-		{#if recentEvents.length}
-			<Timeline events={recentEvents} />
-		{:else}
-			<EmptyState title="No activity yet." compact />
-		{/if}
-	</Section>
+	<section
+		id="due-next"
+		tabindex="-1"
+		class="scroll-mt-24 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/55 bg-surface-container shadow-none"
+	>
+		<div class="border-b border-outline-variant/45 px-4 py-3">
+			<h2 class="text-lg font-semibold text-on-surface">Due next</h2>
+		</div>
+		<div class="grid divide-y divide-outline-variant/35 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+			{#each dueWindows as window (window.title)}
+				<div class="min-w-0">
+					<div class="flex items-baseline justify-between gap-3 px-4 py-3">
+						<h3 class="text-[length:var(--text-body)] font-semibold text-on-surface">
+							{window.title}
+						</h3>
+						<p class="text-[length:var(--text-label)] text-on-surface-variant">
+							{window.items.length} item{window.items.length === 1 ? '' : 's'}
+						</p>
+					</div>
+					<div class="divide-y divide-outline-variant/30">
+						{#each window.items.slice(0, 4) as item (item.id)}
+							{@const href = rowHref(item)}
+							<svelte:element
+								this={href ? 'a' : 'div'}
+								{href}
+								class="block px-4 py-3 hover:bg-surface-container-high/50 {href
+									? 'falcon-focus'
+									: ''}"
+							>
+								<div
+									class="flex min-w-0 flex-wrap items-center gap-2 text-[length:var(--text-label)]"
+								>
+									<span class="text-on-surface-variant">{typeLabel(item.type ?? 'work')}</span>
+									<span class={statusToneClass(item)}>
+										{formatStatus(item.status ?? item.execution_state)}
+									</span>
+								</div>
+								<p
+									class="mt-1 line-clamp-2 text-[length:var(--text-body)] font-semibold leading-5 text-on-surface"
+								>
+									{item.title ?? item.id}
+								</p>
+								<p
+									class="mt-1 text-[length:var(--text-label)] leading-5 {Number(item.due_at) < now
+										? 'text-status-danger'
+										: 'text-on-surface-variant'}"
+								>
+									{dueDateLabel(item)}
+								</p>
+							</svelte:element>
+						{:else}
+							<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">
+								No items in this window.
+							</p>
+						{/each}
+					</div>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class="grid gap-4 xl:grid-cols-2" aria-label="Queues">
+		{@render groupedPanel('needs-you', 'Needs your call', needsCallGroups)}
+		{@render groupedPanel('at-risk', 'At risk and waiting', riskGroups)}
+	</section>
+
+	<section
+		id="recent"
+		tabindex="-1"
+		class="scroll-mt-24 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/55 bg-surface-container shadow-none"
+	>
+		<div class="border-b border-outline-variant/45 px-4 py-3">
+			<h2 class="text-lg font-semibold text-on-surface">Recent activity</h2>
+		</div>
+		<div class="p-4 sm:p-5">
+			{#if recentEvents.length}
+				<Timeline events={recentEvents} />
+			{:else}
+				<EmptyState title="No activity yet." compact />
+			{/if}
+		</div>
+	</section>
 </div>
+
+<style>
+	@media (prefers-reduced-motion: no-preference) {
+		.signal-cell {
+			animation: signal-in var(--md-sys-motion-duration-medium2, 300ms)
+				var(--md-sys-motion-easing-standard, ease-out) both;
+		}
+		.signal-cell:nth-child(2) {
+			animation-delay: 60ms;
+		}
+		.signal-cell:nth-child(3) {
+			animation-delay: 120ms;
+		}
+		.signal-cell:nth-child(4) {
+			animation-delay: 180ms;
+		}
+	}
+	@keyframes signal-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+	}
+</style>

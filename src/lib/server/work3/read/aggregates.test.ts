@@ -3,7 +3,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Actor } from '$lib/work3-shared/types.js';
 import {
+	changedRecentlySummary,
 	computeBrief,
+	computeDueNext,
 	computeQueue,
 	executeCommand,
 	getWork3Db,
@@ -363,5 +365,76 @@ describe('FTS search', () => {
 			expect.objectContaining({ code: 'validation_failed' })
 		);
 		expect(searchWork('nonexistent-term-zzz')).toEqual([]);
+	});
+});
+
+describe('overview signals', () => {
+	it('due-next includes overdue and horizon-bounded dated work, excludes achieved milestones', async () => {
+		const day = 24 * 60 * 60 * 1000;
+		const now = Date.now();
+		const overdue = await cmd<{ id: string }>('create_task', undefined, {
+			title: 'Overdue task',
+			area_id: areaId,
+			due_at: now - 4 * day
+		});
+		const soon = await cmd<{ id: string }>('create_task', undefined, {
+			title: 'Due soon',
+			area_id: areaId,
+			due_at: now + 2 * day
+		});
+		await cmd('create_task', undefined, {
+			title: 'Far out',
+			area_id: areaId,
+			due_at: now + 30 * day
+		});
+		const project = await cmd<{ id: string }>('create_project', undefined, {
+			area_id: areaId,
+			title: 'Dated project',
+			desired_outcome: 'Done',
+			scope_included: ['x'],
+			owner: 'agent:main',
+			completion_criteria: ['works']
+		});
+		const milestone = await cmd<{ id: string }>('create_milestone', undefined, {
+			project_id: project.result.id,
+			title: 'Near milestone',
+			success_condition: 'observable',
+			target_at: now + 5 * day
+		});
+		const achieved = await cmd<{ id: string }>('create_milestone', undefined, {
+			project_id: project.result.id,
+			title: 'Achieved milestone',
+			success_condition: 'observable',
+			target_at: now + 3 * day
+		});
+		getWork3Db()
+			.prepare(`UPDATE milestones SET status = 'achieved', achieved_at = ? WHERE entity_id = ?`)
+			.run(now, achieved.result.id);
+
+		const dueNext = computeDueNext(getWork3Db(), now);
+		const ids = dueNext.items.map((item) => item.id);
+		expect(ids).toContain(overdue.result.id);
+		expect(ids).toContain(soon.result.id);
+		expect(ids).toContain(milestone.result.id);
+		expect(ids).not.toContain(achieved.result.id);
+		expect(ids.some((id) => id === undefined)).toBe(false);
+		expect(dueNext.total).toBe(3);
+		expect(dueNext.by_type).toEqual({ task: 2, milestone: 1 });
+		// Sorted soonest-first, overdue leading.
+		expect(dueNext.items[0].id).toBe(overdue.result.id);
+	});
+
+	it('changed-recently counts distinct entities with material events, typed', async () => {
+		const task = await cmd<{ id: string }>('create_task', undefined, {
+			title: 'Recently changed',
+			area_id: areaId
+		});
+		await cmd('update_task', task.result.id, { summary: 'routine edit' });
+		await transferWork3OutboxOnce();
+
+		const summary = changedRecentlySummary(7, getWork3Db());
+		// Area + task creation are material; the routine task_updated adds no new entity.
+		expect(summary.total).toBe(2);
+		expect(summary.by_type).toEqual({ area: 1, task: 1 });
 	});
 });

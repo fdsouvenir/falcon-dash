@@ -54,9 +54,11 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   `.falcon-focus` fallbacks.
 - Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
   their own copies of the Work navigation.
-- The Work overview is inbox-first: prioritized Work rows with counts inline in section headings, and tonal
-  sections for priority-ordered drill-downs. Clamp long queue explanations, keep Review visually
-  separate from Authorization/Verification, and use the shared keyboard-operable Tabs for waiting
+- The Work overview is an executive dashboard: a hairline-divided KPI signal strip (big toned
+  numeral right, breakdown subline), a Due-next band with four date windows, and two label-rail
+  grouped panels ("Needs your call", "At risk and waiting") with dense linked rows. One border per
+  zone, interior structure via hairline dividers only; statuses in rows are toned text, not filled
+  badges. Keep Review visually separate from Authorization/Verification
   parties rather than rendering two competing first-level panels.
 - Projects and Browse use the shared `FocusChips` URL contract. Definitions live in
   `src/lib/work3/focus.ts`, show counts, preserve the current query string, and declare either a

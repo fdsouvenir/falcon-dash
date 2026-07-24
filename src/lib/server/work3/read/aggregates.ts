@@ -36,13 +36,13 @@ export interface Work3Queue {
 	needs_reconciliation: QueueBucket;
 }
 
-function bucket(rows: Array<Record<string, unknown>>): QueueBucket {
+function bucket(rows: Array<Record<string, unknown>>, limit = BUCKET_LIMIT): QueueBucket {
 	const byType: Record<string, number> = {};
 	for (const row of rows) {
 		const type = typeof row.type === 'string' ? row.type : 'unknown';
 		byType[type] = (byType[type] ?? 0) + 1;
 	}
-	return { total: rows.length, by_type: byType, items: rows.slice(0, BUCKET_LIMIT) };
+	return { total: rows.length, by_type: byType, items: rows.slice(0, limit) };
 }
 
 export function distinctQueueRows(
@@ -256,6 +256,72 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 	};
 }
 
+const DUE_NEXT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const DUE_NEXT_LIMIT = 24;
+
+/**
+ * Near-term dated Work for the overview's Due-next band: open Tasks by
+ * `due_at` and planned Milestones by `target_at`, overdue included, within a
+ * 14-day horizon. The client groups rows into date windows.
+ */
+export function computeDueNext(
+	db: Database.Database = getWork3Db(),
+	now = Date.now()
+): QueueBucket {
+	const horizon = now + DUE_NEXT_WINDOW_MS;
+	const tasks = db
+		.prepare(
+			`SELECT t.entity_id AS id, 'task' AS type, t.title, t.status, t.due_at
+			 FROM tasks t
+			 WHERE t.status NOT IN ('completed','cancelled')
+			   AND t.due_at IS NOT NULL AND t.due_at <= ?
+			 ORDER BY t.due_at ASC`
+		)
+		.all(horizon) as Array<Record<string, unknown>>;
+	const milestones = db
+		.prepare(
+			`SELECT m.entity_id AS id, 'milestone' AS type, m.title, m.status,
+			        m.target_at AS due_at, m.project_id
+			 FROM milestones m
+			 WHERE m.status = 'planned' AND m.target_at IS NOT NULL AND m.target_at <= ?
+			 ORDER BY m.target_at ASC`
+		)
+		.all(horizon) as Array<Record<string, unknown>>;
+	const rows = [...tasks, ...milestones].sort((a, b) => Number(a.due_at) - Number(b.due_at));
+	return bucket(rows, DUE_NEXT_LIMIT);
+}
+
+/**
+ * Distinct entities with material events in the recent window — the overview's
+ * "Changed recently" signal. Shares the material filter with
+ * `materialRecentChanges` so the two can't diverge.
+ */
+export function changedRecentlySummary(
+	days = 7,
+	db: Database.Database = getWork3Db()
+): { total: number; by_type: Record<string, number> } {
+	const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+	const subjects = new Set<string>();
+	for (const event of listWork3Events({ limit: 500 })) {
+		if (event.occurred_at < cutoff) continue;
+		if (!isMaterialEventType(event.event_type)) continue;
+		if (typeof event.subject_id === 'string' && event.subject_id) subjects.add(event.subject_id);
+	}
+	const ids = [...subjects];
+	const byType: Record<string, number> = {};
+	if (ids.length) {
+		const rows = db
+			.prepare(`SELECT id, type FROM entities WHERE id IN (${ids.map(() => '?').join(',')})`)
+			.all(...ids) as Array<{ id: string; type: string }>;
+		const typeById = new Map(rows.map((row) => [row.id, row.type]));
+		for (const id of ids) {
+			const type = typeById.get(id) ?? 'work';
+			byType[type] = (byType[type] ?? 0) + 1;
+		}
+	}
+	return { total: ids.length, by_type: byType };
+}
+
 /** Authority-creating event types — unconditionally in the material feed. */
 const AUTHORITY_EVENT_TYPES = new Set([
 	'decision_decided',
@@ -278,11 +344,13 @@ const ROUTINE_EVENT_TYPES = new Set([
 	'automaton_updated'
 ]);
 
+export function isMaterialEventType(eventType: string): boolean {
+	return isAuthorityEventType(eventType) || !ROUTINE_EVENT_TYPES.has(eventType);
+}
+
 export function materialRecentChanges(limit = 20): Array<Record<string, unknown>> {
 	const events = listWork3Events({ limit: 200 });
-	const material = events.filter(
-		(event) => isAuthorityEventType(event.event_type) || !ROUTINE_EVENT_TYPES.has(event.event_type)
-	);
+	const material = events.filter((event) => isMaterialEventType(event.event_type));
 	return material.slice(0, limit).map((event) => ({
 		id: event.id,
 		at: event.occurred_at,

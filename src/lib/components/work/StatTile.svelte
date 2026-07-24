@@ -4,13 +4,17 @@
 	interface Props {
 		label: string;
 		value: number | string;
+		/** Accepted for API compatibility; the signal-cell layout does not render it. */
 		description?: string;
 		breakdown?: string;
 		href?: string;
-		tone?: 'active' | 'warning' | 'danger' | 'info' | 'muted' | 'purple';
+		tone?: 'active' | 'warning' | 'danger' | 'info' | 'muted' | 'purple' | 'primary';
+		/** Set when the tile sits inside a shared divided panel (no own border). */
+		bare?: boolean;
 	}
 
-	let { label, value, description, breakdown, href, tone = 'info' }: Props = $props();
+	let { label, value, description, breakdown, href, tone = 'info', bare = false }: Props = $props();
+	void description;
 
 	const accentClass = $derived(
 		{
@@ -19,7 +23,19 @@
 			danger: 'bg-status-danger',
 			info: 'bg-status-info',
 			muted: 'bg-status-muted',
-			purple: 'bg-status-purple'
+			purple: 'bg-status-purple',
+			primary: 'bg-primary'
+		}[tone]
+	);
+	const valueClass = $derived(
+		{
+			active: 'text-status-active',
+			warning: 'text-status-warning',
+			danger: 'text-status-danger',
+			info: 'text-status-info',
+			muted: 'text-on-surface-variant',
+			purple: 'text-status-purple',
+			primary: 'text-primary'
 		}[tone]
 	);
 </script>
@@ -29,23 +45,18 @@
 	{href}
 	data-work-stat-tile
 	class={cn(
-		'group relative block min-h-32 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container p-4 shadow-none',
-		href && 'falcon-focus touch-target hover:bg-surface-container-high'
+		'group relative block min-h-28 p-4 shadow-none',
+		!bare &&
+			'overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container',
+		href && 'falcon-focus touch-target hover:bg-surface-container-high/50'
 	)}
 >
-	<span class="absolute inset-y-0 left-0 w-1 {accentClass}" aria-hidden="true"></span>
-	<p
-		class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.13em] text-on-surface-variant"
-	>
-		{label}
-	</p>
-	<p class="mt-2 text-3xl font-semibold leading-none text-on-surface">{value}</p>
+	<span class="absolute inset-x-4 top-0 h-0.5 rounded-full {accentClass}" aria-hidden="true"></span>
+	<div class="flex items-baseline justify-between gap-4">
+		<p class="text-[length:var(--text-body)] font-semibold text-on-surface">{label}</p>
+		<p class="text-3xl font-semibold leading-none tabular-nums {valueClass}">{value}</p>
+	</div>
 	{#if breakdown}
-		<p class="mt-2 text-[length:var(--text-label)] font-medium text-on-surface">{breakdown}</p>
-	{/if}
-	{#if description}
-		<p class="mt-1 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant">
-			{description}
-		</p>
+		<p class="mt-3 text-[length:var(--text-body)] leading-6 text-on-surface-variant">{breakdown}</p>
 	{/if}
 </svelte:element>

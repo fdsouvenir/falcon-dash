@@ -153,6 +153,8 @@ export {
 export {
 	computeQueue,
 	computeBrief,
+	computeDueNext,
+	changedRecentlySummary,
 	materialRecentChanges,
 	searchWork
 } from './read/aggregates.js';

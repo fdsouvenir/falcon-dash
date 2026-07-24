@@ -309,6 +309,12 @@ risk, unhealthy Automations, and reconciliation before computing either total or
 declares the `work3:queue` dependency and debounces invalidation of that dependency from
 `/api/work3/events`, with silent degradation when EventSource is unavailable.
 
+Two further read aggregates feed the overview signals: `computeDueNext()` (open Tasks by `due_at`
+and planned Milestones by `target_at`, overdue included, 14-day horizon, client-side date-window
+grouping) and `changedRecentlySummary()` (distinct entities with material events in the last seven
+days, typed via an `entities` lookup; shares the material-event predicate with
+`materialRecentChanges` through `isMaterialEventType`).
+
 Automaton lists and details are read-through views of OpenClaw. Runtime list failure becomes a
 health banner rather than an invented lifecycle. Detail controls mutate the same runtime object,
 native Runs remain separate from the Falcon Event Log, and deleted records expose restoration only

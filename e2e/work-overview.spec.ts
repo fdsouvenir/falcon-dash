@@ -23,20 +23,29 @@ test.describe('Work v3 cutover', () => {
 			await expect(page.getByRole('link', { name: destination.heading }).first()).toBeVisible();
 		}
 
-		for (const bucket of [/^Needs your call/, /^At risk/, /^Recent activity/]) {
-			await expect(page.getByRole('heading', { name: bucket })).toBeVisible();
+		for (const heading of [
+			'Due next',
+			'Needs your call',
+			'At risk and waiting',
+			'Recent activity'
+		]) {
+			await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 		}
 
-		const inMotion = page.getByRole('button', { name: /^In motion/ });
-		await expect(inMotion).toBeVisible();
-		// Retry the click until hydration makes the collapsible interactive.
-		await expect(async () => {
-			await inMotion.click();
-			await expect(inMotion).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
-		}).toPass();
-		await expect(page.getByRole('heading', { name: /^Agent can act/ })).toBeVisible();
-		await expect(page.getByRole('tab', { name: /Agent/ })).toBeVisible();
-		await expect(page.getByRole('tab', { name: /External/ })).toBeVisible();
+		// KPI strip: four signal tiles anchoring to page sections.
+		const statTiles = page.locator('[data-work-stat-tile]');
+		await expect(statTiles).toHaveCount(4);
+		await statTiles.filter({ hasText: 'Due next' }).click();
+		await expect(page).toHaveURL(/#due-next$/);
+
+		// Due-next band keeps its four windows even when empty.
+		for (const window of ['Today', 'This week', 'Next week', 'Later']) {
+			await expect(page.getByRole('heading', { name: window, exact: true })).toBeVisible();
+		}
+
+		// Label rails: Review and Authorization stay separately labeled groups.
+		await expect(page.getByRole('heading', { name: 'Plan reviews' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Authorization / verification' })).toBeVisible();
 	});
 
 	test('serves every primary Work v3 destination', async ({ page, baseURL }) => {

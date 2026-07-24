@@ -1,5 +1,11 @@
 import type { PageServerLoad } from './$types.js';
-import { computeQueue, materialRecentChanges, startWork3 } from '$lib/server/work3/index.js';
+import {
+	changedRecentlySummary,
+	computeDueNext,
+	computeQueue,
+	materialRecentChanges,
+	startWork3
+} from '$lib/server/work3/index.js';
 
 /** Work overview (doc 05): the smallest set of actions that can materially
  * advance Work, plus the material-recent-changes feed. */
@@ -9,6 +15,8 @@ export const load: PageServerLoad = async ({ depends }) => {
 	const queue = await computeQueue();
 	return {
 		queue,
+		dueNext: computeDueNext(),
+		recentSummary: changedRecentlySummary(),
 		recentChanges: materialRecentChanges(15)
 	};
 };

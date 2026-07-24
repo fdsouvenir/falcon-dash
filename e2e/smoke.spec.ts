@@ -21,7 +21,7 @@ test('desktop shell smoke', async ({ page, baseURL }, testInfo) => {
 	await expect(moduleNavigation.getByRole('button', { name: 'Vault' })).toBeVisible();
 	await expect(moduleNavigation.getByRole('button', { name: 'Channels' })).toBeVisible();
 	await expect(moduleNavigation.getByRole('button', { name: 'Labs' })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Work' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 });
 
 test('mobile shell smoke', async ({ page, baseURL }, testInfo) => {
