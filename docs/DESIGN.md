@@ -1,6 +1,6 @@
 # Design System: Falcon Dash
 
-> Authored 2026-07-24 with the Stitch `taste-design` methodology, replacing the accidental "generic dark dashboard" direction. This is the single source of truth for Falcon Dash's visual language. Proposed — pending Fred's approval; the Work module adopts it first, other modules follow per page pass.
+> Authored 2026-07-24 with the Stitch `taste-design` methodology, replacing the accidental "generic dark dashboard" direction. **Approved by Fred 2026-07-24** (via the Stitch render in project "Falcon Dash Work", stitch.withgoogle.com/projects/14770508551040756389). This is the single source of truth for Falcon Dash's visual language; global tokens adopted in `src/app.css`, Work module first, other modules follow per page pass (#344).
 
 ## 1. Visual Theme & Atmosphere
 
