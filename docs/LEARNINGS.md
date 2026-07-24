@@ -145,3 +145,10 @@ _(Add architectural and design decisions here as they are made.)_
 - **2026-07-24 (Codex):** Work v3 mobile command forms should not render every legal action inline. `CommandBar` switches at the shared `isMobile` threshold to one sticky action bar and one focus-trapped `BottomSheet`; failed-form recovery must match command, target id, and preset payload values so only the owning row reopens when Needs Resolution contains repeated command types.
 - **2026-07-24 (Codex):** Playwright can see SSR-rendered Bits UI controls before Svelte hydration attaches their interaction state. Before testing a `CollapsibleTrigger`, wait for its client-added `aria-controls` value; otherwise a synthetically successful click can land before hydration and leave the disclosure closed. Work acceptance fixtures should include their search marker in the FTS body column, not only the title, when asserting snippet highlighting.
 - **2026-08-04 (Claude):** Visibility pass (#345): README had drifted badly post-v3 — it documented a Docker/ghcr deployment (no Dockerfile or image-publish workflow exists; publish.yml ships the npm package to GitHub Packages), a `/ws` Vite proxy (the browser now talks same-origin `/api/gateway/events|rpc|proxy` to the server-side gateway client), Chat as the default route (`/` redirects to `/work`), and an `openclaw-canvas-bridge/` directory that never made it into this repo (the gateway-side plugin lives at `~/.openclaw/extensions/falcon-dash-plugin/`, versioned source in `gateway-plugin/`). Also note OpenClaw links should point at the public `github.com/openclaw/openclaw`, not `fdsouvenir/openclaw`. When docs mention infra (Docker, workflows), verify the artifact actually exists in-repo before trusting the doc.
+
+## Playwright clicks vs Svelte hydration (2026-07-24)
+
+A `click()` immediately after `goto()` can land before SvelteKit hydration finishes, so JS-driven
+components (bits-ui Collapsible triggers) silently ignore it. Playwright's assertion retry does NOT
+re-click. Fix: wrap the click + state assertion in `expect(async () => { ... }).toPass()` so the
+click itself retries (see e2e/work-overview.spec.ts "In motion" toggle).
