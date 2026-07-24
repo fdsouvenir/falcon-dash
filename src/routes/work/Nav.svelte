@@ -3,10 +3,10 @@
 	import { resolve } from '$app/paths';
 
 	const destinations = [
-		{ href: resolve('/work'), label: 'Mission Control', exact: true },
+		{ href: resolve('/work'), label: 'Work', exact: true },
 		{ href: resolve('/work/projects'), label: 'Projects', exact: false },
 		{ href: resolve('/work/needs-resolution'), label: 'Needs Resolution', exact: false },
-		{ href: resolve('/work/automata'), label: 'Automata', exact: false },
+		{ href: resolve('/work/automations'), label: 'Automations', exact: false },
 		{ href: resolve('/work/browse'), label: 'Browse', exact: false }
 	];
 

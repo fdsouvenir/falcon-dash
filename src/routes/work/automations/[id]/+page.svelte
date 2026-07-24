@@ -71,18 +71,18 @@
 	}
 </script>
 
-<svelte:head><title>{automaton.name} — Automaton</title></svelte:head>
+<svelte:head><title>{automaton.name} — Automations</title></svelte:head>
 
 <div class="mx-auto max-w-6xl space-y-5">
 	<PageHeader
-		eyebrow="Automaton"
+		eyebrow="Automation"
 		title={automaton.name}
 		id={automaton.id}
 		status={automaton.lifecycle}
 		statusType="automaton_lifecycle"
 		description={automaton.summary ?? automaton.description}
-		backHref={resolve('/work/automata')}
-		backLabel="Automata"
+		backHref={resolve('/work/automations')}
+		backLabel="Automations"
 	>
 		{#snippet metadata()}
 			<div class="flex flex-wrap items-center gap-2 pt-1">
@@ -108,7 +108,7 @@
 			The restoration created a new paused runtime object:
 			<a
 				class="falcon-focus touch-target font-mono font-semibold underline underline-offset-4"
-				href={resolve('/work/automata/[id]', { id: restoredId })}
+				href={resolve('/work/automations/[id]', { id: restoredId })}
 			>
 				{restoredId}
 			</a>
@@ -171,7 +171,7 @@
 				{:else}
 					<EmptyState
 						title="No native Runs"
-						description="OpenClaw has not returned Run history for this Automaton."
+						description="OpenClaw has not returned Run history for this automation."
 					/>
 				{/if}
 			</Section>
@@ -185,7 +185,7 @@
 				{:else}
 					<EmptyState
 						title="No Falcon events"
-						description="No Work lifecycle event has been recorded for this Automaton."
+						description="No Work lifecycle event has been recorded for this automation."
 					/>
 				{/if}
 			</Section>
@@ -208,7 +208,7 @@
 
 			{#if automaton.lifecycle === 'deleted'}
 				<Section
-					title="Restore deleted Automaton"
+					title="Restore deleted Automation"
 					description="Recreate a new paused OpenClaw object from the retained snapshot."
 					accent="warning"
 				>

@@ -8,8 +8,8 @@ const labelByType: Record<string, string> = {
 	change: 'Change',
 	change_request: 'Change',
 	finding: 'Finding',
-	automaton: 'Automaton',
-	automation: 'Automaton',
+	automaton: 'Automation',
+	automation: 'Automation',
 	project: 'Project',
 	phase: 'Phase',
 	milestone: 'Milestone',
@@ -34,7 +34,7 @@ export function workHref(type: string, id: string): string {
 	}
 	if (type === 'finding') return resolve('/work/findings/[id]', { id });
 	if (type === 'automaton' || type === 'automation') {
-		return resolve('/work/automata/[id]', { id });
+		return resolve('/work/automations/[id]', { id });
 	}
 	if (type === 'project') return resolve('/work/projects/[id]', { id });
 	return resolve(`/work/browse?type=${encodeURIComponent(type)}&q=${encodeURIComponent(id)}`);

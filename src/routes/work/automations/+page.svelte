@@ -46,12 +46,12 @@
 	}
 </script>
 
-<svelte:head><title>Automata — Work</title></svelte:head>
+<svelte:head><title>Automations — Work</title></svelte:head>
 
 <div class="mx-auto max-w-6xl space-y-5">
 	<PageHeader
 		eyebrow="OpenClaw runtime"
-		title="Automata"
+		title="Automations"
 		description="Live automation configuration, health, scheduling, restoration, and native Run history."
 	/>
 
@@ -62,7 +62,7 @@
 		>
 			<p class="font-semibold">OpenClaw runtime unreachable</p>
 			<p class="mt-1 text-[length:var(--text-label)]">
-				Automaton health and scheduling could not be read: {data.runtimeError}
+				Automation health and scheduling could not be read: {data.runtimeError}
 			</p>
 		</div>
 	{/if}
@@ -90,7 +90,7 @@
 	>
 		{#if automata.length === 0}
 			<EmptyState
-				title={data.runtimeError ? 'Inventory unavailable' : 'No Automata'}
+				title={data.runtimeError ? 'Inventory unavailable' : 'No automations'}
 				description={data.runtimeError
 					? 'The runtime must be reachable before Falcon can render the live inventory.'
 					: 'No OpenClaw automation objects currently exist.'}
@@ -99,7 +99,7 @@
 			<div class="divide-y divide-outline-variant/60">
 				{#each automata as automaton (automaton.id)}
 					<a
-						href={resolve('/work/automata/[id]', { id: automaton.id })}
+						href={resolve('/work/automations/[id]', { id: automaton.id })}
 						class="falcon-focus touch-target grid gap-3 rounded-[var(--md-sys-shape-corner-medium)] px-2 py-4 hover:bg-surface-container-high md:grid-cols-[minmax(0,1fr)_minmax(11rem,auto)] md:items-center"
 					>
 						<div class="min-w-0">

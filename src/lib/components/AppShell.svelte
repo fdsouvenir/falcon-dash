@@ -15,9 +15,7 @@
 		LockKeyhole,
 		MessageSquareText,
 		Search,
-		Settings,
-		ShieldCheck,
-		TerminalSquare
+		Settings
 	} from '@lucide/svelte';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
@@ -101,11 +99,11 @@
 		<button
 			type="button"
 			onclick={() => navigate('/work')}
-			class="falcon-focus mb-8 flex h-10 w-10 items-center justify-center rounded-lg border border-primary/35 bg-primary text-sm font-bold text-primary-foreground shadow-lg shadow-primary/10 transition hover:bg-primary/90"
-			aria-label="Work"
-			title="Work"
+			class="falcon-focus mb-8 flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg transition hover:opacity-90"
+			aria-label="Falcon Dash"
+			title="Falcon Dash"
 		>
-			<ShieldCheck class="h-5 w-5" />
+			<img src="/icon-192.png" alt="Falcon Dash" class="h-10 w-10 rounded-lg" />
 		</button>
 
 		<div class="flex flex-1 flex-col items-center gap-3">
@@ -157,11 +155,10 @@
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-3">
 			<div class="flex items-center gap-2 md:hidden">
-				<ShieldCheck class="h-5 w-5 text-primary" />
-				<span class="text-xs font-bold text-primary"> Falcon </span>
+				<img src="/icon-192.png" alt="" class="h-5 w-5 rounded" />
+				<span class="text-xs font-bold text-primary"> Falcon Dash </span>
 			</div>
 			<div class="hidden items-center gap-3 md:flex">
-				<TerminalSquare class="h-4 w-4 text-on-surface-variant" />
 				<h1 class="truncate text-[18px] font-semibold leading-6 tracking-normal text-primary">
 					{activeModule.title}
 				</h1>

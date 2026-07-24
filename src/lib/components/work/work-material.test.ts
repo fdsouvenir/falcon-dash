@@ -189,7 +189,7 @@ describe('Work UI material guardrails', () => {
 
 	it('routes automaton mutations through the confirmation-aware form', () => {
 		const automaton = readFileSync(
-			new URL('../../../routes/work/automata/[id]/+page.svelte', import.meta.url),
+			new URL('../../../routes/work/automations/[id]/+page.svelte', import.meta.url),
 			'utf-8'
 		);
 		expect(automaton).toContain('<CommandForm');
@@ -228,7 +228,7 @@ describe('Work UI material guardrails', () => {
 			new URL('../../../routes/work/projects/+page.svelte', import.meta.url)
 		);
 		const automata = readFileSync(
-			new URL('../../../routes/work/automata/+page.svelte', import.meta.url)
+			new URL('../../../routes/work/automations/+page.svelte', import.meta.url)
 		);
 
 		expect(commandBar).toContain('BottomSheet');

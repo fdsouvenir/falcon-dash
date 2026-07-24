@@ -4,7 +4,7 @@ const workDestinations = [
 	{ path: '/work', heading: 'Mission Control' },
 	{ path: '/work/projects', heading: 'Projects' },
 	{ path: '/work/needs-resolution', heading: 'Needs Resolution' },
-	{ path: '/work/automata', heading: 'Automata' },
+	{ path: '/work/automations', heading: 'Automata' },
 	{ path: '/work/browse', heading: 'Browse' }
 ] as const;
 

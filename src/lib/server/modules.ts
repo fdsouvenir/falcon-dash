@@ -27,7 +27,13 @@ export const FALCON_DASH_MODULES: FalconDashModule[] = [
 			'Work v3: semantic-command engine, governance, Automatons, aggregates, and the falcon CLI.',
 		primary: true,
 		status: 'active',
-		routes: ['/work', '/work/projects', '/work/needs-resolution', '/work/automata', '/work/browse'],
+		routes: [
+			'/work',
+			'/work/projects',
+			'/work/needs-resolution',
+			'/work/automations',
+			'/work/browse'
+		],
 		apiRoutes: [
 			'/api/v3/commands',
 			'/api/v3/objects',

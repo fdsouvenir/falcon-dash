@@ -166,7 +166,7 @@ test.describe('Work v3 rendered acceptance', () => {
 		await expect(page.getByRole('heading', { name: 'Authorizations', exact: true })).toBeVisible();
 		await expect(page.getByText('never execution authority', { exact: false })).toBeVisible();
 
-		await visit('/work/automata');
+		await visit('/work/automations');
 		await expect(page.getByRole('heading', { name: 'Automata', exact: true })).toBeVisible();
 		await expect(
 			page.getByRole('heading', { name: 'Runtime inventory', exact: true })
