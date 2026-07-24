@@ -355,7 +355,11 @@
 	</div>
 
 	<!-- Overflow sheet -->
-	<BottomSheet open={overflowSheetOpen} onclose={() => (overflowSheetOpen = false)}>
+	<BottomSheet
+		open={overflowSheetOpen}
+		onclose={() => (overflowSheetOpen = false)}
+		label="Job actions"
+	>
 		<div class="pb-4">
 			{#if overflowTarget}
 				<h3 class="mb-3 text-[length:var(--text-card-title)] font-medium text-white">
@@ -387,7 +391,11 @@
 	</BottomSheet>
 
 	<!-- Delete confirmation -->
-	<BottomSheet open={deleteSheetOpen} onclose={() => (deleteSheetOpen = false)}>
+	<BottomSheet
+		open={deleteSheetOpen}
+		onclose={() => (deleteSheetOpen = false)}
+		label="Delete job confirmation"
+	>
 		<div class="pb-4">
 			<h3 class="text-[length:var(--text-card-title)] font-semibold text-white">Delete Job</h3>
 			<p class="mt-2 text-[length:var(--text-body)] text-status-muted">

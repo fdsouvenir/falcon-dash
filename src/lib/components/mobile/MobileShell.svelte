@@ -44,13 +44,13 @@
 
 	<BottomTabBar onmore={() => (moreOpen = true)} />
 
-	<BottomSheet open={moreOpen} onclose={() => (moreOpen = false)}>
+	<BottomSheet open={moreOpen} onclose={() => (moreOpen = false)} label="More navigation">
 		<MoreSheet onclose={() => (moreOpen = false)} />
 	</BottomSheet>
 
 	<MobileNotificationSheet open={notificationsOpen} onclose={() => (notificationsOpen = false)} />
 
-	<BottomSheet open={approvalsSheetOpen} onclose={() => {}}>
+	<BottomSheet open={approvalsSheetOpen} onclose={() => {}} label="Execution approval">
 		{#if approvals.length > 0}
 			<ExecApprovalPrompt
 				approval={approvals[0]}

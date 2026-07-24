@@ -27,6 +27,16 @@ This document captures Falcon Dash frontend constraints that should stay stable 
 - Use the MD3-compatible aliases in `src/app.css` for shape, typography, motion, and semantic color
   while keeping Falcon's own palette. Shared buttons use full-radius silhouettes and cards use
   tonal elevation instead of default drop shadows.
+- Use the shared `Input`, `Textarea`, `Select`, and `Field` primitives for operator forms. `Field`
+  owns label, hint, error, and `aria-describedby` IDs; pass its snippet context through to the
+  nested control so required and invalid states remain native and accessible. `Input` is for
+  value-based text, numeric, color, and date/time controls; use a dedicated choice, toggle, or file
+  control for checkbox, radio, and file inputs.
+- Use the shared `Tabs` primitive for small in-page view switches. It renders a useful default
+  panel during SSR and supports arrow, Home, and End keys.
+- Use `ConfirmDialog` for destructive, terminal, authority-granting, and execution actions. It
+  uses a native dialog on desktop and the focus-trapped `BottomSheet` modal on mobile, and it locks
+  dismissal and repeat submission while an asynchronous action is pending.
 
 ## Shell Model
 

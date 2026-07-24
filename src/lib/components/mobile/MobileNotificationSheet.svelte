@@ -52,7 +52,7 @@
 	}
 </script>
 
-<BottomSheet {open} {onclose} maxHeight="70vh">
+<BottomSheet {open} {onclose} maxHeight="70vh" label="Notifications">
 	<div class="flex items-center justify-between pb-3">
 		<h2 class="text-sm font-semibold text-white">
 			Notifications

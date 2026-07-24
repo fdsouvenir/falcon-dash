@@ -1,22 +1,59 @@
+<script module lang="ts">
+	let openSheetCount = 0;
+
+	function lockBody() {
+		openSheetCount += 1;
+		document.body.classList.add('sheet-open');
+	}
+
+	function unlockBody() {
+		openSheetCount = Math.max(0, openSheetCount - 1);
+		if (openSheetCount === 0) document.body.classList.remove('sheet-open');
+	}
+</script>
+
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 
 	let {
 		open,
 		onclose,
 		children,
-		maxHeight = '80vh'
+		maxHeight = '80vh',
+		label
 	}: {
 		open: boolean;
 		onclose: () => void;
 		children: Snippet;
 		maxHeight?: string;
+		label: string;
 	} = $props();
 
 	let sheetEl: HTMLDivElement | undefined = $state();
 	let translateY = $state(0);
 	let dragging = $state(false);
 	let startY = 0;
+	let priorFocus: HTMLElement | null = null;
+
+	const focusableSelector = [
+		'a[href]',
+		'button:not([disabled])',
+		'input:not([disabled])',
+		'select:not([disabled])',
+		'textarea:not([disabled])',
+		'[tabindex]:not([tabindex="-1"])'
+	].join(',');
+
+	function tabbableElements(): HTMLElement[] {
+		if (!sheetEl) return [];
+		return Array.from(sheetEl.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+			(element) =>
+				element.tabIndex >= 0 &&
+				!(element instanceof HTMLInputElement && element.type === 'hidden') &&
+				!element.closest('[hidden], [aria-hidden="true"]') &&
+				element.getClientRects().length > 0
+		);
+	}
 
 	function handlePointerDown(e: PointerEvent) {
 		dragging = true;
@@ -44,13 +81,65 @@
 		onclose();
 	}
 
-	$effect(() => {
-		if (open) {
-			document.body.classList.add('sheet-open');
-		} else {
-			document.body.classList.remove('sheet-open');
+	function isTopmostSheet(): boolean {
+		const sheets = document.querySelectorAll<HTMLElement>('[data-bottom-sheet="true"]');
+		return sheets[sheets.length - 1] === sheetEl;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (!isTopmostSheet()) return;
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			onclose();
+			return;
 		}
-		return () => document.body.classList.remove('sheet-open');
+		if (event.key !== 'Tab' || !sheetEl) return;
+		const focusable = tabbableElements();
+		if (focusable.length === 0) {
+			event.preventDefault();
+			sheetEl.focus();
+			return;
+		}
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		if (!active || active === sheetEl || !sheetEl.contains(active) || !focusable.includes(active)) {
+			event.preventDefault();
+			(event.shiftKey ? last : first).focus();
+		} else if (event.shiftKey && active === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && active === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
+
+	function handleFocusin(event: FocusEvent) {
+		if (!sheetEl || !isTopmostSheet()) return;
+		const target = event.target;
+		if (target instanceof Node && sheetEl.contains(target)) return;
+		(tabbableElements()[0] ?? sheetEl).focus();
+	}
+
+	$effect(() => {
+		if (!open) return;
+		lockBody();
+		priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		document.addEventListener('keydown', handleKeydown, true);
+		document.addEventListener('focusin', handleFocusin, true);
+		void tick().then(() => {
+			const first = tabbableElements()[0];
+			(first ?? sheetEl)?.focus();
+		});
+		return () => {
+			unlockBody();
+			document.removeEventListener('keydown', handleKeydown, true);
+			document.removeEventListener('focusin', handleFocusin, true);
+			priorFocus?.focus();
+			priorFocus = null;
+		};
 	});
 </script>
 
@@ -69,6 +158,11 @@
 		style="max-height: {maxHeight}; transform: translateY({translateY}px); transition: {dragging
 			? 'none'
 			: 'transform 0.2s ease-out'};"
+		role="dialog"
+		aria-modal="true"
+		aria-label={label}
+		tabindex="-1"
+		data-bottom-sheet="true"
 	>
 		<!-- Drag handle -->
 		<div

@@ -46,4 +46,37 @@ describe('Falcon Material foundation', () => {
 		expect(card).toContain('shadow-none');
 		expect(card).not.toContain('shadow-sm');
 	});
+
+	it('keeps form controls tokenized and focus-visible', () => {
+		for (const path of [
+			'./input/input.svelte',
+			'./textarea/textarea.svelte',
+			'./select/select.svelte'
+		]) {
+			const control = source(path);
+			expect(control).toContain('bg-surface-container');
+			expect(control).toContain('rounded-[var(--md-sys-shape-corner-small)]');
+			expect(control).toContain('falcon-focus');
+			expect(control).not.toMatch(/(?:bg|text|border)-(?:blue|emerald|red|amber|sky)-\d/);
+		}
+	});
+
+	it('uses semantic modal surfaces on desktop and mobile', () => {
+		const dialog = source('./confirm-dialog/confirm-dialog.svelte');
+
+		expect(dialog).toContain('<dialog');
+		expect(dialog).toContain('BottomSheet');
+		expect(dialog).toContain('bg-surface-container');
+		expect(dialog).toContain('shadow-none');
+		expect(dialog).not.toContain('shadow-sm');
+	});
+
+	it('gives tabs keyboard and ARIA semantics', () => {
+		const tabs = source('./tabs/tabs.svelte');
+
+		expect(tabs).toContain('role="tablist"');
+		expect(tabs).toContain("'ArrowLeft', 'ArrowRight'");
+		expect(tabs).toContain("event.key === 'ArrowRight'");
+		expect(tabs).toContain('aria-selected');
+	});
 });
