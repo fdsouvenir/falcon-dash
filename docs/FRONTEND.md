@@ -54,7 +54,7 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   `.falcon-focus` fallbacks.
 - Work v3 navigation belongs to `src/routes/work/+layout.svelte`; destination pages must not render
   their own copies of the Work navigation.
-- Mission Control leads with four linked queue totals, then uses compact Work rows and tonal
+- The Work overview is inbox-first: prioritized Work rows with counts inline in section headings, and tonal
   sections for priority-ordered drill-downs. Clamp long queue explanations, keep Review visually
   separate from Authorization/Verification, and use the shared keyboard-operable Tabs for waiting
   parties rather than rendering two competing first-level panels.
@@ -68,7 +68,7 @@ This document captures Falcon Dash frontend constraints that should stay stable 
 - Browse type tabs are navigation links so the selected type survives SSR, reload, and sharing.
   Search snippets must be tokenized and highlighted as text rather than injected as HTML. Keep
   terminal and archived rows available behind a native disclosure.
-- Automata render lifecycle, health, and Run outcome through separate tone maps. Native Runs are
+- Automations render lifecycle, health, and Run outcome through separate tone maps. Native Runs are
   responsive rows rather than a desktop-only table, runtime unavailability is a visible health
   banner, and restoration owns a dedicated section on deleted records.
 

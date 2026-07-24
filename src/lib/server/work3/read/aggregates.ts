@@ -197,7 +197,7 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 		})
 		.filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-	// Unhealthy Automata (live gateway; unreachable runtime is itself the news).
+	// Unhealthy automations (live gateway; unreachable runtime is itself the news).
 	let unhealthyAutomata: Array<Record<string, unknown>>;
 	try {
 		const jobs = await getCronGateway().list();

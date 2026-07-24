@@ -10,17 +10,17 @@ default; `/` redirects to `/work`.
 
 The Work shell keeps five destinations available on every Work page:
 
-- **Mission Control** — the executive action queue and material recent changes.
+- **Work** — the overview inbox: what needs your call, what is at risk, what is in motion, and recent activity.
 - **Projects** — the portfolio and each Project's route, proof, current work, and history.
 - **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring a human.
-- **Automata** — live OpenClaw automation configuration, health, scheduling, and Run history.
+- **Automations** — live OpenClaw automation configuration, health, scheduling, and Run history.
 - **Browse** — search and filters across existing Work and knowledge objects.
 
 Creation is agent-driven. Browse does not provide generic create forms. Project-local Phase and
 Milestone composers are the limited exception because they shape an existing Project's route and
 proof. Work v3 does not include an in-product agent composer.
 
-## Mission Control
+## Work overview
 
 The first row answers four questions: what needs your call, what is at risk, what an agent can act
 on, and what is waiting. Each total links to its detailed section and shows the mix of Work types.
@@ -29,7 +29,7 @@ The detailed queue keeps Review separate from Authorization and Verification. Wa
 between agent handoffs and external dependencies. Every empty section gives a definitive state,
 and bounded queues link to Browse for the remaining items.
 
-Mission Control refreshes its queue after Work events while the page is open. If the live stream is
+The overview refreshes its queue after Work events while the page is open. If the live stream is
 temporarily unavailable, the current page remains usable and a normal navigation or reload gets the
 latest state.
 
@@ -73,7 +73,7 @@ Each Work type has a distinct detail experience rather than a generic record car
   next work, and risk flags. Route manages ordered Phases. Proof distinguishes work that merely
   contributes from terminal, source-backed satisfaction assertions and explicit authority
   waivers. Current work groups Tasks, Questions, Decisions, and Change Requests by Phase.
-- Automata operate on the same OpenClaw-backed object and show runtime unavailability as a health
+- Automations operate on the same OpenClaw-backed object and show runtime unavailability as a health
   error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
   pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and
   restore a deleted snapshot as a new paused runtime object.

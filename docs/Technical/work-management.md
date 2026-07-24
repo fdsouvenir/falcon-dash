@@ -195,7 +195,7 @@ one active reconciliation session per root project, and a max-projects-per-sweep
 
 ## Work v3 Operator UI
 
-The Work v3 route shell exposes Mission Control, Projects, Needs Resolution, Automata, and Browse.
+The Work v3 route shell exposes the Work overview, Projects, Needs Resolution, Automations, and Browse.
 Detail routes issue semantic commands through a shared manifest-driven form; they never patch
 lifecycle fields directly. Structured command failures preserve submitted values, date/time form
 values are normalized to epoch milliseconds at the UI adapter boundary, and nullable fields use
@@ -280,7 +280,7 @@ current Project route; same-type commands remain bound to the route object, and 
 Milestone creation payloads must name that same route Project. Project history merges Project,
 Phase, Milestone, assigned Work, attached Plan, Review, Authorization, and proof-relationship
 events into one bounded ledger timeline and classifies authority acts with the same server helper
-as Mission Control. Project- and Phase-attached Plans and their Reviews are static Project history
+as the Work overview. Project- and Phase-attached Plans and their Reviews are static Project history
 subjects. Work-attached governance subjects are time-bounded by their audited Project
 assignment intervals: the ledger includes both assignment boundaries, preserves history after Work
 leaves, and never imports events from before Work joined or after it left. Derived Project mutations
@@ -302,10 +302,10 @@ manifest membership before target routing, preserves the canonical `unknown_comm
 rejects unrelated targetless commands posted through detail routes. Archived Projects also reject
 child Phase, Milestone, and proof-relationship mutations server-side until restoration.
 
-Mission Control consumes the server-computed queue buckets directly. Each bucket reports `total`,
+The Work overview consumes the server-computed queue buckets directly. Each bucket reports `total`,
 `by_type`, and at most eight compact `items`; `by_type` is computed from the full bucket before the
 item bound is applied. The combined `at_risk` bucket deduplicates object identities across blocked
-risk, unhealthy Automata, and reconciliation before computing either total or type counts. The page
+risk, unhealthy Automations, and reconciliation before computing either total or type counts. The page
 declares the `work3:queue` dependency and debounces invalidation of that dependency from
 `/api/work3/events`, with silent degradation when EventSource is unavailable.
 

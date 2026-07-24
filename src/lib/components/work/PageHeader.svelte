@@ -26,7 +26,7 @@
 		statusType = 'task',
 		description,
 		backHref = resolve('/work'),
-		backLabel = 'Mission Control',
+		backLabel = 'Work',
 		metadata,
 		actions
 	}: Props = $props();

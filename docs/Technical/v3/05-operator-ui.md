@@ -2,6 +2,8 @@
 
 > Consolidated from approved contract [#330](https://github.com/fdsouvenir/falcon-dash/issues/330) on 2026-07-22. Implementation tracked in #330.
 
+> **Naming note (2026-07-24, per Fred's direction in #344):** the shipped destination labels are plain product names — "Mission Control" ships as **Work** (the module's overview/index) and "Automata" ships as **Automations** (`/work/automations`). This doc keeps the original contract names below; the semantics are unchanged, only surface naming. The overview also shipped inbox-first (prioritized item lists with counts inline in headings) rather than hero stat tiles; the queue-bucket contract is unaffected.
+
 ## Objective
 
 Build a human-first operator surface for the approved v3 Work model without flattening every object into one queue.
