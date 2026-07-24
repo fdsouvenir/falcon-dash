@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { EmptyState, Section, Timeline, WorkItemRow } from '$lib/components/work/index.js';
 	import {
-		EmptyState,
-		Section,
-		StatTile,
-		Timeline,
-		WorkItemRow
-	} from '$lib/components/work/index.js';
+		Collapsible,
+		CollapsibleContent,
+		CollapsibleTrigger
+	} from '$lib/components/ui/collapsible/index.js';
 	import { Tabs } from '$lib/components/ui/tabs/index.js';
-	import { typeLabel } from '$lib/work3/hrefs.js';
 	import { connectWorkQueueLive } from '$lib/work3/live.js';
 	import type { PageData } from './$types.js';
 
@@ -54,7 +52,13 @@
 	let { data }: { data: PageData } = $props();
 	const queue = $derived(data.queue as unknown as Record<string, QueueBucket>);
 	const browseHref = resolve('/work/browse');
-	const waiting = $derived(combineBuckets(queue.waiting_on_agent, queue.waiting_on_external));
+	const atRisk = $derived(
+		combineBuckets(queue.blocked_risk, queue.unhealthy_automata, queue.needs_reconciliation)
+	);
+	const waitingTotal = $derived(queue.waiting_on_agent.total + queue.waiting_on_external.total);
+	const governanceTotal = $derived(
+		queue.awaiting_review.total + queue.changes_needing_authorization_or_verification.total
+	);
 	const recentEvents = $derived(
 		(data.recentChanges as unknown as RecentChange[]).map((change) => ({
 			id: change.id,
@@ -67,6 +71,7 @@
 		}))
 	);
 	let waitingTab = $state('agent');
+	let inMotionOpen = $state(false);
 
 	onMount(() => connectWorkQueueLive());
 
@@ -84,16 +89,6 @@
 		};
 	}
 
-	function breakdown(bucket: QueueBucket): string {
-		const parts = Object.entries(bucket.by_type)
-			.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-			.map(([type, count]) => {
-				const label = typeLabel(type).toLowerCase();
-				return `${count} ${label}${count === 1 ? '' : 's'}`;
-			});
-		return parts.join(' · ') || 'No queued work';
-	}
-
 	function itemStatus(item: QueueItem): string | undefined {
 		return item.status ?? item.execution_state;
 	}
@@ -103,7 +98,7 @@
 	}
 </script>
 
-{#snippet bucketList(bucket: QueueBucket, emptyTitle: string, emptyDescription: string)}
+{#snippet bucketList(bucket: QueueBucket, emptyTitle: string)}
 	{#if bucket.items.length}
 		<div class="-my-2">
 			{#each bucket.items as item, index (item.id ?? index)}
@@ -126,247 +121,126 @@
 			{/if}
 		</div>
 	{:else}
-		<EmptyState title={emptyTitle} description={emptyDescription} />
+		<EmptyState title={emptyTitle} compact />
 	{/if}
 {/snippet}
 
-<svelte:head><title>Mission Control — Work v3</title></svelte:head>
+<svelte:head><title>Work — Falcon Dash</title></svelte:head>
 
-<div class="mx-auto max-w-6xl space-y-6">
-	<header class="space-y-2 border-b border-outline-variant pb-5">
-		<p
-			class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
-		>
-			Operator cockpit
-		</p>
-		<h1
-			class="text-[length:var(--md-sys-typescale-headline-medium-size)] font-semibold leading-tight text-on-surface"
-		>
-			Mission Control
-		</h1>
-		<p class="max-w-3xl text-[length:var(--text-body)] leading-relaxed text-on-surface-variant">
-			The smallest set of calls, risks, and next actions that can materially advance Work.
-		</p>
-	</header>
-
-	<section aria-label="Queue summary" class="grid grid-cols-2 gap-3 xl:grid-cols-4">
-		<StatTile
-			label="Needs your call"
-			value={queue.needs_fred.total}
-			breakdown={breakdown(queue.needs_fred)}
-			description="Decisions, questions, and outputs waiting on you."
-			href="#needs-fred"
-			tone="warning"
-		/>
-		<StatTile
-			label="At risk"
-			value={queue.at_risk.total}
-			breakdown={breakdown(queue.at_risk)}
-			description="Blocked work, unhealthy automation, and reconciliation gaps."
-			href="#at-risk"
-			tone="danger"
-		/>
-		<StatTile
-			label="Agent can act"
-			value={queue.actionable_now.total}
-			breakdown={breakdown(queue.actionable_now)}
-			description="Owned work that can advance without a human call."
-			href="#agent-can-act"
-			tone="active"
-		/>
-		<StatTile
-			label="Waiting"
-			value={waiting.total}
-			breakdown={breakdown(waiting)}
-			description="Work waiting on an agent or an external party."
-			href="#waiting"
-			tone="muted"
-		/>
-	</section>
+<div class="mx-auto max-w-5xl space-y-5">
+	<h1 class="sr-only">Work</h1>
 
 	<Section
-		id="needs-fred"
-		title="Needs Fred"
-		description="Authority, knowledge, or review needed from the operator."
+		id="needs-your-call"
+		title="Needs your call"
+		count={queue.needs_fred.total}
 		accent="warning"
 	>
-		{@render bucketList(
-			queue.needs_fred,
-			'Nothing needs your call',
-			'No Decisions, Questions, or reviewed outputs are waiting on you.'
-		)}
+		{@render bucketList(queue.needs_fred, 'Nothing needs your call.')}
 	</Section>
 
-	<Section
-		id="at-risk"
-		title="At-risk breakdown"
-		description="The combined risk total, separated by the kind of intervention it needs."
-		accent="danger"
-	>
-		<nav aria-label="At-risk queues" class="grid gap-2 sm:grid-cols-3">
-			<a
-				href="#blocked-risk"
-				class="falcon-focus touch-target flex items-center justify-between rounded-[var(--md-sys-shape-corner-medium)] bg-surface-container-high px-4 py-3 text-on-surface hover:text-primary"
-			>
-				<span class="font-semibold">Blocked work</span>
-				<span class="font-mono">{queue.blocked_risk.total}</span>
-			</a>
-			<a
-				href="#automation-health"
-				class="falcon-focus touch-target flex items-center justify-between rounded-[var(--md-sys-shape-corner-medium)] bg-surface-container-high px-4 py-3 text-on-surface hover:text-primary"
-			>
-				<span class="font-semibold">Automation health</span>
-				<span class="font-mono">{queue.unhealthy_automata.total}</span>
-			</a>
-			<a
-				href="#reconciliation"
-				class="falcon-focus touch-target flex items-center justify-between rounded-[var(--md-sys-shape-corner-medium)] bg-surface-container-high px-4 py-3 text-on-surface hover:text-primary"
-			>
-				<span class="font-semibold">Reconciliation</span>
-				<span class="font-mono">{queue.needs_reconciliation.total}</span>
-			</a>
-		</nav>
+	<Section id="at-risk" title="At risk" count={atRisk.total} accent="danger">
+		{@render bucketList(atRisk, 'Nothing at risk.')}
 	</Section>
 
-	<Section
-		id="blocked-risk"
-		title="Blocked risk"
-		description="Explicit blockers on work that would otherwise be actionable."
-		accent="danger"
-	>
-		{@render bucketList(
-			queue.blocked_risk,
-			'No blocked risk',
-			'No active blockers are preventing actionable Work.'
-		)}
-	</Section>
-
-	<Section
-		id="governance"
-		title="Governance"
-		description="Reviews evaluate work; Authorization and Verification govern whether changes may proceed."
-		accent="purple"
-	>
-		<div class="grid gap-4 lg:grid-cols-2">
-			<section
-				class="rounded-[var(--md-sys-shape-corner-medium)] border border-status-info/45 bg-surface-container-high p-4"
-				aria-labelledby="awaiting-review-title"
-			>
-				<h3 id="awaiting-review-title" class="font-semibold text-on-surface">Awaiting Review</h3>
-				<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
-					Submitted Plan revisions awaiting evaluation. Review is not execution authority.
-				</p>
-				<div class="mt-3">
-					{@render bucketList(
-						queue.awaiting_review,
-						'No Reviews waiting',
-						'Every submitted Plan revision has a Review disposition.'
-					)}
-				</div>
-			</section>
-			<section
-				class="rounded-[var(--md-sys-shape-corner-medium)] border border-status-warning/45 bg-surface-container-high p-4"
-				aria-labelledby="authorization-verification-title"
-			>
-				<h3 id="authorization-verification-title" class="font-semibold text-on-surface">
-					Needs Authorization / Verification
-				</h3>
-				<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
-					Change controls that must be satisfied before execution or closeout.
-				</p>
-				<div class="mt-3">
-					{@render bucketList(
-						queue.changes_needing_authorization_or_verification,
-						'No governance gates waiting',
-						'No Change currently needs Authorization or Verification.'
-					)}
-				</div>
-			</section>
-		</div>
-	</Section>
-
-	<Section
-		id="waiting"
-		title="Waiting"
-		description="Separate agent handoffs from dependencies outside the agent system."
-	>
-		<Tabs
-			items={[
-				{ value: 'agent', label: 'Agent', count: queue.waiting_on_agent.total },
-				{ value: 'external', label: 'External', count: queue.waiting_on_external.total }
-			]}
-			bind:value={waitingTab}
-			label="Waiting queue"
-		>
-			{#snippet children(activeTab)}
-				{#if activeTab === 'agent'}
-					{@render bucketList(
-						queue.waiting_on_agent,
-						'No agent handoffs waiting',
-						'No Work is waiting on another agent or bot.'
-					)}
-				{:else}
-					{@render bucketList(
-						queue.waiting_on_external,
-						'No external dependencies waiting',
-						'No Work is waiting on a person, vendor, event, or external system.'
-					)}
+	{#if governanceTotal > 0}
+		<Section id="governance" title="Governance" count={governanceTotal} accent="purple">
+			<div class="grid gap-4 lg:grid-cols-2">
+				{#if queue.awaiting_review.total > 0}
+					<section aria-labelledby="awaiting-review-title">
+						<h3 id="awaiting-review-title" class="mb-2 font-medium text-on-surface">
+							Awaiting review
+							<span class="font-normal text-on-surface-variant">
+								({queue.awaiting_review.total})
+							</span>
+						</h3>
+						{@render bucketList(queue.awaiting_review, 'No reviews waiting.')}
+					</section>
 				{/if}
-			{/snippet}
-		</Tabs>
-	</Section>
+				{#if queue.changes_needing_authorization_or_verification.total > 0}
+					<section aria-labelledby="authorization-verification-title">
+						<h3 id="authorization-verification-title" class="mb-2 font-medium text-on-surface">
+							Needs authorization or verification
+							<span class="font-normal text-on-surface-variant">
+								({queue.changes_needing_authorization_or_verification.total})
+							</span>
+						</h3>
+						{@render bucketList(
+							queue.changes_needing_authorization_or_verification,
+							'No gates waiting.'
+						)}
+					</section>
+				{/if}
+			</div>
+		</Section>
+	{/if}
 
-	<Section
-		id="agent-can-act"
-		title="Agent can act"
-		description="Unblocked owned tasks ready to advance now."
-		accent="info"
-	>
-		{@render bucketList(
-			queue.actionable_now,
-			'No agent-ready Work',
-			'No owned Task is currently ready or in progress without a blocker.'
-		)}
-	</Section>
+	<Collapsible bind:open={inMotionOpen}>
+		<section
+			class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container shadow-none"
+			aria-label="In motion"
+		>
+			<h2 class="m-0">
+				<CollapsibleTrigger
+					class="falcon-focus touch-target flex w-full items-center justify-between px-4 py-4 text-left sm:px-5"
+				>
+					<span class="font-semibold text-on-surface">
+						In motion
+						<span class="ml-1.5 font-normal text-on-surface-variant">
+							({queue.actionable_now.total} agent · {waitingTotal} waiting)
+						</span>
+					</span>
+					<span class="text-[length:var(--text-label)] font-semibold text-primary">
+						{inMotionOpen ? 'Collapse' : 'Expand'}
+					</span>
+				</CollapsibleTrigger>
+			</h2>
+			<CollapsibleContent>
+				<div class="space-y-5 border-t border-outline-variant/70 p-4 sm:p-5">
+					<section aria-labelledby="agent-can-act-title">
+						<h3 id="agent-can-act-title" class="mb-2 font-medium text-on-surface">
+							Agent can act
+							<span class="font-normal text-on-surface-variant">
+								({queue.actionable_now.total})
+							</span>
+						</h3>
+						{@render bucketList(queue.actionable_now, 'No agent-ready work.')}
+					</section>
+					<section aria-labelledby="waiting-title">
+						<h3 id="waiting-title" class="mb-2 font-medium text-on-surface">
+							Waiting
+							<span class="font-normal text-on-surface-variant">({waitingTotal})</span>
+						</h3>
+						<Tabs
+							items={[
+								{ value: 'agent', label: 'Agent', count: queue.waiting_on_agent.total },
+								{ value: 'external', label: 'External', count: queue.waiting_on_external.total }
+							]}
+							bind:value={waitingTab}
+							label="Waiting queue"
+						>
+							{#snippet children(activeTab)}
+								{#if activeTab === 'agent'}
+									{@render bucketList(queue.waiting_on_agent, 'Nothing waiting on an agent.')}
+								{:else}
+									{@render bucketList(
+										queue.waiting_on_external,
+										'Nothing waiting on an external party.'
+									)}
+								{/if}
+							{/snippet}
+						</Tabs>
+					</section>
+				</div>
+			</CollapsibleContent>
+		</section>
+	</Collapsible>
 
-	<Section
-		id="automation-health"
-		title="Automation health"
-		description="Automata with failing runs or an unreachable runtime."
-		accent="danger"
-	>
-		{@render bucketList(
-			queue.unhealthy_automata,
-			'Automation is healthy',
-			'All reachable Automata report healthy execution.'
-		)}
-	</Section>
-
-	<Section
-		id="reconciliation"
-		title="Reconciliation"
-		description="Structural inconsistencies that need the operator or an agent to restore coherence."
-		accent="warning"
-	>
-		{@render bucketList(
-			queue.needs_reconciliation,
-			'No reconciliation needed',
-			'Project next actions and evidence relationships are internally consistent.'
-		)}
-	</Section>
-
-	<Section
-		id="recent-changes"
-		title="Material recent changes"
-		description="Meaningful state transitions and authority acts, excluding routine edit noise."
-	>
+	<Section id="recent-activity" title="Recent activity">
 		{#if recentEvents.length}
 			<Timeline events={recentEvents} />
 		{:else}
-			<EmptyState
-				title="No material changes yet"
-				description="Material command history will appear here as Work advances."
-			/>
+			<EmptyState title="No activity yet." compact />
 		{/if}
 	</Section>
 </div>

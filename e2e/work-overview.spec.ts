@@ -1,46 +1,40 @@
 import { expect, test } from './fixtures';
 
 const workDestinations = [
-	{ path: '/work', heading: 'Mission Control' },
+	{ path: '/work', heading: 'Work' },
 	{ path: '/work/projects', heading: 'Projects' },
 	{ path: '/work/needs-resolution', heading: 'Needs Resolution' },
-	{ path: '/work/automations', heading: 'Automata' },
+	{ path: '/work/automations', heading: 'Automations' },
 	{ path: '/work/browse', heading: 'Browse' }
 ] as const;
 
 test.describe('Work v3 cutover', () => {
-	test('renders Mission Control with the operator queue and v3 navigation', async ({
+	test('renders the Work overview inbox with the operator queue and v3 navigation', async ({
 		page,
 		baseURL
 	}) => {
 		const response = await page.goto(`${baseURL ?? ''}/work`);
 
 		expect(response?.status()).toBe(200);
-		await expect(page).toHaveTitle('Mission Control — Work v3');
-		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
+		await expect(page).toHaveTitle('Work — Falcon Dash');
+		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 
 		for (const destination of workDestinations) {
 			await expect(page.getByRole('link', { name: destination.heading }).first()).toBeVisible();
 		}
 
-		for (const bucket of [
-			'Needs Fred',
-			'Blocked risk',
-			'Governance',
-			'Awaiting Review',
-			'Needs Authorization / Verification',
-			'Waiting',
-			'Agent can act',
-			'Automation health',
-			'Reconciliation',
-			'Material recent changes'
-		]) {
-			await expect(page.getByRole('heading', { name: bucket, exact: true })).toBeVisible();
+		for (const bucket of [/^Needs your call/, /^At risk/, /^Recent activity/]) {
+			await expect(page.getByRole('heading', { name: bucket })).toBeVisible();
 		}
 
-		for (const summary of ['Needs your call', 'At risk']) {
-			await expect(page.getByText(summary, { exact: true })).toBeVisible();
-		}
+		const inMotion = page.getByRole('button', { name: /^In motion/ });
+		await expect(inMotion).toBeVisible();
+		// Retry the click until hydration makes the collapsible interactive.
+		await expect(async () => {
+			await inMotion.click();
+			await expect(inMotion).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
+		}).toPass();
+		await expect(page.getByRole('heading', { name: /^Agent can act/ })).toBeVisible();
 		await expect(page.getByRole('tab', { name: /Agent/ })).toBeVisible();
 		await expect(page.getByRole('tab', { name: /External/ })).toBeVisible();
 	});
@@ -102,14 +96,6 @@ test.describe('Work v3 cutover', () => {
 			);
 			expect(hasHorizontalOverflow, destination.path).toBe(false);
 		}
-
-		await page.goto(`${baseURL ?? ''}/work`);
-		const statTiles = page.locator('[data-work-stat-tile]');
-		await expect(statTiles).toHaveCount(4);
-		const first = await statTiles.nth(0).boundingBox();
-		const second = await statTiles.nth(1).boundingBox();
-		expect(first?.y).toBe(second?.y);
-		expect(first?.x).not.toBe(second?.x);
 
 		await page.goto(`${baseURL ?? ''}/work/browse`);
 		const search = await page.getByRole('textbox', { name: 'Search terms' }).boundingBox();

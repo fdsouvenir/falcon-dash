@@ -1,14 +1,14 @@
 import { expect, test } from './fixtures';
 
 test.describe('issue #315 default operator workspace', () => {
-	test('redirects the homepage to Work v3 Mission Control', async ({ gotoHome, page }) => {
+	test('redirects the homepage to the Work overview', async ({ gotoHome, page }) => {
 		await gotoHome();
 
 		await expect(page).toHaveURL(/\/work$/);
-		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Needs Fred' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Agent can act' })).toBeVisible();
-		await expect(page.getByText('Material recent changes')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Needs your call/ })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^At risk/ })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Recent activity/ })).toBeVisible();
 	});
 
 	test('stays usable at mobile width', async ({ gotoHome, page }) => {
@@ -16,7 +16,7 @@ test.describe('issue #315 default operator workspace', () => {
 
 		await gotoHome();
 
-		await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 		for (const module of ['Work', 'Vault', 'Channels', 'Labs']) {
 			await expect(page.getByRole('link', { name: module, exact: true }).last()).toBeVisible();
 		}

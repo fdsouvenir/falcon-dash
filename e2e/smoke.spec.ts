@@ -33,7 +33,7 @@ test('mobile shell smoke', async ({ page, baseURL }, testInfo) => {
 	for (const module of ['Work', 'Vault', 'Channels', 'Labs']) {
 		await expect(page.getByRole('link', { name: module, exact: true }).last()).toBeVisible();
 	}
-	await expect(page.getByRole('heading', { name: 'Mission Control' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 });
 
 test('settings route smoke', async ({ page, baseURL }, testInfo) => {

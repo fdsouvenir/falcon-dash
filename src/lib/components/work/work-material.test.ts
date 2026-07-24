@@ -242,8 +242,11 @@ describe('Work UI material guardrails', () => {
 		expect(pageHeader).toContain('break-all');
 		expect(layout.toString()).toContain('var(--safe-left)');
 		expect(layout.toString()).toContain('var(--safe-right)');
-		for (const source of [overview, projects, automata]) {
+		for (const source of [projects, automata]) {
 			expect(source.toString()).toContain('grid grid-cols-2 gap-3');
 		}
+		// The overview is inbox-first: no stat tiles, counts live inline in section headings.
+		expect(overview.toString()).not.toContain('StatTile');
+		expect(overview.toString()).toContain('sr-only');
 	});
 });

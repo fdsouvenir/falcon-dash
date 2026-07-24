@@ -3,6 +3,7 @@
 
 	interface Props {
 		title: string;
+		count?: number;
 		description?: string;
 		eyebrow?: string;
 		accent?: 'default' | 'info' | 'warning' | 'danger' | 'purple';
@@ -11,7 +12,16 @@
 		children: Snippet;
 	}
 
-	let { title, description, eyebrow, accent = 'default', id, actions, children }: Props = $props();
+	let {
+		title,
+		count,
+		description,
+		eyebrow,
+		accent = 'default',
+		id,
+		actions,
+		children
+	}: Props = $props();
 
 	const accentClass = $derived(
 		{
@@ -39,7 +49,11 @@
 					{eyebrow}
 				</p>
 			{/if}
-			<h2 class="font-semibold text-on-surface">{title}</h2>
+			<h2 class="font-semibold text-on-surface">
+				{title}{#if count !== undefined}<span class="ml-1.5 font-normal text-on-surface-variant"
+						>({count})</span
+					>{/if}
+			</h2>
 			{#if description}
 				<p class="mt-1 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant">
 					{description}

@@ -159,9 +159,9 @@
 				<span class="text-xs font-bold text-primary"> Falcon Dash </span>
 			</div>
 			<div class="hidden items-center gap-3 md:flex">
-				<h1 class="truncate text-[18px] font-semibold leading-6 tracking-normal text-primary">
+				<p class="truncate text-[18px] font-semibold leading-6 tracking-normal text-primary">
 					{activeModule.title}
-				</h1>
+				</p>
 			</div>
 			<div class="hidden h-5 w-px bg-outline-variant lg:block"></div>
 			{#if activeModule.label === 'Work'}

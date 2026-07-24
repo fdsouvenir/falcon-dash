@@ -57,7 +57,7 @@ async function seedAcceptanceData(
 			summary: `${marker} is a realistic high-density acceptance fixture.`,
 			desired_outcome: `${marker} verifies every Work v3 operator surface at desktop and mobile widths.`,
 			why_it_matters: 'Operators need trustworthy triage, governance, and evidence.',
-			scope_included: ['Mission Control', 'Project Ledger', 'Governance surfaces'],
+			scope_included: ['Work overview', 'Project Ledger', 'Governance surfaces'],
 			scope_excluded: ['In-product agent composer'],
 			owner: 'agent:e2e',
 			completion_criteria: [{ id: 'ui', text: 'All rendered acceptance checks pass' }]
@@ -140,8 +140,8 @@ test.describe('Work v3 rendered acceptance', () => {
 		};
 
 		await visit('/work');
-		await expect(page.getByRole('heading', { name: 'Mission Control', exact: true })).toBeVisible();
-		await expect(page.locator('[data-work-stat-tile]')).toHaveCount(4);
+		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Needs your call/ })).toBeVisible();
 
 		await visit(`/work/projects/${data.project.id}`);
 		await expect(
@@ -167,7 +167,7 @@ test.describe('Work v3 rendered acceptance', () => {
 		await expect(page.getByText('never execution authority', { exact: false })).toBeVisible();
 
 		await visit('/work/automations');
-		await expect(page.getByRole('heading', { name: 'Automata', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Automations', exact: true })).toBeVisible();
 		await expect(
 			page.getByRole('heading', { name: 'Runtime inventory', exact: true })
 		).toBeVisible();
