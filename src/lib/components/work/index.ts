@@ -4,6 +4,7 @@ export { default as CommandFeedback } from './CommandFeedback.svelte';
 export { default as CommandForm } from './CommandForm.svelte';
 export { default as DataRow } from './DataRow.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
+export { default as FocusChips } from './FocusChips.svelte';
 export { default as PageHeader } from './PageHeader.svelte';
 export { default as Section } from './Section.svelte';
 export { default as SourceRefs } from './SourceRefs.svelte';

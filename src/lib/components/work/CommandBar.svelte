@@ -8,6 +8,16 @@
 		reason?: string;
 	}
 
+	interface ChoiceField {
+		label?: string;
+		options: Array<{
+			value: string;
+			label: string;
+			description?: string;
+			recommended?: boolean;
+		}>;
+	}
+
 	interface Props {
 		commands: Array<string | CommandAvailability>;
 		targetId?: string;
@@ -18,6 +28,10 @@
 		forceRequiredByCommand?: Record<string, string[]>;
 		requireAnyOfByCommand?: Record<string, string[]>;
 		requireExactlyOneOfByCommand?: Record<string, string[]>;
+		presetValuesByCommand?: Record<string, Record<string, string>>;
+		choiceFieldsByCommand?: Record<string, Record<string, ChoiceField>>;
+		confirmationSubjectByCommand?: Record<string, string>;
+		submitLabelByCommand?: Record<string, string>;
 	}
 
 	let {
@@ -29,7 +43,11 @@
 		title = 'Available actions',
 		forceRequiredByCommand = {},
 		requireAnyOfByCommand = {},
-		requireExactlyOneOfByCommand = {}
+		requireExactlyOneOfByCommand = {},
+		presetValuesByCommand = {},
+		choiceFieldsByCommand = {},
+		confirmationSubjectByCommand = {},
+		submitLabelByCommand = {}
 	}: Props = $props();
 	const commandBarId = $props.id();
 	const commandBarTitleId = `${commandBarId}-title`;
@@ -67,6 +85,10 @@
 						forceRequired={forceRequiredByCommand[item.command] ?? []}
 						requireAnyOf={requireAnyOfByCommand[item.command] ?? []}
 						requireExactlyOneOf={requireExactlyOneOfByCommand[item.command] ?? []}
+						presetValues={presetValuesByCommand[item.command] ?? {}}
+						choiceFields={choiceFieldsByCommand[item.command] ?? {}}
+						confirmationSubject={confirmationSubjectByCommand[item.command]}
+						submitLabel={submitLabelByCommand[item.command]}
 					/>
 				</div>
 			{/each}

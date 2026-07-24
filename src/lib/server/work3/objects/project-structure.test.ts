@@ -945,6 +945,23 @@ describe('typed relationships', () => {
 		expect(detail.milestones).toEqual([]);
 	});
 
+	it('list projection exposes target and update timestamps for portfolio focus', async () => {
+		const targetAt = Date.now() + 7 * 86_400_000;
+		const projectId = await createProject({ target_at: targetAt });
+		const { getObjectReader } = await import('../read/registry.js');
+		const listing = await getObjectReader('project').list({
+			view: 'list',
+			filters: { archived: 'all' },
+			limit: 50,
+			offset: 0
+		});
+
+		expect(listing.items.find((item) => item.id === projectId)).toMatchObject({
+			target_at: targetAt,
+			updated_at: expect.any(Number)
+		});
+	});
+
 	it('full Project projections include typed current work across all four Work families', async () => {
 		const projectId = await activeProject();
 		const taskId = await projectTask(projectId, 'Implement the route');

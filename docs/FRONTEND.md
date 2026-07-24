@@ -53,6 +53,19 @@ This document captures Falcon Dash frontend constraints that should stay stable 
   sections for priority-ordered drill-downs. Clamp long queue explanations, keep Review visually
   separate from Authorization/Verification, and use the shared keyboard-operable Tabs for waiting
   parties rather than rendering two competing first-level panels.
+- Projects and Browse use the shared `FocusChips` URL contract. Definitions live in
+  `src/lib/work3/focus.ts`, show counts, preserve the current query string, and declare either a
+  reader-backed filter or a predicate over list-projection fields. Routes must not recreate those
+  predicates or infer missing server state.
+- Needs Resolution uses four distinct expandable Sections for Questions, Decisions, Reviews, and
+  Authorizations. The expanded region may host a scoped `CommandBar`; Review controls stay
+  information-toned while Authorization controls stay warning-toned.
+- Browse type tabs are navigation links so the selected type survives SSR, reload, and sharing.
+  Search snippets must be tokenized and highlighted as text rather than injected as HTML. Keep
+  terminal and archived rows available behind a native disclosure.
+- Automata render lifecycle, health, and Run outcome through separate tone maps. Native Runs are
+  responsive rows rather than a desktop-only table, runtime unavailability is a visible health
+  banner, and restoration owns a dedicated section on deleted records.
 
 ## Shell Model
 

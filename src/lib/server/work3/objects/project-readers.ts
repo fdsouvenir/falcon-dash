@@ -127,6 +127,8 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 		},
 		current_next_item_id: row.current_next_item_id,
 		current_next_valid: isValidProjectNextItem(db, row.id, row.current_next_item_id),
+		target_at: row.target_at,
+		updated_at: row.updated_at,
 		archived: row.archived_at !== null,
 		version: row.version
 	};

@@ -34,6 +34,22 @@ Falcon Dash v3 has five primary Work destinations:
 
 Object types keep distinct detail experiences. The UI must not flatten everything into generic cards or one universal status board.
 
+### Portfolio, focus, and Browse
+
+- The Projects index leads with a portfolio pulse and health distribution. Focuses are `Blocked`,
+  `At risk`, `No next move`, `Overdue`, and `Stale`; the Project reader supplies health,
+  current-next validity, target time, and update time.
+- Browse type selection and focus selection are URL-driven. Counted focus chips cover Tasks
+  (`Overdue`, `Blocked`, `Waiting on you`, `In review`, `Ready`), Projects, Changes
+  (`Needs authorization`, `Verification pending`, `Failed`), and Finding validity.
+- A focus definition declares either a reader-known filter or a predicate over fields already
+  present in the list projection. The client does not reconstruct lifecycle, health,
+  actionability, Authorization effectiveness, or reconciliation.
+- Full-text search highlights snippets without HTML injection. Search failures are visible.
+  Terminal and archived results remain inspectable in a collapsed group.
+- Browse contains no generic Task or Area creation form. Agent-driven creation remains the v3
+  workflow.
+
 ### Mission Control
 
 - Lead with the smallest set of actions that can materially advance Work.
@@ -75,6 +91,10 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 ### Human decision and approval surfaces
 
+- Needs Resolution keeps four independently labeled expandable sections: Questions, Decisions,
+  Reviews, and Authorizations. Expansion exposes a semantic command bar scoped to that exact row.
+- Review rows carry the exact submitted revision. Authorization rows carry the current Change
+  version and explain a missing prerequisite inline.
 - Question view emphasizes prompt, impact, investigation context, sources, and authoritative answer.
 - Question context is split into keyboard-operable native disclosure sections; the current answer
   keeps confidence and sources together while immutable answer revisions remain inspectable.
@@ -97,6 +117,7 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 ### Automata
 
 - The Automaton screen edits the same OpenClaw-backed object, not a mirrored Falcon configuration.
+- Lifecycle, health, and native Run outcome use distinct semantic tone maps.
 - Show paused/active/deleted lifecycle, trigger or schedule, payload summary, delivery, health, next execution, and recent native Runs.
 - Runtime unavailability or failed updates appear as operation/health errors, never drift or a fake lifecycle state.
 - Deleted Automata expose restoration history and restore to paused.

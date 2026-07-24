@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types.js';
 import { startWork3 } from '$lib/server/work3/index.js';
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
 	startWork3();
 	const projects = await getObjectReader('project').list({
 		view: 'list',
@@ -10,5 +10,9 @@ export const load: PageServerLoad = async () => {
 		limit: 100,
 		offset: 0
 	});
-	return { projects: projects.items };
+	return {
+		projects: projects.items,
+		focus: url.searchParams.get('focus'),
+		now: Date.now()
+	};
 };

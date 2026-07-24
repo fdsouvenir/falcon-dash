@@ -243,6 +243,41 @@ describe('queue buckets', () => {
 			title: 'OpenClaw runtime unreachable'
 		});
 	});
+
+	it('keeps exact Review revisions and Change versions in resolution queue rows', async () => {
+		const task = await cmd<{ id: string }>('create_task', undefined, {
+			area_id: areaId,
+			title: 'Reviewed task'
+		});
+		const plan = await cmd<{ id: string }>('create_plan', undefined, {
+			work_item_id: task.result.id,
+			title: 'Exact revision plan',
+			steps: ['Inspect']
+		});
+		await cmd('submit_plan', plan.result.id);
+		const change = await cmd<{ id: string }>('create_change', undefined, {
+			area_id: areaId,
+			title: 'Authorize exact scope',
+			scope_allowed: ['One route'],
+			targets: { routes: ['/work'] },
+			risk: { level: 'low' },
+			acceptance_criteria: [{ id: 'c1', text: 'Route works' }],
+			plan: { title: 'Change plan', steps: ['Apply'] }
+		});
+
+		const queue = await computeQueue();
+		expect(queue.awaiting_review.items.find((item) => item.id === plan.result.id)).toMatchObject({
+			revision_id: expect.any(String)
+		});
+		expect(
+			queue.changes_needing_authorization_or_verification.items.find(
+				(item) => item.id === change.result.id
+			)
+		).toMatchObject({
+			version: expect.any(Number),
+			why: expect.stringContaining('Authorization')
+		});
+	});
 });
 
 describe('brief and material feed', () => {

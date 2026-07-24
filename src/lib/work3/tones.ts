@@ -101,6 +101,25 @@ export const TONE_MAPS = {
 		unreachable: 'danger',
 		deleted: 'muted'
 	},
+	automaton_lifecycle: {
+		active: 'active',
+		paused: 'warning',
+		deleted: 'muted',
+		unknown: 'danger'
+	},
+	automaton_health: {
+		ok: 'active',
+		paused: 'muted',
+		failing: 'danger',
+		unreachable: 'danger',
+		unknown: 'muted'
+	},
+	automaton_run: {
+		ok: 'active',
+		error: 'danger',
+		skipped: 'muted',
+		unknown: 'muted'
+	},
 	priority: {
 		low: 'muted',
 		normal: 'info',

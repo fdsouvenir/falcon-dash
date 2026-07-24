@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { Work3Error } from '$lib/work3-shared/errors.js';
+import { isAgentIdentity } from '$lib/work3-shared/identity.js';
 import { getWork3Db } from '../db.js';
 import { listWork3Events } from '../eventlog.js';
 import { getCronGateway } from '../cron-gateway.js';
@@ -53,12 +54,6 @@ export function distinctQueueRows(
 		if (!rows.has(key)) rows.set(key, row);
 	}
 	return [...rows.values()];
-}
-
-/** Waiting-on classification: agent identities vs everything else. */
-function isAgentIdentity(value: string | null): boolean {
-	if (!value) return false;
-	return value.startsWith('agent') || value.startsWith('bot');
 }
 
 export async function computeQueue(db: Database.Database = getWork3Db()): Promise<Work3Queue> {
@@ -139,14 +134,20 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 		.all() as Array<Record<string, unknown> & { id: string; revision_id: string }>;
 	const awaitingReview = submittedPlans
 		.filter((plan) => reviewDisposition(db, plan.id, plan.revision_id) === 'unreviewed')
-		.map(({ id, type, title }) => ({ id, type, title, why: 'Submitted, no Review yet' }));
+		.map(({ id, type, title, revision_id }) => ({
+			id,
+			type,
+			title,
+			revision_id,
+			why: 'Submitted, no Review yet'
+		}));
 
 	// Changes lacking valid Authorization (pre-execution) or verification.
 	const openChanges = db
 		.prepare(
 			`SELECT c.entity_id AS id, c.title, c.execution_state, c.verification_state, c.plan_id,
-			        c.rollback_started_at
-			 FROM change_requests c
+			        c.rollback_started_at, e.version
+			 FROM change_requests c JOIN entities e ON e.id = c.entity_id
 			 WHERE c.execution_state IN ('not_started','failed','paused')
 			    OR (c.execution_state = 'succeeded' AND c.verification_state NOT IN ('passed','waived'))
 			    OR (c.rollback_started_at IS NOT NULL AND c.execution_state <> 'rolled_back')
@@ -187,6 +188,8 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 					type: 'change_request',
 					title: change.title,
 					execution_state: change.execution_state,
+					verification_state: change.verification_state,
+					version: change.version,
 					why: `Authorization ${authorization.state}${planReady ? '' : ' (plan not submitted)'}`
 				};
 			}

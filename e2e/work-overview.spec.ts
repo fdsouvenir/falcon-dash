@@ -59,11 +59,17 @@ test.describe('Work v3 cutover', () => {
 	test('keeps Browse search-only and agent-driven', async ({ page, baseURL }) => {
 		await page.goto(`${baseURL ?? ''}/work/browse`);
 
-		await expect(page.getByPlaceholder('Search all Work…')).toBeVisible();
+		await expect(page.getByRole('textbox', { name: 'Search terms' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'New Task' })).toHaveCount(0);
 		await expect(page.getByRole('heading', { name: 'New Area' })).toHaveCount(0);
-		await expect(page.getByText(/^Tasks \(0\)$/)).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'All indexed Work' })).toBeVisible();
+
+		await page.goto(`${baseURL ?? ''}/work/browse?type=task`);
+		await expect(page.getByRole('navigation', { name: 'Focus filters' })).toBeVisible();
+		for (const focus of ['All', 'Overdue', 'Blocked', 'Waiting on you', 'In review', 'Ready']) {
+			await expect(page.getByRole('link', { name: new RegExp(`^${focus}`) })).toBeVisible();
+		}
 	});
 
 	test('reports version 3 health and keeps the v2 Work API retired', async ({ request }) => {

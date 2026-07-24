@@ -486,6 +486,35 @@ describe('optimistic concurrency and idempotency (template §5–6)', () => {
 });
 
 describe('contradiction rules (template §7)', () => {
+	it('list projection exposes due, waiting, and blocker fields for focus filters', async () => {
+		const dueAt = Date.now() + 86_400_000;
+		const id = await taskAt('waiting', { due_at: dueAt });
+		await cmd('create_blocker', undefined, {
+			blocked_id: id,
+			source_kind: 'external',
+			source_label: 'Vendor',
+			reason: 'Vendor access is pending',
+			resolution_condition: 'Vendor grants access'
+		});
+
+		const { getObjectReader } = await import('../read/registry.js');
+		const listing = await getObjectReader('task').list({
+			view: 'list',
+			filters: {},
+			limit: 50,
+			offset: 0
+		});
+
+		expect(listing.items.find((item) => item.id === id)).toMatchObject({
+			due_at: dueAt,
+			status: 'waiting',
+			waiting_on: 'fred',
+			actionability: 'blocked',
+			blocker_summary: 'Vendor access is pending',
+			blocked_age_ms: expect.any(Number)
+		});
+	});
+
 	it('terminal transitions clear waiting metadata and invalidate active blockers atomically', async () => {
 		const id = await taskAt('waiting');
 		await cmd('create_blocker', undefined, {

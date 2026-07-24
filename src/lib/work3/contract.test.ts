@@ -25,7 +25,10 @@ const vocabularies: Array<[keyof typeof TONE_MAPS, readonly string[]]> = [
 	['plan', ['draft', 'submitted', 'superseded', 'withdrawn']],
 	['review', ['unreviewed', 'approved', 'changes_requested', 'rejected']],
 	['finding', ['current', 'superseded', 'retracted']],
-	['automaton', ['ok', 'paused', 'failing', 'unreachable', 'deleted']]
+	['automaton', ['ok', 'paused', 'failing', 'unreachable', 'deleted']],
+	['automaton_lifecycle', ['active', 'paused', 'deleted', 'unknown']],
+	['automaton_health', ['ok', 'paused', 'failing', 'unreachable', 'unknown']],
+	['automaton_run', ['ok', 'error', 'skipped', 'unknown']]
 ];
 
 describe('Work UI contract maps', () => {

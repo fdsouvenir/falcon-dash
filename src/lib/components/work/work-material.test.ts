@@ -7,15 +7,22 @@ const componentDirectory = new URL('./', import.meta.url);
 const componentSources = readdirSync(componentDirectory)
 	.filter((name) => name.endsWith('.svelte'))
 	.map((name) => ({ name, source: readFileSync(new URL(name, componentDirectory), 'utf-8') }));
+const workRouteDirectory = new URL('../../../routes/work/', import.meta.url);
+const routeSources = (readdirSync(workRouteDirectory, { recursive: true }) as string[])
+	.filter((name) => name.endsWith('.svelte'))
+	.map((name) => ({
+		name: `routes/work/${name}`,
+		source: readFileSync(new URL(name, workRouteDirectory), 'utf-8')
+	}));
 
 describe('Work UI material guardrails', () => {
-	it('uses semantic colors and restrained effects throughout the shared kit', () => {
-		for (const component of componentSources) {
-			expect(component.source, component.name).not.toMatch(
+	it('uses semantic colors and restrained effects throughout every Work surface', () => {
+		for (const surface of [...componentSources, ...routeSources]) {
+			expect(surface.source, surface.name).not.toMatch(
 				/(?:text|bg|border)-(?:blue|emerald|red|amber|sky)-\d/
 			);
-			expect(component.source, component.name).not.toContain('transition-all');
-			expect(component.source, component.name).not.toContain('shadow-sm');
+			expect(surface.source, surface.name).not.toContain('transition-all');
+			expect(surface.source, surface.name).not.toContain('shadow-sm');
 		}
 	});
 
@@ -188,5 +195,27 @@ describe('Work UI material guardrails', () => {
 		expect(automaton).toContain('<CommandForm');
 		expect(automaton).not.toContain('<form');
 		expect(automaton).not.toContain('window.confirm');
+	});
+
+	it('keeps focus, resolution, and Browse contracts centralized', () => {
+		const focusChips = componentSources.find((entry) => entry.name === 'FocusChips.svelte')?.source;
+		const browse = readFileSync(
+			new URL('../../../routes/work/browse/+page.svelte', import.meta.url)
+		);
+		const resolution = readFileSync(
+			new URL('../../../routes/work/needs-resolution/+page.svelte', import.meta.url)
+		);
+
+		expect(focusChips).toContain('focusDefinitionsForType');
+		expect(focusChips).toContain("params.set('focus', focus)");
+		expect(browse.toString()).toContain('<FocusChips');
+		expect(browse.toString()).toContain('Terminal and archived');
+		expect(browse.toString()).not.toContain('create_task');
+		expect(browse.toString()).not.toContain('create_area');
+		for (const section of ['Questions', 'Decisions', 'Reviews', 'Authorizations']) {
+			expect(resolution.toString()).toContain('title={`' + section + ' (');
+		}
+		expect(resolution.toString()).toContain('Review does not grant execution authority');
+		expect(resolution.toString()).toContain('This is not Review');
 	});
 });

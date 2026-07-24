@@ -33,6 +33,25 @@ Mission Control refreshes its queue after Work events while the page is open. If
 temporarily unavailable, the current page remains usable and a normal navigation or reload gets the
 latest state.
 
+## Portfolio and Browse
+
+Projects opens with a portfolio pulse for open, blocked, at-risk, overdue, no-next-move, and stale
+outcomes. The health strip and Project rows use reader-supplied health and progress; target and
+last-update timestamps support the date-focused views. Selecting a pulse tile or focus chip writes
+the choice to `?focus=` so the view is linkable and reload-safe.
+
+Browse is an inspection surface, not a creation surface. Type tabs cover Tasks, Questions,
+Decisions, Changes, Projects, Findings, and Areas. Types with an operator focus taxonomy show
+counted focus chips: Task timing/actionability, Project health and motion, Change Authorization/
+Verification/failure, and Finding validity. Full-text matches highlight the indexed snippet.
+Terminal and archived rows remain available in a collapsed section, and unsupported search input is
+shown as an explicit error.
+
+Needs Resolution keeps Questions, Decisions, Reviews, and Authorizations in four separate sections.
+Rows expand in place to expose semantic actions without losing queue context. A Review records an
+evaluation of an exact submitted revision; an Authorization grants exact-scope permission and is
+never implied by Review.
+
 ## Object Pages
 
 Each Work type has a distinct detail experience rather than a generic record card:
@@ -55,7 +74,9 @@ Each Work type has a distinct detail experience rather than a generic record car
   contributes from terminal, source-backed satisfaction assertions and explicit authority
   waivers. Current work groups Tasks, Questions, Decisions, and Change Requests by Phase.
 - Automata operate on the same OpenClaw-backed object and show runtime unavailability as a health
-  error, not as a fake lifecycle state.
+  error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
+  pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and
+  restore a deleted snapshot as a new paused runtime object.
 
 ## Semantic Actions
 

@@ -205,6 +205,21 @@ The client may format server projections, but it must not rederive lifecycle, he
 actionability, Authorization effectiveness, or reconciliation state. Reviews and Authorizations
 remain visually and semantically distinct.
 
+`src/lib/work3/focus.ts` is the shared operator-focus taxonomy. Each definition names either a
+reader-known filter or a predicate over list-projection fields, and `FocusChips` persists the
+selection through `?focus=` while computing counts from the same bounded result. Task list rows
+include `due_at`, waiting identity, and active-blocker summary/age. Project list rows include
+`target_at` and `updated_at` alongside reader-derived health, progress, and current-next validity.
+The `agent*`/`bot*` waiting-identity heuristic lives in `work3-shared/identity.ts` so Mission
+Control and client focus predicates cannot drift.
+
+Browse loads list projections for the selected type (or all supported searchable types), keeps
+Project archives visible for the terminal disclosure, and applies only the shared focus taxonomy.
+FTS snippets are parsed into text/highlight spans; no search result is rendered through raw HTML.
+Needs Resolution carries exact submitted Plan revision IDs into Review forms and Change envelope
+versions into Authorization forms. Its four sections post semantic commands to the owning object
+route, except targetless Review creation, which is restricted to the resolution route.
+
 Question, Decision, Change Request, Finding, and Task detail routes share the Work page header,
 semantic status badges, command feedback, command bar, source references, and immutable timeline.
 Decision outcomes are recorded through one accessible radio-card command form. Guarded Change
@@ -289,6 +304,11 @@ item bound is applied. The combined `at_risk` bucket deduplicates object identit
 risk, unhealthy Automata, and reconciliation before computing either total or type counts. The page
 declares the `work3:queue` dependency and debounces invalidation of that dependency from
 `/api/work3/events`, with silent degradation when EventSource is unavailable.
+
+Automaton lists and details are read-through views of OpenClaw. Runtime list failure becomes a
+health banner rather than an invented lifecycle. Detail controls mutate the same runtime object,
+native Runs remain separate from the Falcon Event Log, and deleted records expose restoration only
+when a retained snapshot is available; restoration creates a new paused runtime ID with lineage.
 
 ## Context Generation
 
