@@ -40,6 +40,7 @@ export default defineConfig({
 				timeout: 120_000,
 				env: {
 					...process.env,
+					CHOKIDAR_USEPOLLING: 'true',
 					FALCON_DASH_DATA_DIR: playwrightDataDir
 				}
 			}
