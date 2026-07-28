@@ -21,7 +21,7 @@ import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '
 
 let context: Work3TestContext;
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
-const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
+const person: Actor = { kind: 'person', id: 'operator', label: 'Operator' };
 
 let areaId: string;
 
@@ -29,7 +29,7 @@ const AUTHORITY = {
 	authority_source: {
 		kind: 'message',
 		ref: 'agent:main:main#msg-42',
-		label: 'Fred: go with GitHub Packages'
+		label: 'Operator: go with GitHub Packages'
 	}
 };
 
@@ -39,7 +39,7 @@ function packagePayload(overrides: Record<string, unknown> = {}) {
 		title: 'Choose the package registry',
 		prompt: 'Which registry should falcon-dash publish to?',
 		consequence_of_no_decision: 'Release pipeline stays blocked',
-		deciders: ['fred'],
+		deciders: ['operator'],
 		options: [
 			{ id: 'npm', label: 'Public npm', summary: 'Simple, public' },
 			{ id: 'ghp', label: 'GitHub Packages', summary: 'Private, integrated' }
@@ -144,7 +144,7 @@ describe('decide (authority-creating)', () => {
 		const id = await createDecision();
 		const decided = await cmd('decide', id, {
 			option_id: 'ghp',
-			rationale: 'Fred said so',
+			rationale: 'Operator said so',
 			...AUTHORITY
 		});
 		expect(decided.result).toMatchObject({ status: 'decided', option_id: 'ghp' });

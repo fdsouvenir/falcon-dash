@@ -21,14 +21,14 @@ describe('Work focus taxonomy', () => {
 	it('classifies agent identities consistently', () => {
 		expect(isAgentIdentity('agent:sidekick')).toBe(true);
 		expect(isAgentIdentity(' Bot-17 ')).toBe(true);
-		expect(isAgentIdentity('fred')).toBe(false);
+		expect(isAgentIdentity('operator')).toBe(false);
 		expect(isAgentIdentity(null)).toBe(false);
 	});
 
 	it('filters task focus from list projections', () => {
 		const items = [
 			{ id: 't1', status: 'ready', actionability: 'actionable', due_at: NOW - 1 },
-			{ id: 't2', status: 'waiting', actionability: 'waiting', waiting_on: 'fred' },
+			{ id: 't2', status: 'waiting', actionability: 'waiting', waiting_on: 'operator' },
 			{ id: 't3', status: 'waiting', actionability: 'waiting', waiting_on: 'agent:ops' },
 			{ id: 't4', status: 'in_review', actionability: 'needs_human' },
 			{ id: 't5', status: 'ready', actionability: 'blocked', blocker_summary: 'Dependency' }

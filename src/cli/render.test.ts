@@ -86,10 +86,10 @@ describe('loud unknown input', () => {
 	});
 
 	it('kebab-case flags map to snake_case fields', () => {
-		const { flags } = parseArgs(['--resume-condition', 'Fred replies'], {
+		const { flags } = parseArgs(['--resume-condition', 'Operator replies'], {
 			resume_condition: 'string'
 		});
-		expect(flags.resume_condition).toBe('Fred replies');
+		expect(flags.resume_condition).toBe('Operator replies');
 	});
 });
 

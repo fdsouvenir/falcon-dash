@@ -26,7 +26,7 @@ import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '
 
 let context: Work3TestContext;
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
-const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
+const person: Actor = { kind: 'person', id: 'operator', label: 'Operator' };
 
 let areaId: string;
 

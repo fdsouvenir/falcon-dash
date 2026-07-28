@@ -71,9 +71,9 @@ async function taskAt(status: string, payload: Record<string, unknown> = {}): Pr
 	if (status === 'ready') return id;
 	if (status === 'waiting') {
 		await transition('wait_task', id, {
-			waiting_on: 'fred',
+			waiting_on: 'operator',
 			reason: 'Needs input',
-			resume_condition: 'Fred replies'
+			resume_condition: 'Operator replies'
 		});
 		return id;
 	}
@@ -223,7 +223,7 @@ describe('start_task', () => {
 describe('wait_task / resume_task', () => {
 	it('requires structured waiting metadata', async () => {
 		const id = await taskAt('in_progress');
-		await expect(transition('wait_task', id, { waiting_on: 'fred' })).rejects.toMatchObject({
+		await expect(transition('wait_task', id, { waiting_on: 'operator' })).rejects.toMatchObject({
 			code: 'validation_failed'
 		});
 	});
@@ -231,14 +231,14 @@ describe('wait_task / resume_task', () => {
 	it('stores waiting metadata and resumes to the prior status', async () => {
 		const id = await taskAt('in_progress');
 		await transition('wait_task', id, {
-			waiting_on: 'fred',
+			waiting_on: 'operator',
 			reason: 'Needs sign-off',
-			resume_condition: 'Fred approves',
+			resume_condition: 'Operator approves',
 			follow_up_at: Date.now() + 86_400_000
 		});
 		let row = loadTask(getWork3Db(), id)!;
 		expect(row.status).toBe('waiting');
-		expect(row.waiting_on).toBe('fred');
+		expect(row.waiting_on).toBe('operator');
 		expect(row.waiting_resume_status).toBe('in_progress');
 
 		await transition('resume_task', id);
@@ -272,7 +272,7 @@ describe('wait_task / resume_task', () => {
 			resume_condition: 'y'
 		});
 		expect(repeat.noop).toBe(true);
-		expect(loadTask(getWork3Db(), id)?.waiting_on).toBe('fred');
+		expect(loadTask(getWork3Db(), id)?.waiting_on).toBe('operator');
 
 		await transition('resume_task', id);
 		const resumeAgain = await transition('resume_task', id);
@@ -432,7 +432,7 @@ describe('optimistic concurrency and idempotency (template §5–6)', () => {
 		const id = await taskAt('ready');
 		const staleVersion = versionOf(id);
 		await transition('wait_task', id, {
-			waiting_on: 'fred',
+			waiting_on: 'operator',
 			reason: 'x',
 			resume_condition: 'y'
 		});
@@ -508,7 +508,7 @@ describe('contradiction rules (template §7)', () => {
 		expect(listing.items.find((item) => item.id === id)).toMatchObject({
 			due_at: dueAt,
 			status: 'waiting',
-			waiting_on: 'fred',
+			waiting_on: 'operator',
 			actionability: 'blocked',
 			blocker_summary: 'Vendor access is pending',
 			blocked_age_ms: expect.any(Number)
@@ -520,7 +520,7 @@ describe('contradiction rules (template §7)', () => {
 		await cmd('create_blocker', undefined, {
 			blocked_id: id,
 			source_kind: 'person',
-			source_label: 'Fred',
+			source_label: 'Operator',
 			reason: 'Needs approval',
 			resolution_condition: 'Approval given'
 		});

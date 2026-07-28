@@ -393,7 +393,7 @@ describe('idempotency keys', () => {
 		// no-ops semantically because the task is already started.
 		const other = await executeCommand({
 			command: 'start_test_task',
-			actor: { kind: 'person', id: 'fred', label: 'Fred' },
+			actor: { kind: 'person', id: 'operator', label: 'Operator' },
 			target: id,
 			expected_version: 2,
 			idempotency_key: 'shared-key',

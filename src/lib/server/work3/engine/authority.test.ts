@@ -21,7 +21,7 @@ import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '
 
 let context: Work3TestContext;
 
-const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
+const person: Actor = { kind: 'person', id: 'operator', label: 'Operator' };
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
 const system: Actor = { kind: 'system', id: 'reconciler', label: 'Reconciler' };
 
@@ -112,7 +112,7 @@ describe('human authority basis', () => {
 				authority_source: {
 					kind: 'message',
 					ref: 'gateway:session/abc:msg/42',
-					summary: 'Fred: yes, go ahead'
+					summary: 'Operator: yes, go ahead'
 				}
 			}
 		});

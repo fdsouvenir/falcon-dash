@@ -28,7 +28,7 @@ import { isTerminalProjectWork } from './project-work.js';
 
 let context: Work3TestContext;
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
-const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
+const person: Actor = { kind: 'person', id: 'operator', label: 'Operator' };
 
 let areaId: string;
 
@@ -978,7 +978,7 @@ describe('typed relationships', () => {
 				title: 'Choose the operator route',
 				prompt: 'Which route should be canonical?',
 				consequence_of_no_decision: 'Navigation remains ambiguous',
-				deciders: ['fred'],
+				deciders: ['operator'],
 				options: [
 					{ id: 'ledger', label: 'Project ledger' },
 					{ id: 'browse', label: 'Browse surface' }

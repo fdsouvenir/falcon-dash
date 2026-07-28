@@ -11,7 +11,7 @@ import { ulid } from './ulid.js';
  * NEVER produce a person actor — person actorship exists only through the
  * operator UI's in-process path (person.ts). This asymmetry is the spoofing
  * fix: agent traffic is localhost and bypasses Cloudflare Access, so any
- * "no bearer = person" rule would let an agent act as Fred.
+ * "no bearer = person" rule would let an agent act as the operator.
  */
 
 const TOKEN_PREFIX = 'fd3_';

@@ -329,7 +329,7 @@ describe('per-kind resolution', () => {
 			await resolveWork3SourceRef({
 				kind: 'human_statement',
 				ref: 'standup-2026-07-22',
-				label: 'Fred: ship it this week'
+				label: 'Operator: ship it this week'
 			})
 		).toEqual({ available: true });
 	});

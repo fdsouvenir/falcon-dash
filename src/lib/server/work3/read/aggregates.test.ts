@@ -28,7 +28,7 @@ import { setupWork3TestDbs, teardownWork3TestDbs, type Work3TestContext } from '
 
 let context: Work3TestContext;
 const agent: Actor = { kind: 'agent', id: 'main', label: 'Main Agent' };
-const person: Actor = { kind: 'person', id: 'fred', label: 'Fred' };
+const person: Actor = { kind: 'person', id: 'operator', label: 'Operator' };
 
 let areaId: string;
 
@@ -79,7 +79,7 @@ describe('queue buckets', () => {
 		});
 		await cmd('ready_task', ready.result.id, { owner: 'agent:main' });
 
-		// Needs Fred: an open question and a pending decision.
+		// Needs operator: an open question and a pending decision.
 		await cmd('create_question', undefined, {
 			area_id: areaId,
 			question: 'Which host?',
@@ -90,7 +90,7 @@ describe('queue buckets', () => {
 			title: 'Pick host',
 			prompt: 'Which host?',
 			consequence_of_no_decision: 'Deploy stalls',
-			deciders: ['fred'],
+			deciders: ['operator'],
 			options: [
 				{ id: 'a', label: 'Hetzner' },
 				{ id: 'b', label: 'Fly' }
@@ -136,8 +136,8 @@ describe('queue buckets', () => {
 		const queue = await computeQueue();
 		expect(queue.actionable_now.total).toBe(1);
 		expect(queue.actionable_now.items[0]).toMatchObject({ id: ready.result.id });
-		expect(queue.needs_fred.total).toBe(2);
-		expect(queue.needs_fred.by_type).toEqual({ decision: 1, question: 1 });
+		expect(queue.needs_operator.total).toBe(2);
+		expect(queue.needs_operator.by_type).toEqual({ decision: 1, question: 1 });
 		expect(queue.waiting_on_agent.total).toBe(1);
 		expect(queue.waiting_on_external.total).toBe(1);
 		expect(queue.blocked_risk.total).toBe(1);
@@ -305,7 +305,7 @@ describe('brief and material feed', () => {
 			title: 'D',
 			prompt: 'Which?',
 			consequence_of_no_decision: 'stall',
-			deciders: ['fred'],
+			deciders: ['operator'],
 			options: [
 				{ id: 'a', label: 'A' },
 				{ id: 'b', label: 'B' }
@@ -317,8 +317,8 @@ describe('brief and material feed', () => {
 			decision.result.id,
 			{
 				option_id: 'a',
-				rationale: 'Fred said so',
-				authority_source: { kind: 'human_statement', ref: 'standup', label: 'Fred: go with A' }
+				rationale: 'Operator said so',
+				authority_source: { kind: 'human_statement', ref: 'standup', label: 'Operator: go with A' }
 			},
 			agent
 		);
@@ -425,14 +425,14 @@ describe('overview signals', () => {
 		expect(dueNext.overdue_total).toBe(1);
 	});
 
-	it('per-type needs-fred buckets report true totals past the combined row bound', async () => {
+	it('per-type needs-operator buckets report true totals past the combined row bound', async () => {
 		for (let index = 0; index < 9; index++) {
 			await cmd('create_decision', undefined, {
 				area_id: areaId,
 				title: `Decision ${index}`,
 				prompt: `Pick option for ${index}?`,
 				consequence_of_no_decision: 'stall',
-				deciders: ['fred'],
+				deciders: ['operator'],
 				options: [
 					{ id: 'a', label: 'A', summary: 'Option A' },
 					{ id: 'b', label: 'B', summary: 'Option B' }
@@ -445,13 +445,13 @@ describe('overview signals', () => {
 
 		const queue = await computeQueue();
 		// Combined bucket is bounded at 8 decision-first rows…
-		expect(queue.needs_fred.total).toBe(11);
-		expect(queue.needs_fred.items.length).toBe(8);
+		expect(queue.needs_operator.total).toBe(11);
+		expect(queue.needs_operator.items.length).toBe(8);
 		// …but the per-type buckets never report a false empty.
-		expect(queue.needs_fred_decisions.total).toBe(9);
-		expect(queue.needs_fred_questions.total).toBe(2);
-		expect(queue.needs_fred_questions.items.length).toBe(2);
-		expect(queue.needs_fred_review.total).toBe(0);
+		expect(queue.needs_operator_decisions.total).toBe(9);
+		expect(queue.needs_operator_questions.total).toBe(2);
+		expect(queue.needs_operator_questions.items.length).toBe(2);
+		expect(queue.needs_operator_review.total).toBe(0);
 	});
 
 	it('changed-recently counts distinct entities with material events, typed', async () => {

@@ -46,9 +46,9 @@ describe('object read registry', () => {
 		expect(() => validateReadOptions(reader, options({ fields: ['title', 'bogus'] }))).toThrowError(
 			expect.objectContaining({ code: 'validation_failed' })
 		);
-		expect(() => validateReadOptions(reader, options({ filters: { owner: 'fred' } }))).toThrowError(
-			expect.objectContaining({ code: 'validation_failed' })
-		);
+		expect(() =>
+			validateReadOptions(reader, options({ filters: { owner: 'operator' } }))
+		).toThrowError(expect.objectContaining({ code: 'validation_failed' }));
 		expect(() =>
 			validateReadOptions(reader, options({ fields: ['title'], filters: { status: 'ready' } }))
 		).not.toThrow();

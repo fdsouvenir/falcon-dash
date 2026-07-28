@@ -158,9 +158,11 @@ Run has no Falcon Dash lifecycle or artifact. OpenClaw exclusively owns Run crea
 
 This section supersedes the earlier cross-cutting authority matrix. Falcon Dash v3 has one human and one agent and no real identity-management, organizational-role, or authentication-policy system. It must not simulate IAM through owner, reviewer, decider, authorizer, executor, Project, or Area roles.
 
-OpenClaw/Falcon Dash access control remains the actual security boundary. created_by, decided_by, reviewed_by, and authorized_by are attribution/provenance fields, not permission principals. The server enforces object state, revision matching, transition guards, required Reviews, and valid Authorization artifacts before governed execution. Fred approval sources provide authority provenance; the agent is the normal executor.
+OpenClaw/Falcon Dash access control remains the actual security boundary. created_by, decided_by, reviewed_by, and authorized_by are attribution/provenance fields, not permission principals. The server enforces object state, revision matching, transition guards, required Reviews, and valid Authorization artifacts before governed execution. Operator approval sources provide authority provenance; the agent is the normal executor.
 
 Future multi-user IAM requires an explicit identity/session/organization design and is outside v3. Current cross-cutting enforcement is state and Authorization validation, not RBAC.
+
+> **Amendment (2026-07-28, #344) — the actor id names the credential, not a human.** Following from the no-IAM rule above, Falcon Dash does not store any operator's personal identity. `actor.kind` is the load-bearing field: it selects the authority basis in `humanAuthorityPreGuard` (agent ⇒ resolvable `authority_source`; person ⇒ the operator-UI session is itself the basis; system ⇒ never), and it is derived from the transport, never caller-supplied — that asymmetry is the anti-spoofing rule in doc 06. `actor.id` and `actor.label` are attribution only: nothing in the engine treats them as principals. The person actor is therefore fixed as `operator`, meaning "arrived through the operator UI"; a proxy-verified identity (e.g. Cloudflare Access) surfaces only as the display label. Which human, and why, belongs to the fields that can carry it — agent-supplied `owner`/`deciders`/`waiting_on`/`answerable_by` and `source_refs`. The queue buckets renamed accordingly: `needs_fred*` → `needs_operator*`.
 
 ## Approved: structured command errors
 

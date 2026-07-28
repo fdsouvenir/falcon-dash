@@ -8,10 +8,19 @@ import { executeCommand, type CommandInput } from './engine/execute.js';
  * UI's server-side path — SvelteKit form actions / server routes calling the
  * engine in-process, protected by SvelteKit's origin check. There is no
  * session store and no network API that can mint a person actor.
+ *
+ * The actor id names the *credential*, not a human: `operator` means "this
+ * command arrived through the operator UI". Falcon Dash has no IAM and does
+ * not pretend otherwise — `actor.kind` is the load-bearing part (it selects
+ * the authority basis in humanAuthorityPreGuard), while id and label are
+ * attribution only (doc 02: provenance fields, never permission principals).
+ * Which human it was, and why, lives in the fields that can actually carry it:
+ * agent-supplied `owner`/`deciders`/`waiting_on` and `source_refs`. A proxy-
+ * verified identity (Cloudflare Access) is surfaced as the display label.
  */
 
-const PERSON_ID = 'fred';
-const DEFAULT_LABEL = 'Fred';
+const PERSON_ID = 'operator';
+const DEFAULT_LABEL = 'Operator';
 
 export function personActorFromRequest(event: Pick<RequestEvent, 'request'>): Actor {
 	const accessEmail = event.request.headers.get('cf-access-authenticated-user-email');
