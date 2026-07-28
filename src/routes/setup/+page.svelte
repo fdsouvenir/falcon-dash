@@ -8,6 +8,8 @@
 	});
 </script>
 
+<h1 class="sr-only">Setup</h1>
+
 <div class="flex h-screen items-center justify-center bg-surface-0">
 	<p class="text-sm text-status-muted">Redirecting to settings…</p>
 </div>

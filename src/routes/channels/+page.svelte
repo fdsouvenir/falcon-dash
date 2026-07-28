@@ -76,6 +76,8 @@
 	}
 </script>
 
+<h1 class="sr-only">Channels</h1>
+
 <svelte:head>
 	<title>Channels - Falcon Dash</title>
 </svelte:head>

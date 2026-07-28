@@ -88,6 +88,8 @@
 	}
 </script>
 
+<h1 class="sr-only">Secrets</h1>
+
 <svelte:head>
 	<title>Secret Providers - Falcon Dash</title>
 </svelte:head>

@@ -43,6 +43,8 @@
 	});
 </script>
 
+<h1 class="sr-only">Operations</h1>
+
 <svelte:head>
 	<title>Ops Observer - Falcon Dash</title>
 </svelte:head>

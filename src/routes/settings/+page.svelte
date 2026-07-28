@@ -12,6 +12,8 @@
 	});
 </script>
 
+<h1 class="sr-only">Labs</h1>
+
 <div class="h-full">
 	{#if mobile}
 		<MobileSettingsPage />

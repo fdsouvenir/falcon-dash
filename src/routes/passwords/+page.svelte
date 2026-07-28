@@ -64,6 +64,8 @@
 	}
 </script>
 
+<h1 class="sr-only">Vault</h1>
+
 <svelte:head>
 	<title>Passwords - Falcon Dash</title>
 </svelte:head>
