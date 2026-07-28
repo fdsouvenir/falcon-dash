@@ -2,7 +2,7 @@
 
 > Consolidated from approved contract [#330](https://github.com/fdsouvenir/falcon-dash/issues/330) on 2026-07-22. Implementation tracked in #330.
 
-> **Naming note (2026-07-24, per Fred's direction in #344):** the shipped destination labels are plain product names — "Mission Control" ships as **Work** (the module's overview/index) and "Automata" ships as **Automations** (`/work/automations`). This doc keeps the original contract names below; the semantics are unchanged, only surface naming. The overview also shipped inbox-first (prioritized item lists with counts inline in headings) rather than hero stat tiles; the queue-bucket contract is unaffected.
+> **Naming note (2026-07-24, #344):** the shipped destination labels are plain product names — "Mission Control" ships as **Work** (the module's overview/index) and "Automata" ships as **Automations** (`/work/automations`). This doc keeps the original contract names below; the semantics are unchanged, only surface naming. The overview also shipped inbox-first (prioritized item lists with counts inline in headings) rather than hero stat tiles; the queue-bucket contract is unaffected.
 
 ## Objective
 
@@ -28,7 +28,7 @@ Rendering is not completion. Verify the real interface at target desktop and mob
 
 Falcon Dash v3 has five primary Work destinations:
 
-1. **Mission Control** — current action, needs-Fred queues, blocked risk, unhealthy Automata, and material recent changes.
+1. **Mission Control** — current action, needs-operator queues, blocked risk, unhealthy Automata, and material recent changes.
 2. **Projects** — Project ledger with outcome, current-next, Phases, Milestones, criteria, active Work, and history.
 3. **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring human attention.
 4. **Automata** — the Falcon view of live OpenClaw automations, including configuration, health, next execution, and native Run history.
@@ -58,7 +58,7 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - Lead with four drill-down totals: `Needs your call`, combined `At risk`, `Agent can act`, and
   combined `Waiting`. Each total includes the server-supplied object-type breakdown computed before
   bounded queue rows are sliced.
-- Separate `Needs Fred`, `Blocked risk`, `Governance`, `Waiting`, `Agent can act`,
+- Separate `Needs operator`, `Blocked risk`, `Governance`, `Waiting`, `Agent can act`,
   `Automation health`, and `Reconciliation` below the summary.
 - Keep `Awaiting Review` information-toned and visually distinct from warning-toned
   `Needs Authorization / Verification`; Review never implies permission to execute.
@@ -104,7 +104,7 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - A pending or deferred Decision uses one radio-card outcome form. The recommended option is
   labeled but never preselected or treated as the recorded outcome.
 - Review view shows exact subject revision, content/diff, criteria, sources, and one immutable outcome.
-- Authorization view shows exact governed subject/Plan revisions, scope, conditions, expiration/consumption, and source of Fred’s approval.
+- Authorization view shows exact governed subject/Plan revisions, scope, conditions, expiration/consumption, and source of the operator’s approval.
 - Review and Authorization must never be visually conflated.
 
 ### Change Request and Plan

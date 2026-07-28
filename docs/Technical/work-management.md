@@ -162,8 +162,9 @@ preventing duplicate active relationships.
 - `staleCleanup`
 - `blockedRisky`
 
-`waitingOnFred` is still returned as a legacy alias for older callers, but new UI, docs, and
-generated context should use operator-focused bucket names.
+> Note: the `/api/work/*` sections above document the removed v2 API and are retained only as
+> historical reference — v2 was deleted in the #342 cutover and those routes now return 404. The
+> live contract is `## Work v3 Operator UI` below plus `docs/Technical/v3/`.
 
 ## Work Integrity
 

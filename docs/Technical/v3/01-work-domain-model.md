@@ -215,7 +215,7 @@ Key invariants:
 - Blocking is represented through relationships, not a single blocked_item_id field.
 - Answering resolves applicable Question blocker links but does not silently complete related Tasks.
 
-AXI default projection: id, question, priority, answerable_by. Fred-facing projections may add impact and waiting age.
+AXI default projection: id, question, priority, answerable_by. Operator-facing projections may add impact and waiting age.
 
 ## Approved: Decision
 
@@ -248,7 +248,7 @@ Key invariants:
 - Plan review, routine Task review, and controlled Change authorization are not automatically separate Decisions.
 - Repeating the same Decision outcome is an idempotent no-op.
 
-AXI general projection: id, title, status, deciders. Fred-facing projection: id, prompt, recommendation, consequence_of_no_decision.
+AXI general projection: id, title, status, deciders. Operator-facing projection: id, prompt, recommendation, consequence_of_no_decision.
 
 ## Approved: Change Request
 

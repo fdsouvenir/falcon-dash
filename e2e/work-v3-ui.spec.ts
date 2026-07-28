@@ -72,7 +72,7 @@ async function seedAcceptanceData(
 			context: 'The package must remain scannable at high density.',
 			stakes: 'A poor choice can block the release.',
 			consequence_of_no_decision: 'The release remains blocked.',
-			deciders: ['fred'],
+			deciders: ['operator'],
 			options: [
 				{ id: 'staged', label: 'Staged rollout', summary: 'Lower risk with checkpoints.' },
 				{ id: 'direct', label: 'Direct rollout', summary: 'Faster with greater exposure.' }

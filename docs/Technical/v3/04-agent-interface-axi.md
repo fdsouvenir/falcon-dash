@@ -78,7 +78,7 @@ List defaults never include full descriptions, Plans, source payloads, histories
 `queue` and `brief` are server-computed aggregates, not client-side N+1 joins. Required buckets are:
 
 - actionable now
-- needs Fred
+- needs operator
 - waiting on agent
 - waiting on external
 - blocked risk
@@ -94,7 +94,7 @@ Every bucket provides total count and a bounded set of compact rows. Pagination 
 Session-start context is bounded and cacheable. It contains:
 
 - current high-priority actionable Work
-- decisions/answers/Reviews/Authorizations requiring Fred
+- decisions/answers/Reviews/Authorizations requiring the operator
 - material blockers and unhealthy Automata
 - recently changed relevant Work
 - exact commands for deeper context
@@ -118,8 +118,8 @@ Errors follow #327 and include stable code, message, target context, missing req
 
 ## Approved: conversational capture path
 
-Conversational capture is not a separate subsystem. Fred talks to an OpenClaw agent; the agent translates the conversation into explicit AXI commands — creation, linking, and semantic transitions. Consequences:
+Conversational capture is not a separate subsystem. The operator talks to an OpenClaw agent; the agent translates the conversation into explicit AXI commands — creation, linking, and semantic transitions. Consequences:
 
 - The AXI command surface is the only agent mutation path. There is no natural-language ingestion endpoint, shadow draft store, or automatic transcript mining.
 - Captured objects must satisfy the same creation guards as any other path. If the conversation lacks a required element (for example a second materially distinct Decision option), the agent gathers it conversationally before issuing the command, or records the gap as a Question or Task instead of manufacturing a hollow object.
-- Human statements from conversation are recorded as source_refs (message or human-statement kind) for provenance, including the human authority basis when an agent executes an authority-creating command on Fred's instruction (see the #327 actor model).
+- Human statements from conversation are recorded as source_refs (message or human-statement kind) for provenance, including the human authority basis when an agent executes an authority-creating command on the operator's instruction (see the #327 actor model).

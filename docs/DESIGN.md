@@ -1,10 +1,10 @@
 # Design System: Falcon Dash
 
-> Authored 2026-07-24 with the Stitch `taste-design` methodology, replacing the accidental "generic dark dashboard" direction. **Approved by Fred 2026-07-24** (via the Stitch render in project "Falcon Dash Work", stitch.withgoogle.com/projects/14770508551040756389). This is the single source of truth for Falcon Dash's visual language; global tokens adopted in `src/app.css`, Work module first, other modules follow per page pass (#344).
+> Authored 2026-07-24 with the Stitch `taste-design` methodology, replacing the accidental "generic dark dashboard" direction. **Approved 2026-07-24** (#344, via the Stitch render in project "Falcon Dash Work", stitch.withgoogle.com/projects/14770508551040756389). This is the single source of truth for Falcon Dash's visual language; global tokens adopted in `src/app.css`, Work module first, other modules follow per page pass (#344).
 
 ## 1. Visual Theme & Atmosphere
 
-A **flight deck for an agent fleet**: cockpit-dense (7/10), structured asymmetry (4/10), restrained fluid motion (4/10). The room is dark, warm, and calm — matte charcoal with no blue cast — and the instruments do the talking. One color owns the room: **amber means the operator**. Anything that needs Fred's hand glows raptor-gold; everything the agents handle themselves stays cool and quiet. The second voice is the terminal: every identifier, timestamp, and numeral is monospaced, because this product's native tongue is a CLI.
+A **flight deck for an agent fleet**: cockpit-dense (7/10), structured asymmetry (4/10), restrained fluid motion (4/10). The room is dark, warm, and calm — matte charcoal with no blue cast — and the instruments do the talking. One color owns the room: **amber means the operator**. Anything that needs the operator's hand glows raptor-gold; everything the agents handle themselves stays cool and quiet. The second voice is the terminal: every identifier, timestamp, and numeral is monospaced, because this product's native tongue is a CLI.
 
 The feeling to protect: _a well-run operations room at night_ — not a SaaS marketing page, not a neon "AI dashboard".
 
@@ -22,7 +22,7 @@ The feeling to protect: _a well-run operations room at night_ — not a SaaS mar
 
 ### The accent (exactly one hue, two steps)
 
-Raptor Amber is the operator's color — needs-you signals, focus rings, active nav, primary buttons, links. If it's amber, it's asking for Fred. Never used decoratively. It ships as a two-step scale (values match the approved Stitch render and `src/app.css`):
+Raptor Amber is the operator's color — needs-you signals, focus rings, active nav, primary buttons, links. If it's amber, it's asking for the operator. Never used decoratively. It ships as a two-step scale (values match the approved Stitch render and `src/app.css`):
 
 - **Raptor Amber 400** `#F7BF59` — the interactive amber on dark surfaces: `--primary`, focus rings, active nav, and ALL attention/warning states (`--status-warning` is this exact value — "warning" and "needs the operator" are the same fact).
 - **Raptor Amber 500** `#D9A441` — pressed states and containers (`--primary-container`), and the primary for a future light theme.
@@ -53,7 +53,7 @@ Each v3 Work object type has a fixed hue + Lucide glyph, rendered as a small rou
 | Area       | `LayoutGrid`          | Stone `#A29A8C`     |
 | Blocker    | `OctagonAlert`        | Signal Red (status) |
 
-The glyph tile always pairs with the mono short id (`d2`, `c8`, `t42`) — the same names Fred and the agents use in the CLI. Glyph + id + title is the universal row anatomy everywhere Work renders.
+The glyph tile always pairs with the mono short id (`d2`, `c8`, `t42`) — the same names the operator and the agents use in the CLI. Glyph + id + title is the universal row anatomy everywhere Work renders.
 
 ## 3. Typography Rules
 
@@ -92,7 +92,7 @@ The glyph tile always pairs with the mono short id (`d2`, `c8`, `t42`) — the s
 - Filled status pills scattered through dense rows; color soup (type hues outside glyph tiles).
 - Cards inside cards; three-equal-card rows; centered hero moments.
 - Meta-copy: eyebrows, taglines, object-type explanations, repeated location labels, counts stated twice ("real dashboard test", issue #344).
-- Ops jargon in UI: "operator", "cockpit", "control plane", "Mission Control", "Automata".
+- Ops jargon in user-facing copy: "operator", "cockpit", "control plane", "Mission Control", "Automata". (`operator` remains correct as an internal identifier — e.g. the person actor id — just never as a label a human reads.)
 - Emojis in UI chrome; fabricated metrics or placeholder statistics; AI copy clichés ("Seamless", "Elevate").
 - Pure black `#000000`; more than one UI accent; linear easing.
 

@@ -31,7 +31,7 @@ Actor identity is credential identity (doc 02). Two thin adapters over one engin
 
 - **`/api/v3/*` requires a bearer token, always, and only ever yields `agent` (or `system`) actors.** Per-agent tokens live in a `falcon_agent_tokens` table, hashed at rest, minted in the settings UI, and dropped as token files under the data dir so the co-resident CLI is zero-config (`FALCON_DASH_TOKEN` env overrides).
 - **Person actorship exists only through the operator UI's server-side path**: SvelteKit form actions / server routes calling the engine in-process, protected by SvelteKit's origin check, with display label taken from `Cf-Access-Authenticated-User-Email` when the Cloudflare Access header is present. No session store.
-- Rationale (the spoofing hole this closes): production traffic from agents is localhost and bypasses Cloudflare Access entirely, so any "no bearer = person" rule would let an agent issue authority-creating commands as Fred. Under this design a bearer credential can never produce a person actor, and the person path never crosses the network API.
+- Rationale (the spoofing hole this closes): production traffic from agents is localhost and bypasses Cloudflare Access entirely, so any "no bearer = person" rule would let an agent issue authority-creating commands as the operator. Under this design a bearer credential can never produce a person actor, and the person path never crosses the network API.
 
 ## HTTP API
 
