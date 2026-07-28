@@ -58,7 +58,7 @@
 
 	let { data }: { data: PageData } = $props();
 	const queue = $derived(data.queue as unknown as Record<string, QueueBucket>);
-	const dueNext = $derived(data.dueNext as unknown as QueueBucket);
+	const dueNext = $derived(data.dueNext as unknown as QueueBucket & { overdue_total: number });
 	const recentSummary = $derived(
 		data.recentSummary as { total: number; by_type: Record<string, number> }
 	);
@@ -149,7 +149,7 @@
 		if (waitingTotal) parts.push(`${waitingTotal} waiting`);
 		return parts.join(' · ') || 'Nothing at risk';
 	});
-	const overdueCount = $derived(dueNext.items.filter((item) => Number(item.due_at) < now).length);
+	const overdueCount = $derived(dueNext.overdue_total);
 	const dueBreakdown = $derived.by(() => {
 		const byType = typeBreakdown(dueNext.by_type, 'No near-term dates');
 		return overdueCount > 0 ? `${overdueCount} overdue · ${byType}` : byType;
@@ -192,29 +192,25 @@
 
 	// --- Panels ---------------------------------------------------------------
 
-	function ofType(bucket: QueueBucket, type: string): QueueItem[] {
-		return bucket.items.filter((item) => item.type === type);
-	}
-
 	const needsCallGroups = $derived.by<PanelGroup[]>(() => [
 		{
 			title: 'Decisions',
-			count: queue.needs_fred.by_type.decision ?? 0,
-			items: ofType(queue.needs_fred, 'decision'),
+			count: queue.needs_fred_decisions.total,
+			items: queue.needs_fred_decisions.items,
 			empty: 'No decisions waiting',
 			moreHref: needsResolutionHref
 		},
 		{
 			title: 'Questions',
-			count: queue.needs_fred.by_type.question ?? 0,
-			items: ofType(queue.needs_fred, 'question'),
+			count: queue.needs_fred_questions.total,
+			items: queue.needs_fred_questions.items,
 			empty: 'No open questions',
 			moreHref: needsResolutionHref
 		},
 		{
 			title: 'Review outputs',
-			count: queue.needs_fred.by_type.task ?? 0,
-			items: ofType(queue.needs_fred, 'task'),
+			count: queue.needs_fred_review.total,
+			items: queue.needs_fred_review.items,
 			empty: 'No outputs to review',
 			moreHref: needsResolutionHref
 		},
@@ -300,14 +296,18 @@
 				</div>
 			</svelte:element>
 		{:else}
-			<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">{group.empty}</p>
+			{#if group.count === 0}
+				<p class="px-4 py-3 text-[length:var(--text-body)] text-on-surface-variant">
+					{group.empty}
+				</p>
+			{/if}
 		{/each}
-		{#if group.count > 4 && group.moreHref}
+		{#if group.count > Math.min(group.items.length, 4) && group.moreHref}
 			<a
 				href={group.moreHref}
 				class="falcon-focus block px-4 py-2 text-[length:var(--text-label)] font-semibold text-primary hover:bg-surface-container-high/50"
 			>
-				+{group.count - 4} more
+				+{group.count - Math.min(group.items.length, 4)} more
 			</a>
 		{/if}
 	</div>
@@ -466,6 +466,16 @@
 								<p class="text-[length:var(--text-body)] text-on-surface-variant">Nothing due.</p>
 							</div>
 						{/each}
+						{#if window.items.length > 4}
+							<a
+								href={window.title === 'Today'
+									? `${browseHref}?type=task&focus=overdue`
+									: `${browseHref}?type=task`}
+								class="falcon-focus block rounded px-1 py-2 text-[length:var(--text-label)] font-semibold text-primary"
+							>
+								+{window.items.length - 4} more
+							</a>
+						{/if}
 					</div>
 				</div>
 			{/each}
