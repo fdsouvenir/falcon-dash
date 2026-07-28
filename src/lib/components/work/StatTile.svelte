@@ -4,7 +4,6 @@
 	interface Props {
 		label: string;
 		value: number | string;
-		/** Accepted for API compatibility; the signal-cell layout does not render it. */
 		description?: string;
 		breakdown?: string;
 		href?: string;
@@ -14,7 +13,6 @@
 	}
 
 	let { label, value, description, breakdown, href, tone = 'info', bare = false }: Props = $props();
-	void description;
 
 	const accentClass = $derived(
 		{
@@ -58,5 +56,10 @@
 	</div>
 	{#if breakdown}
 		<p class="mt-3 text-[length:var(--text-body)] leading-6 text-on-surface-variant">{breakdown}</p>
+	{/if}
+	{#if description}
+		<p class="mt-2 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant">
+			{description}
+		</p>
 	{/if}
 </svelte:element>
