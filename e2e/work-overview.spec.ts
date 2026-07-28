@@ -54,6 +54,16 @@ test.describe('Work v3 cutover', () => {
 		}
 	});
 
+	test('redirects legacy /work/automata URLs to /work/automations', async ({ page, baseURL }) => {
+		const listResponse = await page.goto(`${baseURL ?? ''}/work/automata`);
+		expect(listResponse?.status()).toBe(200);
+		await expect(page).toHaveURL(/\/work\/automations$/);
+
+		const detailResponse = await page.goto(`${baseURL ?? ''}/work/automata/some-job-id`);
+		expect(detailResponse?.status()).toBeLessThan(500);
+		expect(page.url()).toContain('/work/automations/some-job-id');
+	});
+
 	test('keeps Browse search-only and agent-driven', async ({ page, baseURL }) => {
 		await page.goto(`${baseURL ?? ''}/work/browse`);
 
