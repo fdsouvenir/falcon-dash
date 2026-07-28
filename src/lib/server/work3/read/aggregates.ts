@@ -25,10 +25,10 @@ export interface QueueBucket {
 
 export interface Work3Queue {
 	actionable_now: QueueBucket;
-	needs_fred: QueueBucket;
-	needs_fred_decisions: QueueBucket;
-	needs_fred_questions: QueueBucket;
-	needs_fred_review: QueueBucket;
+	needs_operator: QueueBucket;
+	needs_operator_decisions: QueueBucket;
+	needs_operator_questions: QueueBucket;
+	needs_operator_review: QueueBucket;
 	at_risk: QueueBucket;
 	waiting_on_agent: QueueBucket;
 	waiting_on_external: QueueBucket;
@@ -72,10 +72,10 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 		)
 		.all() as Array<Record<string, unknown>>;
 
-	// Needs Fred: pending/deferred Decisions, open Questions, in_review Tasks.
+	// Needs operator: pending/deferred Decisions, open Questions, in_review Tasks.
 	// Kept as separate lists so the per-type buckets report true totals and
 	// rows even when the combined bucket's row bound cuts a type off.
-	const needsFredDecisions = db
+	const needsOperatorDecisions = db
 		.prepare(
 			`SELECT d.entity_id AS id, 'decision' AS type, p.title, d.status,
 			        p.consequence_of_no_decision AS why
@@ -84,20 +84,24 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 			 WHERE d.status IN ('pending','deferred') ORDER BY d.entity_id`
 		)
 		.all() as Array<Record<string, unknown>>;
-	const needsFredQuestions = db
+	const needsOperatorQuestions = db
 		.prepare(
 			`SELECT q.entity_id AS id, 'question' AS type, q.question AS title, q.status, q.impact AS why
 			 FROM questions q WHERE q.status = 'open' ORDER BY q.entity_id`
 		)
 		.all() as Array<Record<string, unknown>>;
-	const needsFredReview = db
+	const needsOperatorReview = db
 		.prepare(
 			`SELECT t.entity_id AS id, 'task' AS type, t.title, t.status,
 			        'Output awaiting review' AS why
 			 FROM tasks t WHERE t.status = 'in_review' ORDER BY t.entity_id`
 		)
 		.all() as Array<Record<string, unknown>>;
-	const needsFred = [...needsFredDecisions, ...needsFredQuestions, ...needsFredReview];
+	const needsOperator = [
+		...needsOperatorDecisions,
+		...needsOperatorQuestions,
+		...needsOperatorReview
+	];
 
 	// Waiting, classified by who is waited on.
 	const waiting = db
@@ -248,10 +252,10 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 
 	return {
 		actionable_now: bucket(actionable),
-		needs_fred: bucket(needsFred),
-		needs_fred_decisions: bucket(needsFredDecisions),
-		needs_fred_questions: bucket(needsFredQuestions),
-		needs_fred_review: bucket(needsFredReview),
+		needs_operator: bucket(needsOperator),
+		needs_operator_decisions: bucket(needsOperatorDecisions),
+		needs_operator_questions: bucket(needsOperatorQuestions),
+		needs_operator_review: bucket(needsOperatorReview),
 		at_risk: bucket(distinctQueueRows(blocked, unhealthyAutomata, reconciliation)),
 		waiting_on_agent: bucket(waitingOnAgent),
 		waiting_on_external: bucket(waitingOnExternal),
@@ -403,10 +407,10 @@ export async function computeBrief(
 			by_type: queue.actionable_now.by_type,
 			items: queue.actionable_now.items.slice(0, BRIEF_LIMIT)
 		},
-		needs_fred: {
-			total: queue.needs_fred.total,
-			by_type: queue.needs_fred.by_type,
-			items: queue.needs_fred.items.slice(0, BRIEF_LIMIT)
+		needs_operator: {
+			total: queue.needs_operator.total,
+			by_type: queue.needs_operator.by_type,
+			items: queue.needs_operator.items.slice(0, BRIEF_LIMIT)
 		},
 		blocked_risk: {
 			total: queue.blocked_risk.total,

@@ -195,22 +195,22 @@
 	const needsCallGroups = $derived.by<PanelGroup[]>(() => [
 		{
 			title: 'Decisions',
-			count: queue.needs_fred_decisions.total,
-			items: queue.needs_fred_decisions.items,
+			count: queue.needs_operator_decisions.total,
+			items: queue.needs_operator_decisions.items,
 			empty: 'No decisions waiting',
 			moreHref: needsResolutionHref
 		},
 		{
 			title: 'Questions',
-			count: queue.needs_fred_questions.total,
-			items: queue.needs_fred_questions.items,
+			count: queue.needs_operator_questions.total,
+			items: queue.needs_operator_questions.items,
 			empty: 'No open questions',
 			moreHref: needsResolutionHref
 		},
 		{
 			title: 'Review outputs',
-			count: queue.needs_fred_review.total,
-			items: queue.needs_fred_review.items,
+			count: queue.needs_operator_review.total,
+			items: queue.needs_operator_review.items,
 			empty: 'No outputs to review',
 			moreHref: needsResolutionHref
 		},
@@ -230,7 +230,7 @@
 		}
 	]);
 
-	// Blocked work lives with the operator asks: unblocking is Fred's job.
+	// Blocked work lives with the operator asks: unblocking is the operator's job.
 	const blockedGroup = $derived.by<PanelGroup>(() => ({
 		title: 'Blocked on you',
 		count: queue.blocked_risk.total,
@@ -361,8 +361,8 @@
 				<StatTile
 					bare
 					label="Needs your call"
-					value={queue.needs_fred.total}
-					breakdown={typeBreakdown(queue.needs_fred.by_type, 'No operator asks')}
+					value={queue.needs_operator.total}
+					breakdown={typeBreakdown(queue.needs_operator.by_type, 'No operator asks')}
 					href="#needs-you"
 					tone="warning"
 				/>

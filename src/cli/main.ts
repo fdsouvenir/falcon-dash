@@ -38,7 +38,7 @@ Commands:
   milestone list | get | create | achieve | cancel | reopen
   link      create | remove | assign — typed relationships + project assignment
   automaton list | get | create | activate | pause | update | delete | restore
-  queue     server-computed buckets (actionable, needs Fred, blocked, …)
+  queue     server-computed buckets (actionable, needs operator, blocked, …)
   brief     bounded session-start context
   history   <id> — Event Log timeline
   sources   check — resolve a source reference

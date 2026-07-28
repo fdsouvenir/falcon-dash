@@ -51,9 +51,11 @@ function formatBucket(label, bucket) {
 function formatBrief(brief) {
 	const sections = [
 		formatBucket('Actionable now', brief.actionable_now),
-		formatBucket('Needs Fred', brief.needs_fred),
+		// needs_fred is the pre-rename key; tolerated so a deployed copy of this
+		// plugin keeps working against either server version.
+		formatBucket('Needs operator', brief.needs_operator ?? brief.needs_fred),
 		formatBucket('Blocked risk', brief.blocked_risk),
-		formatBucket('Unhealthy Automata', brief.unhealthy_automata)
+		formatBucket('Unhealthy automations', brief.unhealthy_automata)
 	].filter((section) => section.length > 0);
 	if (sections.length === 0) return '';
 	return `\n\n## Falcon Dash Work (v3 brief)\n${sections.join('\n')}\n\nDeeper context: \`falcon\` (orientation), \`falcon queue\`, \`falcon work get <id>\`.`;
