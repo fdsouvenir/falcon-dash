@@ -20,9 +20,12 @@ The feeling to protect: _a well-run operations room at night_ — not a SaaS mar
 - **Smoke** `#9B9A94` — secondary text, labels, metadata.
 - **Ash** `#6E6D68` — tertiary/disabled text.
 
-### The accent (exactly one)
+### The accent (exactly one hue, two steps)
 
-- **Raptor Amber** `#D9A441` (sat ≈ 65%) — the operator's color. Used for: needs-you signals, focus rings, active nav, primary buttons, links. If it's amber, it's asking for Fred. Never used decoratively.
+Raptor Amber is the operator's color — needs-you signals, focus rings, active nav, primary buttons, links. If it's amber, it's asking for Fred. Never used decoratively. It ships as a two-step scale (values match the approved Stitch render and `src/app.css`):
+
+- **Raptor Amber 400** `#F7BF59` — the interactive amber on dark surfaces: `--primary`, focus rings, active nav, and ALL attention/warning states (`--status-warning` is this exact value — "warning" and "needs the operator" are the same fact).
+- **Raptor Amber 500** `#D9A441` — pressed states and containers (`--primary-container`), and the primary for a future light theme.
 
 ### Status (semantic, unchanged in meaning; recalibrated to the warm room)
 
@@ -30,7 +33,7 @@ The feeling to protect: _a well-run operations room at night_ — not a SaaS mar
 - **Signal Red** `#D96757` — danger/blocked/failing (warm red, not neon).
 - **Steel Blue** `#7A9CC4` — info/ready (the only cool note, kept quiet).
 - **Authority Violet** `#A78BCB` — authority acts, review dispositions.
-- Attention/warning states use **Raptor Amber** — "warning" and "needs the operator" are the same fact in this product.
+- Attention/warning states use **Raptor Amber 400** — same token value as the accent, by design.
 
 ### Object-type palette (data encoding, glyph tiles ONLY)
 

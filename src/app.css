@@ -174,8 +174,8 @@
 	/* ── Semantic status colors ── */
 	--status-active: #5cbb7a;
 	--status-active-bg: rgba(92, 187, 122, 0.13);
-	--status-warning: #f5bd58;
-	--status-warning-bg: rgba(245, 189, 88, 0.14);
+	--status-warning: #f7bf59;
+	--status-warning-bg: rgba(247, 191, 89, 0.14);
 	--status-danger: #d96757;
 	--status-danger-bg: rgba(217, 103, 87, 0.14);
 	--status-info: #7a9cc4;
