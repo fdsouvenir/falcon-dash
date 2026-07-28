@@ -26,6 +26,9 @@ export interface QueueBucket {
 export interface Work3Queue {
 	actionable_now: QueueBucket;
 	needs_fred: QueueBucket;
+	needs_fred_decisions: QueueBucket;
+	needs_fred_questions: QueueBucket;
+	needs_fred_review: QueueBucket;
 	at_risk: QueueBucket;
 	waiting_on_agent: QueueBucket;
 	waiting_on_external: QueueBucket;
@@ -70,30 +73,31 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 		.all() as Array<Record<string, unknown>>;
 
 	// Needs Fred: pending/deferred Decisions, open Questions, in_review Tasks.
-	const needsFred = [
-		...(db
-			.prepare(
-				`SELECT d.entity_id AS id, 'decision' AS type, p.title, d.status,
-				        p.consequence_of_no_decision AS why
-				 FROM decisions d
-				 LEFT JOIN decision_packages p ON p.parent_id = d.entity_id AND p.is_current = 1
-				 WHERE d.status IN ('pending','deferred') ORDER BY d.entity_id`
-			)
-			.all() as Array<Record<string, unknown>>),
-		...(db
-			.prepare(
-				`SELECT q.entity_id AS id, 'question' AS type, q.question AS title, q.status, q.impact AS why
-				 FROM questions q WHERE q.status = 'open' ORDER BY q.entity_id`
-			)
-			.all() as Array<Record<string, unknown>>),
-		...(db
-			.prepare(
-				`SELECT t.entity_id AS id, 'task' AS type, t.title, t.status,
-				        'Output awaiting review' AS why
-				 FROM tasks t WHERE t.status = 'in_review' ORDER BY t.entity_id`
-			)
-			.all() as Array<Record<string, unknown>>)
-	];
+	// Kept as separate lists so the per-type buckets report true totals and
+	// rows even when the combined bucket's row bound cuts a type off.
+	const needsFredDecisions = db
+		.prepare(
+			`SELECT d.entity_id AS id, 'decision' AS type, p.title, d.status,
+			        p.consequence_of_no_decision AS why
+			 FROM decisions d
+			 LEFT JOIN decision_packages p ON p.parent_id = d.entity_id AND p.is_current = 1
+			 WHERE d.status IN ('pending','deferred') ORDER BY d.entity_id`
+		)
+		.all() as Array<Record<string, unknown>>;
+	const needsFredQuestions = db
+		.prepare(
+			`SELECT q.entity_id AS id, 'question' AS type, q.question AS title, q.status, q.impact AS why
+			 FROM questions q WHERE q.status = 'open' ORDER BY q.entity_id`
+		)
+		.all() as Array<Record<string, unknown>>;
+	const needsFredReview = db
+		.prepare(
+			`SELECT t.entity_id AS id, 'task' AS type, t.title, t.status,
+			        'Output awaiting review' AS why
+			 FROM tasks t WHERE t.status = 'in_review' ORDER BY t.entity_id`
+		)
+		.all() as Array<Record<string, unknown>>;
+	const needsFred = [...needsFredDecisions, ...needsFredQuestions, ...needsFredReview];
 
 	// Waiting, classified by who is waited on.
 	const waiting = db
@@ -245,6 +249,9 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 	return {
 		actionable_now: bucket(actionable),
 		needs_fred: bucket(needsFred),
+		needs_fred_decisions: bucket(needsFredDecisions),
+		needs_fred_questions: bucket(needsFredQuestions),
+		needs_fred_review: bucket(needsFredReview),
 		at_risk: bucket(distinctQueueRows(blocked, unhealthyAutomata, reconciliation)),
 		waiting_on_agent: bucket(waitingOnAgent),
 		waiting_on_external: bucket(waitingOnExternal),
@@ -257,17 +264,18 @@ export async function computeQueue(db: Database.Database = getWork3Db()): Promis
 }
 
 const DUE_NEXT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
-const DUE_NEXT_LIMIT = 24;
+const DUE_NEXT_LIMIT = 60;
 
 /**
  * Near-term dated Work for the overview's Due-next band: open Tasks by
  * `due_at` and planned Milestones by `target_at`, overdue included, within a
- * 14-day horizon. The client groups rows into date windows.
+ * 14-day horizon. The client groups rows into date windows. `overdue_total`
+ * is computed before the row bound so the headline can never under-report.
  */
 export function computeDueNext(
 	db: Database.Database = getWork3Db(),
 	now = Date.now()
-): QueueBucket {
+): QueueBucket & { overdue_total: number } {
 	const horizon = now + DUE_NEXT_WINDOW_MS;
 	const tasks = db
 		.prepare(
@@ -288,7 +296,10 @@ export function computeDueNext(
 		)
 		.all(horizon) as Array<Record<string, unknown>>;
 	const rows = [...tasks, ...milestones].sort((a, b) => Number(a.due_at) - Number(b.due_at));
-	return bucket(rows, DUE_NEXT_LIMIT);
+	return {
+		...bucket(rows, DUE_NEXT_LIMIT),
+		overdue_total: rows.filter((row) => Number(row.due_at) < now).length
+	};
 }
 
 /**
@@ -298,14 +309,22 @@ export function computeDueNext(
  */
 export function changedRecentlySummary(
 	days = 7,
-	db: Database.Database = getWork3Db()
+	db: Database.Database = getWork3Db(),
+	pageSize = 500
 ): { total: number; by_type: Record<string, number> } {
 	const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 	const subjects = new Set<string>();
-	for (const event of listWork3Events({ limit: 500 })) {
-		if (event.occurred_at < cutoff) continue;
-		if (!isMaterialEventType(event.event_type)) continue;
-		if (typeof event.subject_id === 'string' && event.subject_id) subjects.add(event.subject_id);
+	// Paginate the whole window — one bounded page is not the full seven days
+	// on a busy install. The ceiling (20 pages) only bounds pathological logs.
+	let before: string | undefined;
+	for (let page = 0; page < 20; page++) {
+		const events = listWork3Events({ since: cutoff, limit: pageSize, before });
+		for (const event of events) {
+			if (!isMaterialEventType(event.event_type)) continue;
+			if (typeof event.subject_id === 'string' && event.subject_id) subjects.add(event.subject_id);
+		}
+		if (events.length < pageSize) break;
+		before = events[events.length - 1].id;
 	}
 	const ids = [...subjects];
 	const byType: Record<string, number> = {};

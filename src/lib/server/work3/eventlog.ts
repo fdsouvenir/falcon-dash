@@ -147,6 +147,8 @@ export function listWork3Events(
 		eventType?: string;
 		limit?: number;
 		before?: string;
+		/** Only events with occurred_at >= since (ms epoch). */
+		since?: number;
 	} = {}
 ): Work3Event[] {
 	const db = getWork3EventsDb();
@@ -168,6 +170,10 @@ export function listWork3Events(
 	if (options.before) {
 		clauses.push('id < ?');
 		params.push(options.before);
+	}
+	if (options.since !== undefined) {
+		clauses.push('occurred_at >= ?');
+		params.push(options.since);
 	}
 	const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
 	const rows = db

@@ -420,8 +420,38 @@ describe('overview signals', () => {
 		expect(ids.some((id) => id === undefined)).toBe(false);
 		expect(dueNext.total).toBe(3);
 		expect(dueNext.by_type).toEqual({ task: 2, milestone: 1 });
-		// Sorted soonest-first, overdue leading.
+		// Sorted soonest-first, overdue leading; overdue counted before the row bound.
 		expect(dueNext.items[0].id).toBe(overdue.result.id);
+		expect(dueNext.overdue_total).toBe(1);
+	});
+
+	it('per-type needs-fred buckets report true totals past the combined row bound', async () => {
+		for (let index = 0; index < 9; index++) {
+			await cmd('create_decision', undefined, {
+				area_id: areaId,
+				title: `Decision ${index}`,
+				prompt: `Pick option for ${index}?`,
+				consequence_of_no_decision: 'stall',
+				deciders: ['fred'],
+				options: [
+					{ id: 'a', label: 'A', summary: 'Option A' },
+					{ id: 'b', label: 'B', summary: 'Option B' }
+				],
+				recommendation: { option_id: 'a', rationale: 'default' }
+			});
+		}
+		await cmd('create_question', undefined, { area_id: areaId, question: 'Q1?', impact: 'scope' });
+		await cmd('create_question', undefined, { area_id: areaId, question: 'Q2?', impact: 'scope' });
+
+		const queue = await computeQueue();
+		// Combined bucket is bounded at 8 decision-first rows…
+		expect(queue.needs_fred.total).toBe(11);
+		expect(queue.needs_fred.items.length).toBe(8);
+		// …but the per-type buckets never report a false empty.
+		expect(queue.needs_fred_decisions.total).toBe(9);
+		expect(queue.needs_fred_questions.total).toBe(2);
+		expect(queue.needs_fred_questions.items.length).toBe(2);
+		expect(queue.needs_fred_review.total).toBe(0);
 	});
 
 	it('changed-recently counts distinct entities with material events, typed', async () => {
@@ -436,5 +466,20 @@ describe('overview signals', () => {
 		// Area + task creation are material; the routine task_updated adds no new entity.
 		expect(summary.total).toBe(2);
 		expect(summary.by_type).toEqual({ area: 1, task: 1 });
+	});
+
+	it('changed-recently paginates past a single event page', async () => {
+		for (let index = 0; index < 5; index++) {
+			await cmd('create_task', undefined, { title: `Paged ${index}`, area_id: areaId });
+		}
+		await transferWork3OutboxOnce();
+
+		// Page size 2 forces multiple pages over the 6 material creations
+		// (area + 5 tasks); the summary must still see every distinct entity.
+		const paged = changedRecentlySummary(7, getWork3Db(), 2);
+		const single = changedRecentlySummary(7, getWork3Db(), 500);
+		expect(paged.total).toBe(single.total);
+		expect(paged.total).toBe(6);
+		expect(paged.by_type).toEqual({ area: 1, task: 5 });
 	});
 });
