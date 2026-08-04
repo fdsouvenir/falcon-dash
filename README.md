@@ -3,25 +3,29 @@
 [![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml)
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-The primary user interface for [OpenClaw](https://github.com/fdsouvenir/openclaw) — a web dashboard that connects to the OpenClaw Gateway over WebSocket to provide real-time control of the AI agent, Work management, file browsing, and system monitoring.
+The operator console for [OpenClaw](https://github.com/openclaw/openclaw) deployments — a web dashboard that lets operators see what their AI agents are doing, approve sensitive actions, manage work, and administer every gateway-backed capability without touching a terminal.
 
-Falcon Dash is designed to be installed alongside OpenClaw and serves as the main operator console. It reads its configuration directly from `~/.openclaw/openclaw.json`, so once OpenClaw is running, the dashboard connects automatically with no manual setup.
+Falcon Dash is designed to be installed alongside OpenClaw. It reads its configuration directly from `~/.openclaw/openclaw.json`, so once OpenClaw is running, the dashboard connects automatically with no manual setup.
 
-## Features
+## Surfaces
 
-- **Chat** — Real-time conversation with the OpenClaw agent. Supports streaming responses, thinking blocks, tool call visualization, slash commands, threads, bookmarks, and search. Markdown rendering includes syntax highlighting (Shiki), math (KaTeX), and diagrams (Mermaid).
-- **Work Management** — Work module for operator projects, tasks, decisions, routines, observations, and changes. It is the agent-facing source of truth and writes generated Work context into agent workspaces.
-- **Documents** — Browse and edit files in the OpenClaw workspace. Supports creating, renaming, and deleting files and directories.
-- **Agent Jobs** — Create and manage cron jobs that run on a schedule (cron expressions, intervals, or one-shot timestamps). View run history and job status.
-- **Heartbeat** — Monitor system health with heartbeat history and status indicators.
-- **Passwords** — KeePassXC vault integration for secure credential storage and retrieval.
-- **Settings** — Configuration editor, device management, Discord integration, execution approvals, live gateway logs, model selection, skill management, and workspace file browsing.
-- **Canvas** — Renders A2UI (Agent-to-UI) surfaces pushed by the agent. Supports dynamic bundle loading, custom app panels, and pinned apps in the sidebar.
+- **Work (default)** — Mission Control for operator work: projects, tasks, decisions, routines, observations, and changes as typed domain objects with lifecycle guards, provenance, and an append-only event log. Includes Needs Resolution, Projects, Automata, and Browse views, plus governance records (plans, reviews, authorizations, change requests). Agents work against the same data through `/api/v3` and the bundled `falcon` CLI.
+- **Chat** — Real-time conversation with the agent through the main shell. Streaming responses, thinking blocks, tool call visualization, slash commands, threads, bookmarks, and search. Markdown rendering includes syntax highlighting (Shiki), math (KaTeX), and diagrams (Mermaid).
+- **Channels** — Guided setup, readiness checks, validation, and repair for chat channels such as Discord and Telegram.
+- **Agents** — Overview and administration of the agents behind the gateway.
+- **Approvals** — Review and resolve execution approval requests from agents.
+- **Documents** — Browse and edit files in the OpenClaw workspace, including creating, renaming, and deleting files and directories.
+- **Jobs** — Create and manage scheduled agent jobs (cron expressions, intervals, or one-shot timestamps) with run history and status.
+- **Heartbeat** — System health monitoring with heartbeat history and status indicators.
+- **Passwords** — KeePassXC vault integration for secure credential storage, plus SecretRef resolution so gateway configs never store credentials in plaintext.
+- **Skills** — Install and manage agent skills.
+- **Settings** — Configuration editor, device management, execution approvals, live gateway logs, model selection, and workspace administration.
+- **Apps / Canvas** — Renders A2UI (Agent-to-UI) surfaces pushed by the agent, with custom app panels and pinned apps in the sidebar.
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+
-- A running [OpenClaw](https://github.com/fdsouvenir/openclaw) gateway (default: `ws://127.0.0.1:18789`)
+- A running [OpenClaw](https://github.com/openclaw/openclaw) gateway (default: `ws://127.0.0.1:18789`)
 
 ## Quick Start
 
@@ -37,57 +41,32 @@ npm run dev
 
 Open `http://localhost:5173` in your browser. If OpenClaw is running, the dashboard reads the gateway token from `~/.openclaw/openclaw.json` and connects automatically. If the config file is unavailable, a manual token entry screen is shown.
 
-## Docker
-
-Pull the pre-built image from GitHub Container Registry:
+For a production build, run `npm run build`, then start the server with the bundled CLI:
 
 ```bash
-docker pull ghcr.io/fdsouvenir/falcon-dash:latest
-docker run -p 3000:3000 ghcr.io/fdsouvenir/falcon-dash:latest
+npx falcon-dash start --port=3000
 ```
 
-Or build locally:
-
-```bash
-docker build -t falcon-dash .
-docker run -p 3000:3000 falcon-dash
-```
-
-For production deployment, reverse proxy setup, and Docker Compose examples, see the [Deployment Guide](docs/deployment.md).
+See the [Deployment Guide](docs/Technical/deployment.md) for reverse proxy setup, remote gateways, and production hardening.
 
 ## Gateway Connection
 
-Falcon Dash connects to the OpenClaw Gateway using WebSocket protocol v3.
+Falcon Dash maintains its gateway connection server-side; the browser talks to the dashboard over same-origin routes (`/api/gateway/events` for state and event streaming, `/api/gateway/rpc` for calls, `/api/gateway/proxy` for the Gateway Control UI).
 
-- **Auto-configuration** — On startup, the server-side `/api/gateway-config` endpoint reads `~/.openclaw/openclaw.json` to extract the gateway token and URL. The dashboard connects once this config is resolved.
-- **Reconnection** — Exponential backoff (800ms base, 1.7x multiplier, 15s cap) with tick-based health monitoring. If the gateway rotates its token, the reconnector automatically re-reads the config before each retry.
-- **Dev proxy** — In development, Vite proxies `/ws` to the gateway so the browser connects through the dev server.
+- **Configuration resolution** — Explicit environment variables win first (`GATEWAY_URL`, `GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_TOKEN`), then the OpenClaw CLI (`openclaw config get gateway --json`), then `~/.openclaw/openclaw.json`. Remote-mode configs (`gateway.mode: "remote"`) are supported.
+- **Reconnection** — Exponential backoff with tick-based health monitoring. If the gateway rotates its token, the reconnector re-reads the config before each retry.
 
 ### Dev Auth
 
 For local development, set `gateway.controlUi.allowInsecureAuth: true` in `~/.openclaw/openclaw.json` to use token-only authentication (no device pairing required).
 
-## Gateway Plugins
+## Gateway Plugin
 
-Falcon Dash ships with gateway plugins that extend OpenClaw's capabilities.
+Falcon Dash registers with the gateway as an OpenClaw plugin (see `openclaw.plugin.json`) exposing its Work, Vault, Channels, Shell, and Labs modules. The gateway-side companion (deployed to `~/.openclaw/extensions/falcon-dash-plugin/`) registers the `falcon` chat channel, bridges canvas surfaces to the dashboard, and injects a bounded Work brief (`gateway-plugin/brief-context.js`, fetched from `/api/v3/brief`) into every agent prompt.
 
-### Canvas Operator Bridge
+The KeePassXC secret resolver (`bin/keepassxc-secret-resolver.cjs`) bridges vault entries to OpenClaw's secrets system so provider configs can reference credentials by vault path — see [docs/secretrefs.md](docs/secretrefs.md).
 
-Routes the agent's canvas commands (present, hide, navigate, push A2UI) to the dashboard. This allows the agent to render rich UI surfaces directly in the browser.
-
-```bash
-cd openclaw-canvas-bridge
-npm install && npm run build
-openclaw plugins install ./openclaw-canvas-bridge
-```
-
-Restart the gateway after installing plugins.
-
-### KeePassXC Secret Resolver
-
-Bridges KeePassXC vault entries to OpenClaw's secrets system so provider configs can reference credentials by vault path instead of storing them in plaintext.
-
-See [docs/secretrefs.md](docs/secretrefs.md) for setup and configuration details.
+See [docs/Technical/gateway-plugin.md](docs/Technical/gateway-plugin.md) for plugin internals.
 
 ## Scripts
 
@@ -100,6 +79,7 @@ See [docs/secretrefs.md](docs/secretrefs.md) for setup and configuration details
 | `npm run lint`          | ESLint                               |
 | `npm run test`          | Run unit tests                       |
 | `npm run test:coverage` | Run tests with coverage report       |
+| `npm run test:e2e`      | Playwright end-to-end tests          |
 | `npm run format`        | Format all files with Prettier       |
 
 ## Tech Stack
@@ -115,33 +95,42 @@ See [docs/secretrefs.md](docs/secretrefs.md) for setup and configuration details
 ```
 src/
   lib/
-    gateway/       WebSocket client (connection, correlator, event bus,
-                   snapshot store, reconnector, stream manager, diagnostics)
+    gateway/       Server-side gateway client (connection, correlator,
+                   event bus, snapshot store, reconnector, stream manager)
     stores/        Svelte stores (gateway, chat, sessions, files, etc.)
-    components/    UI components (chat, Work, settings, canvas, etc.)
+    components/    UI components (shell, chat, work, settings, canvas, etc.)
     canvas/        A2UI bridge and canvas delivery system
     chat/          Markdown pipeline, commands, highlighting
-    server/        Server-side code (Work database, file config, passwords)
+    server/        Server-side code (Work v3 engine, gateway proxy,
+                   file config, passwords)
   routes/
-    /              Chat view (default) or welcome screen
-    /work          Work management dashboard
+    /              Redirects to /work (Mission Control)
+    /work          Work v3: Mission Control, projects, automata, browse
+    /channels      Channel setup, readiness, and repair
+    /agents        Agent overview and administration
+    /approvals     Execution approval queue
     /documents     File browser and editor
-    /jobs          Cron job management
+    /jobs          Scheduled job management
     /heartbeat     System health monitoring
     /passwords     Password vault (KeePassXC)
+    /secrets       SecretRef management
+    /skills        Skill management
     /settings      Configuration and administration
+    /ops           Ops observer (live operational diagnostics)
+    /setup         First-run setup wizard
     /apps/[id]     Custom canvas app panels
-    /api/          Server endpoints (files, passwords, gateway config)
+    /api/          Server endpoints (gateway, v3 work API, files, passwords)
 ```
 
-The gateway layer is composed of six classes wired together as singletons in `src/lib/stores/gateway.ts`:
+Chat and session control live in the main shell and are available from every surface.
 
-- **GatewayConnection** — WebSocket lifecycle and handshake
-- **RequestCorrelator** — Maps request IDs to Promises for req/res correlation
-- **EventBus** — Pub/sub for gateway event frames
-- **SnapshotStore** — Hydrates state from the gateway hello-ok payload
-- **Reconnector** — Exponential backoff with token refresh
-- **AgentStreamManager** — Reassembles streaming agent responses
+## Documentation
+
+- [docs/README.md](docs/README.md) — index of all project documentation
+- [docs/PURPOSE.md](docs/PURPOSE.md) — what Falcon Dash is and who it's for
+- [docs/End User/quick-start.md](docs/End%20User/quick-start.md) — non-technical user guide
+- [docs/Technical/architecture.md](docs/Technical/architecture.md) — system architecture
+- [CHANGELOG.md](CHANGELOG.md) — release history
 
 ## Configuration
 
