@@ -9,7 +9,7 @@ Before deploying Falcon Dash, ensure you have:
 - **Node.js 20+** — Required for building and running the application
 - **npm** — Included with Node.js; used for dependency installation and build scripts
 - **OpenClaw Gateway** — A running instance of the OpenClaw gateway (default: `ws://127.0.0.1:18789`)
-- **Gateway Plugins** — The Falcon Dash plugin and `openclaw-canvas-bridge` installed on your gateway
+- **Gateway Plugin** — The Falcon Dash gateway plugin installed at `~/.openclaw/extensions/falcon-dash-plugin/` (see [gateway-plugin.md](gateway-plugin.md))
 
 ## Local Development
 
