@@ -4,7 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x   | Yes       |
+| 3.x     | Yes       |
+| < 3.0   | No        |
 
 ## Reporting a Vulnerability
 
@@ -29,4 +30,4 @@ Instead, please email security concerns to the repository maintainer. You can fi
 
 ## Scope
 
-This policy covers the Falcon Dash web dashboard. For issues with the OpenClaw gateway or its plugins, please report to the [OpenClaw repository](https://github.com/fdsouvenir/openclaw).
+This policy covers the Falcon Dash web dashboard. For issues with the OpenClaw gateway or its plugins, please report to the [OpenClaw repository](https://github.com/openclaw/openclaw).

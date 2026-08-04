@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Falcon Dash!
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+
-- A running [OpenClaw](https://github.com/fdsouvenir/openclaw) gateway (for integration testing)
+- A running [OpenClaw](https://github.com/openclaw/openclaw) gateway (for integration testing)
 
 ## Local Setup
 
@@ -16,7 +16,7 @@ npm install
 npm run dev
 ```
 
-The dev server starts at `http://localhost:5173`. Vite proxies `/ws` to the gateway at `ws://127.0.0.1:18789`.
+The dev server starts at `http://localhost:5173`. The gateway connection is maintained server-side; the browser talks to the dashboard over same-origin `/api/gateway/*` routes. Gateway config is resolved from `GATEWAY_URL`/`GATEWAY_TOKEN` env vars, the OpenClaw CLI, or `~/.openclaw/openclaw.json` (in that order).
 
 ## Available Scripts
 
@@ -96,8 +96,8 @@ All pushes and PRs to `main` trigger the **CI** workflow, which runs format chec
 Additional workflows:
 
 - **Release** — triggered by pushing a `v*` tag; runs CI then creates a GitHub Release with auto-generated notes
-- **Docker** — triggered on push to `main` and `v*` tags; builds and pushes to `ghcr.io/fdsouvenir/falcon-dash`
-- **E2E** — placeholder for Playwright tests (disabled until tests are added)
+- **Publish** — triggered by pushing a `v*` tag; publishes the npm package to GitHub Packages
+- **E2E** — Playwright end-to-end tests on pushes and PRs
 - **Dependabot** — weekly npm dependency updates
 
 ## Release Process
@@ -107,18 +107,7 @@ npm version patch    # or minor / major — bumps version in package.json and cr
 git push origin main --tags
 ```
 
-This triggers the Release and Docker workflows automatically.
-
-## Docker
-
-Build and run locally:
-
-```bash
-docker compose up --build     # Build and start
-docker compose up -d          # Detached mode
-```
-
-The container exposes port 3000 and mounts `~/.openclaw` for persistent data (SQLite DB, PM context, agent workspaces). The image includes a health check against `/api/health`.
+This triggers the Release and Publish workflows automatically.
 
 ## Branch Protection (recommended for `main`)
 
