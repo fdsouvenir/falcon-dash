@@ -54,7 +54,8 @@ The vault uses **keyfile authentication** (no master password). Every command mu
 ## Guardrails
 
 - **Never log or echo passwords.** Pipe output to files or use in variables — never print to stdout in scripts.
-- **Use `show -s`** when you only need metadata (title, username, URL) without exposing the password.
+- **Use `show -s` only when the protected value is required.** It reveals protected fields in clear
+  text; omit it for metadata-only reads.
 - **Prefer `vault://path/to/entry` references** over copying raw secrets into config files or environment variables.
 - **Do not create or destroy the vault** — it is provisioned and managed by Falcon Dash.
 - **Do not reorganize the group structure** without explicit operator approval.

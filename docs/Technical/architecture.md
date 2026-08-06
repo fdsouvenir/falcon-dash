@@ -1,240 +1,133 @@
-# Architecture overview
+# Architecture
 
-This document describes the high-level architecture of Falcon Dash, a SvelteKit web dashboard for the OpenClaw AI Agent platform.
+This document describes the current Falcon Dash implementation. Approved future modules are kept
+separately in [../ROADMAP.md](../ROADMAP.md).
 
-See also:
+## Supported topology
 
-- [Gateway protocol](gateway-protocol.md) -- WebSocket protocol v3 internals
-- [Stores](stores.md) -- Svelte store layer
-- [Components](components.md) -- UI component architecture
-- [Gateway plugin](gateway-plugin.md) -- `falcon-dash-plugin/` channel and canvas bridge
-- [Work management](work-management.md) -- Falcon Dash work system
-- [fredbot integration](fredbot-integration.md) -- deployment infrastructure
-- [Deployment](deployment.md) -- build, Docker, reverse proxy setup
+Falcon Dash is a standalone application that runs on the same host as an OpenClaw Gateway. It does
+not require fredbot-backend or another Falcon control plane. A process installation normally uses
+loopback; containers on the same machine may use a private container network. Connecting to a
+gateway on another host is intentionally unsupported.
 
-## System overview
-
-```
-Browser (Falcon Dash SvelteKit app)
-   |
-   |  HTTP/SSE (SvelteKit API routes)
-   |  /api/work/*, /api/gateway/*
-   v
-+--SvelteKit Server--+   WebSocket (protocol v3)   +--OpenClaw Gateway--+
-|  better-sqlite3    |---------------------------->|  Session mgmt      |
-|  Work CRUD/context |                             |  Auth / Pairing     |
-|  Gateway client    |                             |  Event broadcast    |
-|  Gateway proxy     |                             |  Canvas pipeline    |
-|  File ops          |                             +----+----------------+
-|  Password vault    |                                  |
-+--------------------+                                  v
-                                                  +--Agent Process--+
-                                                  |  Claude Code    |
-                                                  |  Tool execution |
-                                                  |  Workspace      |
-                                                  +-----------------+
+```mermaid
+flowchart LR
+    B["Browser"] -->|"same-origin HTTP, SSE, WebSocket"| F["Falcon Dash SvelteKit server"]
+    F --> W["Work SQLite databases"]
+    F --> V["Built-in KeePassXC vault"]
+    F -->|"server-side gateway client"| O["OpenClaw Gateway"]
+    P["Falcon Dash gateway plugin"] --> O
+    P -->|"bounded Work context"| F
+    O --> A["Agents, sessions, native cron, approvals"]
+    O --> X["External model, tool, and channel providers"]
 ```
 
-The browser client communicates over two channels:
+The browser never connects directly to OpenClaw and never receives the gateway token. Falcon Dash
+resolves gateway configuration, authenticates, and maintains the upstream WebSocket on the server.
 
-1. **HTTP** -- SvelteKit API routes for server-side operations (Work Management, legacy PM compatibility, file system, password vault, agent config CRUD). These endpoints run inside the SvelteKit Node.js process and access local resources directly.
+## Runtime components
 
-2. **Gateway stream** -- The SvelteKit server owns a persistent WebSocket connection to the
-   OpenClaw Gateway for real-time operations (chat, sessions, presence, health, canvas, exec
-   approvals). Browser clients subscribe through `/api/gateway/events` and invoke RPC through
-   `/api/gateway/rpc`. Falcon Dash resolves the upstream gateway from `GATEWAY_URL`, OpenClaw CLI
-   config, or `~/.openclaw/openclaw.json`, including `gateway.remote.url` when `gateway.mode` is
-   `remote`.
+### SvelteKit application
 
-The gateway manages agent processes, routes messages between operators and agents, and broadcasts events. The `falcon-dash-plugin` registers a custom channel (`falcon-dash`) and a canvas bridge so agents can present canvas surfaces to the dashboard.
+Routes and page servers live in `src/routes/`. Shared UI lives in `src/lib/components/`. The root
+layout starts browser subscriptions and selects the desktop or narrow-viewport shell.
 
-## Directory structure
+Current primary modules are:
 
-```
-falcon-dash/
-├── src/
-│   ├── routes/                    # SvelteKit pages and API routes
-│   │   ├── +layout.svelte        # Root layout: auth gating, connection bootstrap
-│   │   ├── +page.ts              # Redirects the product home to /work
-│   │   ├── work/                 # Work executive status board, lists, search, and details
-│   │   ├── documents/            # File browser + editor
-│   │   ├── jobs/                 # Cron job management
-│   │   ├── heartbeat/            # System health monitoring
-│   │   ├── passwords/            # Password vault (KeePassXC)
-│   │   ├── projects/             # Legacy PM dashboard / compatibility UI
-│   │   ├── settings/             # Settings page
-│   │   └── api/                  # Server-side API routes
-│   │       ├── agents/           # Agent CRUD
-│   │       ├── work/             # Work Management REST API, context, migration
-│   │       ├── pm/               # Legacy PM REST API
-│   │       ├── falcon-dash/      # Falcon Dash plugin/module metadata
-│   │       ├── files/            # File CRUD
-│   │       ├── files-bulk/       # Bulk file operations
-│   │       ├── gateway-config/   # Gateway config proxy
-│   │       └── passwords/        # Vault management
-│   └── lib/
-│       ├── gateway/              # WebSocket client (6 core classes)
-│       │   ├── connection.ts     # GatewayConnection
-│       │   ├── correlator.ts     # RequestCorrelator
-│       │   ├── event-bus.ts      # EventBus
-│       │   ├── snapshot-store.ts # SnapshotStore
-│       │   ├── reconnector.ts    # Reconnector
-│       │   ├── stream.ts         # AgentStreamManager
-│       │   ├── diagnostic-log.ts # DiagnosticLog
-│       │   ├── device-identity.ts# DeviceIdentity
-│       │   └── types.ts          # Frame types, connection state, hello-ok payload
-│       ├── stores/               # Svelte stores (reactive state)
-│       │   ├── gateway.ts        # Singleton wiring, connectToGateway(), call()
-│       │   ├── chat.ts           # createChatSession() factory
-│       │   ├── sessions.ts       # Session lifecycle
-│       │   ├── canvas.ts         # CanvasStore
-│       │   └── ...               # Feature, PM, utility stores
-│       ├── components/           # Svelte 5 UI components
-│       │   ├── AppShell.svelte   # Desktop layout
-│       │   ├── ChatView.svelte   # Chat message view
-│       │   ├── mobile/           # Mobile-specific shell and pages
-│       │   ├── settings/         # Settings tabs
-│       │   ├── canvas/           # Canvas rendering
-│       │   ├── pm/               # PM list, detail, utils
-│       │   └── ai/               # AI display adapters (reasoning, tools, etc.)
-│       ├── server/               # Server-only code
-│       │   ├── work/             # Work schema, CRUD, migration, context, module metadata
-│       │   ├── pm/               # Legacy PM database and compatibility context generation
-│       │   ├── agents/           # Agent CRUD against openclaw.json
-│       │   └── ...               # Files, passwords, config
-│       ├── chat/                 # Markdown pipeline, Shiki, slash commands
-│       ├── canvas/               # A2UI bridge, canvas delivery
-│       ├── performance/          # Virtual scroll
-│       ├── pwa/                  # Service worker registration
-│       └── theme/                # Theme manager
-├── falcon-dash-plugin/           # OpenClaw gateway plugin
-│   └── src/
-│       ├── index.ts              # Plugin entry (activate)
-│       ├── channel.ts            # falcon-dash channel registration
-│       ├── canvas-bridge.ts      # Canvas operator bridge
-│       └── context.ts            # Agent context injection
-└── docs/                         # Project documentation
-```
+- **Work** — the default route and v3 work-management UI;
+- **Vault** — KeePassXC entry and group management;
+- **Channels** — Discord and Telegram readiness/setup, with WhatsApp shown only as unwired status;
+- **Labs / Settings** — gateway, agent, workspace, diagnostics, approvals, terminal, and other
+  advanced surfaces.
 
-Work is the product home for the current operator flow. Shared shell and agent-detail back links
-return to `/work`; deeper gateway and agent status remain available through settings and specialist
-surfaces rather than the retired Shell readiness page.
+Documents, Jobs, Skills, Agents, global Approvals, Operations, and Heartbeat also remain routable
+current surfaces. Falcon Dash does not currently have an in-product agent conversation route;
+contextual conversations are a v5 target.
 
-## Request flow
+### Work domain
 
-A typical user action (sending a chat message) traverses the system as follows:
+`src/lib/server/work3/` owns canonical Work data, command validation, authority checks, derived
+readers, relationships, source resolution, and the outbox-to-event-log pipeline.
 
-```
-1. User types message in MessageComposer
-2. ChatView calls chatSession.send(message)
-3. chat.ts store calls call<T>('chat.send', { sessionKey, message, ... })
-4. gateway.ts: call() generates ID via correlator.nextId()
-5. gateway.ts: correlator.track(id) creates a Promise
-6. connection.send() serializes { type: 'req', id, method: 'chat.send', params }
-7. WebSocket delivers JSON frame to gateway
-8. Gateway routes to agent, returns { runId, status: 'started' }
-9. Response frame arrives: correlator resolves the Promise
-10. streamManager.onAck(runId) creates the run tracker
-11. Gateway streams agent events: { type: 'event', event: 'agent', payload: { stream, data } }
-12. EventBus dispatches to AgentStreamManager
-13. AgentStreamManager emits delta/toolCall/toolResult/messageEnd events
-14. chat.ts updates _messages writable store
-15. ChatView reactively re-renders
-```
+- `work3.db` stores canonical entities and the transactional outbox.
+- `work3-events.db` stores the append-only event log.
+- `/api/v3/**` is the bearer-authenticated agent interface.
+- `/api/work3/events` streams post-commit invalidations to the browser.
+- Work page servers call the same readers and command engine for human actions.
+- The `falcon` CLI is a packaged client of `/api/v3`.
 
-## Auth flow
+OpenClaw native cron definitions and runs remain owned by OpenClaw. Falcon Dash composes them with
+Work metadata as Automations; it does not create a second runtime definition.
 
-Authentication is handled at the root layout (`src/routes/+layout.svelte`):
+### Gateway client
 
-```
-1. Page loads → fetch('/api/gateway-config')
-   - Server reads ~/.openclaw/openclaw.json for token + URL
-   - Sets gatewayToken and gatewayUrl stores
+`src/lib/server/gateway-client.ts` is the one long-lived OpenClaw connection. It performs
+challenge-response authentication, negotiates protocol v3–v4, correlates RPC responses, maintains
+the hello snapshot, follows tick liveness, and reconnects with backoff.
 
-2. If no token → render TokenEntry for manual entry
-   If token exists → render AppShell (desktop) or MobileShell (mobile)
+The browser uses two same-origin adapters:
 
-3. connectToGateway(url, token) called:
-   a. ensureDeviceIdentity() — load or generate Ed25519 keypair from IndexedDB
-   b. exportPublicKeyBase64() — encode public key for wire format
-   c. connection.connect(config) — open WebSocket
+- `POST /api/gateway/rpc` for RPC calls;
+- `GET /api/gateway/events` for the snapshot, connection state, and gateway events over SSE.
 
-4. Gateway sends connect.challenge event with { nonce, ts }
-   - State transitions: CONNECTING → AUTHENTICATING
+`/api/gateway/proxy` forwards the native Gateway Control UI. Production WebSocket upgrades for
+that proxy and `/terminal-ws` are attached by `src/entry.js`.
 
-5. Client builds connect frame:
-   - Signs challenge: buildSignMessage() + signMessage() with Ed25519 private key
-   - Includes: client.id='openclaw-control-ui', mode='ui', role='operator'
-   - Declares scopes, caps, commands
-   - Uses frame ID '__connect' (non-numeric to avoid correlator collision)
+### Gateway plugin
 
-6. Gateway validates → responds with hello-ok or:
-   - Close code 1008 → PAIRING_REQUIRED (retries up to 10 times)
-   - Error response → AUTH_FAILED
+The gateway client and plugin have different jobs:
 
-7. hello-ok received → onHelloOk callback fires:
-   a. snapshot.hydrate(helloOk) — populate presence, health, session defaults
-   b. snapshot.subscribe(eventBus) — wire incremental updates
-   c. canvasStore.subscribe(eventBus, call)
-   d. canvas.bridge.register RPC — register as virtual canvas node
-   e. reconnector.onConnected(tickIntervalMs)
-   f. State: CONNECTED → READY
+| Integration           | Use it for                                                               | Do not use it for                                                       |
+| --------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Native gateway client | OpenClaw RPCs, events, sessions, approvals, native cron, config          | Falcon-specific context or capabilities OpenClaw does not define        |
+| Falcon Dash plugin    | bounded prompt context, Falcon-specific tools, canvas/channel extensions | duplicating standard gateway transport or owning OpenClaw runtime state |
 
-8. Layout reacts to READY:
-   - restoreActiveSession()
-   - subscribeToEvents() (sessions, notifications, approvals)
-   - ensureDefaultChannel() per agent
-```
+The repo currently versions `gateway-plugin/brief-context.js`, which fetches a bounded Work brief
+for prompt injection. Full standalone packaging of the companion extension remains an installation
+gap; see [gateway-plugin.md](gateway-plugin.md).
 
-## Data flow
+### Built-in vault
 
-Data flows through three phases:
+`src/lib/server/vault/vault.ts` wraps `keepassxc-cli` against
+`~/.openclaw/passwords.kdbx` using `~/.openclaw/vault.key`. Vault APIs are same-origin and
+server-side. `bin/keepassxc-secret-resolver.cjs` exposes the same vault to OpenClaw through its exec
+SecretRef protocol.
 
-### Initial hydration (hello-ok)
+KeePassXC is part of Falcon Dash's product architecture. The current implementation still expects
+the binary, database, and key file to be provisioned; installation must automate that before it can
+claim a complete first-run experience.
 
-When the connection reaches READY, the hello-ok payload contains a snapshot:
+## Startup and data flow
 
-- `snapshot.presence` -- list of connected operators/devices
-- `snapshot.health` -- agent health data
-- `snapshot.stateVersion` -- per-domain version counters
-- `snapshot.sessionDefaults` -- model, thinkingLevel, defaultAgentId
-- `features.methods` -- available gateway methods
-- `policy` -- maxPayload, maxBufferedBytes, tickIntervalMs
+`src/hooks.server.ts` starts Work, the Work outbox worker, the gateway client, security headers,
+optional Sentry, and the development terminal server. In production, the adapter-node server is
+wrapped by `src/entry.js` for WebSocket upgrades.
 
-`SnapshotStore.hydrate()` populates writable stores from this payload.
+A typical gateway read follows this path:
 
-### Incremental updates (EventBus)
+1. The browser calls a same-origin route or subscribes to SSE.
+2. The SvelteKit server checks the gateway client state.
+3. The server issues a typed OpenClaw RPC with a 30-second timeout.
+4. The response returns to the browser; later gateway events flow through the SSE bridge.
 
-After hydration, `SnapshotStore.subscribe(eventBus)` registers handlers for `presence` and `health` events. Other stores subscribe independently:
+A Work mutation instead executes in the local command engine, writes canonical data and an outbox
+record in one transaction, then transfers the event to the append-only log. Browser Work views
+invalidate from the local Work SSE stream and reread server-derived state.
 
-- `sessions.ts` listens for `session` and `chat.message` events
-- `chat.ts` listens for `agent`, `chat`, `chat.message`, `chat.message.update`, `chat.reaction` events
-- `canvas.ts` listens for `node.invoke.request`, `canvas.deliver`, `canvas.message` events
-- `exec-approvals.ts` listens for `exec.approval.requested` events
-- `notifications.ts` listens for `notification.*` events
+## Trust and failure boundaries
 
-### Reactive rendering (stores to components)
+- Gateway tokens, agent bearer tokens, and vault values stay server-side.
+- Agent authority comes from a verified bearer token; human authority comes from the trusted
+  same-origin UI path and recorded source evidence, never caller-supplied labels.
+- Gateway unavailability degrades gateway-backed surfaces without changing Work lifecycle state.
+- Plugin context injection is bounded, cached, short-timeout, and best-effort so Falcon Dash cannot
+  block every agent prompt.
+- The Work event log is durable history; SSE streams are invalidation channels, not persistence.
+- External provider APIs are required only by the OpenClaw capabilities or future integrations the
+  installation chooses to use. No external Falcon Dash backend or external vault is required.
 
-Svelte stores (`writable`/`readable`/`derived`) drive component rendering. Components subscribe to stores and re-render when values change. The `$state` and `$derived` runes (Svelte 5) handle local component state.
+## Future boundary
 
-## Server-side overview
-
-The SvelteKit server process handles operations that require local filesystem or database access:
-
-| Subsystem       | Storage                                                             | Key files                        |
-| --------------- | ------------------------------------------------------------------- | -------------------------------- |
-| Work Management | better-sqlite3 at `~/.openclaw/data/falcon-dash/work.db` (WAL mode) | `src/lib/server/work/`           |
-| Agent CRUD      | `~/.openclaw/openclaw.json`                                         | `src/lib/server/agents/`         |
-| File browser    | Filesystem (agent workspaces)                                       | `src/lib/server/files-config.ts` |
-| Password vault  | KeePassXC database                                                  | `src/lib/server/keepassxc.ts`    |
-| Gateway config  | `~/.openclaw/openclaw.json`                                         | `src/routes/api/gateway-config/` |
-
-Work Management is the active agent-facing module for operator work. It stores categories and
-subcategories for setup plus projects, milestones, tasks, Needs Resolution variants, change
-requests, findings, and automations in its own SQLite database, exposes `/api/work/*` for agent and
-app use, and presents those resolution variants together as Needs Resolution in the UI. It
-generates Work context files (`WORK.md`, `Work/W-{id}.md`, `WORK-API.md`, `FALCON-DASH.md`). The
-archived PM database may remain on disk as read-only migration source material, but old PM routes,
-stores, context writers, and UI components are not part of Falcon Dash.
-See
-[Work management](work-management.md) for the current contract.
+v4 adds Falcon-owned integration lifecycle records and a separate internal scheduler. v5 adds
+contextual OpenClaw conversations without copying transcripts. Those targets are architecture
+constraints in [../ROADMAP.md](../ROADMAP.md), not current runtime components.

@@ -1,64 +1,62 @@
-# Getting started with Falcon Dash
+# Quick Start
 
-This guide walks you through opening Falcon Dash, connecting to your agent, and having your first conversation. It should take less than five minutes.
+Falcon Dash is a same-host dashboard for OpenClaw. It opens to Work and connects to the local
+OpenClaw Gateway through the Falcon Dash server; there is no browser gateway-token form.
 
-## Open Falcon Dash
+## Before you start
 
-Open the URL that Fredbot Hosting provided to you in your web browser. You can use any modern browser on a computer or phone -- Chrome, Safari, Firefox, and Edge all work.
+The installation needs:
 
-## Enter your access key
+- OpenClaw running on the same machine with a configured gateway port and token;
+- Falcon Dash installed or a source checkout with dependencies installed;
+- KeePassXC CLI, `~/.openclaw/passwords.kdbx`, and `~/.openclaw/vault.key` for Vault;
+- the Falcon Dash gateway extension when ambient Work context is required.
 
-When you first open Falcon Dash, you will see a login screen titled "Self-Hosted" with a connection form.
+The current package does not yet provision the vault or complete extension automatically. Follow
+[../Technical/deployment.md](../Technical/deployment.md) for the current setup boundary.
 
-1. In the "Gateway Token" field, paste the access key that Fredbot provided to you.
-2. Leave the "Gateway URL" field as-is unless Fredbot gave you a different URL.
-3. Click "Connect."
+## Start Falcon Dash
 
-If you do not have an access key, contact Fredbot Hosting support and we will provide one.
+From a source checkout:
 
-## Device pairing
+```bash
+npm run dev
+```
 
-The first time you connect from a new device (computer, phone, or tablet), the system needs to verify that your device is authorized. You will see a "Waiting for device approval..." message with a pulsing yellow indicator.
+From an installed package:
 
-This is normal. Fredbot Hosting will approve your device, usually within a few minutes. Once approved, Falcon Dash will automatically connect and you will not need to go through this step again on the same device.
+```bash
+falcon-dash start
+```
 
-If approval takes longer than expected, reach out to Fredbot support.
+Open the URL printed by the server. Development normally uses
+`http://127.0.0.1:5173`; the package launcher defaults to port `3000`.
 
-## Your first conversation
+## First gateway connection
 
-Once connected, you will see the main Falcon Dash interface. The connection indicator in the upper-left corner of the sidebar will show a green dot with "Connected."
+Falcon Dash creates a server device identity and authenticates to OpenClaw. If OpenClaw requires
+pairing, approve the pending Falcon Dash server device with the OpenClaw device-management command
+or control UI. The browser itself is not paired to the gateway.
 
-To start chatting:
+When connected, gateway-backed pages show live data. If the gateway is unavailable, Falcon Dash
+shows a disconnected state rather than asking for a browser token.
 
-1. Look at the sidebar on the left. Under "Channels," you will see a channel called #general. Click on it.
-2. The chat area will open with a welcome message: "How can I help you today?"
-3. Type your message in the text box at the bottom and press Enter to send it.
-4. Your agent will begin responding. You will see text appear as the agent works on its reply.
+## Orient yourself
 
-You can also click one of the suggestion chips -- like "Summarize a document" or "Help me brainstorm" -- to quickly send a starter message.
+- **Work** is the home page and shared human/agent source of truth.
+- **Vault** manages credentials in the built-in KeePassXC database.
+- **Channels** checks and configures supported OpenClaw chat providers.
+- **Labs / Settings** contains gateway, agent, workspace, diagnostics, approvals, and terminal
+  controls.
 
-## Finding your way around the interface
+Other direct routes include Documents, Jobs, Heartbeat, Operations, Skills, Agents, Approvals,
+Secret Providers, and plugin-created Canvas Apps. There is no current in-product conversation page;
+project-contextual agent conversations are a v5 roadmap feature.
 
-Falcon Dash has a layout similar to Discord or Slack. Here is what each part does:
+## Give an agent Work access
 
-**Agent Rail (far-left vertical bar):** This narrow strip shows circular icons for each of your agents. Click an icon to switch to that agent. A green dot on an icon means that agent has active conversations. At the bottom of the rail, a "+" button lets you add a new agent.
+Open Settings → Agent Tokens and mint a token for the agent. The plaintext token is shown once and
+the stored record is hashed. Install or configure the Falcon Dash gateway hook so session-start
+prompts receive the bounded Work brief, then use `falcon` for deeper reads and commands.
 
-**Sidebar (next to the agent rail):** This panel shows:
-
-- Your agent's name and connection status at the top.
-- "Channels" -- organized conversation spaces (like #general). Click a channel to open it.
-- "Apps" -- links to other Falcon Dash features: Projects, Documents, Jobs, and Skills.
-- At the bottom: Notifications, Settings, and Passwords.
-
-**Main area (center/right):** This is where your conversation appears. Messages from you appear on the right side (on desktop), and agent responses appear on the left with the agent's name in purple.
-
-## Using Falcon Dash on your phone
-
-Falcon Dash works on mobile devices. The layout adjusts automatically:
-
-- The agent rail and channel list appear as your home screen.
-- Tapping a channel slides the chat view in from the right.
-- A bottom tab bar provides quick access to Chat, Projects, Jobs, Docs, and Passwords.
-- Tap the back arrow in the header to return to the channel list.
-
-For a more app-like experience, you can install Falcon Dash to your home screen. See the mobile guide for instructions.
+Do not paste the gateway token, agent token, or vault values into browser storage or documentation.

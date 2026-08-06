@@ -5,8 +5,10 @@ accurate enough that agents and humans can rely on it during implementation.
 
 ## What the Checks Mean
 
-- `npm run check:harness` verifies that the required harness files exist.
-- `npm run check:docs` verifies that high-signal code changes also touch a matching doc.
+- `npm run check:harness` verifies required harness files, local documentation links, and that every
+  file under `docs/` is reachable from `docs/README.md`.
+- `npm run check:docs` verifies that high-signal code changes touch every owning documentation
+  group required by the path map.
 - `npm run check:skills` verifies that repo-local skills remain structurally valid.
 
 These checks are intentionally lightweight. They do not prove semantic perfection. They force an
@@ -18,7 +20,8 @@ When `check:docs` fails:
 
 1. read the reported rule
 2. read the changed paths that triggered it
-3. update one of the suggested docs if behavior, architecture, UX, or validation expectations changed
+3. update at least one document from every reported owner group when behavior, architecture, UX, or
+   validation expectations changed
 4. if the code change is narrower than the rule, keep the code narrow or tune the rule in the same PR
 
 Do not add meaningless doc churn just to satisfy the check. Make a real update or tighten the
@@ -38,7 +41,7 @@ It is not acceptable when:
 - route behavior changed
 - store semantics changed in a user-visible or agent-relevant way
 - validation expectations changed
-- gateway, PM, channel, or canvas behavior changed materially
+- gateway, Work, Vault, channel, agent-context, or canvas behavior changed materially
 
 ## How To Triage a Skill Failure
 

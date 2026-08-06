@@ -1,53 +1,34 @@
-# Passwords
+# Vault
 
-The Passwords page is a secure vault for storing credentials and secrets. It uses KeePassXC encryption to keep your data safe.
+Falcon Dash includes a KeePassXC-backed credential vault at `/passwords`. It is a built-in product
+component and the source for Falcon Dash/OpenClaw SecretRefs, not an optional third-party vault.
 
-## First-time vault setup
+## Current behavior
 
-If you have not set up a vault before, Falcon Dash will guide you through creating one. You will choose a master password that protects all entries in the vault. Keep this password somewhere safe -- it cannot be recovered if lost.
+The Vault page can:
 
-## Unlocking the vault
+- browse nested groups and entries;
+- create groups and entries;
+- inspect, copy, edit, move/rename, and delete an entry;
+- store username, password, URL, notes, and generated passwords.
 
-Each time you visit the Passwords page, you need to unlock the vault by entering your master password. The vault locks automatically when you leave the page or after a period of inactivity.
+The current implementation uses key-file-only, unattended access:
 
-You can also lock the vault manually by clicking the "Lock" button in the top toolbar.
+- `~/.openclaw/passwords.kdbx`
+- `~/.openclaw/vault.key`
+- `keepassxc-cli --no-password --key-file`
 
-## Browsing passwords
+There is no Falcon Dash master-password prompt or unlock screen. If the binary, database, or key
+file is missing or unreadable, the page shows Vault not available.
 
-Once unlocked, you see a list of all stored entries. Click any entry to view its details.
+## SecretRefs
 
-## Viewing a password
+OpenClaw can resolve values from the same vault through Falcon Dash's bundled exec provider. Use
+SecretRefs so gateway configuration identifies an entry path instead of storing plaintext. See
+[../secretrefs.md](../secretrefs.md) for the exact provider configuration and ID format.
 
-When you select an entry, Falcon Dash shows its details including the username, website, and any notes. The password itself is hidden by default. Use the reveal or copy options to see or use it:
+## Security boundary
 
-- **Reveal** -- shows the password in plain text.
-- **Copy** -- copies the password to your clipboard so you can paste it where needed.
-
-## Adding a new password
-
-Click the "+ Add Entry" button in the toolbar. A form appears where you can enter:
-
-- A title for the entry.
-- The username or email.
-- The password.
-- The website URL.
-- Any additional notes.
-
-Click "Save" when you are finished.
-
-## Editing a password
-
-Open an existing entry and click "Edit." Make your changes in the form and save.
-
-## Importing secrets
-
-If you have secrets stored elsewhere that you want to bring into the vault, click the "Import Secrets" button in the toolbar. This opens a migration tool that helps you move credentials into the vault in bulk.
-
-Click "Back to Passwords" when the import is complete.
-
-## Security notes
-
-- Your vault is encrypted locally using KeePassXC. Falcon Dash never stores your master password.
-- The vault stays locked until you explicitly unlock it with your master password.
-- Always use a strong, unique master password.
-- When you are done working with passwords, lock the vault or navigate away from the page.
+The browser receives a selected entry only when the human opens it. Agents should use approved
+tools or SecretRefs and should not receive raw vault contents in prompt context. Protect both the
+database and key file: together they are sufficient to read every entry.

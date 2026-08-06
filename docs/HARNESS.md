@@ -23,6 +23,7 @@ execution model for agents and maintainers.
 
 - `AGENTS.md` — top-level router
 - `docs/PURPOSE.md` — why the product exists
+- `docs/ROADMAP.md` — approved future versions, clearly separated from current behavior
 - `docs/CONTRIBUTING-HARNESS.md` — how to satisfy harness checks and policies
 - `docs/HARNESS-LOOP.md` — local recursive work loop and artifact storage
 - `docs/CONSOLE-SWEEP.md` — route inventory, baselines, and browser console sweep behavior
@@ -50,7 +51,7 @@ Do not jump to a higher-cost layer if a lower-cost layer can prove the change.
 
 For operator-facing surfaces:
 
-- verify desktop and mobile when the route exists in both shells
+- verify desktop and narrow-viewport shells when the route exists in both
 - verify loading, empty, error, and connected states when relevant
 - verify overflow for long content, logs, markdown, and tables
 - verify that shared shell elements do not cover or break the page
@@ -74,11 +75,14 @@ High-signal code areas should touch matching docs in the same change:
 
 - route and component changes should usually touch frontend, quality, technical component, or end-user docs
 - store and realtime wiring changes should usually touch reliability or technical store docs
-- PM flow changes should usually touch the PM technical doc or project user docs
-- gateway, channel, agent, and canvas changes should usually touch the matching technical or end-user docs
+- Work flow changes should touch the current Work technical and/or end-user docs named by the
+  ownership rule
+- gateway, Vault, channel, agent, and canvas changes should touch the matching technical or
+  end-user docs
 
-This is enforced by CI as a lightweight path-based check. The point is to force an explicit docs
-decision, not to require blanket documentation churn.
+This is enforced by CI as a path-based ownership check. Each rule can require more than one owner
+group; touching an unrelated end-user guide no longer satisfies a technical change. The harness also
+fails broken or orphaned files under `docs/`.
 
 ## Manual Verification Format
 

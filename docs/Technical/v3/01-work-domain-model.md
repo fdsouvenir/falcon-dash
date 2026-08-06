@@ -6,7 +6,8 @@
 
 Define the canonical Falcon Dash v3 Work domain model object by object before implementation. Each object must have one clear job, explicit fields, type-specific lifecycle semantics, invariants, allowed relationships, completion rules, and derived projections.
 
-This is a living RFC. Approved object recommendations will be added as the review proceeds.
+This retained contract records the approved v3 domain. Amend it explicitly when the domain contract
+changes; ordinary implementation details belong in the current technical overview.
 
 > **Edited in place 2026-07-22:** the earlier object sections below were updated to match the later "Approved correction" sections (Decision without draft, Change review not embedded, Automaton as one OpenClaw-backed aggregate, Plan lifecycle vs Review disposition, no Run artifact, source references instead of an Evidence object). The correction sections are retained as the approval record; see issue edit history for prior text.
 

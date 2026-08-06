@@ -27,7 +27,7 @@ Run the smallest subset that proves the change. Do not skip validation silently.
 - run `npm run check`
 - run `npm run lint`
 - add or update Playwright coverage for user-critical flows when practical
-- verify desktop and mobile if the route supports both shells
+- verify desktop and narrow-viewport behavior if the route supports both shells
 
 ### Server route or gateway-facing changes
 
@@ -58,6 +58,7 @@ possible. At minimum, update the doc if you changed:
 - verification expectations
 - plan-writing or operator workflow
 
-CI also runs a lightweight docs freshness check for high-signal directories. If a change touches
-frontend surfaces, stores, PM flows, or gateway-facing integration without touching a matching doc,
-the build should fail and force an explicit documentation decision.
+CI also runs a docs ownership check for high-signal directories. If a change touches frontend
+surfaces, stores, Work flows, Vault behavior, or gateway-facing integration without touching every
+required owner group, the build should fail and force an explicit documentation decision. The
+harness separately rejects broken local links and orphaned files under `docs/`.

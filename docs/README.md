@@ -1,55 +1,82 @@
-# Falcon Dash Docs
+# Falcon Dash Documentation
 
-This directory is the system of record for Falcon Dash behavior, architecture, and repo operating
-rules.
+`docs/` is the system of record for Falcon Dash product behavior, architecture, operating rules,
+and approved contracts. A document must say whether it describes the current product, a future
+roadmap target, or a retained contract. Do not present planned behavior as shipped behavior.
 
-## Start Here
+## Start here
 
-- [PURPOSE.md](PURPOSE.md) — product purpose, audience, and design philosophy
-- [HARNESS.md](HARNESS.md) — execution model for making and verifying changes
-- [HARNESS-LOOP.md](HARNESS-LOOP.md) — recursive local work loop and artifact layout
-- [CONSOLE-SWEEP.md](CONSOLE-SWEEP.md) — manifest-driven browser console sweep
-- [CONTRIBUTING-HARNESS.md](CONTRIBUTING-HARNESS.md) — how to satisfy the harness checks
-- [FRONTEND.md](FRONTEND.md) — frontend constraints and preferred UI patterns
-- [QUALITY.md](QUALITY.md) — validation expectations and manual verification format
-- [RELIABILITY.md](RELIABILITY.md) — realtime, shell, and failure-mode expectations
-- [PLANS.md](PLANS.md) — how to write useful execution plans
-- [OWNERSHIP.md](OWNERSHIP.md) — which docs should move with which kinds of changes
-- [LEARNINGS.md](LEARNINGS.md) — notable implementation pitfalls and historical fixes
+- [PURPOSE.md](PURPOSE.md) — product intent, audience, and non-negotiable product boundaries
+- [ROADMAP.md](ROADMAP.md) — the v3 through v5 product sequence and the desired post-v5 system
+- [HARNESS.md](HARNESS.md) — repo execution and validation model
+- [OWNERSHIP.md](OWNERSHIP.md) — code-to-document ownership and update requirements
+- [QUALITY.md](QUALITY.md) — validation levels and rerun expectations
+- [LEARNINGS.md](LEARNINGS.md) — only lessons durable across the full roadmap
 
-## Technical Docs
+## Current product documentation
 
-- [Technical/architecture.md](Technical/architecture.md) — high-level system architecture
-- [Technical/components.md](Technical/components.md) — component conventions and shell structure
-- [Technical/stores.md](Technical/stores.md) — store architecture and event wiring
-- [Technical/gateway-protocol.md](Technical/gateway-protocol.md) — gateway protocol integration
-- [Technical/gateway-plugin.md](Technical/gateway-plugin.md) — Falcon Dash gateway plugin behavior
-- [Technical/work-management.md](Technical/work-management.md) — Work data model and context pipeline
-- [Technical/deployment.md](Technical/deployment.md) — build, runtime, and deployment
-- [Technical/fredbot-integration.md](Technical/fredbot-integration.md) — hosting and infrastructure integration
+These files describe the implementation that exists now.
 
-## End User Docs
+### End-user behavior
 
 - [End User/quick-start.md](End%20User/quick-start.md)
-- [End User/mobile.md](End%20User/mobile.md)
-- [End User/chat.md](End%20User/chat.md)
 - [End User/work.md](End%20User/work.md)
+- [End User/passwords.md](End%20User/passwords.md)
+- [End User/secrets.md](End%20User/secrets.md)
+- [End User/channels.md](End%20User/channels.md)
 - [End User/documents.md](End%20User/documents.md)
 - [End User/jobs.md](End%20User/jobs.md)
-- [End User/passwords.md](End%20User/passwords.md)
-- [End User/settings.md](End%20User/settings.md)
-- [End User/channels.md](End%20User/channels.md)
+- [End User/heartbeat.md](End%20User/heartbeat.md)
+- [End User/operations.md](End%20User/operations.md)
 - [End User/apps.md](End%20User/apps.md)
 - [End User/agents.md](End%20User/agents.md)
 - [End User/skills.md](End%20User/skills.md)
 - [End User/exec-approvals.md](End%20User/exec-approvals.md)
+- [End User/settings.md](End%20User/settings.md)
 - [End User/troubleshooting.md](End%20User/troubleshooting.md)
 
-## Additional Docs
+### Technical implementation
 
-- [secretrefs.md](secretrefs.md) — KeePassXC SecretRef integration
+- [Technical/architecture.md](Technical/architecture.md) — current system boundaries and request flow
+- [Technical/components.md](Technical/components.md) — current Svelte shell and component conventions
+- [Technical/stores.md](Technical/stores.md) — current browser state and realtime wiring
+- [Technical/gateway-protocol.md](Technical/gateway-protocol.md) — server-side OpenClaw transport
+- [Technical/gateway-plugin.md](Technical/gateway-plugin.md) — Falcon-specific plugin extensions
+- [Technical/work-management.md](Technical/work-management.md) — current Work implementation
+- [Technical/deployment.md](Technical/deployment.md) — supported same-host runtime and packaging
+- [secretrefs.md](secretrefs.md) — built-in KeePassXC vault as an OpenClaw SecretRef provider
 
-## Working Rule
+### Frontend and repo operation
 
-Keep durable repo knowledge here. `AGENTS.md` should stay short and point into this directory
-instead of duplicating it.
+- [DESIGN.md](DESIGN.md) — visual language and tokens
+- [FRONTEND.md](FRONTEND.md) — frontend implementation constraints
+- [RELIABILITY.md](RELIABILITY.md) — state, realtime, and failure-mode expectations
+- [CONSOLE-SWEEP.md](CONSOLE-SWEEP.md) — route-based browser console verification
+- [CONTRIBUTING-HARNESS.md](CONTRIBUTING-HARNESS.md) — satisfying harness checks
+- [HARNESS-LOOP.md](HARNESS-LOOP.md) — recursive local work loop
+- [PLANS.md](PLANS.md) — execution-plan expectations
+
+## Retained contracts
+
+[Technical/v3/](Technical/v3/README.md) contains the approved v3 product contracts. They preserve the
+contract and decision record behind the current Work implementation. They are not a substitute for
+the current technical overview above, and historical names or sequencing inside them do not make a
+surface current again.
+
+## Optional deployment profiles
+
+[Technical/fredbot-integration.md](Technical/fredbot-integration.md) records one optional managed
+hosting profile. Falcon Dash must not depend on it, and core product or installation instructions
+must not route through it.
+
+## Documentation classes
+
+| Class            | Meaning                                           | Update rule                                                   |
+| ---------------- | ------------------------------------------------- | ------------------------------------------------------------- |
+| Current          | Describes code and UI that ship now               | Must change with the owning code                              |
+| Roadmap          | Describes an approved future target               | Must identify its target version and never imply availability |
+| Contract         | Preserves an approved semantic or design contract | Amend explicitly; do not silently rewrite history             |
+| Optional profile | Describes one deployment integration              | Must remain outside core product requirements                 |
+
+Unclassified historical notes, screenshots, abandoned proposals, and implementation diaries do not
+belong in `docs/`. Git history and closed issues retain that information.

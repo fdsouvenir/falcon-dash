@@ -1,95 +1,132 @@
 # Falcon Dash v3 — Implementation Architecture
 
-> Developer-owned architecture decisions for implementing the v3 contracts (docs 01–05). Release gate 7 in [#332](https://github.com/fdsouvenir/falcon-dash/issues/332) requires these material choices and their tradeoffs to be documented; this doc is that record, written before implementation began (2026-07-22) and updated as decisions evolve. The contracts constrain this doc, never the reverse.
-
-Guiding rule: do not over-index on v2. v2 patterns are inherited only where they are domain-neutral house style (data directory layout, test conventions, adapter-node deployment, idempotent-singleton startup). v2's domain design — universal status enum, markdown workspace mirror, unauthenticated API, imperative schema evolution — is explicitly not carried forward.
+> Developer-owned as-built architecture for the approved v3 contracts. This file records the
+> material v3 implementation decisions required by #332. General current orientation lives in
+> `../work-management.md`; docs 01–05 constrain this implementation, not the reverse.
 
 ## Storage
 
-- Two SQLite databases via `better-sqlite3` (existing dependency): `work3.db` (canonical Work database) and `work3-events.db` (append-only Event Log), per the two-database contract in doc 01. Both live under the standard data dir (`FALCON_DASH_DATA_DIR`, default `~/.openclaw/data/falcon-dash/`), with env overrides `FALCON_DASH_WORK3_DATABASE_PATH` and `FALCON_DASH_WORK3_EVENTS_DATABASE_PATH`. WAL mode, foreign keys on, lazy idempotent singleton open with test-reset helpers (mirroring the v2 test pattern: env-var path override + `close`/`reset` exports).
-- **Numbered migrations**: a `schema_migrations` table per database and ordered SQL files (`migrations/work/NNN_*.sql`, `migrations/events/NNN_*.sql`) applied transactionally at startup. This deliberately replaces v2's imperative, introspection-guarded rebuild pipeline, which proved order-sensitive and hard to reason about.
-- **Two versioning mechanisms, deliberately distinct** (per doc 01): the envelope `version` counter provides optimistic concurrency on mutable head rows; immutable revisions (Plan revisions, Decision packages, Question answers, Findings, Reviews, Authorizations) live in dedicated revision tables with `supersedes` links. The revision-table pattern is part of the foundation because Review/Authorization pinning and revision-pinned `satisfies` assertions build on it — it is the most expensive thing to get wrong.
-- **IDs**: short type-prefixed public IDs (`t42`, `q7`, `p3`) for all agent- and human-facing surfaces (AXI token efficiency; UUIDs waste tokens and are hostile to conversational reference). ULIDs for Event Log event IDs and idempotency keys. Automatons use the OpenClaw job id as their identity per the one-aggregate contract — no separate Falcon id.
+- `better-sqlite3` opens `work3.db` for canonical Work state and the transactional outbox, plus
+  `work3-events.db` for the append-only Event Log.
+- Both default to `~/.openclaw/data/falcon-dash/`, with directory and per-database environment
+  overrides.
+- Each database has a `schema_migrations` table. Numbered SQL migrations apply transactionally at
+  startup; applied migrations are immutable.
+- Mutable head rows use an envelope version for optimistic concurrency. Immutable answers,
+  packages, revisions, Reviews, and Authorizations use revision/supersession records.
+- Public IDs are short and type-prefixed. Event IDs and idempotency keys use ULIDs. An Automaton
+  uses its OpenClaw job ID; Falcon Dash does not mint a second runtime identity.
 
-## Transition engine
+## Command engine
 
-- One shared **command registry**: per-object semantic command definitions as data — command name, target type, legal source states, guards, required metadata, effects, emitted event types. The registry is the single source of truth for execution, HTTP routing, CLI help, and error alternatives ("valid alternatives" in structured errors come from the registry, not hand-maintained lists).
-- **Two-phase execution pipeline.** Some guards are irreducibly async — resolving a human-instruction `source_ref` against gateway chat history, rechecking Authorization validity, and all Automaton gateway operations — and cannot live inside a synchronous better-sqlite3 transaction. The pipeline is therefore: (1) async pre-guards; (2) one synchronous transaction: load target + `expected_version` check, synchronous guards, mutation, idempotency record, outbox insert; (3) post-commit in-process bus emit. The in-transaction version check protects against races during the async phase: if the record changed while a pre-guard was in flight, the command fails with `version_conflict` rather than committing on stale state.
-- **Automaton commands use a distinct executor shape** sharing the same registry, errors, and idempotency: gateway RPC first (`cron.add`/`cron.update` with `expectedConfigRevision`/`cron.remove`), then the local transaction for extension attributes + outbox. Partial failure (runtime mutated, local write failed, or vice versa) surfaces as an operation/health error per the contract — never hidden, never modeled as drift.
-- **Structured errors** with stable codes (`transition_not_allowed`, `transition_requirements_not_met`, `authority_required`, `authorization_invalid`, `version_conflict`, `invariant_violation`, …) defined once in shared code and mapped to HTTP statuses and CLI exit classes.
-- **Derived state is computed on read, never stored**: Authorization effectiveness (including time-based expiry), Review disposition, blocked state, Project health, progress, Milestone schedule state — all in one shared `read/derived.ts` module consumed by projections, guards, and queue buckets, so they cannot diverge (release gate 2). No expiry sweeper: the recheck-before-every-governed-action rule makes one redundant for correctness; a system-actor sweep can be added later only if Mission Control needs expiry _events_.
+One registry defines semantic commands, target types, validation, guards, effects, and events. The
+registry feeds execution, legal-command projections, HTTP mutation routing, CLI help, and valid
+alternatives in errors.
 
-## Event Log
+Execution has three phases:
 
-- Transactional **outbox** table in `work3.db`, written in the same transaction as every canonical mutation. A transfer worker moves outbox rows to `work3-events.db`: interval fallback **plus** an immediate kick from the post-commit bus emit, so `history` reflects a completed command without perceptible lag. ULID event IDs make the transfer an insert-or-ignore upsert (idempotent across the two files, which share no transaction); delivered rows are pruned after a safety window.
-- Outbox transfer lag and failed publication are surfaced through `/api/health` diagnostics — observable operational states, never silent (doc 01 Event Log rules; release gate 6 evidence).
-- Browser live updates come from an SSE endpoint reading the in-process bus (same stream template as `/api/gateway/events`). UI timelines and the agent `history` command read only the Event Log through the server API; nothing but the transfer worker reads the outbox.
+1. asynchronous pre-guards resolve external sources or runtime state;
+2. one synchronous SQLite transaction reloads the target, checks `expected_version`, applies
+   synchronous guards and mutation, records idempotency, and inserts the outbox event;
+3. post-commit code publishes local invalidation and starts outbox transfer.
 
-## Auth and actor adapters
+The in-transaction reload prevents an asynchronous validation result from authorizing a stale
+mutation.
 
-Actor identity is credential identity (doc 02). Two thin adapters over one engine:
+Semantic no-ops and idempotency replays are intentionally different. A no-op does not bump the
+version or emit an event. A replay returns the original recorded result and skips repeated side
+effects.
 
-- **`/api/v3/*` requires a bearer token, always, and only ever yields `agent` (or `system`) actors.** Per-agent tokens live in a `falcon_agent_tokens` table, hashed at rest, minted in the settings UI, and dropped as token files under the data dir so the co-resident CLI is zero-config (`FALCON_DASH_TOKEN` env overrides).
-- **Person actorship exists only through the operator UI's server-side path**: SvelteKit form actions / server routes calling the engine in-process, protected by SvelteKit's origin check, with display label taken from `Cf-Access-Authenticated-User-Email` when the Cloudflare Access header is present. No session store.
-- Rationale (the spoofing hole this closes): production traffic from agents is localhost and bypasses Cloudflare Access entirely, so any "no bearer = person" rule would let an agent issue authority-creating commands as the operator. Under this design a bearer credential can never produce a person actor, and the person path never crosses the network API.
+Structured errors use stable codes, messages, target/version context, missing requirements, and
+useful alternatives. Unknown fields and filters fail loudly.
 
-## HTTP API
+## Authority
 
-JSON only; TOON rendering is a CLI concern (doc 04: "internal HTTP/API transport remains JSON").
+Agent actors come from hashed bearer-token records. Person actions enter through the trusted
+same-origin UI adapter. Display labels are historical attribution and never create authority.
 
-- Mutations: `POST /api/v3/commands/[command]` — one dispatch route, body `{target, expected_version, idempotency_key, payload}`. Unknown command names fail loudly with 404 and the known-command list. One route file; the registry provides dispatch.
-- Reads: `GET /api/v3/objects/[type]` (list/search with `view=list|detail|full`, `fields=`, filters) and `GET /api/v3/objects/[type]/[id]`; plus dedicated `queue`, `brief`, `history`, `events` (SSE), and `sources/resolve` endpoints. Aggregates are single-pass server-side SQL, bounded rows + totals per bucket (doc 04).
+Authority-creating commands require a person UI session or a resolvable source reference to the
+human instruction asserted by an agent. The source reference establishes auditable provenance, not
+proof of the human's intent. System actors cannot decide, answer, review, grant authority, or waive
+governance.
 
-## CLI: `falcon`
+## Event delivery
 
-- New TypeScript source in `src/cli/`, bundled by a separate esbuild step (`scripts/build-cli.mjs` → `bin/falcon.js`; the SvelteKit build doesn't cover it), new `bin` entry `falcon` alongside the existing `falcon-dash` server launcher. Because Falcon Dash ships as an npm global on every fredbot host, the CLI lands on agent machines automatically.
-- Built on `axi-sdk-js` (pinned exact — 0.x, accept churn risk deliberately; fallback is vendoring its small dispatch layer) and `@toon-format/toon` v4: TOON default output, `--json`, `--fields`, `--full`, truncation metadata with the exact full-content command, stable exit classes, concise per-command `--help`, no-arg orientation view.
-- Command metadata and error codes live in `src/lib/work3-shared/` with **no server imports** (no `$env`, no better-sqlite3), consumed by both engine and CLI so the two surfaces cannot drift.
-- Config: `FALCON_DASH_URL` (default localhost) + token discovery (env → config file → token file under the data dir). Open question deferred to the CLI issue: how the CLI knows _which_ agent it is; fallback is a host-level token with `FALCON_AGENT_ID` attribution, recorded as a Finding.
+Canonical mutation and outbox insertion are atomic. A retrying worker transfers outbox rows to the
+separate Event Log. The outbox remains internal; timelines and agent history read only the Event
+Log.
 
-## Ambient context
+An in-process bus emits after commit. `/api/work3/events` forwards those signals over SSE so browser
+readers can invalidate. The SSE stream is not durable history and missing an event cannot lose
+canonical state.
 
-v3-native, no v2 markdown mirror: no workspace file generation, no symlinks, no per-item `.md` files. The existing falcon-dash gateway plugin's `before_prompt_build` hook fetches the bounded `GET /api/v3/brief` (with its own agent token) and prepends it to agent prompts. On-demand depth is the CLI: `falcon` no-arg orientation, `falcon brief`, `falcon queue`.
+## Read model and search
 
-## Automaton aggregate
+Object readers register `list`, `detail`, and `full` projections with field/filter validation.
+Shared derived modules compute blockers, actionability, governance, Project health/progress,
+Milestone schedule state, queue/brief buckets, due-next groups, and meaningful changes.
 
-- Composition: live gateway `cron.*` record (via the existing `gateway-client.ts` singleton) + a `automaton_attrs` extension table keyed by OpenClaw id (Area/Project context, summary, Plan, policies, restoration history).
-- `automaton_attrs` includes a `last_seen_runtime_config` snapshot column refreshed on every `cron` event and read-through. This exists solely to serve the recoverable-deletion requirement when a job is deleted _directly in OpenClaw_ (the change event may not carry the removed config). It is a snapshot cache, explicitly **not** mirrored desired-state: nothing reconciles against it, and there are no drift semantics.
-- Lifecycle commands go through the gateway (`cron.add`/`cron.update {id, patch}`/`cron.remove`). **Correction (verified against the installed 2026.7.1-2 dist during #340):** the capability audit's `expectedConfigRevision`/`configRevision` token does **not** exist in this build — `cron.update` has no CAS parameter. Optimistic concurrency is therefore Falcon-side: commands read the live job, compare the caller's `expected_runtime_updated_at_ms` against `job.updatedAtMs`, and reject with `version_conflict` on mismatch before patching. The small read-to-write race window is accepted and recorded; if a later OpenClaw release ships the revision token, the guard tightens without an interface change.
-- The `cron` event subscription triggers snapshot refresh + direct-deletion detection (debounced `syncAutomatonsOnce`); definition changes are detected by re-reading and comparing `updatedAtMs`.
-- Verified: restore produces a new runtime id (`declarationKey` is for config-declared jobs and does not preserve API-created identities) — extension attributes are re-bound to the new id with lineage recorded on both sides.
+FTS5 indexes current searchable heads. Queries are term-quoted before `MATCH`. Aggregates use
+set-based queries with totals and bounded rows rather than client-side join loops.
 
-## UI
+Derived state is never patched by clients. Guards and readers consume the same derivations so UI,
+API, and CLI cannot disagree about Authorization effectiveness or lifecycle requirements.
 
-New routes under `/work3` (temporary namespace) implementing the five destinations of doc 05, with form actions calling the engine in-process (the person adapter). At cutover: route swap to `/work`, module-registry update, deletion of the v2 module, `/api/work/*`, and the v2 context writer. Coexistence with v2 is incidental, not a design goal — zero investment beyond not breaking the build, and v2 retirement happens as soon as the operator switches daily driving, not gated on the full issue arc.
+## Human and agent interfaces
 
-## Build order
+- Work page servers call readers and the person command adapter in process.
+- `/api/v3` is JSON and bearer-authenticated for agent access.
+- The packaged `falcon` CLI uses the same projections and commands, defaulting to compact TOON with
+  JSON as an explicit output mode.
+- `gateway-plugin/brief-context.js` fetches the bounded `/api/v3/brief`, caches for 60 seconds, and
+  fails open with empty context. It does not generate markdown mirrors or workspace symlinks.
 
-Vertical-slice first, so every layer of the contract is exercised early and dogfooding starts weeks before breadth:
+The shipped UI routes are under `/work`; the temporary `/work3` build namespace and v2 APIs are no
+longer part of the application.
 
-1. Foundation (DBs, migrations, envelope, engine core, outbox/Event Log, bus/SSE)
-2. Actor model + agent transport (tokens, `/api/v3` skeleton)
-3. Vertical slice: Area + Task + Blockers end-to-end with minimal UI
-4. `falcon` CLI v1
-5. Knowledge objects: Question, Decision, Finding + source-ref resolution
-6. Governance: Plan, Review, Authorization, Change Request
-7. Project structure: Project, Phase, Milestone, typed relationships, reconciliation
-8. Automaton aggregate (parallelizable after 2)
-9. Mission Control, queue/brief aggregates, Needs Resolution, Browse
-10. Cutover, benchmarks, dogfooding, release evidence
+## Project history scope
 
-The child issues of #332 map one-to-one to this order.
+Project timelines combine events for the Project, its structure, and Work assigned during explicit
+membership intervals. Assignment boundaries appear in both the Project being left and the Project
+being joined. Pending outbox assignment events supplement the Event Log until transfer completes,
+so the current ledger boundary takes effect immediately without rewriting history.
 
-## As built (finalized 2026-07-23, gate 7)
+## Automaton composition
 
-Everything above held through implementation except where noted. Material decisions made during the build:
+OpenClaw owns cron definitions and native runs. Falcon Dash owns Work-facing metadata, derived
+health/governance, lifecycle history, and deleted snapshots. The OpenClaw job ID is the shared
+aggregate identity.
 
-- **Engine semantics.** Semantic no-ops (`noop: true`) skip the version bump and emit no events; idempotency-key replay returns the stored original result (original event ids) flagged `replayed: true` with post-commit side effects skipped — two distinct mechanisms, both contract-tested. `registerCommand` is deliberately non-generic (TS unifies no-op and mutation branch literals otherwise); result typing lives on `executeCommand<T>`.
-- **Plan revisions** do not use the generic `appendRevision` helper: `is_current` tracks the _current applicable_ revision (a submitted revision stays current while a revise-draft is open; supersession happens at the replacement's submit). All other revision tables (answers, decision packages, change packages) use the generic helper.
-- **Authorization effectiveness** is one shared derivation (`authorizationEffectiveness`) comparing the pinned change-revision id, plan-revision id, and sha256 scope fingerprint against current state — consumed by both guards and projections, which is what makes gate 2 structural rather than aspirational. Same-millisecond grants tiebreak by id sequence.
-- **Automaton concurrency** (correction recorded above): Falcon-side `expected_runtime_updated_at_ms` vs live `updatedAtMs`; no CAS token exists in openclaw 2026.7.1-2. Automaton entities reuse the OpenClaw job id as their `entities.id`, preserving "no separate Falcon id" while keeping FK compatibility for Blockers and relationships. Runtime results computed in async pre-guards travel to the synchronous transaction via a WeakMap keyed by the payload object (no interleaving is possible between the last awaited pre-guard and the transaction).
-- **Relationships.** The typed link table stores `depends_on`/`contributes_to`/`satisfies`/`implements`/`derived_from`/`related_to`; `blocks`, `supersedes`, `answers`, and `authorizes` remain specialized records/fields per doc 01 (doc 03 lists them in the vocabulary; projections may render them as relationships). `related_to` is the sanctioned last-resort link excluded from every derived calculation — doc 01's prohibited `relates_to` refers to the unconstrained generic association.
-- **Reconciliation** is wired into the terminal commands themselves (not a sweeper): next-pointer clearing with audit events (the Project deliberately surfaces as health-unknown), supportive-terminal blocker auto-resolution (completed/answered/decided/succeeded), ambiguous cases (cancelled sources) left active and visible. Reopening invalidates revision-pinned `satisfies` assertions.
-- **Search** is an FTS5 table maintained by per-head-table triggers; user queries are term-quoted before MATCH. Aggregates (`queue`/`brief`) are a fixed set of set-based queries with totals + bounded rows; gateway unavailability is reported _inside_ the automata bucket rather than failing the aggregate.
-- **Ambient context** ships as `gateway-plugin/brief-context.js` (versioned here) deployed into the installed extension's `dist/` — the falcon-dash-plugin TypeScript source repo was not found locally and should be recovered; until then this repo is the source of truth for the brief hook. Best-effort with a 60s cache and empty-on-failure.
-- **Known tradeoffs.** (1) Automaton updates have a small read-to-write race window until OpenClaw ships a revision token (Finding f1). (2) `waiting_on` classification in the queue is a string-prefix heuristic (`agent*`/`bot*` = agent). (3) Benchmarks on real data: v2 `/api/work/items` ≈ 45.5k chars (~11.4k est. tokens) vs `falcon task list` TOON ≈ 400 chars (~100 tokens); TOON ≈ 2.4× denser than the identical JSON projection.
+Automaton commands perform the gateway operation and then record the corresponding local state and
+event. The installed OpenClaw runtime does not expose a configuration compare-and-swap token, so
+Falcon Dash rereads and compares `updatedAtMs` through `expected_runtime_updated_at_ms`. A small
+read-to-write race remains until OpenClaw exposes a revision token. Partial or unavailable runtime
+operations surface as errors; they are never recast as drift or a fake lifecycle state.
+
+Deleting an Automaton preserves a Falcon snapshot. Restoring creates a new paused OpenClaw job,
+rebinds the Work entity to the new runtime ID, and preserves lineage rather than pretending the new
+job has the deleted identity.
+
+Cron events trigger a debounced synchronization read. Direct runtime edits update snapshots;
+missing jobs are detected explicitly.
+
+## Reconciliation
+
+Terminal commands run deterministic reconciliation in the same mutation path:
+
+- clear invalid Project current-next pointers with an audit event;
+- auto-resolve blockers only for supportive terminal outcomes;
+- leave ambiguous cancellation cases visible for a human decision;
+- invalidate revision-pinned `satisfies` assertions when their subject reopens.
+
+There is no correctness-critical sweeper for these rules.
+
+## Known tradeoffs
+
+- Automaton updates retain the gateway read-to-write race described above.
+- Queue `waiting_on` classification currently recognizes agent-like string prefixes; a richer
+  identity model would replace that heuristic.
+- The repo versions the Work brief hook but not the complete installable gateway extension source;
+  standalone plugin packaging remains a product installation gap.
+- The current package expects KeePassXC files to be provisioned before Vault is available;
+  standalone vault provisioning also remains an installation gap.

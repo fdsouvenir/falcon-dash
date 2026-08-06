@@ -3,18 +3,33 @@
 Use this file as a router. Keep repo truths in `docs/`, reusable workflows in `skills/`, and
 verification in tests and scripts.
 
+`AGENTS.md` is the canonical agent guide. `CLAUDE.md` must remain a symlink to this file so every
+agent receives the same instructions.
+
 ## Start Here
 
 - Read [docs/PURPOSE.md](docs/PURPOSE.md) for product intent and audience.
+- Read [docs/ROADMAP.md](docs/ROADMAP.md) when a change affects version scope or future architecture.
 - Read [docs/HARNESS.md](docs/HARNESS.md) for the repo-level execution and validation model.
 - Read the smallest technical doc that matches the task.
 - Load a skill only when the task matches that skill's scope.
+
+## Product and Sources of Truth
+
+- Falcon Dash is a standalone, self-hostable operator dashboard that requires a co-resident
+  OpenClaw Gateway over loopback or a same-host container network. Remote gateways are outside the
+  supported product scope.
+- OpenClaw changes rapidly. For upstream behavior, consult the current official documentation at
+  `docs.openclaw.ai`, its `llms-full.txt`, and the public `github.com/openclaw/openclaw` repository.
+- Repository docs, code, and tests should agree. When they do not, investigate the discrepancy and
+  reconcile them in the same change instead of silently treating either one as correct.
 
 ## Task Routing
 
 ### Product and UX intent
 
 - [docs/PURPOSE.md](docs/PURPOSE.md) — product purpose, audience, and design philosophy
+- [docs/ROADMAP.md](docs/ROADMAP.md) — current-versus-future version scope and post-v5 architecture
 - [docs/End User/](docs/End%20User) — user-facing behavior by feature
 
 ### Architecture and implementation
@@ -36,7 +51,7 @@ verification in tests and scripts.
 - [docs/RELIABILITY.md](docs/RELIABILITY.md) — state, realtime, and failure-mode expectations
 - [docs/PLANS.md](docs/PLANS.md) — how to write and maintain execution plans in this repo
 - [docs/OWNERSHIP.md](docs/OWNERSHIP.md) — which docs should usually move with which code areas
-- [docs/LEARNINGS.md](docs/LEARNINGS.md) — historical implementation pitfalls and fixes
+- [docs/LEARNINGS.md](docs/LEARNINGS.md) — durable lessons that span the product roadmap
 
 ### Skills
 
@@ -97,5 +112,15 @@ Use Node 20+.
 ## Change Discipline
 
 - Keep `AGENTS.md` short. Put durable repo knowledge in `docs/`.
+- When planning work, find the relevant GitHub issue and keep its scope, status, discoveries, and
+  acceptance criteria current. Create an issue when the work needs tracking and no suitable issue
+  exists. Follow `SECURITY.md` instead of opening public issues for vulnerabilities.
+- Use [docs/OWNERSHIP.md](docs/OWNERSHIP.md) before completing a behavior change and update every
+  owning current document in the same change.
+- Document durable behavior, architecture, decisions, verification paths, and operational gotchas.
+  Add a lesson to `docs/LEARNINGS.md` only when it is expected to remain useful across the full
+  product roadmap; use code, tests, current technical docs, issues, or Git history for narrower facts.
+- Commit early and often. Prefer small, coherent commits and never include unrelated user changes.
 - Do not commit secrets or machine-specific config.
-- Local development expects an OpenClaw gateway and reads `~/.openclaw/openclaw.json`.
+- Do not assume a gateway is running or use a hardcoded gateway port. Inspect the current same-host
+  environment and follow the gateway and deployment docs for configuration and authentication.

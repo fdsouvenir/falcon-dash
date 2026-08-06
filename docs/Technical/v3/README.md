@@ -1,5 +1,10 @@
 # Falcon Dash v3 Contracts
 
+> **Document class: retained approved contracts.** These files preserve v3 semantics and their
+> approval record. Use `../work-management.md` and the current source tree for as-built paths,
+> packaging, and runtime behavior. Historical terminology, benchmarks, migration discussion, or
+> build order inside a contract does not describe a current product surface.
+
 Falcon Dash v3 is a human-operable, agent-native operator workspace backed by one rigorous Work domain. This directory holds the authoritative copies of the approved v3 product contracts, consolidated from the epic [#326](https://github.com/fdsouvenir/falcon-dash/issues/326) and its sub-issues on 2026-07-22. The GitHub issues remain the approval record; when these docs and an issue disagree, reconcile explicitly rather than assuming either side.
 
 ## Product principles (from #326)
@@ -21,8 +26,8 @@ Falcon Dash v3 is a human-operable, agent-native operator workspace backed by on
 | [02-lifecycle-and-authority.md](02-lifecycle-and-authority.md)                   | #327         | Semantic transition commands, per-object state machines, guards, idempotency, optimistic concurrency, actor model and authority classes                                                                          |
 | [03-relationships-provenance-sources.md](03-relationships-provenance-sources.md) | #328         | Typed relationship vocabulary, blockers, source_refs schema, supersession and reconciliation                                                                                                                     |
 | [04-agent-interface-axi.md](04-agent-interface-axi.md)                           | #329         | AXI command surface, TOON/JSON output modes, projections, aggregates, errors, conversational capture path                                                                                                        |
-| [05-operator-ui.md](05-operator-ui.md)                                           | #330         | Information architecture, Mission Control, Project ledger, decision/approval surfaces, rendered acceptance                                                                                                       |
-| [06-implementation-architecture.md](06-implementation-architecture.md)           | #332         | Developer-owned architecture: storage, transition engine, Event Log, auth adapters, API, CLI, Automaton composition, build order                                                                                 |
+| [05-operator-ui.md](05-operator-ui.md)                                           | #330         | Information architecture, Work overview, Project ledger, decision/approval surfaces, rendered acceptance                                                                                                         |
+| [06-implementation-architecture.md](06-implementation-architecture.md)           | #332         | Developer-owned as-built architecture: storage, transition engine, Event Log, auth adapters, API, CLI, and Automaton composition                                                                                 |
 
 ## Explicit exclusions
 

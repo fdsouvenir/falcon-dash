@@ -1,32 +1,18 @@
-# Apps
+# Canvas Apps
 
-Apps are interactive applications that your agent creates on the fly during conversations. Instead of just sending text replies, your agent can build small visual tools, dashboards, forms, and other interactive content right inside Falcon Dash.
+Falcon Dash can display plugin-created canvas surfaces. An active surface appears as a floating
+panel across the desktop shell and may be opened directly at `/apps/<surface-id>`.
 
-## How apps appear
+The current canvas route:
 
-When your agent creates an app, it shows up in two places:
+- renders A2UI or HTML canvas content received through the Falcon Dash gateway plugin;
+- allows a surface to be pinned or unpinned where that control is available;
+- shows loading, no-content, missing-surface, and bridge failure states;
+- is desktop-only; narrow viewports show an explicit Desktop Only message.
 
-- **Inline in chat** -- the app appears directly within the conversation where it was created. You can interact with it right there alongside your messages.
-- **As a pinned app in the sidebar** -- if you pin an app, it gets its own entry in the sidebar so you can return to it any time without scrolling through the conversation.
+Canvas surfaces are gateway/plugin runtime state. A gateway restart or cleared surface may make a
+direct URL unavailable. Pinning is a navigation convenience, not durable application storage.
 
-## Pinning apps to the sidebar
-
-When an app appears in your chat, you will see a pin icon near the app's header. Click it to pin the app to the sidebar. Once pinned:
-
-- The app appears in the left sidebar under your pinned apps section.
-- Click it in the sidebar to open it in a full-page view.
-- The app title is displayed at the top of the page.
-
-To remove an app from the sidebar, open it and click "Unpin." You will be asked to confirm before it is removed. The app content remains in your chat history even after unpinning.
-
-## Interacting with apps
-
-Apps are fully interactive. Depending on what your agent built, you might be able to click buttons, fill in forms, view charts, or navigate between different views. The app runs directly in your browser and communicates with your agent in real time.
-
-## Renaming a pinned app
-
-You can rename a pinned app from the sidebar by right-clicking it and choosing rename. This changes only the display name in the sidebar and does not affect the app itself.
-
-## Desktop only
-
-Canvas apps require a desktop browser. If you visit a pinned app on a mobile device, you will see a message suggesting you switch to a desktop browser for the best experience.
+This current canvas bridge is not the v5 contextual conversation product. v5 will wire optional
+canvas experiences into a rich project/object conversation interface rather than claiming that a
+standalone canvas surface is already a chat system.

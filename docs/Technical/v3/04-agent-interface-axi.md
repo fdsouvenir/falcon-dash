@@ -1,6 +1,6 @@
 # Falcon Dash v3 — AXI-Compliant Agent Interface
 
-> Consolidated from approved contract [#329](https://github.com/fdsouvenir/falcon-dash/issues/329) on 2026-07-22. Implementation tracked in #329.
+> Consolidated from approved contract [#329](https://github.com/fdsouvenir/falcon-dash/issues/329) on 2026-07-22.
 
 ## Objective
 
@@ -84,7 +84,7 @@ List defaults never include full descriptions, Plans, source payloads, histories
 - blocked risk
 - awaiting Review
 - Change Requests lacking valid Authorization or verification
-- unhealthy Automata
+- unhealthy Automations
 - stale current-next pointers or reconciliation problems
 
 Every bucket provides total count and a bounded set of compact rows. Pagination or a follow-up command retrieves more.
@@ -95,7 +95,7 @@ Session-start context is bounded and cacheable. It contains:
 
 - current high-priority actionable Work
 - decisions/answers/Reviews/Authorizations requiring the operator
-- material blockers and unhealthy Automata
+- material blockers and unhealthy Automations
 - recently changed relevant Work
 - exact commands for deeper context
 

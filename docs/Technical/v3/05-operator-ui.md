@@ -1,8 +1,8 @@
 # Falcon Dash v3 — Operator Work UI
 
-> Consolidated from approved contract [#330](https://github.com/fdsouvenir/falcon-dash/issues/330) on 2026-07-22. Implementation tracked in #330.
+> Consolidated from approved contract [#330](https://github.com/fdsouvenir/falcon-dash/issues/330) on 2026-07-22.
 
-> **Naming note (2026-07-24, #344):** the shipped destination labels are plain product names — "Mission Control" ships as **Work** (the module's overview/index) and "Automata" ships as **Automations** (`/work/automations`). This doc keeps the original contract names below; the semantics are unchanged, only surface naming. The overview also shipped inbox-first (prioritized item lists with counts inline in headings) rather than hero stat tiles; the queue-bucket contract is unaffected.
+> **Closeout amendment (2026-08-06, #344):** the final surface uses the plain product names **Work** and **Automations**. Page chrome omits eyebrows, taglines, object-type explanations, and repeated counts. Counts appear once in section headings; compact status strips and row-oriented lists replace equal-card mosaics.
 
 ## Objective
 
@@ -10,7 +10,7 @@ Build a human-first operator surface for the approved v3 Work model without flat
 
 ## Scope
 
-- Mission Control and actionability queues
+- Work overview and actionability queues
 - Project ledger with Phases, Milestones, current work, criteria, sources, and history
 - Needs Resolution and approval experiences
 - Object-specific detail and editing surfaces
@@ -28,17 +28,17 @@ Rendering is not completion. Verify the real interface at target desktop and mob
 
 Falcon Dash v3 has five primary Work destinations:
 
-1. **Mission Control** — current action, needs-operator queues, blocked risk, unhealthy Automata, and material recent changes.
+1. **Work** — current action, needs-operator queues, blocked risk, unhealthy Automations, and material recent changes.
 2. **Projects** — Project ledger with outcome, current-next, Phases, Milestones, criteria, active Work, and history.
 3. **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring human attention.
-4. **Automata** — the Falcon view of live OpenClaw automations, including configuration, health, next execution, and native Run history.
+4. **Automations** — the Falcon view of live OpenClaw automations, including configuration, health, next execution, and native Run history.
 5. **Browse** — search and filter across Tasks, Changes, Plans, Findings, Areas, and archived/terminal Work.
 
 Object types keep distinct detail experiences. The UI must not flatten everything into generic cards or one universal status board.
 
 ### Portfolio, focus, and Browse
 
-- The Projects index leads with a portfolio pulse and health distribution. Focuses are `Blocked`,
+- The Projects index leads with a compact health distribution and counted focus filters. Focuses are `Blocked`,
   `At risk`, `No next move`, `Overdue`, and `Stale`; the Project reader supplies health,
   current-next validity, target time, and update time.
 - Browse type selection and focus selection are URL-driven. Counted focus chips cover Tasks
@@ -52,7 +52,7 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - Browse contains no generic Task or Area creation form. Agent-driven creation remains the v3
   workflow.
 
-### Mission Control
+### Work overview
 
 - Lead with the smallest set of actions that can materially advance Work.
 - Lead with four drill-down totals: `Needs your call`, combined `At risk`, `Agent can act`, and
@@ -95,6 +95,8 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 - Needs Resolution keeps four independently labeled expandable sections: Questions, Decisions,
   Reviews, and Authorizations. Expansion exposes a semantic command bar scoped to that exact row.
+- Needs Resolution reads the complete Authorization work set rather than the overview's bounded
+  queue slice. Authority-ready Plans sort ahead of Change Requests whose Plans are not submitted.
 - Review rows carry the exact submitted revision. Authorization rows carry the current Change
   version and explain a missing prerequisite inline.
 - Question view emphasizes prompt, impact, investigation context, sources, and authoritative answer.
@@ -116,13 +118,13 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
   without implying that Review disposition grants permission.
 - Failure, retry, verification, waiver, rollback, and cancellation preserve prior attempts and require their defined metadata.
 
-### Automata
+### Automations
 
 - The Automaton screen edits the same OpenClaw-backed object, not a mirrored Falcon configuration.
 - Lifecycle, health, and native Run outcome use distinct semantic tone maps.
 - Show paused/active/deleted lifecycle, trigger or schedule, payload summary, delivery, health, next execution, and recent native Runs.
 - Runtime unavailability or failed updates appear as operation/health errors, never drift or a fake lifecycle state.
-- Deleted Automata expose restoration history and restore to paused.
+- Deleted Automations expose restoration history and restore to paused.
 - Native Run detail is read-through; Falcon Dash creates no Run artifact or assessment object.
 
 ### Relationships, provenance, and history
@@ -152,7 +154,7 @@ unmet reason stays visible. Failed submissions reopen the matching form with the
 
 ### Rendered acceptance
 
-- Validate Mission Control, Project, Decision, Change Request, Automaton, and Browse at representative desktop and mobile viewports.
+- Validate Work, Project, Needs Resolution, Decision, Change Request, Automation, and Browse at representative desktop and mobile viewports.
 - Acceptance includes hierarchy, density, typography, focus order, touch targets, clipping, overlap, long content, empty states, loading, errors, and stale-version recovery.
 - Screens must remain usable with realistic high-density data and long titles, not only fixtures designed to fit.
 - Visual implementation choices remain with the developer, but the object distinctions and interaction semantics above are mandatory.

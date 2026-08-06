@@ -1,6 +1,6 @@
 # Work
 
-Work is Falcon Dash's operator control plane and the agent-facing source of truth.
+Work is Falcon Dash's shared dashboard and the agent-facing source of truth.
 
 Use `/work` to see what needs a human call, what is at risk, what the agent can act on, what is
 waiting, and which governance or automation states need attention. Falcon Dash opens to Work by
@@ -39,10 +39,10 @@ latest state.
 
 ## Portfolio and Browse
 
-Projects opens with a portfolio pulse for open, blocked, at-risk, overdue, no-next-move, and stale
-outcomes. The health strip and Project rows use reader-supplied health and progress; target and
-last-update timestamps support the date-focused views. Selecting a pulse tile or focus chip writes
-the choice to `?focus=` so the view is linkable and reload-safe.
+Projects opens with a compact health distribution and counted focus filters for blocked, at-risk,
+overdue, no-next-move, and stale outcomes. Project rows use reader-supplied health and progress;
+target and last-update timestamps support the date-focused views. Selecting a focus writes the
+choice to `?focus=` so the view is linkable and reload-safe.
 
 Browse is an inspection surface, not a creation surface. Type tabs cover Tasks, Questions,
 Decisions, Changes, Projects, Findings, and Areas. Types with an operator focus taxonomy show
@@ -54,7 +54,8 @@ shown as an explicit error.
 Needs Resolution keeps Questions, Decisions, Reviews, and Authorizations in four separate sections.
 Rows expand in place to expose semantic actions without losing queue context. A Review records an
 evaluation of an exact submitted revision; an Authorization grants exact-scope permission and is
-never implied by Review.
+never implied by Review. The page loads the complete set of Change Requests needing Authorization,
+with authority-ready Plans first, instead of applying the bounded overview-queue row limit.
 
 ## Object Pages
 
@@ -67,7 +68,7 @@ Each Work type has a distinct detail experience rather than a generic record car
 - Decisions present stakes, consequence of delay, options, recommendation, deciders, and
   supersession lineage before asking for one radio-card selection and rationale. A recommendation
   is labeled but does not choose itself.
-- Change Requests show execution, verification, and Authorization as separate facts. Reviews are
+- Change Requests show execution, verification, and Authorization in one compact state strip. Reviews are
   evaluations; they are never presented as permission to execute. A guarded execution control
   remains visible and explains which Authorization state prevents it.
 - Findings show conclusion, significance, confidence, validity, sources, and supersession. A

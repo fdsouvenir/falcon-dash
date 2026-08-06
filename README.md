@@ -47,13 +47,17 @@ For a production build, run `npm run build`, then start the server with the bund
 npx falcon-dash start --port=3000
 ```
 
-See the [Deployment Guide](docs/Technical/deployment.md) for reverse proxy setup, remote gateways, and production hardening.
+See the [Deployment Guide](docs/Technical/deployment.md) for co-resident deployment, reverse proxy
+setup, and production hardening.
 
 ## Gateway Connection
 
 Falcon Dash maintains its gateway connection server-side; the browser talks to the dashboard over same-origin routes (`/api/gateway/events` for state and event streaming, `/api/gateway/rpc` for calls, `/api/gateway/proxy` for the Gateway Control UI).
 
-- **Configuration resolution** — Explicit environment variables win first (`GATEWAY_URL`, `GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_TOKEN`), then the OpenClaw CLI (`openclaw config get gateway --json`), then `~/.openclaw/openclaw.json`. Remote-mode configs (`gateway.mode: "remote"`) are supported.
+- **Configuration resolution** — Explicit environment variables win first (`GATEWAY_URL`,
+  `GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_TOKEN`), then the OpenClaw CLI
+  (`openclaw config get gateway --json`), then `~/.openclaw/openclaw.json`. `GATEWAY_URL` is for
+  same-host service or container routing; cross-host gateways are not supported.
 - **Reconnection** — Exponential backoff with tick-based health monitoring. If the gateway rotates its token, the reconnector re-reads the config before each retry.
 
 ### Dev Auth

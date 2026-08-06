@@ -1,106 +1,79 @@
-# SecretRefs Integration Guide
+# KeePassXC SecretRef Integration
 
-Falcon Dash ships a KeePassXC exec provider (`bin/keepassxc-secret-resolver.cjs`) that bridges your KeePassXC vault to [OpenClaw's secrets system](https://docs.openclaw.ai/gateway/secrets). Once wired up, any gateway provider config can reference vault entries by path instead of storing plaintext credentials in `openclaw.json`.
+Falcon Dash includes a KeePassXC-backed vault and an OpenClaw exec-secret provider. The vault is a
+product component, not an optional external service. The UI and resolver use the same database and
+key file:
 
-## What the secret resolver does
+- database: `~/.openclaw/passwords.kdbx`
+- key file: `~/.openclaw/vault.key`
+- authentication: `keepassxc-cli --no-password --key-file`
 
-The resolver implements the OpenClaw exec provider protocol:
+Raw values are resolved server-side. Agent and browser interfaces should receive scoped operations
+or redacted metadata rather than credentials.
 
-1. The gateway passes a JSON payload to the script over stdin with a list of secret IDs.
-2. The script opens `~/.openclaw/passwords.kdbx` using a key file (`~/.openclaw/vault.key`) — **no master password required**.
-3. It calls `keepassxc-cli` to look up each entry and returns the values as JSON on stdout.
+## Current installation requirement
 
-The gateway treats the returned values as opaque strings and injects them wherever a `SecretRef` appears in provider configs.
+The current v3 code expects `keepassxc-cli`, the database, and the key file to exist. Automatic
+provisioning is still an installation gap; it must be closed before the standalone installer can
+claim a fully provisioned built-in vault.
 
-## Prerequisites
+## Configure OpenClaw
 
-- `keepassxc-cli` must be on `PATH` (ships with KeePassXC).
-- Vault database: `~/.openclaw/passwords.kdbx`
-- Key file: `~/.openclaw/vault.key`
-
-## Gateway configuration
-
-Add the provider to `~/.openclaw/openclaw.json`:
+Register the bundled resolver in `~/.openclaw/openclaw.json`. `providers` is an object keyed by
+provider name:
 
 ```json
 {
 	"secrets": {
-		"providers": [
-			{
-				"type": "exec",
-				"name": "keepassxc",
-				"command": "/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs"
+		"providers": {
+			"keepassxc": {
+				"source": "exec",
+				"command": "/absolute/path/to/falcon-dash/bin/keepassxc-secret-resolver.cjs",
+				"passEnv": ["PATH", "HOME"],
+				"jsonOnly": true
 			}
-		]
-	}
-}
-```
-
-If Falcon Dash was installed globally via npm, the path is typically:
-
-```
-/usr/lib/node_modules/@fdsouvenir/falcon-dash/bin/keepassxc-secret-resolver.cjs
-```
-
-Restart the gateway after editing `openclaw.json`.
-
-## Secret ID format
-
-Secret IDs map directly to KeePassXC entry paths. The group and entry name are separated by `/`, and an optional `:Field` suffix selects a specific attribute.
-
-| ID format              | Returns                   |
-| ---------------------- | ------------------------- |
-| `Group/Entry`          | Password field (default)  |
-| `Group/Entry:Password` | Password field (explicit) |
-| `Group/Entry:UserName` | Username field            |
-| `Group/Entry:URL`      | URL field                 |
-| `Group/Entry:Notes`    | Notes field               |
-
-Examples:
-
-```
-Providers/anthropic/apiKey          → password stored under Providers → anthropic/apiKey
-Services/openai:UserName            → username of the Services → openai entry
-Tokens/discord-bot:Notes            → notes field of the discord-bot entry
-```
-
-## Referencing secrets in provider configs
-
-Use a `SecretRef` object anywhere a string value is accepted in your provider configuration:
-
-```json
-{
-	"providers": {
-		"anthropic": {
-			"apiKey": { "source": "exec", "provider": "keepassxc", "id": "Providers/anthropic/apiKey" }
-		},
-		"openai": {
-			"apiKey": { "source": "exec", "provider": "keepassxc", "id": "Providers/openai/apiKey" }
 		}
 	}
 }
 ```
 
-The gateway resolves all `SecretRef` objects at startup (and on config reload) before passing values to providers. Plain strings are passed through unchanged, so you can mix SecretRefs and literals in the same config.
+For a package installation, run `falcon-dash path` to locate the package root, then append
+`/bin/keepassxc-secret-resolver.cjs`. Restart OpenClaw after changing its configuration.
 
-See [OpenClaw secrets docs](https://docs.openclaw.ai/gateway/secrets) for the full SecretRef schema and supported source types.
+## Secret IDs
 
-## Vault authentication
+An ID is a KeePassXC entry path with an optional field suffix:
 
-The resolver uses key-file-only authentication (`--no-password --key-file`). There is no interactive password prompt — the gateway can resolve secrets unattended as long as `~/.openclaw/vault.key` is present and readable.
+| ID                     | Value returned |
+| ---------------------- | -------------- |
+| `Group/Entry`          | `Password`     |
+| `Group/Entry:Password` | `Password`     |
+| `Group/Entry:UserName` | `UserName`     |
+| `Group/Entry:URL`      | `URL`          |
+| `Group/Entry:Notes`    | `Notes`        |
+| `Group/Entry:Title`    | `Title`        |
 
-To create the vault with a key file (no master password):
+Use the provider from OpenClaw configuration with a SecretRef:
+
+```json
+{
+	"source": "exec",
+	"provider": "keepassxc",
+	"id": "Providers/anthropic/apiKey"
+}
+```
+
+The resolver implements exec-provider protocol v1, reads JSON on stdin, writes JSON on stdout, and
+returns per-ID errors without exposing unrelated entries.
+
+## Manual bootstrap
+
+Until installation provisions the vault, create it with key-file-only authentication:
 
 ```bash
+mkdir -p ~/.openclaw
 keepassxc-cli db-create --set-key-file ~/.openclaw/vault.key ~/.openclaw/passwords.kdbx
 ```
 
-To add an entry:
-
-```bash
-keepassxc-cli add \
-  --no-password \
-  --key-file ~/.openclaw/vault.key \
-  -p ~/.openclaw/passwords.kdbx \
-  "Providers/anthropic/apiKey"
-```
+Protect both files with operating-system permissions. Possession of the database and key file is
+sufficient to read the vault.

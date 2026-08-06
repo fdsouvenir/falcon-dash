@@ -18,8 +18,9 @@ If a screen only looks correct in the happy path, it is incomplete.
 ## Shell and Viewport Reliability
 
 - Verify desktop inside `AppShell`.
-- Verify mobile inside `MobileShell`.
-- Check `100dvh` and safe-area behavior on mobile.
+- Verify narrow viewports inside `MobileShell`; this is current responsive behavior, not the future
+  v6 dedicated mobile product.
+- Check `100dvh` and safe-area behavior on narrow devices.
 - Check long-content overflow for logs, markdown, tables, and inspectors.
 
 ## Gateway and Event Reliability
@@ -27,6 +28,11 @@ If a screen only looks correct in the happy path, it is incomplete.
 - Separate UI bugs from missing RPC data, stale snapshots, and event wiring issues.
 - When possible, put state semantics in stores or utilities before encoding them in components.
 - Reconnection and delayed hydration are normal conditions, not edge cases.
+- The browser reconnects to Falcon Dash SSE, not directly to OpenClaw. A new ready snapshot must
+  replace stale gateway-derived state after reconnect.
+- Work SSE is an invalidation channel. Canonical Work state and durable history remain in SQLite and
+  the Event Log even when a browser misses an event.
+- Gateway runtime failures must not mutate local Work lifecycle into a convenient placeholder.
 
 ## Operational Clarity
 
