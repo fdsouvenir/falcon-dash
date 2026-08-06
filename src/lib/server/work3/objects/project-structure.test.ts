@@ -945,9 +945,11 @@ describe('typed relationships', () => {
 		expect(detail.milestones).toEqual([]);
 	});
 
-	it('list projection exposes target and update timestamps for portfolio focus', async () => {
+	it('list projection exposes the outcome, current next, and portfolio timestamps', async () => {
 		const targetAt = Date.now() + 7 * 86_400_000;
 		const projectId = await createProject({ target_at: targetAt });
+		const nextTask = await projectTask(projectId, 'Publish the cutover checklist');
+		await cmd('set_current_next_item', projectId, { item_id: nextTask });
 		const { getObjectReader } = await import('../read/registry.js');
 		const listing = await getObjectReader('project').list({
 			view: 'list',
@@ -957,6 +959,12 @@ describe('typed relationships', () => {
 		});
 
 		expect(listing.items.find((item) => item.id === projectId)).toMatchObject({
+			portfolio_summary: 'v3 replaces v2 as the daily driver',
+			current_next: {
+				id: nextTask,
+				title: 'Publish the cutover checklist',
+				type: 'task'
+			},
 			target_at: targetAt,
 			updated_at: expect.any(Number)
 		});
@@ -1349,7 +1357,9 @@ describe('typed relationships', () => {
 		transferWork3OutboxOnce();
 
 		const { getObjectReader } = await import('../read/registry.js');
-		expect(getObjectReader('project').knownFields).toContain('unscoped_contributions');
+		expect(getObjectReader('project').knownFields).toEqual(
+			expect.arrayContaining(['current_next', 'unscoped_contributions'])
+		);
 		const project = (await getObjectReader('project').get(projectId, {
 			view: 'full',
 			filters: {},
@@ -1403,6 +1413,9 @@ describe('typed relationships', () => {
 				source_refs: [{ kind: 'file', ref: '/tmp/project-contribution' }]
 			})
 		]);
+		expect(project.work).toEqual(
+			expect.arrayContaining([expect.objectContaining({ id: task, milestone_id: milestone })])
+		);
 		const projectRelationships = (
 			project.relationships as { incoming: Array<{ target_id: string }> }
 		).incoming;

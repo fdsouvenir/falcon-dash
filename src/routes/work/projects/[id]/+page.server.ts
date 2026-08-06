@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	});
 	if (!project) throw httpError(404, `No such project: ${params.id}`);
 	await resolveProjectProofSources(project);
-	return { project };
+	return { project, now: Date.now() };
 };
 
 export const actions: Actions = {

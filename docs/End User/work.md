@@ -11,14 +11,14 @@ default; `/` redirects to `/work`.
 The Work shell keeps five destinations available on every Work page:
 
 - **Work** — the overview inbox: what needs your call, what is at risk, what is in motion, and recent activity.
-- **Projects** — the portfolio and each Project's route, proof, current work, and history.
+- **Projects** — the portfolio and each Project's outcome, milestones, current work, and history.
 - **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring a human.
 - **Automations** — live OpenClaw automation configuration, health, scheduling, and Run history.
 - **Browse** — search and filters across existing Work and knowledge objects.
 
-Creation is agent-driven. Browse does not provide generic create forms. Project-local Phase and
-Milestone composers are the limited exception because they shape an existing Project's route and
-proof. Work v3 does not include an in-product agent composer.
+Creation is agent-driven. Browse does not provide generic create forms. Adding an ordered
+Milestone from an existing Project is the limited exception. Work v3 does not include an
+in-product agent composer.
 
 ## Work overview
 
@@ -39,9 +39,10 @@ latest state.
 
 ## Portfolio and Browse
 
-Projects opens with a compact health distribution and counted focus filters for blocked, at-risk,
-overdue, no-next-move, and stale outcomes. Project rows use reader-supplied health and progress;
-target and last-update timestamps support the date-focused views. Selecting a focus writes the
+Projects opens directly on a compact control strip and dense portfolio list. A lifecycle selector
+sits beside counted focus filters for blocked, at-risk, overdue, needs-next, and stale outcomes.
+Needs-next applies only to active Projects. Attention-worthy Projects sort first, and each row uses
+reader-supplied health, next-work, progress, target, and summary facts. Selecting a focus writes the
 choice to `?focus=` so the view is linkable and reload-safe.
 
 Browse is an inspection surface, not a creation surface. Type tabs cover Tasks, Questions,
@@ -73,11 +74,13 @@ Each Work type has a distinct detail experience rather than a generic record car
   remains visible and explains which Authorization state prevents it.
 - Findings show conclusion, significance, confidence, validity, sources, and supersession. A
   source that cannot be resolved stays visible with its unavailable reason.
-- Projects use a ledger: Status, Route, Proof, Current work, and History, with the operating brief
-  pinned alongside it on wide screens. Status includes server-derived health, progress, current
-  next work, and risk flags. Route manages ordered Phases. Proof distinguishes work that merely
-  contributes from terminal, source-backed satisfaction assertions and explicit authority
-  waivers. Current work groups Tasks, Questions, Decisions, and Change Requests by Phase.
+- Projects lead with the outcome, plain-language lifecycle and attention state, and visible
+  contextual actions. The main column is one chronological Work stream: overdue items first,
+  nearest upcoming dates next, and undated items last. Work connected to a Milestone is grouped
+  beneath that ordered exit gate; Work without a Milestone stays in the same stream and is never
+  placed in an "unassigned" bucket. Current-next is an inline marker and does not change date
+  order. The side column keeps the finish-line checklist, ordered Milestones, project details, and
+  "How we know" sources. History is secondary and collapsed by default.
 - Automations operate on the same OpenClaw-backed object and show runtime unavailability as a health
   error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
   pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and
@@ -105,11 +108,10 @@ periods when that Work belonged to it, including the incoming and outgoing assig
 Pending assignment boundaries take effect immediately even while Event Log transfer is catching
 up.
 
-Project pages are the only Work pages with creation controls. Their collapsed operating-brief
-controls add a Phase or Milestone within the current Project; they do not create generic Work.
-Phase and Milestone lifecycle controls stay attached to the structure they govern, and Milestone
-achievement requests source references. Archiving a Project freezes these child structure
-controls until the Project is restored.
+Project pages are the only Work pages with a creation control. It adds an ordered Milestone within
+the current Project; it does not create generic Work. Milestone lifecycle controls stay attached
+to the checkpoint they govern, and achievement requests source references. Archiving a Project
+freezes these controls until the Project is restored.
 
 ## Agent Contract
 

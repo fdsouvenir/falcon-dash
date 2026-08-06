@@ -36,6 +36,11 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 - Use direct product language. Avoid eyebrows, taglines, repeated counts, object-type tutorials,
   and internal terms such as “operator”, “control plane”, “Mission Control”, or “Automata” in UI
   copy.
+- Write for an end user. Labels, warnings, and empty states must say what happened and what the
+  person can do next; do not expose schema names, agent narration, or robot-slop phrases.
+- Do not put major lifecycle, health, or attention state in a badge. Use readable text and
+  hierarchy, with color only as reinforcement. Reserve pills for filters, tags, and compact
+  governance facts.
 - Motion must clarify state or interaction and respect `prefers-reduced-motion`.
 
 ## Shared interaction rules

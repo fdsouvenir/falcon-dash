@@ -54,6 +54,13 @@ and type-specific derived state. Health, progress, actionability, review disposi
 authorization effectiveness, schedule state, queue membership, and meaningful update time are
 server facts. Browser routes must not recreate them.
 
+The Project list projection includes `portfolio_summary` (the desired outcome with short summary as
+fallback) and a compact resolved `current_next` object so portfolio rows can explain the next move
+without showing only an internal ID. The full projection also annotates Project Work with its first
+ordered Milestone relationship. The UI may use those server facts to sort attention, order work by
+due date, and group linked rows under Milestone exit gates; it does not infer Project health or
+lifecycle.
+
 The domain includes Projects, Phases, Milestones, Tasks, Plans, Questions, Decisions, Change
 Requests, Findings, Reviews, Authorizations, Areas, relationships, blockers, and Automations. Refer
 to the v3 contracts for their full lifecycle semantics.
@@ -102,7 +109,7 @@ This subsystem is unrelated to the planned v4 Falcon integration lifecycle sched
 Current destinations are:
 
 - `/work` — action-oriented overview;
-- `/work/projects` and `/work/projects/:id` — portfolio and Project ledger;
+- `/work/projects` and `/work/projects/:id` — portfolio and Project detail;
 - `/work/needs-resolution` — Questions, Decisions, Reviews, and Authorizations;
 - `/work/automations` and `/work/automations/:id` — OpenClaw-backed Automations;
 - `/work/browse` — typed search and inspection;

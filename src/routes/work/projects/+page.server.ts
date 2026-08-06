@@ -13,6 +13,11 @@ export const load: PageServerLoad = async ({ url }) => {
 	return {
 		projects: projects.items,
 		focus: url.searchParams.get('focus'),
+		status: ['draft', 'planned', 'active', 'paused', 'completed', 'cancelled'].includes(
+			url.searchParams.get('status') ?? ''
+		)
+			? url.searchParams.get('status')
+			: null,
 		now: Date.now()
 	};
 };

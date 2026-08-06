@@ -143,13 +143,20 @@ test.describe('Work v3 rendered acceptance', () => {
 		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: /^Needs your call/ })).toBeVisible();
 
+		await visit('/work/projects');
+		await expect(page.getByLabel('Project filters')).toBeVisible();
+		await expect(page.getByText(data.project.title, { exact: true }).first()).toBeVisible();
+
 		await visit(`/work/projects/${data.project.id}`);
 		await expect(
 			page.getByRole('heading', { name: data.project.title, exact: true })
 		).toBeVisible();
-		for (const section of ['status', 'route', 'proof', 'current-work', 'history']) {
-			await expect(page.locator(`#${section}`)).toBeVisible();
-		}
+		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Finish line', exact: true })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Milestones', exact: true })).toBeVisible();
+		await expect(page.locator('summary').filter({ hasText: 'History' })).toBeVisible();
+		await expect(page.getByText('Route', { exact: true })).toHaveCount(0);
+		await expect(page.getByText('Proof', { exact: true })).toHaveCount(0);
 
 		await visit(`/work/decisions/${data.decision.id}`);
 		await expect(

@@ -113,9 +113,29 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 	const db = getWork3Db();
 	const health = projectHealth(db, row);
 	const progress = projectProgress(db, row.id);
+	const currentNext = row.current_next_item_id
+		? (db
+				.prepare(
+					`SELECT id, title, type, status FROM (
+					   SELECT entity_id AS id, title, 'task' AS type, status FROM tasks
+					   UNION ALL
+					   SELECT entity_id, question, 'question', status FROM questions
+					   UNION ALL
+					   SELECT d.entity_id, COALESCE(dp.title, d.entity_id), 'decision', d.status
+					     FROM decisions d
+					     LEFT JOIN decision_packages dp ON dp.parent_id = d.entity_id AND dp.is_current = 1
+					   UNION ALL
+					   SELECT entity_id, title, 'change_request', execution_state FROM change_requests
+					 ) WHERE id = ?`
+				)
+				.get(row.current_next_item_id) as
+				{ id: string; title: string; type: ProjectWorkType; status: string } | undefined)
+		: undefined;
 	const base = {
 		id: row.id,
 		title: row.title,
+		summary: row.summary,
+		portfolio_summary: row.desired_outcome ?? row.summary,
 		status: row.status,
 		health: health.health,
 		health_reason: health.reason,
@@ -127,6 +147,7 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 		},
 		current_next_item_id: row.current_next_item_id,
 		current_next_valid: isValidProjectNextItem(db, row.id, row.current_next_item_id),
+		current_next: currentNext ?? null,
 		target_at: row.target_at,
 		updated_at: row.updated_at,
 		archived: row.archived_at !== null,
@@ -136,7 +157,6 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 	const satisfied = satisfiedCriteria(db, row.id);
 	const detail = {
 		...base,
-		summary: row.summary,
 		desired_outcome: row.desired_outcome,
 		why_it_matters: row.why_it_matters,
 		scope_included: parseJson<string[]>(row.scope_included, []),
@@ -218,8 +238,7 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 			source_type:
 				(
 					db.prepare('SELECT type FROM entities WHERE id = ?').get(link.source_id) as
-						| { type: string }
-						| undefined
+						{ type: string } | undefined
 				)?.type ?? 'unknown',
 			criterion_id: link.criterion_id,
 			source_revision: link.source_revision,
@@ -373,15 +392,26 @@ function projectProjection(row: ProjectRow & EnvelopeJoin, view: string): Record
 					version: milestone.version
 				};
 			}),
-			work: work.map((item) => ({
-				...item,
-				terminal: isTerminalProjectWork(
-					item.type as ProjectWorkType,
-					item.status,
-					item.secondary_state,
-					item.rollback_started_at
-				)
-			})),
+			work: work.map((item) => {
+				const milestone = milestones.find((candidate) =>
+					linkProjection.some(
+						(link) =>
+							link.source_id === item.id &&
+							link.target_id === candidate.entity_id &&
+							!link.invalidated
+					)
+				);
+				return {
+					...item,
+					milestone_id: milestone?.entity_id ?? null,
+					terminal: isTerminalProjectWork(
+						item.type as ProjectWorkType,
+						item.status,
+						item.secondary_state,
+						item.rollback_started_at
+					)
+				};
+			}),
 			relationships: {
 				incoming: linkProjection.filter((link) => link.target_id === row.id)
 			},
@@ -411,8 +441,10 @@ export function registerProjectReaders(): void {
 			'progress',
 			'current_next_item_id',
 			'current_next_valid',
+			'current_next',
 			'archived',
 			'summary',
+			'portfolio_summary',
 			'desired_outcome',
 			'why_it_matters',
 			'scope_included',

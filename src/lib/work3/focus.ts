@@ -101,9 +101,10 @@ export const WORK_FOCUS_DEFINITIONS: FocusDefinition[] = [
 	{
 		type: 'project',
 		key: 'no-next-move',
-		label: 'No next move',
-		description: 'Open Projects without a valid current-next item.',
-		clientPredicate: (item) => openProject(item) && item.current_next_valid !== true
+		label: 'Needs next',
+		description: 'Active projects without a valid next move.',
+		clientPredicate: (item) =>
+			value(item, 'status') === 'active' && item.current_next_valid !== true
 	},
 	{
 		type: 'project',

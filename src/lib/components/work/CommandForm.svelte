@@ -48,6 +48,9 @@
 		disabledReason?: string;
 		compact?: boolean;
 		presetValues?: Record<string, string>;
+		initialValues?: Record<string, string>;
+		optionalFieldsOpen?: boolean;
+		optionalFieldsLabel?: string;
 		forceRequired?: string[];
 		requireAnyOf?: string[];
 		requireExactlyOneOf?: string[];
@@ -66,6 +69,9 @@
 		disabledReason,
 		compact = false,
 		presetValues = {},
+		initialValues = {},
+		optionalFieldsOpen = false,
+		optionalFieldsLabel = 'More options',
 		forceRequired = [],
 		requireAnyOf = [],
 		requireExactlyOneOf = [],
@@ -106,7 +112,16 @@
 
 	function preserved(field: string): string {
 		const values = form?.values;
-		if (!values || !formMatchesPreset()) return '';
+		const initial = initialValues[field] ?? '';
+		if (!values || !formMatchesPreset()) {
+			if (fieldHint(field).kind !== 'datetime-local') return initial;
+			const epoch = Number(initial);
+			if (!Number.isFinite(epoch) || epoch <= 0) return initial;
+			const date = new Date(epoch);
+			return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+				.toISOString()
+				.slice(0, 16);
+		}
 		const hint = fieldHint(field);
 		if (hint.kind === 'datetime-local') {
 			const displayValue = values[`display_${field}`];
@@ -120,7 +135,7 @@
 			}
 		}
 		const prefix = hint.kind === 'json' ? 'payload_json_' : 'payload_';
-		return values[`${prefix}${field}`] ?? '';
+		return values[`${prefix}${field}`] ?? initial;
 	}
 
 	function formMatchesPreset(): boolean {
@@ -466,11 +481,11 @@
 	{/if}
 
 	{#if optionalFields.length}
-		<Collapsible>
+		<Collapsible open={optionalFieldsOpen}>
 			<CollapsibleTrigger
 				class="falcon-focus touch-target text-[length:var(--text-label)] font-semibold text-primary hover:text-primary/80"
 			>
-				More options
+				{optionalFieldsLabel}
 			</CollapsibleTrigger>
 			<CollapsibleContent class="space-y-3 pt-3">
 				{#each optionalFields as field (field)}

@@ -72,6 +72,14 @@ describe('Work focus taxonomy', () => {
 		expect(matchesFocus(drifting, 'project', 'no-next-move', NOW)).toBe(true);
 		expect(matchesFocus(drifting, 'project', 'overdue', NOW)).toBe(true);
 		expect(matchesFocus(drifting, 'project', 'stale', NOW)).toBe(true);
+		expect(
+			matchesFocus(
+				{ status: 'planned', health: 'unknown', current_next_valid: false },
+				'project',
+				'no-next-move',
+				NOW
+			)
+		).toBe(false);
 	});
 
 	it('keeps change authorization, verification, and failure distinct', () => {

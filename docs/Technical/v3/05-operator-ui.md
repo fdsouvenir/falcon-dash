@@ -11,12 +11,12 @@ Build a human-first operator surface for the approved v3 Work model without flat
 ## Scope
 
 - Work overview and actionability queues
-- Project ledger with Phases, Milestones, current work, criteria, sources, and history
+- Project portfolio and detail with Milestones, chronological work, finish-line criteria, sources, and history
 - Needs Resolution and approval experiences
 - Object-specific detail and editing surfaces
 - Relationship, blocker, source, and provenance views
 - Search, filtering, and navigation
-- Desktop and mobile information hierarchy
+- Desktop information hierarchy; a dedicated mobile experience remains a later roadmap item
 
 ## Acceptance direction
 
@@ -29,7 +29,7 @@ Rendering is not completion. Verify the real interface at target desktop and mob
 Falcon Dash v3 has five primary Work destinations:
 
 1. **Work** — current action, needs-operator queues, blocked risk, unhealthy Automations, and material recent changes.
-2. **Projects** — Project ledger with outcome, current-next, Phases, Milestones, criteria, active Work, and history.
+2. **Projects** — outcome portfolio and Project detail with current-next, Milestones, finish-line criteria, active Work, and history.
 3. **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring human attention.
 4. **Automations** — the Falcon view of live OpenClaw automations, including configuration, health, next execution, and native Run history.
 5. **Browse** — search and filter across Tasks, Changes, Plans, Findings, Areas, and archived/terminal Work.
@@ -38,9 +38,14 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 ### Portfolio, focus, and Browse
 
-- The Projects index leads with a compact health distribution and counted focus filters. Focuses are `Blocked`,
-  `At risk`, `No next move`, `Overdue`, and `Stale`; the Project reader supplies health,
-  current-next validity, target time, and update time.
+- The Projects index starts with one compact control strip and the portfolio rows; it does not
+  repeat the Work navigation with a back link, page title block, health cards, or a second list
+  heading. A lifecycle selector sits beside counted focus filters. Focuses are `Blocked`,
+  `At risk`, `Needs next`, `Overdue`, and `Stale`; needs-next applies only to active Projects.
+  The Project reader supplies health, current-next details, target time, summary, progress, and
+  update time.
+- Project rows sort attention first and present lifecycle and attention as plain text. Major state
+  is not a badge. Pills remain appropriate for filter controls, tags, and small governance facts.
 - Browse type selection and focus selection are URL-driven. Counted focus chips cover Tasks
   (`Overdue`, `Blocked`, `Waiting on you`, `In review`, `Ready`), Projects, Changes
   (`Needs authorization`, `Verification pending`, `Failed`), and Finding validity.
@@ -70,26 +75,25 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 - Routine successful Runs, terminal history, and low-value counts remain out of the first viewport.
 - Empty queues state that nothing requires attention; they do not fill space with generic advice.
 
-### Project ledger
+### Project detail
 
-- Header: outcome and lifecycle, with the complete lifecycle command bar available from the
-  header disclosure.
-- Status: server-derived health, progress, current-next, and independent risk flags for blocked
-  next work, blocked items, target/milestone schedule, missing next work, and open criteria.
-- Route: ordered Phases with lifecycle and required Work progress across Tasks, Questions,
-  Decisions, and Change Requests.
-- Proof: Milestones and completion criteria with contribution versus satisfaction clearly
-  distinguished. Criterion waivers are confirmed authority acts; Milestone achievement requests
-  sources.
-- Current work: typed Tasks, Questions, Decisions, and Changes grouped by Phase in Project
-  context, with an explicit set-as-next action for eligible items.
-- History: lifecycle events, supersession, Reviews, Authorizations, sources, and completed outcomes.
-- Editing current-next is explicit and cannot point to terminal or unrelated Work.
-- Desktop uses the three-column Project Ledger (section rail, ledger, sticky operating brief).
-  The rail hides and the operating brief stacks at narrower widths. Collapsed Phase and Milestone
-  composers in the brief are the only operator-UI creation controls.
-- An archived Project is a read-only ledger: ordinary Project, Phase, Milestone, and proof
-  mutations stay hidden and are rejected by the server until restoration.
+- Header: ID, outcome, plain-language lifecycle and attention state, compact progress, and visible
+  contextual actions. One recommended lifecycle action and Edit stay visible; rare or destructive
+  actions live under More. The page does not use a giant all-actions disclosure.
+- Main work stream: Tasks, Questions, Decisions, and Changes ordered by due date, with overdue
+  first, nearest upcoming dates next, and undated items last. Current-next is marked in place and
+  never reorders the stream.
+- Milestone grouping: Work linked to a Milestone sits beneath that ordered exit gate. Work without
+  a Milestone stays as an ordinary chronological row; there is no "Unassigned work" section.
+- Finish line: completion criteria form a separate checklist. Criterion waivers remain confirmed
+  authority acts.
+- Milestones: ordered exit gates with success conditions, schedule state, sources, and local
+  lifecycle actions. A standalone Phase layer is not exposed in the Project UI.
+- Sources use `Sources` or `How we know`; the page never labels this area `Proof` or surfaces
+  contribution/satisfaction ontology as its primary language.
+- History is collapsed by default and keeps lifecycle events, supersession, Reviews,
+  Authorizations, sources, and completed outcomes available without displacing current work.
+- An archived Project is read-only until restored.
 
 ### Human decision and approval surfaces
 
@@ -154,7 +158,9 @@ unmet reason stays visible. Failed submissions reopen the matching form with the
 
 ### Rendered acceptance
 
-- Validate Work, Project, Needs Resolution, Decision, Change Request, Automation, and Browse at representative desktop and mobile viewports.
+- Validate Work, Project, Needs Resolution, Decision, Change Request, Automation, and Browse at
+  representative desktop viewports. Narrow layouts must remain safe, but a dedicated mobile view
+  is outside v3.
 - Acceptance includes hierarchy, density, typography, focus order, touch targets, clipping, overlap, long content, empty states, loading, errors, and stale-version recovery.
 - Screens must remain usable with realistic high-density data and long titles, not only fixtures designed to fit.
 - Visual implementation choices remain with the developer, but the object distinctions and interaction semantics above are mandatory.
