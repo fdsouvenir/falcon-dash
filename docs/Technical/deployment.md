@@ -46,6 +46,10 @@ scope configuration are required before installation. The package exposes:
 - `falcon-dash version` — print the package version;
 - `falcon` — the Work agent/operator CLI.
 
+`postinstall` copies only the namespaced runtime skills `falcon-dash`, `falcon-dash-work`, and
+`falcon-dash-vault` into `~/.openclaw/skills/`. The allowlist is intentional: developer workflows
+and generic skill names must not be installed into an operator's OpenClaw environment.
+
 `falcon-dash start` defaults to port `3000` and host `0.0.0.0`. Override with `--port=`, `--host=`,
 `FALCON_DASH_PORT`, or `FALCON_DASH_HOST`.
 

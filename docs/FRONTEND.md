@@ -12,6 +12,17 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 - Design inside the real shell and verify every changed viewport; do not assume a detached
   component represents the product.
 
+## Design workflow
+
+- Use direct source edits and browser inspection for localized copy, spacing, density, and
+  interaction corrections.
+- For a substantial screen redesign or information-architecture change, use Stitch when it is
+  available: import the current surface, explore alternatives against the existing design system,
+  choose a direction, and then implement it in Svelte. Stitch is a design tool, not a reason to
+  replace the application stack or paste generated React into the repo.
+- Preserve screenshots or design links that materially explain an approved direction. Do not add
+  a repo-local generic frontend skill that duplicates current design tooling.
+
 ## Visual rules
 
 - Extend the warm charcoal and raptor-amber system in `src/app.css`. Do not introduce blue-navy,

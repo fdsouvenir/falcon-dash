@@ -3,9 +3,9 @@
 /**
  * install-skills.cjs — Copy Falcon Dash skills to ~/.openclaw/skills/
  *
- * Runs as npm postinstall. Copies each skill directory from the package's
- * skills/ folder into the shared OpenClaw skills directory. Safe to run
- * multiple times — overwrites existing files (package is source of truth).
+ * Runs as npm postinstall. Copies Falcon Dash's explicitly allowlisted runtime
+ * skills into the shared OpenClaw skills directory. Repo-development skills
+ * and generic skill names must never be shipped into an operator's agent.
  *
  * Skips gracefully if the target directory can't be created (e.g., running
  * in CI or a container without a home directory).
@@ -18,6 +18,7 @@ const os = require('os');
 
 const SKILLS_SRC = path.join(__dirname, '..', 'skills');
 const SKILLS_DEST = path.join(os.homedir(), '.openclaw', 'skills');
+const SKILLS_MANIFEST = path.join(SKILLS_SRC, 'manifest.json');
 
 function copyDirSync(src, dest) {
 	fs.mkdirSync(dest, { recursive: true });
@@ -37,6 +38,18 @@ function main() {
 		// No skills directory in package — nothing to do
 		return;
 	}
+	const { runtimeSkills } = JSON.parse(fs.readFileSync(SKILLS_MANIFEST, 'utf8'));
+	if (
+		!Array.isArray(runtimeSkills) ||
+		runtimeSkills.length === 0 ||
+		new Set(runtimeSkills).size !== runtimeSkills.length ||
+		runtimeSkills.some(
+			(skillName) =>
+				typeof skillName !== 'string' || !/^falcon-dash(?:-[a-z0-9]+)*$/.test(skillName)
+		)
+	) {
+		throw new Error('skills/manifest.json must declare unique, namespaced runtimeSkills');
+	}
 
 	try {
 		fs.mkdirSync(SKILLS_DEST, { recursive: true });
@@ -46,17 +59,19 @@ function main() {
 		return;
 	}
 
-	const skills = fs.readdirSync(SKILLS_SRC, { withFileTypes: true }).filter((e) => e.isDirectory());
-
 	let installed = 0;
-	for (const skill of skills) {
-		const src = path.join(SKILLS_SRC, skill.name);
-		const dest = path.join(SKILLS_DEST, skill.name);
+	for (const skillName of runtimeSkills) {
+		const src = path.join(SKILLS_SRC, skillName);
+		const dest = path.join(SKILLS_DEST, skillName);
+		if (!fs.existsSync(path.join(src, 'SKILL.md'))) {
+			console.error(`[falcon-dash] Packaged runtime skill is missing: ${skillName}`);
+			continue;
+		}
 		try {
 			copyDirSync(src, dest);
 			installed++;
 		} catch (err) {
-			console.error(`[falcon-dash] Failed to install skill "${skill.name}":`, err.message);
+			console.error(`[falcon-dash] Failed to install skill "${skillName}":`, err.message);
 		}
 	}
 

@@ -26,7 +26,8 @@ const requiredPaths = [
 	'docs/Technical/deployment.md',
 	'docs/secretrefs.md',
 	'skills/falcon-dash/SKILL.md',
-	'skills/falcon-dash-harness/SKILL.md'
+	'skills/falcon-dash-work/SKILL.md',
+	'skills/falcon-dash-vault/SKILL.md'
 ];
 
 async function walk(dir) {

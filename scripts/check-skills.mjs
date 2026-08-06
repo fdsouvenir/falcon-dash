@@ -6,6 +6,7 @@ import process from 'node:process';
 
 const root = process.cwd();
 const skillsRoot = path.join(root, 'skills');
+const skillsManifestPath = path.join(skillsRoot, 'manifest.json');
 
 function extractFrontmatter(source) {
 	const match = source.match(/^---\n([\s\S]*?)\n---\n?/);
@@ -110,6 +111,10 @@ async function validateSkill(skillDirName) {
 	return failures;
 }
 
+const skillManifest = JSON.parse(await readFile(skillsManifestPath, 'utf8'));
+const declaredSkills = Array.isArray(skillManifest.runtimeSkills)
+	? skillManifest.runtimeSkills
+	: [];
 const skillEntries = await readdir(skillsRoot, { withFileTypes: true });
 const skillDirs = skillEntries
 	.filter((entry) => entry.isDirectory())
@@ -117,6 +122,27 @@ const skillDirs = skillEntries
 	.sort();
 
 const failures = [];
+if (declaredSkills.length === 0) {
+	failures.push('skills/manifest.json must declare at least one runtime skill');
+}
+if (new Set(declaredSkills).size !== declaredSkills.length) {
+	failures.push('skills/manifest.json contains duplicate runtime skills');
+}
+for (const declaredSkill of declaredSkills) {
+	if (typeof declaredSkill !== 'string' || !/^falcon-dash(?:-[a-z0-9]+)*$/.test(declaredSkill)) {
+		failures.push(`skills/manifest.json contains a non-namespaced skill: ${declaredSkill}`);
+	}
+}
+for (const skillDir of skillDirs) {
+	if (!declaredSkills.includes(skillDir)) {
+		failures.push(`${skillDir}: repo-development or unlisted skills do not belong in skills/`);
+	}
+}
+for (const declaredSkill of declaredSkills) {
+	if (!skillDirs.includes(declaredSkill)) {
+		failures.push(`${declaredSkill}: declared runtime skill directory is missing`);
+	}
+}
 for (const skillDirName of skillDirs) {
 	failures.push(...(await validateSkill(skillDirName)));
 }

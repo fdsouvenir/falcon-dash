@@ -86,6 +86,14 @@ The repo currently versions `gateway-plugin/brief-context.js`, which fetches a b
 for prompt injection. Full standalone packaging of the companion extension remains an installation
 gap; see [gateway-plugin.md](gateway-plugin.md).
 
+### Packaged agent skills
+
+The npm package installs three namespaced OpenClaw runtime skills: `falcon-dash` for concise product
+orientation, `falcon-dash-work` for current v3 reads and commands, and `falcon-dash-vault` for Vault
+and SecretRef handling. The installer uses an explicit allowlist. Repository development guidance
+stays in `AGENTS.md` and `docs/` so frontend, testing, or other developer-only instructions are not
+injected into end-user agents.
+
 ### Built-in vault
 
 `src/lib/server/vault/vault.ts` wraps `keepassxc-cli` against

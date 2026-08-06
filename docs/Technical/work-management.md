@@ -74,6 +74,10 @@ Tokens, returned in plaintext once, and stored hashed. The current surface is:
 HTTP responses are JSON. The `falcon` CLI adds its compact TOON representation and human-oriented
 command routing.
 
+The packaged `falcon-dash-work` runtime skill is deliberately a thin router to this interface and
+the CLI's shared command manifest. It does not duplicate a static command catalog that can drift
+from the server.
+
 ## Browser updates
 
 `/api/work3/events` streams post-commit domain events. `src/lib/work3/live.ts` debounces those

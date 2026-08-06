@@ -15,3 +15,8 @@ A skill changes what an OpenClaw agent can do; it does not automatically grant F
 authority or access to raw Vault values. Review the skill source, required scopes, and secret usage
 before installation. Store credentials in the built-in Vault and use SecretRefs where the gateway
 configuration supports them.
+
+Falcon Dash itself installs only three namespaced runtime skills: `falcon-dash` for product
+orientation, `falcon-dash-work` for the current Work interface, and `falcon-dash-vault` for Vault
+and SecretRef handling. Frontend, testing, and other repository-development instructions are not
+installed into OpenClaw agents.

@@ -53,13 +53,14 @@ agent receives the same instructions.
 - [docs/OWNERSHIP.md](docs/OWNERSHIP.md) — which docs should usually move with which code areas
 - [docs/LEARNINGS.md](docs/LEARNINGS.md) — durable lessons that span the product roadmap
 
-### Skills
+### Packaged runtime skills
 
-- [skills/falcon-dash/SKILL.md](skills/falcon-dash/SKILL.md) — operator dashboard rules and Work-first workflow
-- [skills/falcon-dash-harness/SKILL.md](skills/falcon-dash-harness/SKILL.md) — harness routing and verification workflow
-- [skills/falcon-dash-work/SKILL.md](skills/falcon-dash-work/SKILL.md) — Work API reference
-- [skills/frontend-skill/SKILL.md](skills/frontend-skill/SKILL.md) — Falcon Dash frontend execution guidance
-- [skills/keepassxc/SKILL.md](skills/keepassxc/SKILL.md) — password vault workflows
+- [skills/falcon-dash/SKILL.md](skills/falcon-dash/SKILL.md) — always-on OpenClaw agent orientation
+- [skills/falcon-dash-work/SKILL.md](skills/falcon-dash-work/SKILL.md) — current v3 Work CLI and API workflow
+- [skills/falcon-dash-vault/SKILL.md](skills/falcon-dash-vault/SKILL.md) — built-in Vault and SecretRef workflow
+
+These skills ship to OpenClaw agents. Repo-development workflows belong in this guide and `docs/`,
+or in environment-provided skills such as Stitch; do not add developer-only skills to `skills/`.
 
 ## Project Structure
 
