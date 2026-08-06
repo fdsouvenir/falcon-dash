@@ -40,12 +40,14 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 - The Projects index starts with one compact control strip and the portfolio rows; it does not
   repeat the Work navigation with a back link, page title block, health cards, or a second list
-  heading. A lifecycle selector sits beside counted focus filters. Focuses are `Blocked`,
+  heading. A status selector sits beside counted focus filters. Focuses are `Blocked`,
   `At risk`, `Needs next`, `Overdue`, and `Stale`; needs-next applies only to active Projects.
   The Project reader supplies health, current-next details, target time, summary, progress, and
   update time.
-- Project rows sort attention first and present lifecycle and attention as plain text. Major state
-  is not a badge. Pills remain appropriate for filter controls, tags, and small governance facts.
+- Project rows sort attention first and present status and attention as plain text. Major state
+  is not a badge. The Project identity and outcome own the flexible row width; Status, Next, and
+  Progress remain compact, bounded columns. Pills remain appropriate for filter controls, tags,
+  and small governance facts.
 - Browse type selection and focus selection are URL-driven. Counted focus chips cover Tasks
   (`Overdue`, `Blocked`, `Waiting on you`, `In review`, `Ready`), Projects, Changes
   (`Needs authorization`, `Verification pending`, `Failed`), and Finding validity.

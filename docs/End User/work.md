@@ -39,7 +39,7 @@ latest state.
 
 ## Portfolio and Browse
 
-Projects opens directly on a compact control strip and dense portfolio list. A lifecycle selector
+Projects opens directly on a compact control strip and dense portfolio list. A status selector
 sits beside counted focus filters for blocked, at-risk, overdue, needs-next, and stale outcomes.
 Needs-next applies only to active Projects. Attention-worthy Projects sort first, and each row uses
 reader-supplied health, next-work, progress, target, and summary facts. Selecting a focus writes the
@@ -74,7 +74,7 @@ Each Work type has a distinct detail experience rather than a generic record car
   remains visible and explains which Authorization state prevents it.
 - Findings show conclusion, significance, confidence, validity, sources, and supersession. A
   source that cannot be resolved stays visible with its unavailable reason.
-- Projects lead with the outcome, plain-language lifecycle and attention state, and visible
+- Projects lead with the outcome, plain-language status and attention state, and visible
   contextual actions. The main column is one chronological Work stream: overdue items first,
   nearest upcoming dates next, and undated items last. Work connected to a Milestone is grouped
   beneath that ordered exit gate; Work without a Milestone stays in the same stream and is never

@@ -33,6 +33,9 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
   data. Fonts are self-hosted.
 - Keep surfaces compact and scannable with one boundary per zone and hairline internal divisions.
   Cards are optional containers, not the default layout.
+- In operational lists, give the object identity and outcome the flexible column. Keep status,
+  next action, and progress columns bounded by their content; do not spend the viewport on empty
+  state columns or truncate the primary object to preserve them.
 - Use direct product language. Avoid eyebrows, taglines, repeated counts, object-type tutorials,
   and internal terms such as “operator”, “control plane”, “Mission Control”, or “Automata” in UI
   copy.

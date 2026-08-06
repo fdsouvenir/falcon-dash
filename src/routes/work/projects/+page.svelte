@@ -53,8 +53,8 @@
 		)
 	);
 
-	const lifecycleOptions = [
-		{ value: '', label: 'All lifecycles' },
+	const statusOptions = [
+		{ value: '', label: 'All statuses' },
 		{ value: 'active', label: 'Active' },
 		{ value: 'planned', label: 'Planned' },
 		{ value: 'draft', label: 'Draft' },
@@ -89,11 +89,11 @@
 		return right.updated_at - left.updated_at;
 	}
 
-	function lifecycleLabel(value: string): string {
+	function statusLabel(value: string): string {
 		return value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
 	}
 
-	function lifecycleTone(value: string): string {
+	function statusTone(value: string): string {
 		if (value === 'active') return 'text-status-active';
 		if (value === 'paused') return 'text-status-warning';
 		if (value === 'completed') return 'text-status-info';
@@ -121,7 +121,7 @@
 		if (project.status === 'draft') return 'Still being defined';
 		if (project.status === 'paused') return 'No work is moving';
 		if (project.status === 'completed') return 'Finished';
-		return lifecycleLabel(project.status);
+		return statusLabel(project.status);
 	}
 
 	function attentionTone(project: ProjectListItem): string {
@@ -132,14 +132,14 @@
 			: 'text-on-surface-variant';
 	}
 
-	function progressLabel(project: ProjectListItem): string {
+	function progressParts(project: ProjectListItem): string[] {
 		const parts: string[] = [];
 		const [, criteriaTotal = '0'] = project.progress.criteria.split('/');
 		const [, milestoneTotal = '0'] = project.progress.milestones.split('/');
 		if (Number(criteriaTotal) > 0) parts.push(`${project.progress.criteria} criteria`);
 		if (Number(milestoneTotal) > 0) parts.push(`${project.progress.milestones} milestones`);
 		if (project.progress.work_open > 0) parts.push(`${project.progress.work_open} open`);
-		return parts.join(' · ');
+		return parts;
 	}
 
 	function dateLabel(value: number): string {
@@ -154,7 +154,7 @@
 
 <svelte:head><title>Projects — Work</title></svelte:head>
 
-<div class="mx-auto max-w-7xl space-y-3">
+<div class="w-full space-y-3">
 	<h1 class="sr-only">Projects</h1>
 
 	<section
@@ -173,15 +173,15 @@
 
 			<form method="GET" class="flex items-center gap-2">
 				{#if data.focus}<input type="hidden" name="focus" value={data.focus} />{/if}
-				<label for="project-lifecycle" class="sr-only">Project lifecycle</label>
+				<label for="project-status" class="sr-only">Project status</label>
 				<select
-					id="project-lifecycle"
+					id="project-status"
 					name="status"
 					value={data.status ?? ''}
 					onchange={(event) => event.currentTarget.form?.requestSubmit()}
 					class="falcon-focus touch-target rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant bg-surface-container-high px-3 text-[length:var(--text-label)] font-semibold text-on-surface"
 				>
-					{#each lifecycleOptions as option (option.value)}
+					{#each statusOptions as option (option.value)}
 						<option value={option.value}>{option.label}</option>
 					{/each}
 				</select>
@@ -207,43 +207,47 @@
 			<div class="p-5">
 				<EmptyState
 					title="No projects here"
-					description="Try a different lifecycle or attention filter."
+					description="Try a different status or attention filter."
 				/>
 			</div>
 		{:else}
 			<div
-				class="hidden grid-cols-[4.5rem_minmax(0,1.45fr)_minmax(9rem,0.7fr)_minmax(11rem,0.9fr)_minmax(9rem,auto)] gap-3 border-b border-outline-variant/70 px-4 py-2 font-mono text-[length:var(--text-label)] uppercase tracking-[0.08em] text-on-surface-variant md:grid"
+				class="hidden grid-cols-[minmax(0,1fr)_6rem_clamp(9rem,16vw,13rem)_clamp(12rem,21vw,17rem)] gap-3 border-b border-outline-variant/70 px-4 py-2 font-mono text-[length:var(--text-label)] uppercase tracking-[0.08em] text-on-surface-variant md:grid"
 				aria-hidden="true"
 			>
-				<span>ID</span>
-				<span>Project</span>
-				<span>Lifecycle</span>
-				<span>Attention / next</span>
-				<span class="text-right">Progress / target</span>
+				<div class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+					<span>ID</span>
+					<span>Project</span>
+				</div>
+				<span>Status</span>
+				<span>Next</span>
+				<span class="text-right">Progress</span>
 			</div>
 			<div class="divide-y divide-outline-variant/60">
 				{#each filteredProjects as project (project.id)}
 					<a
 						href={resolve('/work/projects/[id]', { id: project.id })}
-						class="falcon-focus group grid gap-2 px-4 py-3 hover:bg-surface-container-high md:grid-cols-[4.5rem_minmax(0,1.45fr)_minmax(9rem,0.7fr)_minmax(11rem,0.9fr)_minmax(9rem,auto)] md:items-center md:gap-3"
+						class="falcon-focus group grid gap-2 px-4 py-3 transition-colors hover:bg-surface-container-high md:grid-cols-[minmax(0,1fr)_6rem_clamp(9rem,16vw,13rem)_clamp(12rem,21vw,17rem)] md:items-center md:gap-3"
 					>
-						<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
-							{project.id}
-						</span>
-						<div class="min-w-0">
-							<h3 class="truncate font-semibold text-on-surface group-hover:text-primary">
-								{project.title}
-							</h3>
-							{#if project.portfolio_summary}
-								<p class="mt-0.5 truncate text-[length:var(--text-label)] text-on-surface-variant">
-									{project.portfolio_summary}
-								</p>
-							{/if}
+						<div class="grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
+							<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
+								{project.id}
+							</span>
+							<div class="min-w-0">
+								<h3 class="truncate font-semibold text-on-surface group-hover:text-primary">
+									{project.title}
+								</h3>
+								{#if project.portfolio_summary}
+									<p
+										class="mt-0.5 truncate text-[length:var(--text-label)] text-on-surface-variant"
+									>
+										{project.portfolio_summary}
+									</p>
+								{/if}
+							</div>
 						</div>
-						<p
-							class="text-[length:var(--text-label)] font-semibold {lifecycleTone(project.status)}"
-						>
-							{lifecycleLabel(project.status)}
+						<p class="text-[length:var(--text-label)] font-semibold {statusTone(project.status)}">
+							{statusLabel(project.status)}
 						</p>
 						<div class="min-w-0">
 							<p
@@ -260,9 +264,15 @@
 							{/if}
 						</div>
 						<div class="min-w-0 md:text-right">
-							{#if progressLabel(project)}
-								<p class="truncate font-mono text-[length:var(--text-label)] text-on-surface">
-									{progressLabel(project)}
+							{#if progressParts(project).length}
+								<p
+									class="flex flex-wrap justify-end gap-x-2 font-mono text-[length:var(--text-label)] text-on-surface"
+								>
+									{#each progressParts(project) as part, index (part)}
+										<span class="whitespace-nowrap">
+											{part}{index < progressParts(project).length - 1 ? ' ·' : ''}
+										</span>
+									{/each}
 								</p>
 							{/if}
 							{#if project.target_at}
