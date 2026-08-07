@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from './fixtures';
+
+const packageVersion = JSON.parse(
+	readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+).version as string;
 
 const workDestinations = [
 	{ path: '/work', heading: 'Work' },
@@ -86,7 +91,7 @@ test.describe('Work v3 cutover', () => {
 		expect(healthResponse.ok()).toBe(true);
 		expect(await healthResponse.json()).toMatchObject({
 			status: 'ok',
-			version: '3.0.0',
+			version: packageVersion,
 			work3: { status: 'ok' }
 		});
 
