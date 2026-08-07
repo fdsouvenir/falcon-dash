@@ -25,6 +25,11 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 
 ## Visual rules
 
+- Treat agent-managed Work as an approachable collaborative workspace: closer to Asana than an
+  engineering console, SAP screen, or data dashboard. A person should understand what the agent
+  is moving, what needs their input, and what progress means without learning the data model.
+- Lead with names, outcomes, next moves, human decisions, and visible progress. Keep IDs, schema
+  details, event metadata, and dense counts secondary or behind disclosure.
 - Extend the warm charcoal and raptor-amber system in `src/app.css`. Do not introduce blue-navy,
   neon, gradient-heavy, or generic AI-dashboard styling.
 - Amber means the human is needed. Use semantic status tokens for health and operational meaning;
@@ -32,7 +37,8 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 - Use Geist for interface text and Geist Mono for identifiers, timestamps, counts, and terminal
   data. Fonts are self-hosted.
 - Keep surfaces compact and scannable with one boundary per zone and hairline internal divisions.
-  Cards are optional containers, not the default layout.
+  Cards are optional containers, not the default layout. Use friendly grouped surfaces when they
+  express a real unit such as a Milestone; do not recreate a dashboard as a grid of metrics.
 - In operational lists, give the object identity and outcome the flexible column. Keep status,
   next action, and progress columns bounded by their content; do not spend the viewport on empty
   state columns or truncate the primary object to preserve them.

@@ -79,21 +79,28 @@ Object types keep distinct detail experiences. The UI must not flatten everythin
 
 ### Project detail
 
-- Header: ID, outcome, plain-language lifecycle and attention state, compact progress, and visible
-  contextual actions. One recommended lifecycle action and Edit stay visible; rare or destructive
-  actions live under More. The page does not use a giant all-actions disclosure.
-- Main work stream: Tasks, Questions, Decisions, and Changes ordered by due date, with overdue
-  first, nearest upcoming dates next, and undated items last. Current-next is marked in place and
-  never reorders the stream.
-- Milestone grouping: Work linked to a Milestone sits beneath that ordered exit gate. Work without
-  a Milestone stays as an ordinary chronological row; there is no "Unassigned work" section.
+- Product posture: the page is an approachable workspace for a person following work their agent
+  manages. It should feel closer to Asana than an engineering console, SAP screen, or record
+  dashboard. Outcome, next move, human input, Milestones, and progress lead; internal metadata is
+  secondary.
+- Header: ID, outcome, plain-language lifecycle, compact progress, and visible contextual actions.
+  One recommended lifecycle action and Edit stay visible; rare or destructive actions live under
+  More. The page does not use a giant all-actions disclosure.
+- Next up: the current-next item is a dominant, linked working surface. When no valid next item is
+  present, the surface explains the state and tells the person where to choose one. The item also
+  remains in its normal Milestone or Work location; highlighting it never changes date order.
+- Human input: open Questions and pending or deferred Decisions are summarized ahead of the full
+  Work area and link to their distinct resolution experiences.
+- Milestone grouping: each ordered exit gate shows its success condition, target, progress, local
+  actions, and date-ordered Tasks, Questions, Decisions, and Changes. Work without a Milestone stays
+  in the same Work area; there is no "Unassigned work" section.
 - Finish line: completion criteria form a separate checklist. Criterion waivers remain confirmed
   authority acts.
 - Milestones: ordered exit gates with success conditions, schedule state, sources, and local
   lifecycle actions. A standalone Phase layer is not exposed in the Project UI.
 - Sources use `Sources` or `How we know`; the page never labels this area `Proof` or surfaces
   contribution/satisfaction ontology as its primary language.
-- History is collapsed by default and keeps lifecycle events, supersession, Reviews,
+- Activity shows a bounded recent feed. Full history keeps lifecycle events, supersession, Reviews,
   Authorizations, sources, and completed outcomes available without displacing current work.
 - An archived Project is read-only until restored.
 

@@ -74,13 +74,15 @@ Each Work type has a distinct detail experience rather than a generic record car
   remains visible and explains which Authorization state prevents it.
 - Findings show conclusion, significance, confidence, validity, sources, and supersession. A
   source that cannot be resolved stays visible with its unavailable reason.
-- Projects lead with the outcome, plain-language status and attention state, and visible
-  contextual actions. The main column is one chronological Work stream: overdue items first,
-  nearest upcoming dates next, and undated items last. Work connected to a Milestone is grouped
-  beneath that ordered exit gate; Work without a Milestone stays in the same stream and is never
-  placed in an "unassigned" bucket. Current-next is an inline marker and does not change date
-  order. The side column keeps the finish-line checklist, ordered Milestones, project details, and
-  "How we know" sources. History is secondary and collapsed by default.
+- Projects lead with the outcome, plain-language status, visible progress, and contextual actions.
+  A prominent **Next up** area shows the move the agent is advancing, or explains when one still
+  needs to be chosen. Open Questions and Decisions are pulled into **Needs your input** so the
+  person can unblock the Project without reading the whole work list. The main Work area presents
+  each ordered Milestone as a friendly progress group with its finish condition and date-ordered
+  Tasks, Questions, Decisions, and Changes. Work without a Milestone remains in the same Work area
+  and is never labeled "unassigned." The finish line and a plain-language Project summary stay
+  visible beside the Work. Recent activity is readable at a glance; older history, detailed scope,
+  internal references, and "How we know" sources remain available through disclosure.
 - Automations operate on the same OpenClaw-backed object and show runtime unavailability as a health
   error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
   pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and

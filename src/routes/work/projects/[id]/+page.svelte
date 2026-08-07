@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { SvelteMap } from 'svelte/reactivity';
 	import {
 		CommandFeedback,
 		CommandForm,
@@ -92,6 +91,12 @@
 		};
 		current_next_item_id?: string | null;
 		current_next_valid?: boolean;
+		current_next?: {
+			id: string;
+			title: string;
+			type: ProjectWork['type'];
+			status: string;
+		} | null;
 		archived: boolean;
 		version: number;
 		desired_outcome?: string | null;
@@ -126,12 +131,6 @@
 		}>;
 	}
 
-	interface WorkGroup {
-		key: string;
-		milestone: ProjectMilestone | null;
-		items: ProjectWork[];
-	}
-
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const project = $derived(data.project as unknown as ProjectDetail);
 	const milestones = $derived(
@@ -141,10 +140,26 @@
 	const criteria = $derived(project.completion_criteria ?? []);
 	const unscopedContributions = $derived(project.unscoped_contributions ?? []);
 	const terminalProject = $derived(['completed', 'cancelled'].includes(project.status));
+	const currentNext = $derived(
+		project.current_next ?? work.find((item) => item.id === project.current_next_item_id) ?? null
+	);
+	const looseWork = $derived([...work].filter((item) => !item.milestone_id).sort(compareWork));
+	const needsResolution = $derived(
+		[...work]
+			.filter(
+				(item) =>
+					!item.terminal &&
+					((item.type === 'question' && item.status === 'open') ||
+						(item.type === 'decision' && ['pending', 'deferred'].includes(item.status)))
+			)
+			.sort(compareWork)
+	);
 	const editableProject = $derived(!project.archived && !terminalProject);
 	const attentionFlags = $derived(
 		(project.risk_flags ?? []).filter(
-			(flag) => flag.severity !== 'muted' && flag.key !== 'blocked_work'
+			(flag) =>
+				flag.severity !== 'muted' &&
+				!['blocked_work', 'blocked_next', 'no_next_item'].includes(flag.key)
 		)
 	);
 	const projectInitialValues = $derived({
@@ -196,28 +211,33 @@
 		)
 	);
 
-	const workGroups = $derived.by<WorkGroup[]>(() => {
-		const groups: WorkGroup[] = [];
-		const milestoneGroups = new SvelteMap<string, WorkGroup>();
-		for (const item of [...work].sort(compareWork)) {
-			const milestone = item.milestone_id
-				? (milestones.find((candidate) => candidate.id === item.milestone_id) ?? null)
-				: null;
-			if (!milestone) {
-				groups.push({ key: item.id, milestone: null, items: [item] });
-				continue;
-			}
-			const existing = milestoneGroups.get(milestone.id);
-			if (existing) {
-				existing.items.push(item);
-				continue;
-			}
-			const group = { key: milestone.id, milestone, items: [item] };
-			milestoneGroups.set(milestone.id, group);
-			groups.push(group);
-		}
-		return groups;
+	const progressPercent = $derived.by(() => {
+		const [criteriaDone = 0, criteriaTotal = 0] = project.progress.criteria.split('/').map(Number);
+		if (criteriaTotal > 0) return Math.round((criteriaDone / criteriaTotal) * 100);
+		const [milestonesDone = 0, milestonesTotal = 0] = project.progress.milestones
+			.split('/')
+			.map(Number);
+		if (milestonesTotal > 0) return Math.round((milestonesDone / milestonesTotal) * 100);
+		return terminalProject ? 100 : 0;
 	});
+
+	function milestoneWork(milestoneId: string): ProjectWork[] {
+		return [...work].filter((item) => item.milestone_id === milestoneId).sort(compareWork);
+	}
+
+	function milestoneProgress(milestoneId: string): {
+		complete: number;
+		total: number;
+		percent: number;
+	} {
+		const items = milestoneWork(milestoneId);
+		const complete = items.filter((item) => item.terminal).length;
+		return {
+			complete,
+			total: items.length,
+			percent: items.length ? Math.round((complete / items.length) * 100) : 0
+		};
+	}
 
 	function compareWork(left: ProjectWork, right: ProjectWork): number {
 		if (left.due_at && right.due_at) return left.due_at - right.due_at;
@@ -270,29 +290,6 @@
 		return 'text-on-surface-variant';
 	}
 
-	function projectAttention(): string {
-		if (project.archived) return 'Archived — restore it to make changes.';
-		if (project.health === 'blocked') return 'Blocked — the current next move cannot proceed.';
-		if (project.health === 'at_risk') return 'Needs attention — timing or blocked work is at risk.';
-		if (project.status === 'active' && !project.current_next_valid) {
-			return 'Needs a next move — choose one from the work below.';
-		}
-		if (project.status === 'active') return 'Moving forward — the current next move is actionable.';
-		if (project.status === 'planned') return 'Ready to start when its prerequisites are in place.';
-		if (project.status === 'draft') return 'Still being defined.';
-		if (project.status === 'paused') return 'Paused until work is ready to resume.';
-		if (project.status === 'completed') return 'Finished.';
-		return 'Cancelled.';
-	}
-
-	function attentionTone(): string {
-		return project.health === 'blocked' ||
-			project.health === 'at_risk' ||
-			(project.status === 'active' && !project.current_next_valid)
-			? 'text-primary'
-			: 'text-on-surface-variant';
-	}
-
 	function workMeta(item: ProjectWork): string {
 		const details: string[] = [];
 		if (item.waiting_on) details.push(`Waiting on ${item.waiting_on}`);
@@ -337,38 +334,28 @@
 
 {#snippet workRow(item: ProjectWork)}
 	<article
-		class="group/row relative grid min-w-0 gap-3 px-3 py-3 hover:bg-surface-container-high md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+		class="group/row relative grid min-w-0 gap-3 px-4 py-3 transition-colors duration-150 hover:bg-surface-container-high/70 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
 		data-project-work-row
 	>
 		<div class="flex items-start gap-3 md:contents">
 			<WorkGlyph type={item.type} size={28} />
 			<div class="min-w-0">
-				<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-					<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
-						{item.id}
-					</span>
-					<span class="text-[length:var(--text-label)] text-on-surface-variant">
-						{typeLabel(item.type)}
-					</span>
-					{#if item.id === project.current_next_item_id && project.current_next_valid}
-						<span
-							class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.08em] text-primary"
-						>
-							Current next
-						</span>
-					{/if}
-				</div>
 				<a
 					href={workHref(item.type, item.id)}
-					class="falcon-focus mt-0.5 block rounded font-medium text-on-surface hover:text-primary"
+					class="falcon-focus block rounded font-medium text-on-surface hover:text-primary"
 				>
 					{item.title}
 				</a>
-				<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[length:var(--text-label)]">
+				<div
+					class="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[length:var(--text-label)] text-on-surface-variant"
+				>
+					<span>{typeLabel(item.type)}</span>
+					<span aria-hidden="true">·</span>
 					<span class={item.terminal ? 'text-on-surface-variant' : 'text-on-surface'}>
 						{humanize(item.status)}
 					</span>
 					{#if item.due_at}
+						<span aria-hidden="true">·</span>
 						<span
 							class={item.due_at < data.now && !item.terminal
 								? 'text-status-danger'
@@ -380,8 +367,11 @@
 						</span>
 					{/if}
 					{#if workMeta(item)}
+						<span aria-hidden="true">·</span>
 						<span class="text-on-surface-variant">{workMeta(item)}</span>
 					{/if}
+					<span aria-hidden="true">·</span>
+					<span class="font-mono">{item.id}</span>
 				</div>
 			</div>
 		</div>
@@ -415,22 +405,42 @@
 	</article>
 {/snippet}
 
+{#snippet resolutionRow(item: ProjectWork)}
+	<a
+		href={workHref(item.type, item.id)}
+		class="falcon-focus group flex min-w-0 items-start gap-3 rounded-[var(--md-sys-shape-corner-medium)] px-3 py-3 transition-colors duration-150 hover:bg-status-warning-bg"
+	>
+		<WorkGlyph type={item.type} size={28} />
+		<span class="min-w-0 flex-1">
+			<span class="block font-medium text-on-surface group-hover:text-primary">{item.title}</span>
+			<span class="mt-1 block text-[length:var(--text-label)] text-on-surface-variant">
+				{item.type === 'decision'
+					? 'A decision is waiting for you'
+					: 'A question needs an answer'}{item.due_at
+					? ` · ${item.due_at < data.now ? 'Overdue' : 'Due'} ${formatDate(item.due_at)}`
+					: ''}
+			</span>
+		</span>
+		<span class="pt-1 text-primary" aria-hidden="true">→</span>
+	</a>
+{/snippet}
+
 <svelte:head><title>{project.title} — Project</title></svelte:head>
 
-<div class="mx-auto max-w-7xl space-y-4">
+<div class="mx-auto max-w-[90rem] space-y-6">
 	<a
 		href={resolve('/work/projects')}
-		class="falcon-focus touch-target inline-flex items-center rounded text-[length:var(--text-label)] font-semibold text-primary hover:text-primary/80"
+		class="falcon-focus touch-target inline-flex items-center gap-2 rounded text-[length:var(--text-label)] font-semibold text-on-surface-variant hover:text-primary"
 	>
-		← Projects
+		<span aria-hidden="true">←</span> Projects
 	</a>
 
-	<header class="border-b border-outline-variant/70 pb-4">
-		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+	<header class="border-b border-outline-variant/70 pb-6">
+		<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
 			<div class="min-w-0">
 				<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
 					<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
-						{project.id} · v{project.version}
+						{project.id}
 					</span>
 					<span
 						class="text-[length:var(--text-label)] font-semibold {lifecycleTone(project.status)}"
@@ -438,20 +448,19 @@
 						{humanize(project.status)}
 					</span>
 				</div>
-				<h1 class="mt-1 break-words text-2xl font-semibold tracking-tight text-on-surface">
+				<h1
+					class="mt-2 max-w-5xl break-words text-3xl font-semibold tracking-tight text-on-surface"
+				>
 					{project.title}
 				</h1>
 				{#if project.desired_outcome ?? project.summary}
 					<p
-						class="mt-2 line-clamp-2 max-w-4xl text-[length:var(--text-body)] leading-relaxed text-on-surface-variant"
+						class="mt-3 max-w-4xl text-[length:var(--text-body)] leading-relaxed text-on-surface-variant"
 						title={project.desired_outcome ?? project.summary ?? undefined}
 					>
 						{project.desired_outcome ?? project.summary}
 					</p>
 				{/if}
-				<p class="mt-2 text-[length:var(--text-body)] font-medium {attentionTone()}">
-					{projectAttention()}
-				</p>
 			</div>
 
 			<div class="flex flex-wrap items-start gap-2 lg:justify-end" aria-label="Project actions">
@@ -491,27 +500,37 @@
 			</div>
 		</div>
 
+		<div class="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+			<div
+				class="h-2 overflow-hidden rounded-full bg-surface-container-high"
+				role="progressbar"
+				aria-label="Project progress"
+				aria-valuenow={progressPercent}
+				aria-valuemin="0"
+				aria-valuemax="100"
+			>
+				<div
+					class="h-full rounded-full bg-status-active transition-[width] duration-300 motion-reduce:transition-none"
+					style={`width: ${progressPercent}%`}
+				></div>
+			</div>
+			<span class="text-[length:var(--text-label)] font-medium text-on-surface">
+				{progressPercent}% complete
+			</span>
+		</div>
 		<div
-			class="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-outline-variant/60 pt-3 text-[length:var(--text-label)] text-on-surface-variant"
+			class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[length:var(--text-label)] text-on-surface-variant"
 		>
-			<span
-				><strong class="font-mono text-on-surface">{project.progress.criteria}</strong> finish-line items</span
-			>
-			<span
-				><strong class="font-mono text-on-surface">{project.progress.milestones}</strong> milestones</span
-			>
-			<span
-				><strong class="font-mono text-on-surface">{project.progress.work_open}</strong> open work</span
-			>
+			<span>{project.progress.criteria} finish-line items</span>
+			<span>{project.progress.milestones} milestones</span>
+			<span>{project.progress.work_open} open</span>
 			{#if project.progress.work_blocked > 0}
-				<span class="text-status-danger"
-					><strong class="font-mono">{project.progress.work_blocked}</strong> blocked</span
-				>
+				<span class="text-status-danger">{project.progress.work_blocked} blocked</span>
 			{/if}
 			{#if project.target_at}<span>Target {formatDate(project.target_at)}</span>{/if}
 		</div>
 		{#if attentionFlags.length}
-			<ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[length:var(--text-label)]">
+			<ul class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[length:var(--text-label)]">
 				{#each attentionFlags as flag (flag.key)}
 					<li class={flag.severity === 'danger' ? 'text-status-danger' : 'text-status-warning'}>
 						{flag.label}
@@ -523,65 +542,268 @@
 
 	<CommandFeedback form={form as never} />
 
-	<div class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-		<main class="min-w-0 space-y-4">
-			<section
-				class="overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
-				aria-labelledby="project-work-heading"
-			>
-				<div
-					class="flex items-baseline justify-between gap-3 border-b border-outline-variant/70 px-4 py-3"
-				>
-					<h2 id="project-work-heading" class="font-semibold text-on-surface">Work</h2>
-					<p class="text-[length:var(--text-label)] text-on-surface-variant">
-						{work.length} item{work.length === 1 ? '' : 's'} · ordered by due date
-					</p>
-				</div>
-				{#if workGroups.length}
-					<div class="divide-y divide-outline-variant/70">
-						{#each workGroups as group (group.key)}
-							<div class="relative">
-								{#if group.milestone}
-									<div class="flex gap-3 bg-surface-container-high/60 px-3 py-3">
-										<WorkGlyph type="milestone" size={28} />
-										<div class="min-w-0 flex-1">
-											<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-												<span
-													class="font-mono text-[length:var(--text-label)] text-on-surface-variant"
-												>
-													Milestone {group.milestone.sequence}
-												</span>
-												<h3 class="font-semibold text-on-surface">{group.milestone.title}</h3>
-												<span
-													class="text-[length:var(--text-label)] font-semibold {scheduleTone(
-														group.milestone.schedule_state
-													)}"
-												>
-													{humanize(group.milestone.status)}
-												</span>
-											</div>
-											<p
-												class="mt-1 line-clamp-2 text-[length:var(--text-label)] text-on-surface-variant"
-												title={`Finish when ${group.milestone.success_condition}`}
-											>
-												Finish when {group.milestone.success_condition}
-												{group.milestone.target_at
-													? ` · Target ${formatDate(group.milestone.target_at)}`
-													: ''}
-											</p>
-										</div>
-									</div>
-								{/if}
-								<div class="divide-y divide-outline-variant/60">
-									{#each group.items as item (item.id)}
-										{@render workRow(item)}
-									{/each}
-								</div>
-							</div>
-						{/each}
+	<section
+		class="overflow-hidden rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border {project.current_next_valid &&
+		currentNext
+			? 'border-primary/60 bg-primary/[0.06]'
+			: project.status === 'active'
+				? 'border-status-warning/50 bg-status-warning-bg'
+				: 'border-outline-variant/70 bg-surface-container-low'}"
+		aria-labelledby="project-next-heading"
+	>
+		<div class="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+			<div class="min-w-0">
+				<h2 id="project-next-heading" class="text-lg font-semibold text-on-surface">Next up</h2>
+				{#if project.current_next_valid && currentNext}
+					<a
+						href={workHref(currentNext.type, currentNext.id)}
+						class="falcon-focus mt-2 block max-w-4xl rounded text-xl font-semibold text-on-surface hover:text-primary"
+					>
+						{currentNext.title}
+					</a>
+					<div
+						class="mt-2 flex flex-wrap gap-x-2 text-[length:var(--text-label)] text-on-surface-variant"
+					>
+						<span>{typeLabel(currentNext.type)}</span>
+						<span aria-hidden="true">·</span>
+						<span>{humanize(currentNext.status)}</span>
+						{#if work.find((item) => item.id === currentNext?.id)?.due_at}
+							<span aria-hidden="true">·</span>
+							<span>Due {formatDate(work.find((item) => item.id === currentNext?.id)?.due_at)}</span
+							>
+						{/if}
 					</div>
 				{:else}
-					<div class="p-4">
+					<p class="mt-2 max-w-3xl text-[length:var(--text-body)] text-on-surface-variant">
+						{project.status === 'active'
+							? 'No next move has been chosen. Pick one from the project work below so the agent knows what to move forward.'
+							: project.status === 'paused'
+								? 'This project is paused. Choose a next move after it resumes.'
+								: project.status === 'completed'
+									? 'This project is finished.'
+									: 'A next move can be chosen once this project is active.'}
+					</p>
+				{/if}
+			</div>
+			{#if project.current_next_valid && currentNext && editableProject}
+				<details class="relative justify-self-start md:justify-self-end">
+					<summary
+						class="falcon-focus touch-target cursor-pointer list-none rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant bg-surface-container px-3 text-[length:var(--text-label)] font-semibold text-on-surface marker:content-none"
+					>
+						Change next move
+					</summary>
+					<div
+						class="mt-2 w-52 rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant bg-surface-container p-3 md:absolute md:right-0 md:z-20"
+					>
+						<CommandForm
+							command="set_current_next_item"
+							targetId={project.id}
+							expectedVersion={project.version}
+							form={form as never}
+							presetValues={{ item_id: '' }}
+							confirmationSubject={currentNext.title}
+							submitLabel="Clear next move"
+							compact
+						/>
+					</div>
+				</details>
+			{/if}
+		</div>
+	</section>
+
+	<div class="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+		<main class="min-w-0 space-y-6">
+			{#if needsResolution.length}
+				<section
+					class="rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-status-warning/45 bg-status-warning-bg p-2"
+					aria-labelledby="project-resolution-heading"
+				>
+					<div class="flex items-start justify-between gap-4 px-3 pb-2 pt-2">
+						<div>
+							<h2 id="project-resolution-heading" class="text-lg font-semibold text-on-surface">
+								Needs your input
+							</h2>
+							<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
+								Resolve {needsResolution.length === 1 ? 'this item' : 'these items'} to keep the project
+								moving.
+							</p>
+						</div>
+						<span class="text-2xl text-primary" aria-hidden="true">✦</span>
+					</div>
+					<div class="divide-y divide-status-warning/25">
+						{#each needsResolution as item (item.id)}
+							{@render resolutionRow(item)}
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<section class="min-w-0" aria-labelledby="project-work-heading">
+				<div
+					class="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/70 pb-3"
+				>
+					<div>
+						<h2 id="project-work-heading" class="text-xl font-semibold text-on-surface">Work</h2>
+						<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
+							Tasks, questions, decisions, and changes the agent is managing.
+						</p>
+					</div>
+					{#if editableProject}
+						<details class="relative">
+							<summary
+								class="falcon-focus touch-target cursor-pointer list-none rounded-[var(--md-sys-shape-corner-medium)] border border-outline-variant bg-surface-container px-3 text-[length:var(--text-label)] font-semibold text-on-surface marker:content-none hover:border-primary/60"
+							>
+								+ Add milestone
+							</summary>
+							<div
+								class="absolute right-0 z-30 mt-2 w-[min(34rem,calc(100vw-2rem))] rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant bg-surface-container p-4 shadow-xl"
+							>
+								<CommandForm
+									command="create_milestone"
+									form={form as never}
+									presetValues={{ project_id: project.id }}
+									compact
+								/>
+							</div>
+						</details>
+					{/if}
+				</div>
+
+				<div class="mt-4">
+					<div class="mb-3 flex items-baseline justify-between gap-3">
+						<h3 class="font-semibold text-on-surface">Milestones</h3>
+						{#if milestones.length}
+							<p class="text-[length:var(--text-label)] text-on-surface-variant">
+								{project.progress.milestones} reached
+							</p>
+						{/if}
+					</div>
+					{#if milestones.length}
+						<div class="grid gap-4 2xl:grid-cols-2">
+							{#each milestones as milestone, index (milestone.id)}
+								{@const milestoneItems = milestoneWork(milestone.id)}
+								{@const milestoneDone = milestoneProgress(milestone.id)}
+								<article
+									class="overflow-hidden rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-outline-variant/70 bg-surface-container-low"
+								>
+									<div class="p-4">
+										<div class="flex items-start gap-3">
+											<span
+												class="flex size-9 shrink-0 items-center justify-center rounded-full bg-status-active-bg font-mono text-[length:var(--text-label)] font-semibold text-status-active"
+												aria-label={`Milestone ${index + 1}`}
+											>
+												{index + 1}
+											</span>
+											<div class="min-w-0 flex-1">
+												<div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+													<h4 class="font-semibold text-on-surface">{milestone.title}</h4>
+													<span
+														class="text-[length:var(--text-label)] font-semibold {scheduleTone(
+															milestone.schedule_state
+														)}"
+													>
+														{humanize(milestone.status)}
+													</span>
+												</div>
+												<p
+													class="mt-1 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant"
+												>
+													Finish when {milestone.success_condition}
+												</p>
+												<div class="mt-3 flex items-center gap-3">
+													<div
+														class="h-1.5 min-w-20 flex-1 overflow-hidden rounded-full bg-surface-container-high"
+													>
+														<div
+															class="h-full rounded-full bg-status-active"
+															style={`width: ${milestoneDone.percent}%`}
+														></div>
+													</div>
+													<span class="text-[length:var(--text-label)] text-on-surface-variant">
+														{milestoneDone.complete} of {milestoneDone.total} done
+													</span>
+												</div>
+												{#if milestone.target_at}
+													<p class="mt-2 text-[length:var(--text-label)] text-on-surface-variant">
+														Target {formatDate(milestone.target_at)}
+													</p>
+												{/if}
+											</div>
+										</div>
+									</div>
+
+									{#if milestoneItems.length}
+										<div
+											class="divide-y divide-outline-variant/60 border-t border-outline-variant/60"
+										>
+											{#each milestoneItems as item (item.id)}
+												{@render workRow(item)}
+											{/each}
+										</div>
+									{:else}
+										<p
+											class="border-t border-outline-variant/60 px-4 py-3 text-[length:var(--text-label)] text-on-surface-variant"
+										>
+											No work is connected to this milestone yet.
+										</p>
+									{/if}
+
+									{#if milestone.status === 'achieved' && (milestone.source_refs?.length || (milestone.source_refs_omitted ?? 0) > 0)}
+										<div class="border-t border-outline-variant/60 px-4 py-3">
+											<SourceRefs
+												sources={milestone.source_refs}
+												title="How we know"
+												omittedCount={milestone.source_refs_omitted ?? 0}
+											/>
+										</div>
+									{/if}
+									{#if !project.archived && milestoneCommands(milestone).length}
+										<details class="border-t border-outline-variant/60 px-4 py-2">
+											<summary
+												class="falcon-focus touch-target cursor-pointer text-[length:var(--text-label)] font-semibold text-primary"
+											>
+												Milestone actions
+											</summary>
+											<div class="space-y-3 pb-2 pt-2">
+												{#each milestoneCommands(milestone) as command (command)}
+													<CommandForm
+														{command}
+														targetId={milestone.id}
+														expectedVersion={milestone.version}
+														form={form as never}
+														requireExactlyOneOf={command === 'achieve_milestone'
+															? ['source_refs', 'waive_sources_reason']
+															: []}
+														compact
+													/>
+												{/each}
+											</div>
+										</details>
+									{/if}
+								</article>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-[length:var(--text-label)] text-on-surface-variant">
+							No milestones yet.
+						</p>
+					{/if}
+				</div>
+
+				{#if looseWork.length}
+					<div
+						class="mt-4 divide-y divide-outline-variant/60 overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container-low"
+					>
+						{#each looseWork as item (item.id)}
+							{@render workRow(item)}
+						{/each}
+					</div>
+				{/if}
+
+				{#if !milestones.length && !looseWork.length}
+					<div
+						class="mt-4 rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container-low p-4"
+					>
 						<EmptyState
 							title="No work yet"
 							description="Tasks, questions, decisions, and changes will appear here when they are connected to this project."
@@ -590,32 +812,53 @@
 				{/if}
 			</section>
 
-			<details
-				class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
+			<section
+				class="border-t border-outline-variant/70 pt-4"
+				aria-labelledby="project-activity-heading"
 			>
-				<summary
-					class="falcon-focus touch-target cursor-pointer px-4 py-3 font-semibold text-on-surface"
-				>
-					History <span class="font-normal text-on-surface-variant"
-						>({project.history?.length ?? 0})</span
-					>
-				</summary>
-				<div class="border-t border-outline-variant/70 p-4">
-					{#if project.history?.length}
-						<Timeline events={project.history} />
-					{:else}
-						<p class="text-on-surface-variant">No project history yet.</p>
-					{/if}
+				<div class="mb-3 flex items-baseline justify-between gap-3">
+					<h2 id="project-activity-heading" class="text-xl font-semibold text-on-surface">
+						Activity
+					</h2>
+					<span class="text-[length:var(--text-label)] text-on-surface-variant">
+						{project.history?.length ?? 0} update{project.history?.length === 1 ? '' : 's'}
+					</span>
 				</div>
-			</details>
+				{#if project.history?.length}
+					<div
+						class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container-low p-4"
+					>
+						<Timeline events={project.history.slice(0, 6)} />
+						<details class="mt-3 border-t border-outline-variant/60 pt-2">
+							<summary class="falcon-focus touch-target cursor-pointer font-semibold text-primary">
+								History ({project.history.length})
+							</summary>
+							<div class="pt-3">
+								{#if project.history.length > 6}
+									<Timeline events={project.history.slice(6)} />
+								{:else}
+									<p class="text-[length:var(--text-label)] text-on-surface-variant">
+										All activity is shown above.
+									</p>
+								{/if}
+							</div>
+						</details>
+					</div>
+				{:else}
+					<p class="text-on-surface-variant">No project activity yet.</p>
+				{/if}
+			</section>
 		</main>
 
 		<aside class="min-w-0 space-y-4 xl:sticky xl:top-4">
 			<section
-				class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
+				class="rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-outline-variant/70 bg-surface-container-low"
 			>
-				<div class="border-b border-outline-variant/70 px-4 py-3">
-					<h2 class="font-semibold text-on-surface">Finish line</h2>
+				<div class="border-b border-outline-variant/70 px-4 py-4">
+					<h2 class="text-lg font-semibold text-on-surface">Finish line</h2>
+					<p class="mt-1 text-[length:var(--text-label)] text-on-surface-variant">
+						What must be true before this project is done.
+					</p>
 				</div>
 				{#if criteria.length}
 					<ul class="divide-y divide-outline-variant/60">
@@ -677,136 +920,69 @@
 			</section>
 
 			<section
-				class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
+				class="rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-outline-variant/70 bg-surface-container-low p-4"
 			>
-				<div
-					class="flex items-center justify-between gap-3 border-b border-outline-variant/70 px-4 py-3"
-				>
-					<h2 class="font-semibold text-on-surface">Milestones</h2>
-					<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant"
-						>{milestones.length}</span
-					>
-				</div>
-				{#if milestones.length}
-					<ol class="divide-y divide-outline-variant/60">
-						{#each milestones as milestone (milestone.id)}
-							<li class="px-4 py-3">
-								<div class="flex items-start gap-3">
-									<span class="font-mono text-[length:var(--text-label)] text-on-surface-variant">
-										{String(milestone.sequence).padStart(2, '0')}
-									</span>
-									<div class="min-w-0 flex-1">
-										<h3 class="font-semibold text-on-surface">{milestone.title}</h3>
-										<p
-											class="mt-1 text-[length:var(--text-label)] {scheduleTone(
-												milestone.schedule_state
-											)}"
-										>
-											{humanize(milestone.status)}{milestone.target_at
-												? ` · ${formatDate(milestone.target_at)}`
-												: ''}
-										</p>
-										<p
-											class="mt-2 text-[length:var(--text-label)] leading-relaxed text-on-surface-variant"
-										>
-											Finish when {milestone.success_condition}
-										</p>
-									</div>
-								</div>
-								{#if milestone.status === 'achieved' && (milestone.source_refs?.length || (milestone.source_refs_omitted ?? 0) > 0)}
-									<div class="mt-2">
-										<SourceRefs
-											sources={milestone.source_refs}
-											title="How we know"
-											omittedCount={milestone.source_refs_omitted ?? 0}
-										/>
-									</div>
-								{/if}
-								{#if !project.archived && milestoneCommands(milestone).length}
-									<details class="mt-2">
-										<summary
-											class="falcon-focus touch-target cursor-pointer text-[length:var(--text-label)] font-semibold text-primary"
-										>
-											Manage milestone
-										</summary>
-										<div class="mt-2 space-y-3">
-											{#each milestoneCommands(milestone) as command (command)}
-												<CommandForm
-													{command}
-													targetId={milestone.id}
-													expectedVersion={milestone.version}
-													form={form as never}
-													requireExactlyOneOf={command === 'achieve_milestone'
-														? ['source_refs', 'waive_sources_reason']
-														: []}
-													compact
-												/>
-											{/each}
-										</div>
-									</details>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				{:else}
-					<p class="px-4 py-4 text-on-surface-variant">No milestones yet.</p>
+				<h2 class="text-lg font-semibold text-on-surface">About this project</h2>
+				{#if project.why_it_matters}
+					<p class="mt-3 text-[length:var(--text-label)] font-semibold text-on-surface-variant">
+						Why it matters
+					</p>
+					<p class="mt-1 text-[length:var(--text-body)] leading-relaxed text-on-surface">
+						{project.why_it_matters}
+					</p>
 				{/if}
-				{#if !project.archived}
-					<details class="border-t border-outline-variant/70 px-4 py-2">
-						<summary
-							class="falcon-focus touch-target cursor-pointer text-[length:var(--text-label)] font-semibold text-primary"
-						>
-							Add milestone
-						</summary>
-						<div class="pb-2 pt-2">
-							<CommandForm
-								command="create_milestone"
-								form={form as never}
-								presetValues={{ project_id: project.id }}
-								compact
-							/>
-						</div>
-					</details>
-				{/if}
+				<dl class="mt-3 border-t border-outline-variant/60 pt-2">
+					<DataRow label="Owner" value={project.owner ?? 'Not assigned'} />
+					<DataRow label="Target" value={formatDate(project.target_at)} />
+					<DataRow label="Updated" value={formatDateTime(project.updated_at)} />
+				</dl>
 			</section>
 
 			<details
-				open
-				class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
+				class="rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-outline-variant/70 bg-surface-container-low"
 			>
 				<summary
 					class="falcon-focus touch-target cursor-pointer px-4 py-3 font-semibold text-on-surface"
 				>
-					Project details
+					Scope and details
 				</summary>
-				<div class="border-t border-outline-variant/70 px-4 pb-4">
-					<dl>
-						<DataRow label="Why it matters" value={project.why_it_matters ?? 'Not defined'} />
-						<DataRow label="Owner" value={project.owner ?? 'Not assigned'} />
-						<DataRow label="Target" value={formatDate(project.target_at)} />
-						<DataRow label="Area" value={project.area_id ?? 'Not assigned'} mono />
-						<DataRow label="Plan" value={project.plan_id ?? 'No plan attached'} mono />
-						<DataRow label="Updated" value={formatDateTime(project.updated_at)} />
-					</dl>
-					<div class="border-t border-outline-variant/70 pt-3">
+				<div class="border-t border-outline-variant/70 px-4 pb-4 pt-3">
+					<div>
 						<p class="text-[length:var(--text-label)] font-semibold text-on-surface-variant">
 							In scope
 						</p>
-						<p class="mt-1 text-[length:var(--text-body)] text-on-surface">
-							{project.scope_included?.join(' · ') || 'Not defined'}
-						</p>
-						<p class="mt-3 text-[length:var(--text-label)] font-semibold text-on-surface-variant">
+						{#if project.scope_included?.length}
+							<ul class="mt-2 space-y-1 text-[length:var(--text-body)] text-on-surface">
+								{#each project.scope_included as item (item)}
+									<li class="flex gap-2"><span class="text-status-active">✓</span> {item}</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="mt-1 text-on-surface-variant">Not defined</p>
+						{/if}
+						<p class="mt-4 text-[length:var(--text-label)] font-semibold text-on-surface-variant">
 							Out of scope
 						</p>
-						<p class="mt-1 text-[length:var(--text-body)] text-on-surface">
-							{project.scope_excluded?.join(' · ') || 'Nothing recorded'}
-						</p>
+						{#if project.scope_excluded?.length}
+							<ul class="mt-2 space-y-1 text-[length:var(--text-body)] text-on-surface">
+								{#each project.scope_excluded as item (item)}
+									<li class="flex gap-2"><span class="text-on-surface-variant">—</span> {item}</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="mt-1 text-on-surface-variant">Nothing recorded</p>
+						{/if}
 					</div>
+					<dl class="mt-4 border-t border-outline-variant/60 pt-2">
+						<DataRow label="Area" value={project.area_id ?? 'Not assigned'} mono />
+						<DataRow label="Plan" value={project.plan_id ?? 'No plan attached'} mono />
+						<DataRow label="Version" value={String(project.version)} mono />
+					</dl>
 				</div>
 			</details>
 
 			<details
-				class="rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-surface-container"
+				class="rounded-[calc(var(--md-sys-shape-corner-large)+0.25rem)] border border-outline-variant/70 bg-surface-container-low"
 			>
 				<summary
 					class="falcon-focus touch-target cursor-pointer px-4 py-3 font-semibold text-on-surface"
