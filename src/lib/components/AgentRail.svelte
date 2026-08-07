@@ -169,8 +169,7 @@
 			const defaultId =
 				((
 					get(gatewayEvents.snapshot)?.snapshot?.sessionDefaults as
-						| Record<string, unknown>
-						| undefined
+						Record<string, unknown> | undefined
 				)?.defaultAgentId as string) ?? 'default';
 			if (!selectedAgentId || selectedAgentId === 'default') {
 				selectedAgentId = defaultId;

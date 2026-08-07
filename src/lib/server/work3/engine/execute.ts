@@ -108,8 +108,7 @@ export async function executeCommand<TResult = unknown>(
 					 WHERE key = ? AND command = ? AND target = ? AND actor_key = ?`
 				)
 				.get(input.idempotency_key, definition.name, targetId ?? '', actorKey(actor)) as
-				| IdempotencyRow
-				| undefined;
+				IdempotencyRow | undefined;
 			if (existing) {
 				if (existing.payload_hash !== payloadHash(payload)) {
 					throw new Work3Error(

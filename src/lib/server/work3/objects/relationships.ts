@@ -343,8 +343,7 @@ export function registerRelationshipCommands(): void {
 		execute: (ctx) => {
 			const linkId = requireString(ctx.payload, 'link_id');
 			const row = ctx.db.prepare('SELECT * FROM relationships WHERE id = ?').get(linkId) as
-				| RelationshipRow
-				| undefined;
+				RelationshipRow | undefined;
 			if (!row) throw new Work3Error('not_found', `No such link: ${linkId}`);
 			if (row.removed_at !== null) {
 				return { result: { id: linkId, removed: true }, events: [], noop: true };

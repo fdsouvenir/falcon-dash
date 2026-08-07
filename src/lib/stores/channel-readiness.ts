@@ -3,11 +3,7 @@ import { gatewayEvents, rpc } from '$lib/gateway-api.js';
 
 export type ChannelId = 'discord' | 'telegram';
 export type ChannelReadinessState =
-	| 'not_configured'
-	| 'needs_input'
-	| 'misconfigured'
-	| 'degraded'
-	| 'ready';
+	'not_configured' | 'needs_input' | 'misconfigured' | 'degraded' | 'ready';
 
 export interface ChannelReadiness {
 	id: ChannelId;

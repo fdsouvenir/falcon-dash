@@ -34,11 +34,7 @@ let loaded = false;
 let loadPromise: Promise<void> | null = null;
 
 export type A2UILoadTier =
-	| 'not-loaded'
-	| 'local-import'
-	| 'local-script'
-	| 'canvas-host'
-	| 'placeholder';
+	'not-loaded' | 'local-import' | 'local-script' | 'canvas-host' | 'placeholder';
 
 let loadedTier: A2UILoadTier = 'not-loaded';
 

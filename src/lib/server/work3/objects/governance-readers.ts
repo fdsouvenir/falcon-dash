@@ -198,8 +198,7 @@ export function registerGovernanceReaders(): void {
 		},
 		get: (id) => {
 			const row = getWork3Db().prepare('SELECT * FROM reviews WHERE entity_id = ?').get(id) as
-				| ReviewRow
-				| undefined;
+				ReviewRow | undefined;
 			return row ? reviewProjection(row) : null;
 		}
 	});
@@ -259,8 +258,7 @@ export function registerGovernanceReaders(): void {
 		get: (id) => {
 			const db = getWork3Db();
 			const row = db.prepare('SELECT * FROM authorizations WHERE entity_id = ?').get(id) as
-				| AuthorizationRow
-				| undefined;
+				AuthorizationRow | undefined;
 			if (!row) return null;
 			return authorizationProjection(
 				row,

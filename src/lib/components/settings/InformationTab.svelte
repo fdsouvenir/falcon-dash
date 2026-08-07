@@ -271,8 +271,7 @@
 	);
 	let configPath = $derived(
 		((snapshotData?.snapshot as Record<string, unknown> | undefined)?.configPath as
-			| string
-			| null) ?? null
+			string | null) ?? null
 	);
 	let stateDir = $derived(
 		((snapshotData?.snapshot as Record<string, unknown> | undefined)?.stateDir as string | null) ??

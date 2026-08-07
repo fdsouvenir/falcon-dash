@@ -100,11 +100,7 @@ export interface AuthorizationRow {
 }
 
 export type AuthorizationEffectiveness =
-	| 'valid'
-	| 'expired'
-	| 'revoked'
-	| 'consumed'
-	| 'invalidated';
+	'valid' | 'expired' | 'revoked' | 'consumed' | 'invalidated';
 
 export interface CurrentSubjectState {
 	/** The subject's current revision id (change revision / plan revision …). */

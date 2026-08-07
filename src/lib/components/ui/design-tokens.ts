@@ -60,13 +60,7 @@ export const STATUS_COLORS: Record<StatusKey, { text: string; bg: string; dot: s
 
 /* ── Status Mapping (project/task status → semantic color) ── */
 export type ProjectStatus =
-	| 'todo'
-	| 'in_progress'
-	| 'review'
-	| 'done'
-	| 'blocked'
-	| 'cancelled'
-	| 'archived';
+	'todo' | 'in_progress' | 'review' | 'done' | 'blocked' | 'cancelled' | 'archived';
 
 export const STATUS_MAP: Record<ProjectStatus, StatusKey> = {
 	todo: 'info',
@@ -100,12 +94,7 @@ export function getPriority(level: string | null) {
 
 /* ── Plan Status Colors ── */
 export type PlanStatus =
-	| 'planning'
-	| 'assigned'
-	| 'in_progress'
-	| 'needs_review'
-	| 'complete'
-	| 'cancelled';
+	'planning' | 'assigned' | 'in_progress' | 'needs_review' | 'complete' | 'cancelled';
 
 export const PLAN_STATUS_MAP: Record<PlanStatus, StatusKey> = {
 	planning: 'info',

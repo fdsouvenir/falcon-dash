@@ -9,13 +9,7 @@ import type { ExecuteContext, DomainEventInput } from '../engine/registry.js';
  */
 
 export type TerminalKind =
-	| 'completed'
-	| 'cancelled'
-	| 'answered'
-	| 'withdrawn'
-	| 'decided'
-	| 'succeeded'
-	| 'rolled_back';
+	'completed' | 'cancelled' | 'answered' | 'withdrawn' | 'decided' | 'succeeded' | 'rolled_back';
 
 /** Terminal kinds that count as a supportive result (auto-resolve blockers). */
 const SUPPORTIVE: TerminalKind[] = ['completed', 'answered', 'decided', 'succeeded'];

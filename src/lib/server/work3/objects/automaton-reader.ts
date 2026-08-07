@@ -85,8 +85,7 @@ function compose(
 
 function areaOf(jobId: string): string | null {
 	const row = getWork3Db().prepare('SELECT area_id FROM entities WHERE id = ?').get(jobId) as
-		| { area_id: string | null }
-		| undefined;
+		{ area_id: string | null } | undefined;
 	return row?.area_id ?? null;
 }
 
