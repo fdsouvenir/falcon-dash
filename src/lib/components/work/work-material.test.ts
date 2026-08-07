@@ -101,12 +101,16 @@ describe('Work UI material guardrails', () => {
 
 		for (const [name, source] of Object.entries(routes)) {
 			expect(source, name).toContain('<CommandFeedback');
-			expect(source, name).toContain('<CommandBar');
-			expect(source, name).toContain('<PageHeader');
 			expect(source, name).not.toMatch(/(?:text|bg|border)-(?:blue|emerald|red|amber|sky)-\d/);
 			expect(source, name).not.toContain('transition-all');
 			expect(source, name).not.toContain('shadow-sm');
 		}
+		for (const [name, source] of Object.entries(routes).filter(([name]) => name !== 'project')) {
+			expect(source, name).toContain('<CommandBar');
+			expect(source, name).toContain('<PageHeader');
+		}
+		expect(routes.project).toContain('<CommandForm');
+		expect(routes.project).toContain('confirmationSubject=');
 		expect(routes.question).not.toMatch(
 			/value="(?:answer_question|revise_answer|withdraw_question)"/
 		);
@@ -133,34 +137,33 @@ describe('Work UI material guardrails', () => {
 		expect(routes.finding).toContain('<SourceRefs');
 		expect(routes.project).toContain('<CommandForm');
 		expect(routes.project).not.toContain('<form');
-		expect(routes.project).toContain('xl:grid-cols-[14rem_minmax(0,1fr)_23rem]');
-		for (const section of ['status', 'route', 'proof', 'current-work', 'history']) {
-			expect(routes.project).toContain(`id="${section}"`);
+		expect(routes.project).toContain('xl:grid-cols-[minmax(0,1fr)_20rem]');
+		for (const heading of [
+			'Next up',
+			'Needs your input',
+			'Activity',
+			'Finish line',
+			'About this project',
+			'Scope and details',
+			'How we know'
+		]) {
+			expect(routes.project).toContain(heading);
 		}
-		expect(routes.project).toContain('Add phase');
-		expect(routes.project).toContain('Add milestone');
-		expect(routes.project).toContain('Waive under authority');
-		expect(routes.project).toContain('Contributes');
-		expect(routes.project).toContain('Satisfies');
-		expect(routes.project).toContain('Criterion contribution sources');
-		expect(routes.project).toContain('Milestone contribution sources');
-		expect(routes.project).toContain('Historical achievement sources');
-		expect(routes.project).toContain('Historical satisfactions');
-		expect(routes.project).toContain('Archived Projects do not have a current next item');
-		expect(routes.project).toContain('Reopen the Project before choosing work');
-		expect(routes.project).toContain('!terminalProject && project.current_next_valid');
-		expect(routes.project).toContain("project.archived ? 'Saved current next' : 'Current next'");
-		expect(routes.project).toContain('project.current_next_item_id && !project.archived');
+		expect(routes.project).not.toContain('Add phase');
+		expect(routes.project).not.toContain('>Route<');
+		expect(routes.project).not.toContain('>Proof<');
+		expect(routes.project).toContain('+ Add milestone');
+		expect(routes.project).toContain('Waive this item');
+		expect(routes.project).toContain('.sort((a, b) => a.sequence - b.sequence)');
+		expect(routes.project).toContain('.sort(compareWork)');
+		expect(routes.project).toContain('item.milestone_id === milestoneId');
+		expect(routes.project).toContain('!item.milestone_id');
+		expect(routes.project).toContain(
+			"item.id === project.current_next_item_id ? 'Clear next' : 'Make next'"
+		);
 		expect(routes.project).toContain("milestone.status === 'achieved'");
-		expect(routes.project).toContain('requireExactlyOneOfByCommand');
-		expect(routes.project).toContain('enabled: phase.open_work === 0');
-		expect(routes.project).toContain('must finish first');
-		expect(routes.project).toContain('enabled: phase.work_total > 0');
-		expect(routes.project).toContain('Assign at least one work item before activation');
-		expect(routes.project).toContain('Rollback in progress since');
-		expect(routes.project).toContain('Rollback completed');
-		expect(routes.project).toContain('Project contributions');
-		expect(routes.project).toContain('Clear invalid current next item');
+		expect(routes.project).toContain("details.push('Rollback in progress')");
+		expect(routes.project).toContain('<SourceRefs');
 
 		const questionLoader = readFileSync(
 			new URL('../../../routes/work/questions/[id]/+page.server.ts', import.meta.url),
@@ -242,9 +245,9 @@ describe('Work UI material guardrails', () => {
 		expect(pageHeader).toContain('break-all');
 		expect(layout.toString()).toContain('var(--safe-left)');
 		expect(layout.toString()).toContain('var(--safe-right)');
-		for (const source of [projects, automata]) {
-			expect(source.toString()).toContain('grid grid-cols-2 gap-3');
-		}
+		expect(projects.toString()).toContain('class="falcon-focus group grid gap-2');
+		expect(projects.toString()).toContain('md:grid-cols-[');
+		expect(automata.toString()).toContain('grid grid-cols-2 gap-3');
 		// The overview is the executive dashboard: KPI signal strip + label-rail
 		// grouped panels, hairline-divided single-border zones.
 		expect(overview.toString()).toContain('xl:grid-cols-4');
