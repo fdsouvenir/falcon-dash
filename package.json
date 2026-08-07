@@ -1,6 +1,6 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
-	"version": "3.1.0",
+	"version": "3.1.1",
 	"description": "Operator console for OpenClaw AI agent deployments — work management, chat, channels, approvals, and gateway administration",
 	"repository": {
 		"type": "git",
