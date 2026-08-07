@@ -3335,7 +3335,7 @@ Commands:
   milestone list | get | create | achieve | cancel | reopen
   link      create | remove | assign \u2014 typed relationships + project assignment
   automaton list | get | create | activate | pause | update | delete | restore
-  queue     server-computed buckets (actionable, needs Fred, blocked, \u2026)
+  queue     server-computed buckets (actionable, needs operator, blocked, \u2026)
   brief     bounded session-start context
   history   <id> \u2014 Event Log timeline
   sources   check \u2014 resolve a source reference
