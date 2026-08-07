@@ -118,6 +118,10 @@ and restart cleanly on failure.
 application and CLI. Before a release, run the repo validation required by [../QUALITY.md](../QUALITY.md)
 and verify a clean installation on a machine that does not contain a developer checkout.
 
+Run release validation after `npm ci`, not against an existing `node_modules`. The lockfile is the
+authoritative toolchain for CI and publishing, including Prettier. Formatting committed for a
+release must be produced and checked with the exact formatter version recorded in `package-lock.json`.
+
 That clean-install test must include OpenClaw discovery, vault provisioning, SecretRef resolution,
 gateway extension installation, Work database creation, and agent context injection. At present,
 the vault and extension steps expose known packaging gaps.
