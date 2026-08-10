@@ -108,7 +108,7 @@
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
-		"@internationalized/date": "^3.11.0",
+		"@internationalized/date": "^3.12.3",
 		"@lucide/svelte": "^0.575.0",
 		"@sentry/sveltekit": "^10.39.0",
 		"@sveltejs/adapter-node": "^5.5.3",
