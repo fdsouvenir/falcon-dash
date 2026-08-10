@@ -137,7 +137,7 @@
 		"remark-parse": "^11.0.0",
 		"remark-rehype": "^11.1.2",
 		"shiki": "^3.22.0",
-		"svelte": "^5.53.0",
+		"svelte": "^5.56.8",
 		"svelte-check": "^4.4.3",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
