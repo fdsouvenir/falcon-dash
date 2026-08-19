@@ -8,7 +8,7 @@ import { Work3Error } from '$lib/work3-shared/errors.js';
  * Verified against openclaw 2026.7.1-2 dist: `cron.update` takes {id, patch}
  * — the capability audit's `expectedConfigRevision` does NOT exist in this
  * build, so optimistic concurrency uses the job's updatedAtMs (read → compare
- * → update; the small race window is accepted and recorded in LEARNINGS).
+ * → update; the small race window is documented in the v3 implementation architecture).
  */
 
 export interface CronJob {

@@ -36,7 +36,7 @@
 
 <section
 	{id}
-	class="scroll-mt-24 rounded-[var(--md-sys-shape-corner-large)] border bg-surface-container shadow-none {accentClass}"
+	class="min-w-0 scroll-mt-24 rounded-[var(--md-sys-shape-corner-large)] border bg-surface-container shadow-none {accentClass}"
 >
 	<div
 		class="flex flex-col gap-3 border-b border-outline-variant/70 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5"

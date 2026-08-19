@@ -145,16 +145,9 @@
 <svelte:head><title>Browse — Work</title></svelte:head>
 
 <div class="mx-auto max-w-6xl space-y-5">
-	<PageHeader
-		eyebrow="Search and filter"
-		title="Browse"
-		description="Inspect existing Work and knowledge objects, including terminal and archived records."
-	/>
+	<PageHeader title="Browse" />
 
-	<Section
-		title="Search Work"
-		description="Full-text search uses titles and the indexed Work body."
-	>
+	<Section title="Search">
 		<form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end">
 			{#if data.type}<input type="hidden" name="type" value={data.type} />{/if}
 			<div class="min-w-0 flex-1">
@@ -200,11 +193,7 @@
 	{/if}
 
 	{#if data.query && !data.searchError}
-		<Section
-			title={`Results for “${data.query}”`}
-			description={`${data.results.length} full-text matches${data.type ? ` in ${typeLabel(data.type)}` : ''}.`}
-			accent="info"
-		>
+		<Section title={`Results for “${data.query}”`} count={data.results.length} accent="info">
 			{#if data.results.length === 0}
 				<EmptyState
 					title="No search matches"
@@ -248,10 +237,7 @@
 		<FocusChips type={data.type} {items} active={data.focus} now={data.now} />
 	{/if}
 
-	<Section
-		title={data.type ? typeLabel(data.type) : 'All indexed Work'}
-		description={`${currentItems.length} current records${data.focus ? ' match this focus' : ''}.`}
-	>
+	<Section title={data.type ? typeLabel(data.type) : 'All work'} count={currentItems.length}>
 		{#if currentItems.length === 0}
 			<EmptyState
 				title="No current records"

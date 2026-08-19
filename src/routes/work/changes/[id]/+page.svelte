@@ -6,7 +6,6 @@
 		DataRow,
 		PageHeader,
 		Section,
-		StatTile,
 		StatusBadge,
 		Timeline
 	} from '$lib/components/work/index.js';
@@ -180,18 +179,6 @@
 		...verificationCommands
 	]);
 
-	function stateTone(state: string, category: 'execution' | 'verification' | 'authorization') {
-		if (category === 'authorization') {
-			if (state === 'valid') return 'active';
-			if (['revoked', 'invalidated'].includes(state)) return 'danger';
-			return 'warning';
-		}
-		if (['succeeded', 'passed'].includes(state)) return 'active';
-		if (state === 'failed') return 'danger';
-		if (['in_progress', 'paused', 'waived'].includes(state)) return 'warning';
-		return 'muted';
-	}
-
 	function displayValue(value: unknown): string {
 		if (value === null || value === undefined || value === '') return 'Not recorded';
 		if (typeof value === 'string') return value;
@@ -213,7 +200,6 @@
 
 <div class="mx-auto max-w-6xl space-y-5">
 	<PageHeader
-		eyebrow="Change request"
 		title={change.title}
 		id={change.id}
 		version={change.version}
@@ -231,35 +217,30 @@
 
 	<CommandFeedback form={form as never} />
 
-	<div class="grid grid-cols-2 gap-4 md:grid-cols-3" aria-label="Change state">
-		<StatTile
-			label="Execution"
-			value={change.execution_state.replaceAll('_', ' ')}
-			description={change.result_summary ??
-				change.failure_summary ??
-				'No execution result recorded.'}
-			tone={stateTone(change.execution_state, 'execution')}
-		/>
-		<StatTile
-			label="Verification"
-			value={change.verification_state.replaceAll('_', ' ')}
-			description={change.verification_waived_reason ?? 'Acceptance evidence state.'}
-			tone={stateTone(change.verification_state, 'verification')}
-		/>
-		<StatTile
-			label="Authorization"
-			value={authorizationState.replaceAll('_', ' ')}
-			description={change.authorization?.reason ?? 'Permission state for this exact revision.'}
-			tone={stateTone(authorizationState, 'authorization')}
-		/>
+	<div
+		class="grid gap-px overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-outline-variant/60 md:grid-cols-3"
+		aria-label="Change state"
+	>
+		{#each [{ label: 'Execution', type: 'change_execution', value: change.execution_state, note: change.result_summary ?? change.failure_summary }, { label: 'Verification', type: 'change_verification', value: change.verification_state, note: change.verification_waived_reason }, { label: 'Authorization', type: 'authorization', value: authorizationState, note: change.authorization?.reason }] as item (item.label)}
+			<div class="min-w-0 bg-surface-container px-4 py-3">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<span class="text-[length:var(--text-label)] font-semibold text-on-surface-variant"
+						>{item.label}</span
+					>
+					<StatusBadge type={item.type} value={item.value} />
+				</div>
+				{#if item.note}
+					<p class="mt-2 line-clamp-2 text-[length:var(--text-label)] text-on-surface-variant">
+						{item.note}
+					</p>
+				{/if}
+			</div>
+		{/each}
 	</div>
 
-	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)]">
-		<div class="space-y-5">
-			<Section
-				title="Scope, risk, and safety"
-				description="The execution boundary attached to this exact change revision."
-			>
+	<div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)]">
+		<div class="min-w-0 space-y-5">
+			<Section title="Scope, risk, and safety">
 				<dl>
 					<DataRow
 						label="Allowed"
@@ -275,10 +256,7 @@
 				</dl>
 			</Section>
 
-			<Section
-				title="Acceptance criteria"
-				description="Verification must satisfy each criterion with evidence or record an explicit waiver."
-			>
+			<Section title="Acceptance criteria">
 				{#if change.acceptance_criteria?.length}
 					<ul class="divide-y divide-outline-variant/60">
 						{#each change.acceptance_criteria as criterion (criterion.id)}
@@ -304,11 +282,7 @@
 			</Section>
 
 			{#if plan}
-				<Section
-					title="Execution plan"
-					description="The plan revision and review disposition are related facts, not interchangeable authority."
-					accent="purple"
-				>
+				<Section title="Execution plan" accent="purple">
 					<div class="flex flex-wrap items-center gap-2">
 						<StatusBadge type="plan" value={plan.state} />
 						<StatusBadge
@@ -359,12 +333,7 @@
 				</Section>
 			{/if}
 
-			<Section
-				title="Authorizations"
-				description="Permission grants pinned to exact revisions, scope, and authority basis."
-				eyebrow="Execution authority"
-				accent="warning"
-			>
+			<Section title="Authorizations" accent="warning">
 				{#if change.authorizations?.length}
 					<ul class="divide-y divide-outline-variant/60">
 						{#each change.authorizations as authorization (authorization.id)}
@@ -430,12 +399,7 @@
 				{/if}
 			</Section>
 
-			<Section
-				title="Reviews"
-				description="Evaluations of quality and readiness — never execution authority."
-				eyebrow="Advisory evidence"
-				accent="info"
-			>
+			<Section title="Reviews" accent="info">
 				{#if change.reviews?.length}
 					<ul class="divide-y divide-outline-variant/60">
 						{#each change.reviews as review (review.id)}
@@ -460,13 +424,13 @@
 			</Section>
 
 			{#if change.history?.length}
-				<Section title="Timeline" description="Immutable command history and authority acts.">
+				<Section title="Timeline">
 					<Timeline events={change.history} />
 				</Section>
 			{/if}
 		</div>
 
-		<Section title="Revision context" description="Identifiers and current placement.">
+		<Section title="Revision context">
 			<dl>
 				<DataRow label="Change revision" value={change.revision_id ?? 'Not recorded'} mono />
 				<DataRow label="Plan" value={change.plan_id ?? 'Not assigned'} mono />

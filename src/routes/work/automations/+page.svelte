@@ -1,12 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import {
-		EmptyState,
-		PageHeader,
-		Section,
-		StatTile,
-		StatusBadge
-	} from '$lib/components/work/index.js';
+	import { EmptyState, PageHeader, Section, StatusBadge } from '$lib/components/work/index.js';
 	import type { PageData } from './$types.js';
 
 	interface AutomatonListItem {
@@ -31,6 +25,12 @@
 	const deleted = $derived(
 		automata.filter((automaton) => automaton.lifecycle === 'deleted').length
 	);
+	const statusSummary = $derived([
+		{ label: 'Active', value: active, tone: 'text-status-active' },
+		{ label: 'Paused', value: paused, tone: 'text-status-warning' },
+		{ label: 'Needs attention', value: attention, tone: 'text-status-danger' },
+		{ label: 'Deleted', value: deleted, tone: 'text-on-surface' }
+	]);
 
 	function dateLabel(value?: number | null): string {
 		return value ? new Date(value).toLocaleString() : 'Not scheduled';
@@ -49,11 +49,7 @@
 <svelte:head><title>Automations — Work</title></svelte:head>
 
 <div class="mx-auto max-w-6xl space-y-5">
-	<PageHeader
-		eyebrow="OpenClaw runtime"
-		title="Automations"
-		description="Live automation configuration, health, scheduling, restoration, and native Run history."
-	/>
+	<PageHeader title="Automations" />
 
 	{#if data.runtimeError}
 		<div
@@ -67,27 +63,21 @@
 		</div>
 	{/if}
 
-	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-		<StatTile label="Active" value={active} description="Enabled in OpenClaw." tone="active" />
-		<StatTile label="Paused" value={paused} description="Present but disabled." tone="warning" />
-		<StatTile
-			label="Needs attention"
-			value={attention}
-			description="Failing or unreachable health."
-			tone="danger"
-		/>
-		<StatTile
-			label="Deleted"
-			value={deleted}
-			description="Snapshots retained for restoration."
-			tone="muted"
-		/>
+	<div
+		class="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--md-sys-shape-corner-large)] border border-outline-variant/70 bg-outline-variant/60 sm:grid-cols-4"
+		aria-label="Automation status summary"
+	>
+		{#each statusSummary as item (item.label)}
+			<div class="flex min-w-0 items-baseline justify-between gap-3 bg-surface-container px-4 py-3">
+				<span class="truncate text-[length:var(--text-label)] font-semibold text-on-surface-variant"
+					>{item.label}</span
+				>
+				<span class="text-xl font-semibold tabular-nums {item.tone}">{item.value}</span>
+			</div>
+		{/each}
 	</div>
 
-	<Section
-		title="Runtime inventory"
-		description="Each row is the live OpenClaw object composed with Falcon attributes."
-	>
+	<Section title="All automations" count={automata.length}>
 		{#if automata.length === 0}
 			<EmptyState
 				title={data.runtimeError ? 'Inventory unavailable' : 'No automations'}

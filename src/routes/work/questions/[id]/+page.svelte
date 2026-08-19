@@ -91,7 +91,6 @@
 
 <div class="mx-auto max-w-5xl space-y-5">
 	<PageHeader
-		eyebrow="Question"
 		title={question.question}
 		id={question.id}
 		version={question.version}
@@ -136,10 +135,7 @@
 
 	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.75fr)]">
 		<div class="space-y-5">
-			<Section
-				title="Question brief"
-				description="The decision context, risks, and evidence boundary behind the prompt."
-			>
+			<Section title="Question brief">
 				<div class="space-y-3">
 					{#each questionSections as briefSection (briefSection.id)}
 						<details
@@ -196,10 +192,7 @@
 			{/if}
 
 			{#if answerHistory.length}
-				<Section
-					title="Answer revision history"
-					description="Immutable answer revisions, newest authority first."
-				>
+				<Section title="Answer revision history">
 					<ol class="divide-y divide-outline-variant/60">
 						{#each answerHistory as revision (revision.id)}
 							<li class="py-4 first:pt-0 last:pb-0">
@@ -227,7 +220,7 @@
 			{/if}
 
 			{#if question.history?.length}
-				<Section title="Timeline" description="Immutable command history and version transitions.">
+				<Section title="Timeline">
 					<Timeline events={question.history} />
 				</Section>
 			{/if}
@@ -249,7 +242,7 @@
 				</Section>
 			{/if}
 
-			<Section title="Operating context" description="Ownership, answerability, and timing.">
+			<Section title="Operating context">
 				<dl>
 					<DataRow label="Steward" value={question.steward ?? 'Unassigned'} />
 					<DataRow

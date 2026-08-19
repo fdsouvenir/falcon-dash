@@ -80,9 +80,11 @@ Each Work type has a distinct detail experience rather than a generic record car
   person can unblock the Project without reading the whole work list. The main Work area presents
   each ordered Milestone as a friendly progress group with its finish condition and date-ordered
   Tasks, Questions, Decisions, and Changes. Work without a Milestone remains in the same Work area
-  and is never labeled "unassigned." The finish line and a plain-language Project summary stay
-  visible beside the Work. Recent activity is readable at a glance; older history, detailed scope,
-  internal references, and "How we know" sources remain available through disclosure.
+  and is never labeled "unassigned." One **Project actions** menu replaces a row of competing
+  lifecycle and edit controls. The finish line and plain-language Project summary use broad,
+  readable surfaces instead of a narrow inspector rail. Recent activity reads as human progress;
+  older history, detailed scope, internal references, and "How we know" sources remain available
+  through disclosure.
 - Automations operate on the same OpenClaw-backed object and show runtime unavailability as a health
   error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
   pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and

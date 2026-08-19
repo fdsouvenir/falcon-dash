@@ -116,7 +116,6 @@
 
 <div class="mx-auto max-w-5xl space-y-5">
 	<PageHeader
-		eyebrow="Decision"
 		title={decision.title}
 		id={decision.id}
 		version={decision.version}
@@ -145,20 +144,12 @@
 	<CommandFeedback form={form as never} />
 
 	<div class="grid gap-5 md:grid-cols-2">
-		<Section
-			title="What is at stake"
-			description="The material consequence attached to this choice."
-			accent="info"
-		>
+		<Section title="What is at stake" accent="info">
 			<p class="text-[length:var(--text-body)] leading-relaxed text-on-surface">
 				{decision.stakes ?? 'No explicit stakes recorded.'}
 			</p>
 		</Section>
-		<Section
-			title="If no decision is made"
-			description="The cost or default path of leaving this unresolved."
-			accent="warning"
-		>
+		<Section title="If no decision is made" accent="warning">
 			<p class="text-[length:var(--text-body)] leading-relaxed text-on-surface">
 				{preview(decision.consequence_of_no_decision)}
 			</p>
@@ -180,11 +171,7 @@
 	</div>
 
 	{#if decision.outcome}
-		<Section
-			title="Recorded outcome"
-			description="This outcome is immutable; corrections create a superseding decision."
-			accent="info"
-		>
+		<Section title="Recorded outcome" accent="info">
 			<div class="space-y-3">
 				<div class="flex flex-wrap items-center gap-2">
 					<StatusBadge type="decision" value="decided" />
@@ -210,10 +197,7 @@
 
 	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.75fr)]">
 		<div class="space-y-5">
-			<Section
-				title="Decision package"
-				description="The prepared options and current recommendation."
-			>
+			<Section title="Decision package">
 				{#if decision.context}
 					<details
 						open={decision.context.length <= 900}
@@ -274,11 +258,7 @@
 			</Section>
 
 			{#if decidable}
-				<Section
-					title="Record the decision"
-					description="Choose one package option and provide the human rationale."
-					accent="warning"
-				>
+				<Section title="Record the decision" accent="warning">
 					<CommandForm
 						command="decide"
 						targetId={decision.id}
@@ -290,10 +270,7 @@
 			{/if}
 
 			{#if decision.package_history?.length}
-				<Section
-					title="Package revisions"
-					description="Prior packages are retained so the decision basis stays auditable."
-				>
+				<Section title="Package revisions">
 					<ol class="divide-y divide-outline-variant/60">
 						{#each decision.package_history as revision, index (revision.id ?? index)}
 							<li class="py-3 first:pt-0 last:pb-0">
@@ -310,17 +287,14 @@
 			{/if}
 
 			{#if decision.history?.length}
-				<Section title="Timeline" description="Immutable command history and authority acts.">
+				<Section title="Timeline">
 					<Timeline events={decision.history} />
 				</Section>
 			{/if}
 		</div>
 
 		<div class="space-y-5">
-			<Section
-				title="Decision authority"
-				description="Who may decide and when the answer is needed."
-			>
+			<Section title="Decision authority">
 				<dl>
 					<DataRow label="Deciders" value={decision.deciders?.join(', ') || 'No deciders named'} />
 					<DataRow label="Needed by" value={dateLabel(decision.needed_by)} />
@@ -331,11 +305,7 @@
 			</Section>
 
 			{#if decision.supersedes || decision.superseded_by}
-				<Section
-					title="Supersession lineage"
-					description="Corrections preserve the full chain instead of rewriting history."
-					accent="purple"
-				>
+				<Section title="Supersession lineage" accent="purple">
 					<div class="space-y-2 text-[length:var(--text-body)]">
 						{#if decision.supersedes}
 							<p class="text-on-surface-variant">

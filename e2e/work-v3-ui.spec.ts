@@ -119,6 +119,12 @@ async function expectNoHorizontalOverflow(page: Page) {
 	expect(
 		await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
 	).toBe(false);
+	expect(
+		await page.evaluate(() => {
+			const workContent = document.querySelector('#work-content');
+			return workContent ? workContent.scrollWidth > workContent.clientWidth + 1 : false;
+		})
+	).toBe(false);
 }
 
 test.describe('Work v3 rendered acceptance', () => {
@@ -142,6 +148,12 @@ test.describe('Work v3 rendered acceptance', () => {
 		await visit('/work');
 		await expect(page.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: /^Needs your call/ })).toBeVisible();
+
+		await visit('/work/needs-resolution');
+		await expect(
+			page.getByRole('heading', { name: 'Needs Resolution', exact: true })
+		).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Decisions/ })).toBeVisible();
 
 		await visit('/work/projects');
 		await expect(page.getByLabel('Project filters')).toBeVisible();
@@ -171,13 +183,10 @@ test.describe('Work v3 rendered acceptance', () => {
 		await expect(page.getByRole('heading', { name: data.change.title, exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Reviews', exact: true })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Authorizations', exact: true })).toBeVisible();
-		await expect(page.getByText('never execution authority', { exact: false })).toBeVisible();
 
 		await visit('/work/automations');
 		await expect(page.getByRole('heading', { name: 'Automations', exact: true })).toBeVisible();
-		await expect(
-			page.getByRole('heading', { name: 'Runtime inventory', exact: true })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^All automations/ })).toBeVisible();
 
 		await visit(`/work/browse?type=project&q=${encodeURIComponent(data.marker)}`);
 		await expect(page.getByText(data.project.title, { exact: true }).first()).toBeVisible();

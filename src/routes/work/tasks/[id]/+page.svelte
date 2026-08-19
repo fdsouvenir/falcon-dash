@@ -75,7 +75,6 @@
 
 <div class="mx-auto max-w-5xl space-y-5">
 	<PageHeader
-		eyebrow="Task"
 		title={task.title}
 		id={task.id}
 		version={task.version}
@@ -106,10 +105,7 @@
 
 	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(17rem,0.8fr)]">
 		<div class="space-y-5">
-			<Section
-				title="Definition and outcome"
-				description="The task contract and the latest recorded result."
-			>
+			<Section title="Definition and outcome">
 				<dl>
 					<DataRow label="Summary" value={task.summary ?? 'No summary recorded.'} />
 					<DataRow
@@ -122,16 +118,13 @@
 			</Section>
 
 			{#if task.history?.length}
-				<Section
-					title="Timeline"
-					description="Immutable command history, actors, and version transitions."
-				>
+				<Section title="Timeline">
 					<Timeline events={task.history} />
 				</Section>
 			{/if}
 		</div>
 
-		<Section title="Operating context" description="Ownership, placement, and timing.">
+		<Section title="Operating context">
 			<dl>
 				<DataRow label="Owner" value={task.owner ?? 'Unassigned'} />
 				<DataRow label="Priority">

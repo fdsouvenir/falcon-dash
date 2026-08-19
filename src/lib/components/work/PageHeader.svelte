@@ -4,7 +4,7 @@
 	import StatusBadge from './StatusBadge.svelte';
 
 	interface Props {
-		eyebrow: string;
+		eyebrow?: string;
 		title: string;
 		id?: string;
 		version?: number;
@@ -42,11 +42,13 @@
 	</a>
 	<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 		<div class="min-w-0 space-y-2">
-			<p
-				class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
-			>
-				{eyebrow}
-			</p>
+			{#if eyebrow}
+				<p
+					class="font-mono text-[length:var(--text-label)] font-semibold uppercase tracking-[0.14em] text-on-surface-variant"
+				>
+					{eyebrow}
+				</p>
+			{/if}
 			<div class="flex flex-wrap items-center gap-2">
 				<h1
 					class="min-w-0 break-words text-[length:var(--md-sys-typescale-headline-medium-size)] font-semibold leading-tight text-on-surface"

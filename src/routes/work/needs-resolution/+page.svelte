@@ -95,6 +95,12 @@
 			? ['decide', 'resume_decision', 'withdraw_decision']
 			: ['decide', 'defer_decision', 'withdraw_decision'];
 	}
+
+	function compactText(value: string | undefined, limit = 180): string | undefined {
+		if (!value) return undefined;
+		const compact = value.replace(/\s+/g, ' ').trim();
+		return compact.length > limit ? `${compact.slice(0, limit - 1).trimEnd()}…` : compact;
+	}
 </script>
 
 {#snippet expandableRow(
@@ -104,9 +110,9 @@
 	badges: Array<{ type: string; value: string }>
 )}
 	<summary
-		class="falcon-focus touch-target cursor-pointer list-none rounded-[var(--md-sys-shape-corner-medium)] px-3 py-4 marker:hidden hover:bg-surface-container-high"
+		class="falcon-focus touch-target w-full min-w-0 cursor-pointer list-none rounded-[var(--md-sys-shape-corner-medium)] px-3 py-4 marker:hidden hover:bg-surface-container-high"
 	>
-		<div class="flex items-start justify-between gap-3">
+		<div class="flex min-w-0 items-start justify-between gap-3">
 			<div class="min-w-0">
 				<div class="flex flex-wrap items-center gap-2">
 					<span class="break-words font-semibold text-on-surface">{title}</span>
@@ -134,20 +140,12 @@
 <svelte:head><title>Needs Resolution — Work</title></svelte:head>
 
 <div class="mx-auto max-w-6xl space-y-5">
-	<PageHeader
-		eyebrow="Human attention"
-		title="Needs Resolution"
-		description="Answer Questions, decide commitments, record Reviews, and grant exact-scope Authorization."
-	/>
+	<PageHeader title="Needs Resolution" />
 
 	<CommandFeedback form={form as never} />
 
-	<div class="grid gap-5 xl:grid-cols-2">
-		<Section
-			title={`Questions (${questions.length})`}
-			description="Missing knowledge that needs an authoritative answer."
-			accent="warning"
-		>
+	<div class="grid min-w-0 gap-5 xl:grid-cols-2">
+		<Section title="Questions" count={questions.length} accent="warning">
 			{#if questions.length === 0}
 				<EmptyState
 					title="No open Questions"
@@ -192,11 +190,7 @@
 			{/if}
 		</Section>
 
-		<Section
-			title={`Decisions (${decisions.length})`}
-			description="Commitments awaiting one recorded outcome."
-			accent="warning"
-		>
+		<Section title="Decisions" count={decisions.length} accent="warning">
 			{#if decisions.length === 0}
 				<EmptyState
 					title="No Decisions awaiting outcome"
@@ -209,9 +203,11 @@
 							{@render expandableRow(
 								decision.title,
 								decision.id,
-								decision.consequence_of_no_decision
-									? `If unresolved: ${decision.consequence_of_no_decision}`
-									: decision.prompt,
+								compactText(
+									decision.consequence_of_no_decision
+										? `If unresolved: ${decision.consequence_of_no_decision}`
+										: decision.prompt
+								),
 								[{ type: 'decision', value: decision.status }]
 							)}
 							<div class="space-y-3 px-3 pb-5">
@@ -247,11 +243,7 @@
 			{/if}
 		</Section>
 
-		<Section
-			title={`Reviews (${reviews.length})`}
-			description="Evaluation of an exact submitted revision. Review does not grant execution authority."
-			accent="info"
-		>
+		<Section title="Reviews" count={reviews.length} accent="info">
 			{#if reviews.length === 0}
 				<EmptyState
 					title="No Reviews waiting"
@@ -289,11 +281,7 @@
 			{/if}
 		</Section>
 
-		<Section
-			title={`Authorizations (${authorizations.length})`}
-			description="Permission pinned to the exact Change and Plan revisions. This is not Review."
-			accent="warning"
-		>
+		<Section title="Authorizations" count={data.authorizations.total} accent="warning">
 			{#if authorizations.length === 0}
 				<EmptyState
 					title="No Authorization calls"

@@ -26,6 +26,14 @@ describe('Work UI material guardrails', () => {
 		}
 	});
 
+	it('keeps page chrome free of eyebrows and mission-statement copy', () => {
+		for (const surface of routeSources.filter((entry) => !entry.name.endsWith('+layout.svelte'))) {
+			expect(surface.source, surface.name).not.toContain('eyebrow=');
+		}
+		const header = componentSources.find((entry) => entry.name === 'PageHeader.svelte')?.source;
+		expect(header).toContain('eyebrow?: string');
+	});
+
 	it('keeps shared panel surfaces tonal', () => {
 		for (const name of ['CommandBar.svelte', 'Section.svelte', 'StatTile.svelte']) {
 			const component = componentSources.find((entry) => entry.name === name);
@@ -126,9 +134,8 @@ describe('Work UI material guardrails', () => {
 		expect(routes.change).toContain("guarded('start_change', 'Start')");
 		expect(routes.change).toContain("guarded('succeed_execution', 'Complete')");
 		expect(routes.change).toContain('unavailable — Authorization ${authorizationState}');
-		expect(routes.change).toContain(
-			'Evaluations of quality and readiness — never execution authority.'
-		);
+		expect(routes.change).toContain('title="Authorizations"');
+		expect(routes.change).toContain('title="Reviews"');
 		expect(routes.change).toContain('authorization.scope_fingerprint');
 		expect(routes.change).toContain('authorization.conditions');
 		expect(routes.change).toContain('review.submitted_at');
@@ -137,7 +144,8 @@ describe('Work UI material guardrails', () => {
 		expect(routes.finding).toContain('<SourceRefs');
 		expect(routes.project).toContain('<CommandForm');
 		expect(routes.project).not.toContain('<form');
-		expect(routes.project).toContain('xl:grid-cols-[minmax(0,1fr)_20rem]');
+		expect(routes.project).not.toContain('xl:grid-cols-[minmax(0,1fr)_20rem]');
+		expect(routes.project).toContain('lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]');
 		for (const heading of [
 			'Next up',
 			'Needs your input',
@@ -154,16 +162,15 @@ describe('Work UI material guardrails', () => {
 		expect(routes.project).not.toContain('>Proof<');
 		expect(routes.project).toContain('+ Add milestone');
 		expect(routes.project).toContain('Waive this item');
-		expect(routes.project).toContain('.sort((a, b) => a.sequence - b.sequence)');
+		expect(routes.project).toContain('left.sequence - right.sequence');
 		expect(routes.project).toContain('.sort(compareWork)');
 		expect(routes.project).toContain('item.milestone_id === milestoneId');
 		expect(routes.project).toContain('!item.milestone_id');
-		expect(routes.project).toContain(
-			"item.id === project.current_next_item_id ? 'Clear next' : 'Make next'"
-		);
+		expect(routes.project).toContain("'Make current next'");
 		expect(routes.project).toContain("milestone.status === 'achieved'");
 		expect(routes.project).toContain("details.push('Rollback in progress')");
 		expect(routes.project).toContain('<SourceRefs');
+		expect(routes.project).toContain('<Timeline events={project.history}');
 
 		const questionLoader = readFileSync(
 			new URL('../../../routes/work/questions/[id]/+page.server.ts', import.meta.url),
@@ -208,6 +215,9 @@ describe('Work UI material guardrails', () => {
 		const resolution = readFileSync(
 			new URL('../../../routes/work/needs-resolution/+page.svelte', import.meta.url)
 		);
+		const resolutionLoader = readFileSync(
+			new URL('../../../routes/work/needs-resolution/+page.server.ts', import.meta.url)
+		);
 
 		expect(focusChips).toContain('focusDefinitionsForType');
 		expect(focusChips).toContain("params.set('focus', focus)");
@@ -216,10 +226,15 @@ describe('Work UI material guardrails', () => {
 		expect(browse.toString()).not.toContain('create_task');
 		expect(browse.toString()).not.toContain('create_area');
 		for (const section of ['Questions', 'Decisions', 'Reviews', 'Authorizations']) {
-			expect(resolution.toString()).toContain('title={`' + section + ' (');
+			expect(resolution.toString()).toContain(`title="${section}"`);
 		}
-		expect(resolution.toString()).toContain('Review does not grant execution authority');
-		expect(resolution.toString()).toContain('This is not Review');
+		expect(resolution.toString()).toContain('count={data.authorizations.total}');
+		expect(resolution.toString()).toContain('compactText(');
+		expect(resolutionLoader.toString()).toContain("getObjectReader('change_request').list");
+		expect(resolutionLoader.toString()).toContain(
+			"change.next_action?.includes('authorize_change')"
+		);
+		expect(resolutionLoader.toString()).not.toContain('computeQueue');
 	});
 
 	it('keeps mobile Work actions compact, touch-safe, and sheet-based', () => {
@@ -245,9 +260,12 @@ describe('Work UI material guardrails', () => {
 		expect(pageHeader).toContain('break-all');
 		expect(layout.toString()).toContain('var(--safe-left)');
 		expect(layout.toString()).toContain('var(--safe-right)');
+		expect(projects.toString()).not.toContain('<StatTile');
+		expect(projects.toString()).toContain('<span>Status</span>');
 		expect(projects.toString()).toContain('class="falcon-focus group grid gap-2');
 		expect(projects.toString()).toContain('md:grid-cols-[');
-		expect(automata.toString()).toContain('grid grid-cols-2 gap-3');
+		expect(automata.toString()).not.toContain('<StatTile');
+		expect(automata.toString()).toContain('aria-label="Automation status summary"');
 		// The overview is the executive dashboard: KPI signal strip + label-rail
 		// grouped panels, hairline-divided single-border zones.
 		expect(overview.toString()).toContain('xl:grid-cols-4');

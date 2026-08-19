@@ -66,7 +66,6 @@
 
 <div class="mx-auto max-w-5xl space-y-5">
 	<PageHeader
-		eyebrow="Finding"
 		title={finding.title}
 		id={finding.id}
 		version={finding.version}
@@ -103,11 +102,7 @@
 
 	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.75fr)]">
 		<div class="space-y-5">
-			<Section
-				title="Conclusion"
-				description="The durable evidence-backed claim carried by this finding."
-				accent="info"
-			>
+			<Section title="Conclusion" accent="info">
 				<p
 					class="whitespace-pre-wrap text-[length:var(--md-sys-typescale-title-large-size)] font-medium leading-relaxed text-on-surface"
 				>
@@ -125,25 +120,19 @@
 				{/if}
 			</Section>
 
-			<Section
-				title="Evidence"
-				description="References are resolved at read time so missing evidence is visible, not silently omitted."
-			>
+			<Section title="Evidence">
 				<SourceRefs {sources} title="Finding sources" omittedCount={sourcesOmitted} />
 			</Section>
 
 			{#if finding.history?.length}
-				<Section title="Timeline" description="Immutable command history and version transitions.">
+				<Section title="Timeline">
 					<Timeline events={finding.history} />
 				</Section>
 			{/if}
 		</div>
 
 		<div class="space-y-5">
-			<Section
-				title="Finding context"
-				description="Attachment, authorship, and observation details."
-			>
+			<Section title="Finding context">
 				<dl>
 					<DataRow label="Validity">
 						<StatusBadge type="finding" value={finding.validity} />
@@ -159,11 +148,7 @@
 				</dl>
 			</Section>
 
-			<Section
-				title="Targets"
-				description="Work objects this evidence is attached to."
-				accent="purple"
-			>
+			<Section title="Targets" accent="purple">
 				{#if finding.targets?.length}
 					<ul class="space-y-2">
 						{#each finding.targets as target (target)}
@@ -180,11 +165,7 @@
 			</Section>
 
 			{#if finding.supersedes || finding.superseded_by}
-				<Section
-					title="Supersession lineage"
-					description="Corrections preserve the prior finding and its evidence."
-					accent="purple"
-				>
+				<Section title="Supersession lineage" accent="purple">
 					<div class="space-y-2">
 						{#if finding.supersedes}
 							<p class="text-on-surface-variant">

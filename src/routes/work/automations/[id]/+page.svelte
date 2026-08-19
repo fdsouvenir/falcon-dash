@@ -75,7 +75,6 @@
 
 <div class="mx-auto max-w-6xl space-y-5">
 	<PageHeader
-		eyebrow="Automation"
 		title={automaton.name}
 		id={automaton.id}
 		status={automaton.lifecycle}
@@ -127,10 +126,7 @@
 
 	<div class="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]">
 		<div class="space-y-5">
-			<Section
-				title="Runtime configuration"
-				description="Read through from the same OpenClaw object Falcon operates."
-			>
+			<Section title="Runtime configuration">
 				<dl>
 					<DataRow label="Schedule" value={jsonLabel(automaton.schedule)} mono />
 					<DataRow label="Payload" value={automaton.payload_summary?.kind ?? 'Not configured'} />
@@ -141,10 +137,7 @@
 				</dl>
 			</Section>
 
-			<Section
-				title={`Native Run history (${automaton.runs?.length ?? 0})`}
-				description="Read directly from OpenClaw; Falcon creates no parallel Run artifact."
-			>
+			<Section title="OpenClaw Run history" count={automaton.runs?.length ?? 0}>
 				{#if automaton.runs?.length}
 					<div class="divide-y divide-outline-variant/60">
 						{#each automaton.runs as run, index (run.runId ?? `${run.ts}:${index}`)}
@@ -176,10 +169,7 @@
 				{/if}
 			</Section>
 
-			<Section
-				title="Falcon timeline"
-				description="Lifecycle and restoration events in Work history."
-			>
+			<Section title="Falcon timeline">
 				{#if automaton.history?.length}
 					<Timeline events={automaton.history as never} />
 				{:else}
@@ -192,7 +182,7 @@
 		</div>
 
 		<div class="space-y-5">
-			<Section title="Runtime state" description="Scheduling, delivery, and current placement.">
+			<Section title="Runtime state">
 				<dl>
 					<DataRow label="Next Run" value={dateLabel(automaton.next_run_at_ms)} />
 					<DataRow label="Last Run" value={dateLabel(automaton.last_run_at_ms)} />
@@ -207,11 +197,7 @@
 			</Section>
 
 			{#if automaton.lifecycle === 'deleted'}
-				<Section
-					title="Restore deleted Automation"
-					description="Recreate a new paused OpenClaw object from the retained snapshot."
-					accent="warning"
-				>
+				<Section title="Restore automation" accent="warning">
 					{#if automaton.restorable}
 						<CommandForm
 							command="restore_automaton"
@@ -228,7 +214,7 @@
 					{/if}
 				</Section>
 			{:else}
-				<Section title="Runtime controls" description="Mutate the same OpenClaw-backed object.">
+				<Section title="Runtime controls">
 					<div class="space-y-4">
 						{#if automaton.lifecycle === 'paused'}
 							<CommandForm

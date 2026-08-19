@@ -61,9 +61,10 @@ ordered Milestone relationship. The UI may use those server facts to sort attent
 due date, and group linked rows under Milestone exit gates; it does not infer Project health or
 lifecycle.
 
-The domain includes Projects, Phases, Milestones, Tasks, Plans, Questions, Decisions, Change
-Requests, Findings, Reviews, Authorizations, Areas, relationships, blockers, and Automations. Refer
-to the v3 contracts for their full lifecycle semantics.
+The domain includes Projects, ordered Milestones, Tasks, Plans, Questions, Decisions, Change
+Requests, Findings, Reviews, Authorizations, Areas, relationships, blockers, and Automations. A
+Milestone is the ordered exit gate for a Project; there is no separate Phase layer in the Work UI.
+Refer to the v3 contracts for the full lifecycle semantics.
 
 ## Agent HTTP interface
 
