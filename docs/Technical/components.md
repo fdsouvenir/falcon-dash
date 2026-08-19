@@ -11,9 +11,10 @@ viewport state current, and selects:
 - `src/lib/components/AppShell.svelte` for the desktop application shell;
 - `src/lib/components/mobile/MobileShell.svelte` for narrow viewports.
 
-The current primary shell destinations are Work, Vault, Channels, and Labs/Settings. Standalone
-routes such as Documents, Jobs, Skills, Agents, Approvals, Operations, and Heartbeat reuse the same
-root shell. Do not document or reintroduce the removed Agent Rail or browser-direct chat shell.
+The current primary shell destinations are Work, Vault, Channels, and Labs/Settings. Labs contains
+Preferences, Information, Workspace, Terminal, and About. Standalone routes such as Documents,
+Jobs, Skills, Agents, Approvals, Operations, and Heartbeat reuse the same root shell. Do not
+document or reintroduce the removed Agent Rail or browser-direct chat shell.
 
 Work has its own nested layout at `src/routes/work/+layout.svelte`. It owns navigation for Work,
 Projects, Needs Resolution, Automations, and Browse. Child pages do not render another copy.

@@ -37,8 +37,8 @@ Current primary modules are:
 - **Work** — the default route and v3 work-management UI;
 - **Vault** — KeePassXC entry and group management;
 - **Channels** — Discord and Telegram readiness/setup, with WhatsApp shown only as unwired status;
-- **Labs / Settings** — gateway, agent, workspace, diagnostics, approvals, terminal, and other
-  advanced surfaces.
+- **Labs / Settings** — display preferences, gateway information, workspace files, terminal access,
+  and version information.
 
 Documents, Jobs, Skills, Agents, global Approvals, Operations, and Heartbeat also remain routable
 current surfaces. Falcon Dash does not currently have an in-product agent conversation route;
@@ -70,8 +70,7 @@ The browser uses two same-origin adapters:
 - `POST /api/gateway/rpc` for RPC calls;
 - `GET /api/gateway/events` for the snapshot, connection state, and gateway events over SSE.
 
-`/api/gateway/proxy` forwards the native Gateway Control UI. Production WebSocket upgrades for
-that proxy and `/terminal-ws` are attached by `src/entry.js`.
+Production WebSocket upgrades for `/terminal-ws` are attached by `src/entry.js`.
 
 ### Gateway plugin
 

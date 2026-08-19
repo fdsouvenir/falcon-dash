@@ -191,11 +191,7 @@ const rules = [
 	},
 	{
 		name: 'execution approvals',
-		matchers: [
-			'src/routes/approvals/',
-			'src/lib/stores/exec-approvals.ts',
-			'src/lib/components/settings/ExecApprovals.svelte'
-		],
+		matchers: ['src/routes/approvals/', 'src/lib/stores/exec-approvals.ts'],
 		requiredDocGroups: [['docs/End User/exec-approvals.md']]
 	},
 	{

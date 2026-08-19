@@ -32,7 +32,7 @@ The current files under `src/lib/stores/` fall into these groups:
   `exec-approvals`, `channel-readiness`, `discord`, `secrets`, `files`, `ops`, and diagnostics.
 - **Falcon UI state:** `preferences`, `viewport`, `toast`, `notifications`, `editor`, and
   `pinned-apps`.
-- **Canvas state:** `canvas` plus diagnostic logging for plugin-provided canvas events.
+- **Canvas state:** `canvas` for plugin-provided surfaces, delivery, and actions.
 - **Vault UI state:** `vault`, backed by Falcon Dash vault APIs rather than a gateway secret value
   cache.
 

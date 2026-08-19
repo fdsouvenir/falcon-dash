@@ -1,12 +1,6 @@
 import { writable, readonly, derived, get, type Readable } from 'svelte/store';
 import { sendCanvasAction, pushSurfaceMessage, clearSurface } from '$lib/canvas/delivery.js';
 
-export interface BridgeStatus {
-	registered: boolean;
-	nodeId?: string;
-	error?: string;
-}
-
 export interface CanvasSurface {
 	surfaceId: string;
 	title?: string;
@@ -29,12 +23,6 @@ export class CanvasStore {
 	private _activeRunId: string | null = null;
 	private _canvasHostBaseUrl: string | null = null;
 	private _canvasHostBaseUrlStore = writable<string | null>(null);
-	private _bridgeStatus = writable<BridgeStatus>({ registered: false });
-	readonly bridgeStatus: Readable<BridgeStatus> = readonly(this._bridgeStatus);
-
-	setBridgeStatus(status: BridgeStatus): void {
-		this._bridgeStatus.set(status);
-	}
 
 	/** Set the active chat run ID so canvas surfaces can auto-associate */
 	setActiveRunId(runId: string | null): void {
@@ -437,7 +425,6 @@ export class CanvasStore {
 		this._currentSurfaceId.set(null);
 		this._canvasHostBaseUrlStore.set(null);
 		this._canvasHostBaseUrl = null;
-		this._bridgeStatus.set({ registered: false });
 		this.callFn = null;
 	}
 

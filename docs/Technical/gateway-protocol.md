@@ -68,12 +68,6 @@ state changes, plus a 15-second SSE keepalive.
 The browser adapter supports exact event names and `prefix.*` subscriptions. EventSource reconnects
 automatically, but consumers must treat state as disconnected until a new ready snapshot arrives.
 
-### Gateway Control UI
-
-`/api/gateway/proxy` keeps the OpenClaw Control UI same-origin. HTTP requests use the SvelteKit
-proxy route; WebSocket upgrades use Vite in development and `src/entry.js` in production. The token
-is supplied to the embedded control UI through a URL fragment generated server-side.
-
 ## Protocol adapters
 
 Gateway protocol v4 renamed and reshaped several capabilities. Adaptation belongs at feature or

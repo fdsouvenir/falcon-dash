@@ -1,14 +1,10 @@
 <script lang="ts">
 	import MobileSettingsHome from './MobileSettingsHome.svelte';
-	import UserPage from './settings/UserPage.svelte';
-	import AgentsPage from './settings/AgentsPage.svelte';
 	import SkillsPage from './settings/SkillsPage.svelte';
 	import ToolsPage from './settings/ToolsPage.svelte';
 	import AnalyticsPage from './settings/AnalyticsPage.svelte';
-	import LogsPage from './settings/LogsPage.svelte';
 	import AdvancedPage from './settings/AdvancedPage.svelte';
 	import SubscriptionPage from './settings/SubscriptionPage.svelte';
-	import DevicesPage from './settings/DevicesPage.svelte';
 	import WorkspaceFiles from '$lib/components/settings/WorkspaceFiles.svelte';
 
 	let activeSettingsPage = $state<string | null>(null);
@@ -20,10 +16,6 @@
 
 {#if activeSettingsPage === null}
 	<MobileSettingsHome onnavigate={(id) => (activeSettingsPage = id)} />
-{:else if activeSettingsPage === 'user'}
-	<UserPage onback={goBack} />
-{:else if activeSettingsPage === 'agents'}
-	<AgentsPage onback={goBack} />
 {:else if activeSettingsPage === 'agent-files'}
 	<div class="flex h-full flex-col bg-surface-1">
 		<header class="flex items-center gap-3 border-b border-surface-border px-4 py-3">
@@ -44,8 +36,6 @@
 			<WorkspaceFiles />
 		</div>
 	</div>
-{:else if activeSettingsPage === 'devices'}
-	<DevicesPage onback={goBack} />
 {:else if activeSettingsPage === 'skills'}
 	<SkillsPage onback={goBack} />
 {:else if activeSettingsPage === 'tools'}
@@ -69,8 +59,6 @@
 	</div>
 {:else if activeSettingsPage === 'analytics'}
 	<AnalyticsPage onback={goBack} />
-{:else if activeSettingsPage === 'logs'}
-	<LogsPage onback={goBack} />
 {:else if activeSettingsPage === 'api-keys'}
 	<div class="flex h-full flex-col bg-surface-1">
 		<div class="flex items-center gap-3 border-b border-surface-border px-4 py-3">

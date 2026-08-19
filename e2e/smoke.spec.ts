@@ -41,12 +41,13 @@ test('settings route smoke', async ({ page, baseURL }, testInfo) => {
 
 	if (testInfo.project.name === 'mobile-chrome') {
 		await expect(page.getByText('Settings')).toBeVisible();
-		await expect(page.getByRole('button', { name: 'User Your profile' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Agents System instructions' })).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: 'Agent Files Instructions for your Agents' })
+		).toBeVisible();
 		return;
 	}
 
-	await expect(page.getByRole('button', { name: 'User' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Agents' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Agent Tokens' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Preferences' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Information' })).toBeVisible();
+	await expect(page.getByTestId('settings-preferences-panel')).toBeVisible();
 });

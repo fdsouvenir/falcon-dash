@@ -81,7 +81,7 @@ export function resolveConfig(): CliConfig {
 	}
 	throw new CliError(
 		'unauthorized',
-		'No agent token found. Set FALCON_DASH_TOKEN, or mint a token in Falcon Dash Settings → Agent Tokens (drops a token file for this host).',
+		'No agent token found. Set FALCON_DASH_TOKEN, or mint one with POST /api/work3/tokens (drops a token file for this host).',
 		{ details: { token_dir: tokenDir() } }
 	);
 }

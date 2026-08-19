@@ -12,6 +12,9 @@ native cron. Use the plugin only when Falcon Dash must extend what an agent know
 - exposing safe Falcon-specific tools that preserve server-side authority and secret boundaries;
 - connecting Falcon-specific canvas or channel surfaces where no native OpenClaw capability exists.
 
+The browser canvas bridge renders plugin surfaces directly; Labs does not expose a separate canvas
+diagnostics page.
+
 The plugin must not duplicate OpenClaw sessions, transcript storage, scheduler ownership, or
 standard RPC transport.
 

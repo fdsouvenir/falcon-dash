@@ -15,19 +15,6 @@ export const settingsNavGroups: SettingsNavGroup[] = [
 		label: 'CONFIGURE',
 		items: [
 			{
-				id: 'user',
-				title: 'User',
-				subtitle: 'Your profile',
-				iconPath: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z'
-			},
-			{
-				id: 'agents',
-				title: 'Agents',
-				subtitle: 'System instructions',
-				iconPath:
-					'M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6'
-			},
-			{
 				id: 'agent-files',
 				title: 'Agent Files',
 				subtitle: 'Instructions for your Agents',
@@ -73,24 +60,12 @@ export const settingsNavGroups: SettingsNavGroup[] = [
 				subtitle: 'Tokens and costs',
 				iconPath:
 					'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-			},
-			{
-				id: 'logs',
-				title: 'Logs',
-				subtitle: 'Live event stream',
-				iconPath: 'M4 6h16M4 10h16M4 14h16M4 18h16'
 			}
 		]
 	},
 	{
 		label: 'ADVANCED',
 		items: [
-			{
-				id: 'devices',
-				title: 'Devices',
-				subtitle: 'Pairing and access',
-				iconPath: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'
-			},
 			{
 				id: 'api-keys',
 				title: 'API Keys',

@@ -72,7 +72,7 @@ async function home(): Promise<string> {
 		if (error instanceof CliError && error.code === 'unauthorized') {
 			return render({
 				error: { code: error.code, message: error.message },
-				help: ['Mint a token in Falcon Dash Settings → Agent Tokens']
+				help: ['Mint a token with POST /api/work3/tokens']
 			});
 		}
 		throw error;

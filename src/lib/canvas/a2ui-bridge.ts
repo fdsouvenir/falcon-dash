@@ -33,15 +33,6 @@ export function initA2UIBridge(sendAction: (action: A2UIAction) => void): () => 
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
 
-export type A2UILoadTier =
-	'not-loaded' | 'local-import' | 'local-script' | 'canvas-host' | 'placeholder';
-
-let loadedTier: A2UILoadTier = 'not-loaded';
-
-export function getLoadedTier(): A2UILoadTier {
-	return loadedTier;
-}
-
 async function loadViaScript(src: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		if (document.querySelector(`script[src="${src}"]`)) {
@@ -101,7 +92,6 @@ async function doLoad(canvasHostBaseUrl?: string): Promise<void> {
 		await import(/* @vite-ignore */ localBundlePath);
 		if (customElements.get('openclaw-a2ui-host')) {
 			console.log('[A2UI] Loaded from local static bundle (import)');
-			loadedTier = 'local-import';
 			loaded = true;
 			return;
 		}
@@ -114,7 +104,6 @@ async function doLoad(canvasHostBaseUrl?: string): Promise<void> {
 		await loadViaScript('/a2ui.bundle.js');
 		if (customElements.get('openclaw-a2ui-host')) {
 			console.log('[A2UI] Loaded from local static bundle (script tag)');
-			loadedTier = 'local-script';
 			loaded = true;
 			return;
 		}
@@ -130,7 +119,6 @@ async function doLoad(canvasHostBaseUrl?: string): Promise<void> {
 		await import(/* @vite-ignore */ bundleUrl);
 		if (customElements.get('openclaw-a2ui-host')) {
 			console.log(`[A2UI] Loaded from canvas host: ${bundleUrl}`);
-			loadedTier = 'canvas-host';
 			loaded = true;
 			return;
 		}
@@ -327,6 +315,5 @@ async function doLoad(canvasHostBaseUrl?: string): Promise<void> {
 			}
 		);
 	}
-	loadedTier = 'placeholder';
 	loaded = true;
 }

@@ -33,6 +33,8 @@ If a screen only looks correct in the happy path, it is incomplete.
 - Work SSE is an invalidation channel. Canonical Work state and durable history remain in SQLite and
   the Event Log even when a browser misses an event.
 - Gateway runtime failures must not mutate local Work lifecycle into a convenient placeholder.
+- Canvas surfaces are ephemeral gateway/plugin state; the canvas store and visible surfaces are the
+  current browser evidence, not a separate Labs diagnostic log.
 
 ## Operational Clarity
 

@@ -67,8 +67,8 @@ to the v3 contracts for their full lifecycle semantics.
 
 ## Agent HTTP interface
 
-Every `/api/v3` request requires a Falcon agent bearer token. Tokens are minted in Settings → Agent
-Tokens, returned in plaintext once, and stored hashed. The current surface is:
+Every `/api/v3` request requires a Falcon agent bearer token. Tokens are minted through
+`POST /api/work3/tokens`, returned in plaintext once, and stored hashed. The current surface is:
 
 - `GET /api/v3/brief` — bounded session-start summary;
 - `GET /api/v3/queue` — actionable queue projection;

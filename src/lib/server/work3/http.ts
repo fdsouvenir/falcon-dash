@@ -22,7 +22,7 @@ export function requireAgentActor(request: Request): { actor: Actor } | { respon
 			response: json(
 				{
 					code: 'unauthorized',
-					message: 'A valid bearer token is required. Mint one in Settings → Agent Tokens.'
+					message: 'A valid bearer token is required. Mint one with POST /api/work3/tokens.'
 				},
 				{ status: 401 }
 			)

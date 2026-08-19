@@ -863,7 +863,7 @@
 		</div>
 	{/if}
 
-	<!-- Gateway Control -->
+	<!-- Gateway restart -->
 	{#if isConnected}
 		<div class="border-t border-surface-border pt-4">
 			{#if showRestartConfirm}

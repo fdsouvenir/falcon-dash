@@ -1,7 +1,7 @@
 # Execution Approvals
 
 Execution approvals are live OpenClaw requests for permission to run a command. Falcon Dash exposes
-them globally at `/approvals`, in Settings → Approvals, and on an agent detail page.
+them globally at `/approvals`, in the shell prompt, and on an agent detail page.
 
 For each pending request, inspect the agent, session, timestamp, and exact command. Available
 responses are:

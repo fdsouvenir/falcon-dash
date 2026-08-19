@@ -34,7 +34,7 @@ node build/start.js
 ```
 
 `postbuild` copies `src/entry.js` into the adapter-node output as `build/start.js`. That wrapper
-attaches `/terminal-ws` and Gateway Control UI WebSocket upgrades to the same HTTP server.
+attaches `/terminal-ws` WebSocket upgrades to the same HTTP server.
 
 ## Package installation
 
@@ -96,7 +96,7 @@ A reverse proxy may terminate HTTPS and forward to the local Falcon Dash server.
 
 - ordinary HTTP requests;
 - SSE responses without buffering for `/api/gateway/events` and `/api/work3/events`;
-- WebSocket upgrades for `/terminal-ws` and `/api/gateway/proxy`;
+- WebSocket upgrades for `/terminal-ws`;
 - the public `ORIGIN` used by SvelteKit.
 
 The OpenClaw Gateway itself should remain on loopback or a same-host private network. Expose Falcon

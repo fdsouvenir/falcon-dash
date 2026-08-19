@@ -2,6 +2,7 @@
 
 Falcon Dash can display plugin-created canvas surfaces. An active surface appears as a floating
 panel across the desktop shell and may be opened directly at `/apps/<surface-id>`.
+There is no separate Canvas diagnostics page in Labs.
 
 The current canvas route:
 

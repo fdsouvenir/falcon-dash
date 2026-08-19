@@ -46,8 +46,8 @@ shows a disconnected state rather than asking for a browser token.
 - **Work** is the home page and shared human/agent source of truth.
 - **Vault** manages credentials in the built-in KeePassXC database.
 - **Channels** checks and configures supported OpenClaw chat providers.
-- **Labs / Settings** contains gateway, agent, workspace, diagnostics, approvals, and terminal
-  controls.
+- **Labs / Settings** contains display preferences, gateway information, workspace files, terminal
+  access, and version information.
 
 Other direct routes include Documents, Jobs, Heartbeat, Operations, Skills, Agents, Approvals,
 Secret Providers, and plugin-created Canvas Apps. There is no current in-product conversation page;
@@ -55,7 +55,7 @@ project-contextual agent conversations are a v5 roadmap feature.
 
 ## Give an agent Work access
 
-Open Settings → Agent Tokens and mint a token for the agent. The plaintext token is shown once and
+Mint a token for the agent with `POST /api/work3/tokens`. The plaintext token is returned once and
 the stored record is hashed. Install or configure the Falcon Dash gateway hook so session-start
 prompts receive the bounded Work brief, then use `falcon` for deeper reads and commands.
 

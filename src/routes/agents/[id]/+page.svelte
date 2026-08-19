@@ -451,10 +451,7 @@
 					{/if}
 
 					<p class="text-xs text-status-muted">
-						Configure approval policies in <a
-							href={resolve('/settings')}
-							class="text-blue-400 underline">Settings → Approvals</a
-						>.
+						Manage persistent approval policies with native OpenClaw tooling.
 					</p>
 				</div>
 			{/if}

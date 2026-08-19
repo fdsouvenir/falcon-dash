@@ -14,7 +14,7 @@
 2. Check `GATEWAY_URL`, `GATEWAY_TOKEN`, `OPENCLAW_GATEWAY_TOKEN`, and the local
    `~/.openclaw/openclaw.json` gateway port/token.
 3. If the server device is pending, approve it in OpenClaw device management.
-4. Inspect Settings → Information or Logs and the Falcon Dash server output.
+4. Inspect Settings → Information, the Falcon Dash server output, and OpenClaw logs.
 5. Do not point Falcon Dash at a gateway on another host; remote gateways are unsupported.
 
 The browser does not hold a gateway token and clearing browser storage does not repair server
@@ -50,7 +50,7 @@ while troubleshooting and never paste their contents into an issue.
 
 ## Agent lacks Work context
 
-1. Mint or verify the agent token in Settings → Agent Tokens.
+1. Mint or verify the agent token through `/api/work3/tokens`.
 2. Confirm the Falcon Dash gateway extension is installed and its prompt hook is registered.
 3. Ensure the hook can reach the same-host `FALCON_DASH_URL` and selects the correct token.
 4. Check `GET /api/v3/brief` with that bearer token.

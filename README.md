@@ -19,7 +19,7 @@ Falcon Dash is designed to be installed alongside OpenClaw. It reads its configu
 - **Heartbeat** — System health monitoring with heartbeat history and status indicators.
 - **Passwords** — KeePassXC vault integration for secure credential storage, plus SecretRef resolution so gateway configs never store credentials in plaintext.
 - **Skills** — Install and manage agent skills.
-- **Settings** — Configuration editor, device management, execution approvals, live gateway logs, model selection, and workspace administration.
+- **Settings** — Display preferences, gateway information, workspace files, terminal access, and version information.
 - **Apps / Canvas** — Renders A2UI (Agent-to-UI) surfaces pushed by the agent, with custom app panels and pinned apps in the sidebar.
 
 ## Prerequisites
@@ -52,7 +52,7 @@ setup, and production hardening.
 
 ## Gateway Connection
 
-Falcon Dash maintains its gateway connection server-side; the browser talks to the dashboard over same-origin routes (`/api/gateway/events` for state and event streaming, `/api/gateway/rpc` for calls, `/api/gateway/proxy` for the Gateway Control UI).
+Falcon Dash maintains its gateway connection server-side; the browser talks to the dashboard over same-origin routes (`/api/gateway/events` for state and event streaming and `/api/gateway/rpc` for calls).
 
 - **Configuration resolution** — Explicit environment variables win first (`GATEWAY_URL`,
   `GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_TOKEN`), then the OpenClaw CLI
@@ -105,7 +105,7 @@ src/
     components/    UI components (shell, chat, work, settings, canvas, etc.)
     canvas/        A2UI bridge and canvas delivery system
     chat/          Markdown pipeline, commands, highlighting
-    server/        Server-side code (Work v3 engine, gateway proxy,
+    server/        Server-side code (Work v3 engine, gateway client,
                    file config, passwords)
   routes/
     /              Redirects to /work (Mission Control)
@@ -119,7 +119,7 @@ src/
     /passwords     Password vault (KeePassXC)
     /secrets       SecretRef management
     /skills        Skill management
-    /settings      Configuration and administration
+    /settings      Preferences, information, workspace, terminal, and about
     /ops           Ops observer (live operational diagnostics)
     /setup         First-run setup wizard
     /apps/[id]     Custom canvas app panels

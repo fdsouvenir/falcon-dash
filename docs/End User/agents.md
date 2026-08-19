@@ -19,7 +19,7 @@ agent configuration.
 
 ## Agent Tokens
 
-Settings → Agent Tokens manages Falcon bearer tokens for `/api/v3` Work access. Mint a token for a
+`/api/work3/tokens` manages Falcon bearer tokens for `/api/v3` Work access. Mint a token for a
 specific agent and capture the plaintext value when it is returned; Falcon Dash stores only a hash.
 These tokens authorize the Work API and context hook. They are not OpenClaw gateway tokens.
 

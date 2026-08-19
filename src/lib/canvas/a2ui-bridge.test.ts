@@ -43,13 +43,6 @@ describe('initA2UIBridge', () => {
 	});
 });
 
-describe('getLoadedTier', () => {
-	it('returns not-loaded initially', async () => {
-		const { getLoadedTier } = await import('./a2ui-bridge.js');
-		expect(getLoadedTier()).toBe('not-loaded');
-	});
-});
-
 describe('getCanvasHostUrl', () => {
 	it('returns default URL with default host and port', async () => {
 		const { getCanvasHostUrl } = await import('./a2ui-bridge.js');
@@ -136,11 +129,10 @@ describe('ensureA2UILoaded', () => {
 			head: { appendChild: vi.fn() }
 		});
 
-		const { ensureA2UILoaded, getLoadedTier } = await import('./a2ui-bridge.js');
+		const { ensureA2UILoaded } = await import('./a2ui-bridge.js');
 		await ensureA2UILoaded('http://fake-host');
 
 		expect(defineMock).toHaveBeenCalledWith('openclaw-a2ui-host', expect.any(Function));
-		expect(getLoadedTier()).toBe('placeholder');
 
 		vi.unstubAllGlobals();
 	});

@@ -30,14 +30,6 @@ function readGatewayFromFile(): OpenClawGatewayConfig {
 	return config?.gateway ?? {};
 }
 
-/**
- * Resolve the gateway token.
- * Priority: GATEWAY_TOKEN env → OPENCLAW_GATEWAY_TOKEN env → file read.
- */
-export function resolveTokenSync(): string {
-	return resolveToken().token;
-}
-
 function resolveToken(): { token: string; source: string } {
 	if (env.GATEWAY_TOKEN) {
 		return { token: env.GATEWAY_TOKEN, source: 'env:GATEWAY_TOKEN' };
@@ -73,14 +65,6 @@ function execCli(cmd: string, args: string[]): Promise<string> {
 function buildWsUrl(port: number, bind: string): string {
 	const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
 	return `ws://${host}:${port}`;
-}
-
-/**
- * Build an HTTP URL from port and bind values.
- */
-function buildHttpUrl(port: number, bind: string): string {
-	const host = bind === 'loopback' ? '127.0.0.1' : bind === 'lan' ? '0.0.0.0' : bind;
-	return `http://${host}:${port}`;
 }
 
 function resolveGatewayUrl(
@@ -142,21 +126,4 @@ export async function readGatewayConfig(): Promise<GatewayConfig> {
 	const urlResult = await resolveUrl();
 	const source = `url:${urlResult.source},token:${tokenResult.source}`;
 	return { url: urlResult.url, token: tokenResult.token, source };
-}
-
-/**
- * Synchronous HTTP URL resolution for the control-url endpoint.
- * Skips CLI (sync context). Uses env → file.
- */
-export function readGatewayUrlSync(): string {
-	if (env.GATEWAY_URL) {
-		return env.GATEWAY_URL.replace(/^ws(s?)/, 'http$1');
-	}
-	const gateway = readGatewayFromFile();
-	if (gateway.mode === 'remote' && gateway.remote?.url) {
-		return gateway.remote.url.replace(/^ws(s?)/, 'http$1');
-	}
-	if (!gateway.port)
-		throw new Error('No gateway.remote.url or gateway.port in ~/.openclaw/openclaw.json');
-	return buildHttpUrl(gateway.port, gateway.bind ?? 'loopback');
 }
