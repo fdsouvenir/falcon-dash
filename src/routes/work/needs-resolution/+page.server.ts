@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types.js';
 import { isWork3Error, Work3Error } from '$lib/work3-shared/errors.js';
-import { computeQueue, startWork3 } from '$lib/server/work3/index.js';
+import { startWork3 } from '$lib/server/work3/index.js';
 import { executePersonCommand } from '$lib/server/work3/person.js';
 import { getObjectReader } from '$lib/server/work3/read/registry.js';
 import { formScalarValue } from '$lib/server/work3/ui.js';
@@ -10,7 +10,6 @@ import { commandLabel, requiresConfirmation } from '$lib/work3/labels.js';
 /** Needs Resolution (doc 05): Questions, Decisions, Reviews, and Authorizations. */
 export const load: PageServerLoad = async () => {
 	startWork3();
-	const queue = await computeQueue();
 	const plans = await getObjectReader('plan').list({
 		view: 'list',
 		filters: {},
@@ -35,9 +34,35 @@ export const load: PageServerLoad = async () => {
 		limit: 50,
 		offset: 0
 	});
+	const changes = await getObjectReader('change_request').list({
+		view: 'detail',
+		filters: {},
+		limit: 200,
+		offset: 0
+	});
 	const awaitingReview = plans.items.filter(
 		(plan) => plan.state === 'submitted' && plan.review_disposition === 'unreviewed'
 	);
+	const planStates = new Map(plans.items.map((plan) => [plan.id, plan.state]));
+	const authorizationItems = changes.items
+		.filter((change) => change.next_action?.includes('authorize_change'))
+		.map((change) => {
+			const authorization = change.authorization as { state?: unknown } | undefined;
+			const planReady = planStates.get(change.plan_id) === 'submitted';
+			return {
+				id: change.id,
+				type: 'change_request',
+				title: change.title,
+				version: change.version,
+				updated_at: change.updated_at,
+				plan_ready: planReady,
+				why: `Authorization ${String(authorization?.state ?? 'missing')}${planReady ? '' : ' (plan not submitted)'}`
+			};
+		})
+		.sort((left, right) => {
+			if (left.plan_ready !== right.plan_ready) return left.plan_ready ? -1 : 1;
+			return Number(right.updated_at ?? 0) - Number(left.updated_at ?? 0);
+		});
 	return {
 		questions: questions.items,
 		decisions: [...decisions.items, ...deferred.items],
@@ -46,10 +71,8 @@ export const load: PageServerLoad = async () => {
 			total: awaitingReview.length
 		},
 		authorizations: {
-			...queue.changes_needing_authorization_or_verification,
-			items: queue.changes_needing_authorization_or_verification.items.filter((item) =>
-				String(item.why ?? '').startsWith('Authorization ')
-			)
+			total: authorizationItems.length,
+			items: authorizationItems
 		}
 	};
 };
