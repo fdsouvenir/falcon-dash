@@ -4,6 +4,15 @@
 
 > **Closeout amendment (2026-08-06, #344):** the final surface uses the plain product names **Work** and **Automations**. Page chrome omits eyebrows, taglines, object-type explanations, and repeated counts. Counts appear once in section headings; compact status strips and row-oriented lists replace equal-card mosaics.
 
+> **Visual-direction amendment (2026-08-19):** the
+> [Project Governance Portal](https://stitch.withgoogle.com/projects/13701669844013221224) is now the
+> visual and interaction-design authority for the active desktop redesign. Its `Synthesized
+Intelligence` system and approved desktop screens define the target direction and supersede
+> earlier presentational prescriptions in this document, including the closeout amendment above.
+> The remaining contract continues to govern v3 object semantics, data, authority, guarded actions,
+> and failure behavior. The current redesign is desktop-web-first; dedicated mobile information
+> architecture remains separate v6 work.
+
 ## Objective
 
 Build a human-first operator surface for the approved v3 Work model without flattening every object into one queue.

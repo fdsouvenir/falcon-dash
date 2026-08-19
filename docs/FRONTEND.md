@@ -1,7 +1,11 @@
 # Frontend Guide
 
-This document contains implementation constraints for the current Svelte UI. The visual source of
-truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable version of that design.
+This document contains implementation constraints for the current Svelte UI. The linked
+[Stitch project](https://stitch.withgoogle.com/projects/13701669844013221224) is the visual and
+interaction-design authority for the active desktop redesign. [DESIGN.md](DESIGN.md) records its
+target design system, while `src/app.css` remains the executable source for currently shipped
+tokens. Where an approved redesigned screen differs from the current implementation, treat that as
+migration work rather than evidence that the target system already ships globally.
 
 ## Stack and shell
 
@@ -16,40 +20,40 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 
 - Use direct source edits and browser inspection for localized copy, spacing, density, and
   interaction corrections.
-- For a substantial screen redesign or information-architecture change, use Stitch when it is
-  available: import the current surface, explore alternatives against the existing design system,
-  choose a direction, and then implement it in Svelte. Stitch is a design tool, not a reason to
-  replace the application stack or paste generated React into the repo.
+- For a substantial screen redesign or information-architecture change, begin with the canonical
+  Stitch project and its `Synthesized Intelligence` design system. Extend that project when a
+  required state or route has no approved screen, then implement the approved result in Svelte.
+  Stitch is a design tool, not a reason to replace the application stack or paste generated HTML
+  into the repo.
 - Preserve screenshots or design links that materially explain an approved direction. Do not add
   a repo-local generic frontend skill that duplicates current design tooling.
 
 ## Visual rules
 
-- Treat agent-managed Work as an approachable collaborative workspace: closer to Asana than an
-  engineering console, SAP screen, or data dashboard. A person should understand what the agent
-  is moving, what needs their input, and what progress means without learning the data model.
-- Lead with names, outcomes, next moves, human decisions, and visible progress. Keep IDs, schema
-  details, event metadata, and dense counts secondary or behind disclosure.
-- Extend the warm charcoal and raptor-amber system in `src/app.css`. Do not introduce blue-navy,
-  neon, gradient-heavy, or generic AI-dashboard styling.
-- Amber means the human is needed. Use semantic status tokens for health and operational meaning;
-  use object-type hues only in Work glyph tiles.
-- Use Geist for interface text and Geist Mono for identifiers, timestamps, counts, and terminal
-  data. Fonts are self-hosted.
-- Keep surfaces compact and scannable with one boundary per zone and hairline internal divisions.
-  Cards are optional containers, not the default layout. Use friendly grouped surfaces when they
-  express a real unit such as a Milestone; do not recreate a dashboard as a grid of metrics.
-- In operational lists, give the object identity and outcome the flexible column. Keep status,
-  next action, and progress columns bounded by their content; do not spend the viewport on empty
-  state columns or truncate the primary object to preserve them.
-- Use direct product language. Avoid eyebrows, taglines, repeated counts, object-type tutorials,
-  and internal terms such as “operator”, “control plane”, “Mission Control”, or “Automata” in UI
-  copy.
-- Write for an end user. Labels, warnings, and empty states must say what happened and what the
-  person can do next; do not expose schema names, agent narration, or robot-slop phrases.
-- Do not put major lifecycle, health, or attention state in a badge. Use readable text and
-  hierarchy, with color only as reinforcement. Reserve pills for filters, tags, and compact
-  governance facts.
+- Implement the `Synthesized Intelligence` system in [DESIGN.md](DESIGN.md) incrementally on
+  approved redesigned screens: workplace-white and cool-slate surfaces, Indigo for human-led action
+  and core navigation, Violet for agent activity, and saturated semantic colors for success,
+  warning, and error.
+- Use the desktop shell shown in Stitch as the reference composition: a persistent 260px labeled
+  sidebar, a 64px workspace header, and a fluid 12-column content grid at 1280px and wider.
+- Favor high information density, compact 8px vertical table/list padding, horizontal row dividers,
+  restrained 4px corners, and tonal surface layers over heavy shadows or decorative effects.
+- Use Geist for interface text and JetBrains Mono for identifiers, timestamps, counts, status
+  labels, reasoning traces, and system data. Fonts remain self-hosted in the application.
+- Keep human and agent activity visually distinct. Indigo communicates human action and navigation;
+  Violet communicates agent actions, reasoning, execution, and live activity. Never rely on color
+  alone to express actor or state.
+- Status-heavy badges are compact rectangles with 2px–4px corners and tinted semantic backgrounds.
+  Pills remain exceptional rather than the default badge shape.
+- Tables, timelines, reasoning blocks, progress bars, contextual agent panels, and split execution
+  workspaces should follow the corresponding approved Stitch screen rather than a generic local
+  abstraction.
+- Treat mockup labels and fixture content as structural examples, not product facts. Preserve the
+  current Work object distinctions, authority model, guarded actions, and gateway boundaries when
+  mapping the screens to live Falcon Dash data.
+- The current redesign is desktop-web-first. Do not invent a new mobile information architecture in
+  this pass; preserve the existing narrow route well enough to avoid catastrophic regressions until
+  the dedicated mobile design work begins.
 - Motion must clarify state or interaction and respect `prefers-reduced-motion`.
 
 ## Shared interaction rules
@@ -82,6 +86,8 @@ truth is [DESIGN.md](DESIGN.md); tokens in `src/app.css` are the executable vers
 
 ## Verification
 
-Follow [QUALITY.md](QUALITY.md). At minimum run type/Svelte checks and the relevant tests. For visual
-changes, inspect the actual route at representative desktop and narrow widths, including loading,
-empty, error, long-content, focus, zoom, and reduced-motion states.
+Follow [QUALITY.md](QUALITY.md). At minimum run type/Svelte checks and the relevant tests. For this
+desktop-web redesign, inspect the actual route at representative 1280px, 1440px, and wide desktop
+widths, including loading, empty, error, long-content, focus, zoom, and reduced-motion states. Keep
+the existing narrow shell free of catastrophic regressions, but defer dedicated mobile UX decisions
+to the separate mobile design effort.
