@@ -30,6 +30,13 @@ Every retained canonical concept and field must justify itself through at least 
   sessions. It does not own a competing transcript, message, or Run model.
 - Explicit human confirmation is not a general Work-domain requirement. Whether an agent consults
   its user belongs to their contract unless a separate governed operation says otherwise.
+- Falcon Work records coordinate and explain agent activity; they do not control the agent runtime.
+  Falcon may enforce invariants of its own persisted objects, but it must not claim that a Work
+  relationship prevented an agent from acting. Actual execution controls exist only where OpenClaw
+  permissions, approvals, or tool boundaries enforce them.
+- When reported agent behavior conflicts with coordination guidance, Falcon records the truthful
+  lifecycle and actor provenance and surfaces the conflict as attention. It does not preserve a
+  cleaner but false Work state by rejecting the report of what happened.
 
 ## Settled: multi-agent is a product-wide foundation
 
@@ -188,7 +195,8 @@ open / ready / in_progress / waiting -> abandoned
 - Remove `in_review` as a Task status and remove Review as a standalone domain object. Reviewing an
   artifact is executable work and therefore uses an ordinary Task.
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
-- Blocking remains a derived condition rather than another Task lifecycle status or object.
+- Constraint and dependency attention remains derived rather than becoming another Task lifecycle
+  status or object. Only explicit `waiting` asserts that execution cannot usefully continue.
 - Starting does not silently claim an unassigned Task. When an agent attempts to start one, Falcon
   returns or persists an Ask: `This Task requires an accountable agent. Would you like to take this
 Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
@@ -217,21 +225,38 @@ Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
 - Remove Blocker as a standalone object, table, lifecycle, list destination, and command family.
   Falcon must not require a second record that paraphrases a constraint already represented by its
   actual source.
-- `blocked` is a derived attention and actionability projection. It is computed from unresolved
-  dependencies, pending Asks, material unanswered Questions, and Task waiting state rather than
-  stored as Task status or mutable boolean.
-- The projection returns the exact causes and their available actions. The UI and agent context show
-  those typed causes instead of flattening them into a generic blocker reason.
+- Falcon does not infer that an agent is literally blocked merely because a dependency, Ask, or
+  Question is unresolved. It exposes each as typed coordination attention with its available
+  actions. A Task's explicit `waiting` state is the agent's declaration that execution cannot
+  usefully continue.
+- The UI and agent context show the exact causes instead of flattening them into a generic blocker
+  reason or claiming Falcon prevented execution.
 - Work dependencies represent constraints caused by other Work. Asks and Questions represent
   missing transition input or durable knowledge. `waiting_for` represents a person, agent, event,
   time, system, or external condition when no separate Work record earns creation.
 - Multiple simultaneous causes require no special Blocker container; the projection returns each
   source independently.
-- Removing or resolving a cause changes derived blocking but does not silently change Task lifecycle
-  state. A waiting Task still requires explicit resumption.
+- Removing or resolving a cause changes derived attention but does not silently change Task
+  lifecycle state. A waiting Task still requires explicit resumption.
 - Existing Blocker records must migrate to typed dependencies, linked Asks or Questions, Task
   waiting state, or historical events according to their actual meaning. Migration must not copy
   all Blockers into one replacement object under a new name.
+
+## Settled: Task dependencies are coordination, not execution control
+
+- `depends_on` records expected sequencing and context. An unresolved dependency is visible
+  attention, but it does not prevent a Task from becoming `in_progress` or `completed` in Falcon.
+- Starting or completing a Task with unresolved dependencies commits the truthful lifecycle and
+  returns those dependencies as warnings, not transition failures.
+- Adding, resolving, removing, abandoning, or withdrawing a dependency never silently rewrites the
+  dependent Task's lifecycle. An agent that truly cannot continue explicitly moves the Task to
+  `waiting` and identifies the dependency in `waiting_for`.
+- Falcon preserves cases where a Task completed despite an unresolved or unsuccessfully terminated
+  dependency. That discrepancy is useful audit and loop-analysis context; it is not silently erased
+  or rewritten as successful sequencing.
+- Dependency cycles remain invalid inside Falcon's own relationship graph because a cyclic
+  coordination model cannot explain an expected order, even though Falcon does not control runtime
+  execution.
 
 ## Settled: Task definition fields
 
@@ -485,7 +510,7 @@ until the schema, commands, projections, and tests migrate together.
   begins.
 - Reconciliation actions for Plan, Result, dependency, and change-control records pinned to an older
   Task definition revision.
-- Exact derived-blocking rules and migration classification for existing Blocker records.
+- Exact constraint-attention projections and migration classification for existing Blocker records.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
