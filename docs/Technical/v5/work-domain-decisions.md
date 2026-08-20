@@ -208,6 +208,31 @@ open / ready / in_progress / waiting -> abandoned
   results; implementation must not discard their reviewer, target revision, outcome, comments, or
   source references.
 
+## Settled: Task Result checkpoints
+
+- A Result checkpoint is an immutable Task-owned record of a meaningful result the agent believes
+  is ready to use, evaluate, hand off, or complete. It is not a Work object, progress entry, tool
+  attempt, or global navigation destination.
+- An agent may optionally create a Result checkpoint while the Task remains `in_progress`. This
+  supports handoffs, external validation, independently requested review Tasks, and detection of
+  repeated candidate-result churn without manufacturing checkpoints for routine execution noise.
+- Direct Task completion does not require a separate checkpoint command. Falcon atomically creates
+  the immutable checkpoint from the completion payload and completes the Task, or completes against
+  an explicitly selected existing current checkpoint without copying it.
+- Every completed Task identifies the exact Result checkpoint that represents its accepted result.
+  Reopening never deletes or rewrites that checkpoint; later candidate work and recompletion create
+  new checkpoints.
+- A checkpoint carries a bounded result summary, validation performed, relevant output and source
+  references, author, timestamp, and links to relevant OpenClaw context. Exact field shapes remain
+  part of the Task audit.
+- Task stores the applicable checkpoint reference. Checkpoints do not duplicate mutable
+  `is_current` flags, and prior checkpoint bodies remain immutable.
+- Normal Task context returns only the applicable checkpoint. History returns compact checkpoint
+  metadata, with prior bodies or comparisons loaded only when explicitly requested.
+- Review Tasks and other consumers target an exact checkpoint rather than a mutable Task result.
+- Possible execution loops are derived from checkpoint churn together with linked OpenClaw session
+  activity and repeated validation outcomes. Loop risk is attention state, not Task lifecycle.
+
 ## Settled: conversational semantic transitions
 
 Consequential Work transitions use an `intent -> requirements -> commit` interaction:
@@ -325,6 +350,8 @@ The following target changes are not implemented yet:
   `cancelled` rather than the target lifecycle;
 - `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
   typed multi-agent assignment and filtering contract;
+- Task stores one mutable `result_summary` plus an integer `output_revision` rather than immutable
+  Result checkpoints and an exact accepted-result reference;
 - contextual OpenClaw session links do not yet exist in Work persistence;
 - persisted Asks and the unified typed attention-queue projection do not yet exist.
 
@@ -349,6 +376,8 @@ until the schema, commands, projections, and tests migrate together.
   abandoned or waiting Task resumes.
 - Exact immutable-artifact targeting for review Tasks and migration rules for current Review
   records.
+- Exact Result checkpoint field bounds, output/source reference shapes, applicability and staleness
+  rules, and migration of existing Task result summaries and output revisions.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
