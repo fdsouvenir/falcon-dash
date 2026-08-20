@@ -182,18 +182,31 @@ open / ready / in_progress / waiting -> abandoned
 - `completed` records the Task's successful terminal result.
 - `abandoned` records that the Task is no longer being pursued without erasing its history. The
   Event Log must preserve abandonment and any later resumption.
-- Remove `in_review` as a Task status. Review is orthogonal activity with its own subject, state,
-  outcome, and history. A Task remains `in_progress` while review happens; the Task projection may
-  expose pending review as contextual state without replacing its execution status.
-- Review is optional, but a requested Review is consequential. While that Review remains pending,
-  Falcon prevents Task completion and returns the exact Review identity and required next action as
-  a structured transition requirement. The request must be resolved or explicitly withdrawn before
-  completion can commit.
-- A pending Review does not automatically move the Task to `waiting`; the agent may continue work
-  while review proceeds and may separately use `waiting` only when execution genuinely cannot
-  continue.
+- Remove `in_review` as a Task status and remove Review as a standalone domain object. Reviewing an
+  artifact is executable work and therefore uses an ordinary Task.
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
 - Blocking remains a derived condition rather than another Task lifecycle status.
+
+## Settled: review work is Task work
+
+- A human or agent may request an independent review by creating a Task linked to the exact
+  immutable artifact revision being examined, such as a Task result, Plan revision, or
+  change-control revision.
+- The reviewing agent decides how to perform that Task and may create an optional Plan like it would
+  for any other Task. Assignment, collaboration, waiting, abandonment, and activity use the normal
+  Task and multi-agent contracts.
+- The review Task's own result records its findings, conclusion, validation, and relevant sources.
+  Falcon does not create a weaker parallel lifecycle solely for review work.
+- The original Task does not request its own Review or enter a review state merely because its agent
+  believes the work is complete.
+- When independent review is explicitly required before completion, the original Task depends on
+  the review Task. When review happens after completion, its findings may justify a remediation Task
+  or an audited reopening without rewriting the original result or history.
+- Review Tasks appear in ordinary Task and attention-queue projections with their reviewed-artifact
+  context. There is no global Reviews destination or review-specific queue object.
+- Existing Review records require an explicit migration into historical activity or review-Task
+  results; implementation must not discard their reviewer, target revision, outcome, comments, or
+  source references.
 
 ## Settled: conversational semantic transitions
 
@@ -239,7 +252,7 @@ not create Falcon-owned transcripts or partially committed Work transitions.
 - When satisfying an Ask reveals genuinely durable missing knowledge, the agent may create and link
   a Question. The Ask may then wait on that Question without becoming the Question itself.
 - The attention queue is a server-derived projection rather than a single polymorphic Work object.
-  It may combine pending Asks, Questions, Decisions, requested Reviews, and blocked or waiting Work
+  It may combine pending Asks, Questions, Decisions, and blocked, waiting, or review-focused Tasks
   while preserving every item's real type, actions, assignment, and contextual thread.
 - Shared and agent-filtered queue views operate on the same canonical records in support of the
   multi-agent model.
@@ -255,8 +268,8 @@ not create Falcon-owned transcripts or partially committed Work transitions.
 - The flow does not offer reassignment to another Project, retention inside the abandoned Project,
   or an open-ended bulk disposition prompt.
 - `Abandon this Work` is the consistent conversational action. Its committed type-specific outcome
-  may remain cancellation for a Task and withdrawal for a Question or Decision; the final command
-  vocabulary remains part of the object-by-object audit.
+  is abandonment for a Task and may remain withdrawal for a Question or Decision; the final command
+  vocabulary for the remaining object types remains part of the object-by-object audit.
 - Keeping Work standalone removes its Project and Project-local Milestone associations without
   changing its own lifecycle.
 - The Project abandonment commits only after every unfinished item has an explicit disposition.
@@ -276,7 +289,7 @@ not create Falcon-owned transcripts or partially committed Work transitions.
 - The agent must resolve the Work or explicitly change its Milestone association through an audited
   semantic command. An achievement rationale does not override unresolved associated Work.
 - Terminal Work no longer blocks achievement even when its terminal outcome is withdrawal or
-  cancellation. An answered or withdrawn Question, completed or cancelled Task, decided or
+  abandonment. An answered or withdrawn Question, completed or abandoned Task, decided or
   withdrawn Decision are resolved for this guard. The bounded achievement rationale separately
   explains why the Milestone's success condition is met.
 - Achievement records a bounded explanation of why the success condition is met. `Achievement
@@ -307,6 +320,7 @@ The following target changes are not implemented yet:
 - Plan remains a standalone entity that supports mutable drafts, submission, withdrawal, and
   mutable `is_current` and revision-state flags;
 - Change Request remains an independent Work type with its own lifecycle and API commands;
+- Review remains a standalone immutable artifact with dedicated readers and commands;
 - Task still uses `backlog`, `ready`, `in_progress`, `waiting`, `in_review`, `completed`, and
   `cancelled` rather than the target lifecycle;
 - `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
@@ -331,9 +345,10 @@ until the schema, commands, projections, and tests migrate together.
   context, generic relationships, and the remaining audited objects.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
-- Exact Task transitions, readiness interaction with derived blockers, the status to which an
-  abandoned or waiting Task resumes, and which Review outcomes satisfy a requested Review versus
-  require revision and another review.
+- Exact Task transitions, readiness interaction with derived blockers, and the status to which an
+  abandoned or waiting Task resumes.
+- Exact immutable-artifact targeting for review Tasks and migration rules for current Review
+  records.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
