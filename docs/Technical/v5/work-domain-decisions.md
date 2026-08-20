@@ -224,6 +224,26 @@ Each ask retains correlation to the parent intent and the exact Work object that
 OpenClaw conversation foundation owns the corresponding thread/session mechanics; this fan-out does
 not create Falcon-owned transcripts or partially committed Work transitions.
 
+## Settled: Asks, Questions, and the attention queue
+
+- A missing transition input may become a lightweight persisted `Ask` when the agent needs time to
+  inspect work, consult its user, delegate, or otherwise gather the response. An Ask is coordination
+  state, not a Work object and not a partially applied domain transition.
+- Each Ask is tied to one exact subject, intended semantic command, missing requirement, and
+  contextual OpenClaw thread. Independent requirements create independent Asks rather than one
+  broad conversation.
+- Resolving an Ask never blindly resumes stored mutation logic. The agent submits the complete
+  semantic command again, and Falcon revalidates current object state before committing atomically.
+- Question remains durable missing knowledge that materially affects Work. Falcon does not create a
+  Question merely because a command lacks a reason, result summary, disposition, or other payload.
+- When satisfying an Ask reveals genuinely durable missing knowledge, the agent may create and link
+  a Question. The Ask may then wait on that Question without becoming the Question itself.
+- The attention queue is a server-derived projection rather than a single polymorphic Work object.
+  It may combine pending Asks, Questions, Decisions, requested Reviews, and blocked or waiting Work
+  while preserving every item's real type, actions, assignment, and contextual thread.
+- Shared and agent-filtered queue views operate on the same canonical records in support of the
+  multi-agent model.
+
 ## Settled: Project abandonment and unfinished Work
 
 - Abandoning a Project never silently cancels, withdraws, detaches, or reassigns its unfinished
@@ -291,7 +311,8 @@ The following target changes are not implemented yet:
   `cancelled` rather than the target lifecycle;
 - `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
   typed multi-agent assignment and filtering contract;
-- contextual OpenClaw session links do not yet exist in Work persistence.
+- contextual OpenClaw session links do not yet exist in Work persistence;
+- persisted Asks and the unified typed attention-queue projection do not yet exist.
 
 Current implementation details remain documented in [../work-management.md](../work-management.md)
 until the schema, commands, projections, and tests migrate together.
@@ -316,6 +337,8 @@ until the schema, commands, projections, and tests migrate together.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
+- Exact Ask storage, deduplication, staleness, resolution, assignment, retention, and thread-link
+  rules, plus the queue projection contract.
 
 Resolve these questions in [#363](https://github.com/fdsouvenir/falcon-dash/issues/363), then amend
 this file. Implementation must not silently decide them through a convenient schema or component
