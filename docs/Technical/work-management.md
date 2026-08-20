@@ -61,10 +61,16 @@ ordered Milestone relationship. The UI may use those server facts to sort attent
 due date, and group linked rows under Milestone exit gates; it does not infer Project health or
 lifecycle.
 
-The domain includes Projects, ordered Milestones, Tasks, Plans, Questions, Decisions, Change
-Requests, Findings, Reviews, Authorizations, Areas, relationships, blockers, and Automations. A
-Milestone is the ordered exit gate for a Project; there is no separate Phase layer in the Work UI.
-Refer to the v3 contracts for the full lifecycle semantics.
+The implemented domain currently includes Projects, Phases, Milestones, Tasks, Plans, Questions,
+Decisions, Change Requests, Findings, Reviews, Authorizations, Areas, relationships, blockers, and
+Automations. Phase records and Work `phase_id` assignments remain part of the current database and
+agent API even where the current UI emphasizes Milestone grouping.
+
+The future v5 contract removes Phase, derives Project completion from ordered Milestone exit gates,
+and replaces directly commanded Project lifecycle with reversible abandonment and conversational
+transition requirements. That target is tracked in [v5/](v5/README.md) and
+[#363](https://github.com/fdsouvenir/falcon-dash/issues/363); it is not shipped behavior yet. Refer
+to the retained v3 contracts for the current lifecycle semantics.
 
 ## Agent HTTP interface
 

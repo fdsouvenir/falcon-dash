@@ -35,8 +35,15 @@ server-side behind SecretRefs and scoped operations.
 
 ## v5 — Contextual agent conversations
 
-Expose OpenClaw agent sessions inside Falcon Dash where the work already lives:
+Reconcile the Work domain before building the desktop-web overhaul, then expose OpenClaw agent
+sessions inside Falcon Dash where the work already lives:
 
+- simplify the Project model around bounded outcomes, ordered Milestone exit gates, derived
+  completion, and reversible abandonment;
+- remove Phase as a separate hierarchy layer and make every retained persisted concept justify its
+  behavior and presentation;
+- make consequential semantic transitions conversational through structured input requirements
+  while keeping final domain commits atomic;
 - project- and object-contextual conversation entry points;
 - a rich conversation surface with strong Markdown, graphs, equations, file uploads, voice notes,
   tool activity, approvals, and durable session references;
@@ -48,6 +55,11 @@ OpenClaw remains the source of truth for sessions and transcripts. Falcon Dash s
 references and presentation state, not a competing transcript database. This should make separate
 conversation channels less necessary without making Discord or other providers product
 prerequisites.
+
+The working replacement Work contract and open decisions are tracked in
+[Technical/v5/](Technical/v5/README.md) and
+[#363](https://github.com/fdsouvenir/falcon-dash/issues/363). The current implementation remains v3
+until its schema, commands, projections, documentation, and tests migrate together.
 
 ## Later: v6 — Dedicated mobile experience
 

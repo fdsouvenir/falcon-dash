@@ -63,6 +63,12 @@ contract and decision record behind the current Work implementation. They are no
 the current technical overview above, and historical names or sequencing inside them do not make a
 surface current again.
 
+## Future working contracts
+
+[Technical/v5/](Technical/v5/README.md) records accepted direction and unresolved questions for
+the desktop-web overhaul and contextual conversations. These documents are not current runtime
+behavior and explicitly identify where they supersede retained v3 semantics.
+
 ## Optional deployment profiles
 
 [Technical/fredbot-integration.md](Technical/fredbot-integration.md) records one optional managed
