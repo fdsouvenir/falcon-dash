@@ -28,6 +28,13 @@ Every retained canonical concept and field must justify itself through at least 
   runtime state.
 - Falcon Dash owns Work state and durable contextual links between Falcon objects and OpenClaw
   sessions. It does not own a competing transcript, message, or Run model.
+- People operate Falcon Dash through the web UI. The `falcon` CLI is the current agent-facing Work
+  interface and is not designed as a human product surface.
+- A person's natural-language request reaches Falcon through their OpenClaw agent, which uses the
+  CLI to read and mutate Work. The web UI and agent CLI share server-side semantic operations, but
+  UI language and interaction design are not constrained by CLI verb names or syntax.
+- HTTP and internal command names are transport and implementation contracts, not additional human
+  interfaces. Future agent adapters may reuse the same semantics without changing this boundary.
 - Explicit human confirmation is not a general Work-domain requirement. Whether an agent consults
   its user belongs to their contract unless a separate governed operation says otherwise.
 - Falcon Work records coordinate and explain agent activity; they do not control the agent runtime.
