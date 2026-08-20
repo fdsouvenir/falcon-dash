@@ -82,6 +82,18 @@ retains the earlier completion and later reopening instead of rewriting history.
 - Milestone or Work transitions cannot create a false `missing current next item` inconsistency,
   because no such pointer exists in the target model.
 
+## Settled: Project and Task Plan placement
+
+- Project does not carry a separate Plan artifact. Its desired outcome, ordered Milestones, and
+  associated Work already provide the useful Project-level planning structure.
+- Tasks carry Plans. A Task Plan describes the proposed approach, ordered steps, assumptions,
+  boundaries, risks, and validation before or during execution.
+- A Task Plan is contextual to its Task rather than a separate global work destination.
+- Removing Project Plans also removes the current Project activation rule that selects one attached
+  Plan and the undefined possibility of several competing Project Plans.
+- Whether every Task requires a Plan, when a Plan becomes immutable, and whether one Task can ever
+  have more than one Plan identity remain part of the Task audit.
+
 ## Settled: conversational semantic transitions
 
 Consequential Work transitions use an `intent -> requirements -> commit` interaction:
@@ -186,8 +198,8 @@ until the schema, commands, projections, and tests migrate together.
 - Rules for adding, removing, editing, or reordering Milestones after execution begins.
 - Whether Project completion criteria disappear entirely in favor of required Milestones.
 - Project readiness and health projections after manually controlled Project states are removed.
-- Cardinality and retained purpose for Plans, Findings, Tags, Automaton Project context, generic
-  relationships, and the remaining audited objects.
+- Task Plan requirements and cardinality; retained purpose for Findings, Tags, Automaton Project
+  context, generic relationships, and the remaining audited objects.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
