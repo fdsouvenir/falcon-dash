@@ -38,7 +38,7 @@ The target planning model is:
 ```text
 Project = bounded outcome
 Milestone = ordered exit gate or outcome checkpoint
-Task / Question / Decision / Change Request = Work used to reach the gate
+Task / Question / Decision = Work used to reach the gate
 ```
 
 - Remove Phase as a domain object. It does not earn a separate containment layer.
@@ -73,7 +73,7 @@ retains the earlier completion and later reopening instead of rewriting history.
 
 - Remove `current_next_item_id` from Project.
 - Remove the semantic command and reconciliation behavior that manually select or clear one next
-  Task, Question, Decision, or Change Request.
+  Task, Question, or Decision.
 - A Project projection exposes its current ordered Milestone and the nonterminal Work associated
   with that Milestone instead of naming one canonical next item.
 - The agent determines the next useful action from that context and its conversation with the user.
@@ -93,6 +93,25 @@ retains the earlier completion and later reopening instead of rewriting history.
   Plan and the undefined possibility of several competing Project Plans.
 - Whether every Task requires a Plan, when a Plan becomes immutable, and whether one Task can ever
   have more than one Plan identity remain part of the Task audit.
+
+## Settled: Change Request is not a Work type
+
+- Remove Change Request as an independent Work type. A Task is the durable identity for executable
+  work, including work that changes code, configuration, data, infrastructure, or production.
+- Consequential execution may add a Task-scoped change-control boundary. That boundary records the
+  authorized scope, targets, safety and rollback requirements, acceptance criteria, and execution
+  evidence without creating a second title, owner, Area, Project, Milestone association, Plan, or
+  general Work lifecycle.
+- The control boundary is shown and acted on through its Task. It does not receive a global Change
+  list or an independent detail destination.
+- A direct user instruction may supply the authority for its exact scope. Falcon must not demand a
+  duplicate approval merely because the implementation mutates code, configuration, or data.
+  Questions, brainstorming, and speculative requests do not authorize execution.
+- When authorization applies to a governed Task, it identifies the exact Task Plan revision and
+  change-control revision that were authorized. A later material revision cannot silently inherit
+  authorization for different work.
+- The exact storage name, revision model, activation rule, and migration from existing Change
+  Requests remain part of the Task and governance audit.
 
 ## Settled: conversational semantic transitions
 
@@ -134,8 +153,8 @@ not create Falcon-owned transcripts or partially committed Work transitions.
 - The flow does not offer reassignment to another Project, retention inside the abandoned Project,
   or an open-ended bulk disposition prompt.
 - `Abandon this Work` is the consistent conversational action. Its committed type-specific outcome
-  may remain cancellation for a Task or Change Request and withdrawal for a Question or Decision;
-  the final command vocabulary remains part of the object-by-object audit.
+  may remain cancellation for a Task and withdrawal for a Question or Decision; the final command
+  vocabulary remains part of the object-by-object audit.
 - Keeping Work standalone removes its Project and Project-local Milestone associations without
   changing its own lifecycle.
 - The Project abandonment commits only after every unfinished item has an explicit disposition.
@@ -156,13 +175,13 @@ not create Falcon-owned transcripts or partially committed Work transitions.
   semantic command. An achievement rationale does not override unresolved associated Work.
 - Terminal Work no longer blocks achievement even when its terminal outcome is withdrawal or
   cancellation. An answered or withdrawn Question, completed or cancelled Task, decided or
-  withdrawn Decision, and terminal Change Request are resolved for this guard. The bounded
-  achievement rationale separately explains why the Milestone's success condition is met.
+  withdrawn Decision are resolved for this guard. The bounded achievement rationale separately
+  explains why the Milestone's success condition is met.
 - Achievement records a bounded explanation of why the success condition is met. `Achievement
 basis` is the current working term for this explanation and its optional references; it is not a
   separate Proof object.
-- Relevant Task results, Question answers, Decisions, verified Change Requests, current Findings,
-  and native source references may support the achievement basis.
+- Relevant Task results and governed execution evidence, Question answers, Decisions, current
+  Findings, and native source references may support the achievement basis.
 - Mere association or `contributes_to` does not prove the gate.
 - Falcon does not impose human confirmation before ordinary Milestone achievement.
 - Project completion follows automatically when the achievement closes the final required
@@ -183,6 +202,7 @@ The following target changes are not implemented yet:
   completion command;
 - Milestone achievement currently commits through the existing command/error contract rather than
   the structured multi-turn `input_required` contract;
+- Change Request remains an independent Work type with its own lifecycle and API commands;
 - contextual OpenClaw session links do not yet exist in Work persistence.
 
 Current implementation details remain documented in [../work-management.md](../work-management.md)
@@ -200,6 +220,8 @@ until the schema, commands, projections, and tests migrate together.
 - Project readiness and health projections after manually controlled Project states are removed.
 - Task Plan requirements and cardinality; retained purpose for Findings, Tags, Automaton Project
   context, generic relationships, and the remaining audited objects.
+- Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
+  control, plus migration rules for existing Change Requests.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
