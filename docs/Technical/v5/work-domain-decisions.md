@@ -188,7 +188,7 @@ open / ready / in_progress / waiting -> abandoned
 - Remove `in_review` as a Task status and remove Review as a standalone domain object. Reviewing an
   artifact is executable work and therefore uses an ordinary Task.
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
-- Blocking remains a derived condition rather than another Task lifecycle status.
+- Blocking remains a derived condition rather than another Task lifecycle status or object.
 - Starting does not silently claim an unassigned Task. When an agent attempts to start one, Falcon
   returns or persists an Ask: `This Task requires an accountable agent. Would you like to take this
 Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
@@ -211,6 +211,27 @@ Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
 - Revising a Task definition while it is waiting does not clear or rewrite the waiting state.
 - Exact typed-reference storage for `waiting_for`, its interaction with dependencies and derived
   blocking, and stale or unavailable upstream references remain part of the relationship audit.
+
+## Settled: Blocker is not a domain object
+
+- Remove Blocker as a standalone object, table, lifecycle, list destination, and command family.
+  Falcon must not require a second record that paraphrases a constraint already represented by its
+  actual source.
+- `blocked` is a derived attention and actionability projection. It is computed from unresolved
+  dependencies, pending Asks, material unanswered Questions, and Task waiting state rather than
+  stored as Task status or mutable boolean.
+- The projection returns the exact causes and their available actions. The UI and agent context show
+  those typed causes instead of flattening them into a generic blocker reason.
+- Work dependencies represent constraints caused by other Work. Asks and Questions represent
+  missing transition input or durable knowledge. `waiting_for` represents a person, agent, event,
+  time, system, or external condition when no separate Work record earns creation.
+- Multiple simultaneous causes require no special Blocker container; the projection returns each
+  source independently.
+- Removing or resolving a cause changes derived blocking but does not silently change Task lifecycle
+  state. A waiting Task still requires explicit resumption.
+- Existing Blocker records must migrate to typed dependencies, linked Asks or Questions, Task
+  waiting state, or historical events according to their actual meaning. Migration must not copy
+  all Blockers into one replacement object under a new name.
 
 ## Settled: Task definition fields
 
@@ -427,6 +448,7 @@ The following target changes are not implemented yet:
   Tasks;
 - Task waiting still stores a separate `waiting_reason` and uses the current untyped waiting
   reference shape;
+- Blocker remains a standalone object with its own active, resolved, and invalidated lifecycle;
 - Task stores one mutable `result_summary` plus an integer `output_revision` rather than immutable
   Result checkpoints and an exact accepted-result reference;
 - Task currently requires only `title`; `summary` and `completion_condition` are optional and do not
@@ -463,6 +485,7 @@ until the schema, commands, projections, and tests migrate together.
   begins.
 - Reconciliation actions for Plan, Result, dependency, and change-control records pinned to an older
   Task definition revision.
+- Exact derived-blocking rules and migration classification for existing Blocker records.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
