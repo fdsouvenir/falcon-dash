@@ -161,6 +161,13 @@ open / ready / in_progress / waiting -> abandoned
 - Remove `in_review` as a Task status. Review is orthogonal activity with its own subject, state,
   outcome, and history. A Task remains `in_progress` while review happens; the Task projection may
   expose pending review as contextual state without replacing its execution status.
+- Review is optional, but a requested Review is consequential. While that Review remains pending,
+  Falcon prevents Task completion and returns the exact Review identity and required next action as
+  a structured transition requirement. The request must be resolved or explicitly withdrawn before
+  completion can commit.
+- A pending Review does not automatically move the Task to `waiting`; the agent may continue work
+  while review proceeds and may separately use `waiting` only when execution genuinely cannot
+  continue.
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
 - Blocking remains a derived condition rather than another Task lifecycle status.
 
@@ -277,8 +284,9 @@ until the schema, commands, projections, and tests migrate together.
   context, generic relationships, and the remaining audited objects.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
-- Exact Task transitions, review-completion guards, readiness interaction with derived blockers,
-  and the status to which an abandoned or waiting Task resumes.
+- Exact Task transitions, readiness interaction with derived blockers, the status to which an
+  abandoned or waiting Task resumes, and which Review outcomes satisfy a requested Review versus
+  require revision and another review.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
