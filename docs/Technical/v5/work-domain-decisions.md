@@ -186,6 +186,11 @@ open / ready / in_progress / waiting -> abandoned
   artifact is executable work and therefore uses an ordinary Task.
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
 - Blocking remains a derived condition rather than another Task lifecycle status.
+- Starting does not silently claim an unassigned Task. When an agent attempts to start one, Falcon
+  returns or persists an Ask: `This Task requires an accountable agent. Would you like to take this
+Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
+- Accepting the Ask explicitly assigns the acting agent and starts the Task atomically after Falcon
+  revalidates current state. Declining or withdrawing it leaves the Task ready and unassigned.
 
 ## Settled: Task definition fields
 
@@ -398,6 +403,8 @@ The following target changes are not implemented yet:
   `cancelled` rather than the target lifecycle;
 - `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
   typed multi-agent assignment and filtering contract;
+- `start_task` does not yet use the target explicit self-assignment Ask for ready-but-unassigned
+  Tasks;
 - Task stores one mutable `result_summary` plus an integer `output_revision` rather than immutable
   Result checkpoints and an exact accepted-result reference;
 - Task currently requires only `title`; `summary` and `completion_condition` are optional and do not
