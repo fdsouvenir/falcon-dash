@@ -82,17 +82,35 @@ retains the earlier completion and later reopening instead of rewriting history.
 - Milestone or Work transitions cannot create a false `missing current next item` inconsistency,
   because no such pointer exists in the target model.
 
-## Settled: Project and Task Plan placement
+## Settled: Project and Task Plan placement and revision history
 
 - Project does not carry a separate Plan artifact. Its desired outcome, ordered Milestones, and
   associated Work already provide the useful Project-level planning structure.
 - Tasks carry Plans. A Task Plan describes the proposed approach, ordered steps, assumptions,
   boundaries, risks, and validation before or during execution.
-- A Task Plan is contextual to its Task rather than a separate global work destination.
+- One Task has one logical Plan represented by an ordered chain of immutable revisions. A Plan is
+  contextual to its Task rather than a separate Work object or global destination, and it does not
+  duplicate the Task title.
+- Every persisted Plan revision is immutable from insertion. Revising a Plan creates a complete new
+  snapshot with a required bounded revision reason and a link to the revision it supersedes. It
+  never edits the prior snapshot or marks the prior row as superseded.
+- Task stores the current Plan revision reference. That single pointer determines which revision is
+  applicable; revisions do not duplicate mutable `is_current` state.
+- Falcon does not persist a mutable Plan draft. OpenClaw may develop the Plan across conversation
+  turns, but Falcon commits it only when the required revision payload is complete. The semantic
+  command surface creates the first revision or revises the current one; it does not expose an
+  in-place `update_plan` command or a separate submit ceremony.
+- Normal Task context includes only the current Plan revision. Revision-history reads return compact
+  metadata such as revision number, time, actor, and reason; a prior body or computed diff is loaded
+  only when explicitly requested. Event Log entries reference the revision and reason rather than
+  copying its full content.
+- Execution progress does not mutate a Plan or create a revision. Task state, results, and activity
+  record what happened. If per-step execution tracking later earns persistence, it must reference a
+  Plan revision without rewriting that revision.
 - Removing Project Plans also removes the current Project activation rule that selects one attached
   Plan and the undefined possibility of several competing Project Plans.
-- Whether every Task requires a Plan, when a Plan becomes immutable, and whether one Task can ever
-  have more than one Plan identity remain part of the Task audit.
+- The lifecycle point at which a Task must have its first Plan revision, bounded field shapes, and
+  migration from the current standalone Plan entities remain part of the Task audit.
 
 ## Settled: Change Request is not a Work type
 
@@ -202,6 +220,8 @@ The following target changes are not implemented yet:
   completion command;
 - Milestone achievement currently commits through the existing command/error contract rather than
   the structured multi-turn `input_required` contract;
+- Plan remains a standalone entity that supports mutable drafts, submission, withdrawal, and
+  mutable `is_current` and revision-state flags;
 - Change Request remains an independent Work type with its own lifecycle and API commands;
 - contextual OpenClaw session links do not yet exist in Work persistence.
 
@@ -218,8 +238,9 @@ until the schema, commands, projections, and tests migrate together.
 - Rules for adding, removing, editing, or reordering Milestones after execution begins.
 - Whether Project completion criteria disappear entirely in favor of required Milestones.
 - Project readiness and health projections after manually controlled Project states are removed.
-- Task Plan requirements and cardinality; retained purpose for Findings, Tags, Automaton Project
-  context, generic relationships, and the remaining audited objects.
+- The Task lifecycle point that requires a first Plan revision and the bounded Task Plan field and
+  step shapes; retained purpose for Findings, Tags, Automaton Project context, generic
+  relationships, and the remaining audited objects.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
