@@ -195,6 +195,23 @@ Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
 - Accepting the Ask explicitly assigns the acting agent and starts the Task atomically after Falcon
   revalidates current state. Declining or withdrawing it leaves the Task ready and unassigned.
 
+## Settled: Task waiting state
+
+- A `ready` or `in_progress` Task may move to `waiting` when execution cannot usefully continue
+  until a condition changes.
+- Entering `waiting` requires `waiting_for` and `resume_when`. `waiting_for` identifies the person,
+  agent, Work, Ask, event, time, system, or external condition involved; `resume_when` states the
+  observable condition that makes continuation useful again.
+- An optional follow-up timestamp may place the waiting Task back into attention without resuming it
+  automatically.
+- Falcon records `waiting_since` and the prior `ready` or `in_progress` status automatically. A
+  separate free-text waiting reason is redundant and is not stored.
+- Resuming returns to the recorded prior status and clears the active waiting projection. The Event
+  Log preserves what the Task waited for, the resume condition, timestamps, and actors.
+- Revising a Task definition while it is waiting does not clear or rewrite the waiting state.
+- Exact typed-reference storage for `waiting_for`, its interaction with dependencies and derived
+  blocking, and stale or unavailable upstream references remain part of the relationship audit.
+
 ## Settled: Task definition fields
 
 - Every Task requires three separately stored definition fields: `title`, `description`, and
@@ -408,6 +425,8 @@ The following target changes are not implemented yet:
   typed multi-agent assignment and filtering contract;
 - `start_task` does not yet use the target explicit self-assignment Ask for ready-but-unassigned
   Tasks;
+- Task waiting still stores a separate `waiting_reason` and uses the current untyped waiting
+  reference shape;
 - Task stores one mutable `result_summary` plus an integer `output_revision` rather than immutable
   Result checkpoints and an exact accepted-result reference;
 - Task currently requires only `title`; `summary` and `completion_condition` are optional and do not
@@ -435,7 +454,7 @@ until the schema, commands, projections, and tests migrate together.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
 - Exact Task transitions, readiness interaction with derived blockers, and the status to which an
-  abandoned or waiting Task resumes.
+  abandoned Task resumes.
 - Exact immutable-artifact targeting for review Tasks and migration rules for current Review
   records.
 - Exact Result checkpoint field bounds, output/source reference shapes, applicability and staleness
