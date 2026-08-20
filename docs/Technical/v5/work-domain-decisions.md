@@ -202,6 +202,15 @@ open / ready / in_progress / waiting -> abandoned
 Task?` No assignment or lifecycle mutation commits while that Ask is unanswered.
 - Accepting the Ask explicitly assigns the acting agent and starts the Task atomically after Falcon
   revalidates current state. Declining or withdrawing it leaves the Task ready and unassigned.
+- A Task may complete truthfully from `open`, `ready`, `in_progress`, or `waiting`; Falcon does not
+  require ceremonial intermediate transitions when an agent reports a completed result.
+- Completion requires an exact immutable Result checkpoint. The command may create it atomically
+  from the supplied result or select an applicable existing checkpoint.
+- Completing from `waiting` clears the active waiting projection while preserving its history.
+  Unresolved dependencies and other coordination discrepancies remain visible as warnings and audit
+  context but do not veto completion.
+- Repeating completion for an already completed Task is a semantic no-op. An abandoned Task must be
+  resumed before it can complete, and a completed Task must be reopened before further work.
 
 ## Settled: Task waiting state
 
@@ -467,6 +476,7 @@ The following target changes are not implemented yet:
 - Review remains a standalone immutable artifact with dedicated readers and commands;
 - Task still uses `backlog`, `ready`, `in_progress`, `waiting`, `in_review`, `completed`, and
   `cancelled` rather than the target lifecycle;
+- `complete_task` currently accepts only `in_progress` rather than any target nonterminal state;
 - `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
   typed multi-agent assignment and filtering contract;
 - `start_task` does not yet use the target explicit self-assignment Ask for ready-but-unassigned
