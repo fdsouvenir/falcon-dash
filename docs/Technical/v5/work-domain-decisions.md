@@ -224,8 +224,16 @@ open / ready / in_progress / waiting -> abandoned
   full definitions.
 - Revision is not a separate Work object, list destination, or approval ceremony. The current
   definition is displayed as the Task itself, with history available contextually.
-- Exact rules for revising active or terminal Tasks and for deriving stale Plan, Result, dependency,
-  and change-control attention remain part of the Task transition audit.
+- Revising an `open`, `ready`, `in_progress`, or `waiting` Task does not automatically change its
+  lifecycle status. Definition and execution state remain separate facts.
+- A `completed` Task must be reopened before revision, and an `abandoned` Task must be resumed. This
+  prevents a definition change from silently rewriting the meaning of a historical terminal
+  outcome.
+- Plans, Result checkpoints, dependencies, and change-control records pinned to the prior definition
+  surface as reconciliation attention. Revision does not silently rewrite or re-pin them, and it
+  does not invent an automatic lifecycle transition.
+- Exact reconciliation actions and which prior artifacts may be reaffirmed versus must be revised
+  remain part of the Task transition audit.
 
 ## Settled: review work is Task work
 
@@ -424,7 +432,8 @@ until the schema, commands, projections, and tests migrate together.
   rules, and migration of existing Task result summaries and output revisions.
 - Exact Task definition field bounds and formatting, plus editing and revision rules after execution
   begins.
-- Task lifecycle and stale-artifact consequences when the current definition revision changes.
+- Reconciliation actions for Plan, Result, dependency, and change-control records pinned to an older
+  Task definition revision.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
