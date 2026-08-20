@@ -86,8 +86,11 @@ retains the earlier completion and later reopening instead of rewriting history.
 
 - Project does not carry a separate Plan artifact. Its desired outcome, ordered Milestones, and
   associated Work already provide the useful Project-level planning structure.
-- Tasks carry Plans. A Task Plan describes the proposed approach, ordered steps, assumptions,
-  boundaries, risks, and validation before or during execution.
+- A Task may carry a Plan. A Task Plan describes a deliberately planned approach, ordered steps,
+  assumptions, boundaries, risks, and validation before or during execution.
+- Plans are optional. An agent may execute a Task directly from a sufficiently clear instruction,
+  or it may create a Plan first when deliberate planning is useful. No ordinary Task lifecycle
+  state requires a Plan merely to make the Task actionable.
 - One Task has one logical Plan represented by an ordered chain of immutable revisions. A Plan is
   contextual to its Task rather than a separate Work object or global destination, and it does not
   duplicate the Task title.
@@ -109,8 +112,8 @@ retains the earlier completion and later reopening instead of rewriting history.
   Plan revision without rewriting that revision.
 - Removing Project Plans also removes the current Project activation rule that selects one attached
   Plan and the undefined possibility of several competing Project Plans.
-- The lifecycle point at which a Task must have its first Plan revision, bounded field shapes, and
-  migration from the current standalone Plan entities remain part of the Task audit.
+- Bounded field shapes and migration from the current standalone Plan entities remain part of the
+  Task audit.
 
 ## Settled: Change Request is not a Work type
 
@@ -125,8 +128,9 @@ retains the earlier completion and later reopening instead of rewriting history.
 - A direct user instruction may supply the authority for its exact scope. Falcon must not demand a
   duplicate approval merely because the implementation mutates code, configuration, or data.
   Questions, brainstorming, and speculative requests do not authorize execution.
-- When authorization applies to a governed Task, it identifies the exact Task Plan revision and
-  change-control revision that were authorized. A later material revision cannot silently inherit
+- When authorization applies to a governed Task, it identifies the exact change-control revision
+  and, when the authorized scope relies on a Plan, the exact Task Plan revision. A Plan is not
+  required solely to create an authorization. A later material revision cannot silently inherit
   authorization for different work.
 - The exact storage name, revision model, activation rule, and migration from existing Change
   Requests remain part of the Task and governance audit.
@@ -238,9 +242,8 @@ until the schema, commands, projections, and tests migrate together.
 - Rules for adding, removing, editing, or reordering Milestones after execution begins.
 - Whether Project completion criteria disappear entirely in favor of required Milestones.
 - Project readiness and health projections after manually controlled Project states are removed.
-- The Task lifecycle point that requires a first Plan revision and the bounded Task Plan field and
-  step shapes; retained purpose for Findings, Tags, Automaton Project context, generic
-  relationships, and the remaining audited objects.
+- Bounded Task Plan field and step shapes; retained purpose for Findings, Tags, Automaton Project
+  context, generic relationships, and the remaining audited objects.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
