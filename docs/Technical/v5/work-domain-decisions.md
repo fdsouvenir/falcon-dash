@@ -41,13 +41,19 @@ Every retained canonical concept and field must justify itself through at least 
   Falcon-owned agent profiles.
 - Assignment and action provenance are separate facts. A Work item may identify an assigned agent,
   while every command and Event Log entry records the agent or human that actually performed it.
+- A Task has at most one accountable assigned agent. Assignment is optional, including for a ready
+  Task. Any number of other agents may collaborate through Falcon-linked OpenClaw sessions and
+  actions without becoming co-assignees.
+- Participating agents are resolved from contextual-session links and action provenance rather than
+  copied into a mutable participant list. Separately accountable work should become separate Tasks
+  instead of making responsibility ambiguous through several co-assignees.
 - Shared all-agent views remain available, with agent-scoped filters and queues layered on the same
   canonical Work data.
 - A missing, disabled, or removed upstream agent reference remains visible as historical or
   unresolved assignment state rather than being silently reassigned.
-- The exact OpenClaw identity reference, assignment cardinality, claim and reassignment commands,
-  and contextual-session linkage will be reconciled against the current upstream beta before the
-  target schema is finalized.
+- The exact OpenClaw identity reference, claim and reassignment commands, and contextual-session
+  linkage will be reconciled against the current upstream beta before the target schema is
+  finalized.
 
 ## Settled: Project, Milestone, and Phase
 
@@ -307,8 +313,7 @@ until the schema, commands, projections, and tests migrate together.
 - Exact Task transitions, readiness interaction with derived blockers, the status to which an
   abandoned or waiting Task resumes, and which Review outcomes satisfy a requested Review versus
   require revision and another review.
-- Task assignment cardinality and semantics, including whether one agent is accountable while
-  several agents may collaborate through sessions and activity.
+- Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
