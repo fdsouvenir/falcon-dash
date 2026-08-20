@@ -65,6 +65,10 @@ Every retained canonical concept and field must justify itself through at least 
   canonical Work data.
 - A missing, disabled, or removed upstream agent reference remains visible as historical or
   unresolved assignment state rather than being silently reassigned.
+- Accountable assignment is independent of lifecycle. Completion, abandonment, reopening,
+  resumption, waiting, and ordinary status changes never clear it implicitly; release or
+  reassignment requires its own explicit semantic command. This preserves who remained accountable
+  and avoids disguising a status transition as an ownership decision.
 - The exact OpenClaw identity reference, claim and reassignment commands, and contextual-session
   linkage will be reconciled against the current upstream beta before the target schema is
   finalized.
@@ -502,6 +506,11 @@ The following target changes are not implemented yet:
 
 Current implementation details remain documented in [../work-management.md](../work-management.md)
 until the schema, commands, projections, and tests migrate together.
+
+The proposed replacement Task aggregate, including recommended logical tables, command outcomes,
+read projections, and migration treatment, is synthesized in
+[task-aggregate.md](task-aggregate.md). Accepted semantics remain authoritative here; exact storage
+names in the synthesis require schema approval.
 
 ## Open decisions
 
