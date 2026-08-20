@@ -95,6 +95,14 @@ validation failure.
 - Each Milestone has an observable success condition.
 - An agent explicitly requests achievement; Falcon does not infer it merely because associated
   Tasks happen to be complete.
+- Unresolved actionable Work associated with the Milestone prevents achievement. For example, an
+  unanswered Question associated with the Milestone is a current reason the Milestone cannot be
+  closed.
+- Falcon returns each unresolved object's identity, type, current state, and relevant next action
+  to the agent as a structured transition requirement. It does not reduce that situation to a
+  generic validation error.
+- The agent must resolve the Work or explicitly change its Milestone association through an audited
+  semantic command. An achievement rationale does not override unresolved associated Work.
 - Achievement records a bounded explanation of why the success condition is met. `Achievement
 basis` is the current working term for this explanation and its optional references; it is not a
   separate Proof object.
@@ -129,7 +137,7 @@ until the schema, commands, projections, and tests migrate together.
 
 - Exact Milestone achievement payload, rationale field name, and length limit.
 - Whether Milestone order is a strict gating constraint or primarily presentation order.
-- How required Work differs from supporting Work in the relationship model.
+- Exact storage and cardinality of the Milestone-to-Work association.
 - Which outcomes for Task, Question, Decision, and Change Request qualify as successful support.
 - Whether changed supporting Work only creates an attention flag or can ever reopen a Milestone
   automatically.
