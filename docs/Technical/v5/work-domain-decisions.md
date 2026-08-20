@@ -164,10 +164,10 @@ retains the earlier completion and later reopening instead of rewriting history.
 The target Task statuses are:
 
 ```text
-open -> ready -> in_progress -> completed
-                   |    ^
-                   v    |
-                 waiting
+open <-> ready -> in_progress -> completed
+                    |    ^
+                    v    |
+                  waiting
 
 open / ready / in_progress / waiting -> abandoned
 ```
@@ -176,6 +176,9 @@ open / ready / in_progress / waiting -> abandoned
   scope, dependencies, or an intentional decision to queue it.
 - `ready` means the Task is intentionally eligible to execute. Neither a Plan nor an assignee is
   required for readiness; ready-but-unassigned Tasks remain valid shared-queue work.
+- Moving between `open` and `ready` is explicit queue management but requires no reason payload. The
+  Event Log records the transition, actor, and timestamp; Falcon does not manufacture explanatory
+  prose for routine queue grooming.
 - `in_progress` means execution is underway.
 - `waiting` means execution cannot usefully continue until a recorded condition changes. Its exact
   entry and resumption rules remain part of the transition audit.
