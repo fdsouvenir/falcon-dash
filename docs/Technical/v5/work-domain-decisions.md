@@ -135,6 +135,35 @@ retains the earlier completion and later reopening instead of rewriting history.
 - The exact storage name, revision model, activation rule, and migration from existing Change
   Requests remain part of the Task and governance audit.
 
+## Settled: Task lifecycle at the current level of detail
+
+The target Task statuses are:
+
+```text
+open -> ready -> in_progress -> completed
+                   |    ^
+                   v    |
+                 waiting
+
+open / ready / in_progress / waiting -> abandoned
+```
+
+- `open` means the Task has been captured but is not yet declared executable now. It may still need
+  scope, dependencies, or an intentional decision to queue it.
+- `ready` means the Task is intentionally eligible to execute. A Plan is not required for
+  readiness.
+- `in_progress` means execution is underway.
+- `waiting` means execution cannot usefully continue until a recorded condition changes. Its exact
+  entry and resumption rules remain part of the transition audit.
+- `completed` records the Task's successful terminal result.
+- `abandoned` records that the Task is no longer being pursued without erasing its history. The
+  Event Log must preserve abandonment and any later resumption.
+- Remove `in_review` as a Task status. Review is orthogonal activity with its own subject, state,
+  outcome, and history. A Task remains `in_progress` while review happens; the Task projection may
+  expose pending review as contextual state without replacing its execution status.
+- Remove `cancelled` in favor of the product-wide `abandoned` language.
+- Blocking remains a derived condition rather than another Task lifecycle status.
+
 ## Settled: conversational semantic transitions
 
 Consequential Work transitions use an `intent -> requirements -> commit` interaction:
@@ -227,6 +256,8 @@ The following target changes are not implemented yet:
 - Plan remains a standalone entity that supports mutable drafts, submission, withdrawal, and
   mutable `is_current` and revision-state flags;
 - Change Request remains an independent Work type with its own lifecycle and API commands;
+- Task still uses `backlog`, `ready`, `in_progress`, `waiting`, `in_review`, `completed`, and
+  `cancelled` rather than the target lifecycle;
 - contextual OpenClaw session links do not yet exist in Work persistence.
 
 Current implementation details remain documented in [../work-management.md](../work-management.md)
@@ -246,6 +277,8 @@ until the schema, commands, projections, and tests migrate together.
   context, generic relationships, and the remaining audited objects.
 - Exact storage, activation, revision, and authorization-invalidation rules for Task-scoped change
   control, plus migration rules for existing Change Requests.
+- Exact Task transitions, review-completion guards, readiness interaction with derived blockers,
+  and the status to which an abandoned or waiting Task resumes.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
