@@ -104,8 +104,15 @@ not create Falcon-owned transcripts or partially committed Work transitions.
   Work.
 - Falcon identifies every nonterminal associated Work item before abandonment can commit.
 - Each item receives its own contextual ask/thread so its disposition can be decided independently.
-- The agent explicitly resolves each item by completing its relevant lifecycle action, detaching or
-  reassigning it, or recording that it is intentionally retained.
+- Each ask offers only two domain outcomes: abandon that Work as well, or detach it from the Project
+  and keep it as standalone Work in its Area.
+- The flow does not offer reassignment to another Project, retention inside the abandoned Project,
+  or an open-ended bulk disposition prompt.
+- `Abandon this Work` is the consistent conversational action. Its committed type-specific outcome
+  may remain cancellation for a Task or Change Request and withdrawal for a Question or Decision;
+  the final command vocabulary remains part of the object-by-object audit.
+- Keeping Work standalone removes its Project and Project-local Milestone associations without
+  changing its own lifecycle.
 - The Project abandonment commits only after every unfinished item has an explicit disposition.
 - Terminal Work remains attached as Project history and requires no disposition ask.
 
