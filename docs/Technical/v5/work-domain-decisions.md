@@ -90,6 +90,25 @@ The structured requirement description must be usable both as an agent tool resu
 control such as a textarea. Missing information is an actionable domain response, not a cryptic
 validation failure.
 
+When one intent discovers several independent requirements, Falcon fans them out into separate
+conversation asks or threads. Each ask addresses exactly one subject and can be resolved without
+answering the others. The presentation may group those asks under their originating intent, but it
+must not collapse them into one broad prompt asking what to do with several unrelated Work items.
+Each ask retains correlation to the parent intent and the exact Work object that caused it. The
+OpenClaw conversation foundation owns the corresponding thread/session mechanics; this fan-out does
+not create Falcon-owned transcripts or partially committed Work transitions.
+
+## Settled: Project abandonment and unfinished Work
+
+- Abandoning a Project never silently cancels, withdraws, detaches, or reassigns its unfinished
+  Work.
+- Falcon identifies every nonterminal associated Work item before abandonment can commit.
+- Each item receives its own contextual ask/thread so its disposition can be decided independently.
+- The agent explicitly resolves each item by completing its relevant lifecycle action, detaching or
+  reassigning it, or recording that it is intentionally retained.
+- The Project abandonment commits only after every unfinished item has an explicit disposition.
+- Terminal Work remains attached as Project history and requires no disposition ask.
+
 ## Settled: Milestone achievement at the current level of detail
 
 - Each Milestone has an observable success condition.
@@ -144,7 +163,6 @@ until the schema, commands, projections, and tests migrate together.
 - Exact storage and cardinality of the Milestone-to-Work association.
 - Whether changed supporting Work only creates an attention flag or can ever reopen a Milestone
   automatically.
-- What abandonment does to unfinished associated Work.
 - Rules for adding, removing, editing, or reordering Milestones after execution begins.
 - Whether Project completion criteria disappear entirely in favor of required Milestones.
 - Project readiness and health projections after manually controlled Project states are removed.
