@@ -187,6 +187,25 @@ open / ready / in_progress / waiting -> abandoned
 - Remove `cancelled` in favor of the product-wide `abandoned` language.
 - Blocking remains a derived condition rather than another Task lifecycle status.
 
+## Settled: Task definition fields
+
+- Every Task requires three separately stored definition fields: `title`, `description`, and
+  `done_when`. Their separation is intentional information architecture, not a prompt to repeat the
+  same sentence three times.
+- `title` is a compact, action-oriented label optimized for scanning, linking, and queue display. It
+  does not carry the full Task context.
+- `description` preserves the context, scope, rationale, constraints, and other instructions needed
+  to understand the work without expanding a single overloaded title.
+- `done_when` states the observable finish line against which the agent declares a Result
+  checkpoint and Task completion.
+- Agent-facing creation guidance must require semantic separation rather than filler: a description
+  that merely restates the title or a `done_when` value equivalent to "when the Task is done" does
+  not satisfy the contract.
+- The source OpenClaw conversation link preserves where the definition came from without making a
+  transcript or one large free-text brief the Task's canonical shape.
+- List projections lead with the title and may use a bounded description excerpt. Task detail and
+  contextual agent projections expose description and `done_when` as distinct content regions.
+
 ## Settled: review work is Task work
 
 - A human or agent may request an independent review by creating a Task linked to the exact
@@ -352,6 +371,8 @@ The following target changes are not implemented yet:
   typed multi-agent assignment and filtering contract;
 - Task stores one mutable `result_summary` plus an integer `output_revision` rather than immutable
   Result checkpoints and an exact accepted-result reference;
+- Task currently requires only `title`; `summary` and `completion_condition` are optional and do not
+  implement the target required `description` and `done_when` contract;
 - contextual OpenClaw session links do not yet exist in Work persistence;
 - persisted Asks and the unified typed attention-queue projection do not yet exist.
 
@@ -378,6 +399,8 @@ until the schema, commands, projections, and tests migrate together.
   records.
 - Exact Result checkpoint field bounds, output/source reference shapes, applicability and staleness
   rules, and migration of existing Task result summaries and output revisions.
+- Exact Task definition field bounds and formatting, plus editing and revision rules after execution
+  begins.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
