@@ -3,7 +3,7 @@
 > **Status: accepted direction under active audit; not current runtime behavior.**
 >
 > Working issue: [#363](https://github.com/fdsouvenir/falcon-dash/issues/363). Last reconciled:
-> 2026-08-19.
+> 2026-08-20.
 
 ## Purpose
 
@@ -30,6 +30,24 @@ Every retained canonical concept and field must justify itself through at least 
   sessions. It does not own a competing transcript, message, or Run model.
 - Explicit human confirmation is not a general Work-domain requirement. Whether an agent consults
   its user belongs to their contract unless a separate governed operation says otherwise.
+
+## Settled: multi-agent is a product-wide foundation
+
+- Every Falcon Dash surface and Work contract must support installations with multiple OpenClaw
+  agents. No schema, command, projection, queue, contextual conversation, or UI control may assume
+  one implicit global agent.
+- OpenClaw owns the canonical agent inventory and runtime identity. Falcon stores typed references
+  to those agents where durable assignment or context requires them; it does not create competing
+  Falcon-owned agent profiles.
+- Assignment and action provenance are separate facts. A Work item may identify an assigned agent,
+  while every command and Event Log entry records the agent or human that actually performed it.
+- Shared all-agent views remain available, with agent-scoped filters and queues layered on the same
+  canonical Work data.
+- A missing, disabled, or removed upstream agent reference remains visible as historical or
+  unresolved assignment state rather than being silently reassigned.
+- The exact OpenClaw identity reference, assignment cardinality, claim and reassignment commands,
+  and contextual-session linkage will be reconciled against the current upstream beta before the
+  target schema is finalized.
 
 ## Settled: Project, Milestone, and Phase
 
@@ -150,8 +168,8 @@ open / ready / in_progress / waiting -> abandoned
 
 - `open` means the Task has been captured but is not yet declared executable now. It may still need
   scope, dependencies, or an intentional decision to queue it.
-- `ready` means the Task is intentionally eligible to execute. A Plan is not required for
-  readiness.
+- `ready` means the Task is intentionally eligible to execute. Neither a Plan nor an assignee is
+  required for readiness; ready-but-unassigned Tasks remain valid shared-queue work.
 - `in_progress` means execution is underway.
 - `waiting` means execution cannot usefully continue until a recorded condition changes. Its exact
   entry and resumption rules remain part of the transition audit.
@@ -265,6 +283,8 @@ The following target changes are not implemented yet:
 - Change Request remains an independent Work type with its own lifecycle and API commands;
 - Task still uses `backlog`, `ready`, `in_progress`, `waiting`, `in_review`, `completed`, and
   `cancelled` rather than the target lifecycle;
+- `ready_task` still requires a free-text owner, and Work projections do not yet provide the target
+  typed multi-agent assignment and filtering contract;
 - contextual OpenClaw session links do not yet exist in Work persistence.
 
 Current implementation details remain documented in [../work-management.md](../work-management.md)
@@ -287,6 +307,8 @@ until the schema, commands, projections, and tests migrate together.
 - Exact Task transitions, readiness interaction with derived blockers, the status to which an
   abandoned or waiting Task resumes, and which Review outcomes satisfy a requested Review versus
   require revision and another review.
+- Task assignment cardinality and semantics, including whether one agent is accountable while
+  several agents may collaborate through sessions and activity.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
 
