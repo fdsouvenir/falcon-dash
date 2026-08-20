@@ -69,6 +69,19 @@ reversible abandonment rather than a terminal Project outcome.
 Reopening a previously achieved Milestone makes a completed Project open again. The Event Log
 retains the earlier completion and later reopening instead of rewriting history.
 
+## Settled: no canonical Project current-next item
+
+- Remove `current_next_item_id` from Project.
+- Remove the semantic command and reconciliation behavior that manually select or clear one next
+  Task, Question, Decision, or Change Request.
+- A Project projection exposes its current ordered Milestone and the nonterminal Work associated
+  with that Milestone instead of naming one canonical next item.
+- The agent determines the next useful action from that context and its conversation with the user.
+  A suggested next action may appear as ephemeral presentation state, but it is not canonical Work
+  data and must not drive Project lifecycle or health.
+- Milestone or Work transitions cannot create a false `missing current next item` inconsistency,
+  because no such pointer exists in the target model.
+
 ## Settled: conversational semantic transitions
 
 Consequential Work transitions use an `intent -> requirements -> commit` interaction:
