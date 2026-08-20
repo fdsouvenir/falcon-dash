@@ -206,6 +206,27 @@ open / ready / in_progress / waiting -> abandoned
 - List projections lead with the title and may use a bounded description excerpt. Task detail and
   contextual agent projections expose description and `done_when` as distinct content regions.
 
+## Settled: Task definition revisions
+
+- A Task is a durable identity whose `title`, `description`, and `done_when` live in an ordered chain
+  of immutable definition revisions. Task stores the current definition revision reference.
+- Revision 1 is created atomically with the Task. Changing any definition field creates a complete
+  new snapshot with author, timestamp, a required bounded revision reason, and a link to the prior
+  revision; it never edits the prior snapshot.
+- Definition revisions do not duplicate mutable `is_current` state. The pointer on Task identifies
+  the applicable revision.
+- Plans and Result checkpoints identify the exact Task definition revision they address. Historical
+  artifacts remain attached to their original definition rather than appearing to satisfy a later
+  rewritten Task.
+- Normal Task and agent context returns only the current definition. Revision listings return
+  compact metadata and reasons; prior bodies and computed diffs load only when explicitly
+  requested. Event Log entries reference revision identifiers and reasons rather than duplicating
+  full definitions.
+- Revision is not a separate Work object, list destination, or approval ceremony. The current
+  definition is displayed as the Task itself, with history available contextually.
+- Exact rules for revising active or terminal Tasks and for deriving stale Plan, Result, dependency,
+  and change-control attention remain part of the Task transition audit.
+
 ## Settled: review work is Task work
 
 - A human or agent may request an independent review by creating a Task linked to the exact
@@ -373,6 +394,8 @@ The following target changes are not implemented yet:
   Result checkpoints and an exact accepted-result reference;
 - Task currently requires only `title`; `summary` and `completion_condition` are optional and do not
   implement the target required `description` and `done_when` contract;
+- Task definition fields are mutable in place rather than immutable snapshots referenced by Plan
+  and Result revisions;
 - contextual OpenClaw session links do not yet exist in Work persistence;
 - persisted Asks and the unified typed attention-queue projection do not yet exist.
 
@@ -401,6 +424,7 @@ until the schema, commands, projections, and tests migrate together.
   rules, and migration of existing Task result summaries and output revisions.
 - Exact Task definition field bounds and formatting, plus editing and revision rules after execution
   begins.
+- Task lifecycle and stale-artifact consequences when the current definition revision changes.
 - Task assignment, claim, reassignment, and release command semantics.
 - Cardinality, purpose vocabulary, and lifecycle for Falcon-owned context-to-OpenClaw-session
   links.
