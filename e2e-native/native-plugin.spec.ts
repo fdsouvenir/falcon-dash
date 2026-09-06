@@ -259,6 +259,11 @@ test('native Integrations performs real persisted maintenance controls without c
 		.locator('details')
 		.filter({ has: page.getByText('Technical details', { exact: true }) });
 	await expect(technical).toHaveJSProperty('open', false);
+	const cardBox = await connection.boundingBox();
+	for (const element of [connection.locator('dl').first(), technical]) {
+		const box = await element.boundingBox();
+		expect(box.x - cardBox.x).toBeGreaterThanOrEqual(16);
+	}
 	await expect(
 		connection
 			.locator('dt')

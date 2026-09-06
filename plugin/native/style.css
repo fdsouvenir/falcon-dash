@@ -115,7 +115,9 @@
 .falcon-native .list-zone > h2,
 .falcon-native .list-zone > p,
 .falcon-native .list-zone > .toolbar,
-.falcon-native .list-zone > .detail-section {
+.falcon-native .list-zone > .detail-section,
+.falcon-native .list-zone > .structured-details,
+.falcon-native .list-zone > details {
 	margin: 14px 18px;
 }
 .falcon-native .record {

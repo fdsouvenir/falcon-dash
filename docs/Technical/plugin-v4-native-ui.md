@@ -113,3 +113,6 @@ The Work action menu also exposes the existing Project resume and Question/Decis
 commands. Server validation remains authoritative; this does not add lifecycle rules or runtime
 permissions. Remaining UI/domain gaps are listed in the scope checklist, not implied closed by
 menu coverage or the 20-case browser matrix.
+
+Rendered follow-up caught flush-to-border summary/Technical details rows. They now use the
+existing card content inset; the real browser case checks that inset at both widths.
