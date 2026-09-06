@@ -74,7 +74,8 @@
 		"test:coverage:historical-standalone": "vitest run --coverage",
 		"precheck": "npm run build",
 		"pretest": "npm run build",
-		"pretest:coverage": "npm run build"
+		"pretest:coverage": "npm run build",
+		"test:managed-runtime": "npm run build && node scripts/verify-managed-install.mjs"
 	},
 	"lint-staged": {
 		"*.{js,ts,svelte}": [

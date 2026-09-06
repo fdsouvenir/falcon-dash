@@ -85,3 +85,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Managed SecretRef install and provider-bound proof
+        timeout-minutes: 5
+        run: npm run test:managed-runtime
+
+      - name: Upload managed runtime proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: managed-runtime-proof
+          path: artifacts/plugin-v4/managed-install-*/combined-proof.json
+          retention-days: 14

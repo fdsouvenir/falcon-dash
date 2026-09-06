@@ -45,8 +45,21 @@ export async function snapshotLegacy(source, destination) {
 	}
 }
 export function inspectLegacy(snapshot) {
+	requireValue(path.isAbsolute(snapshot), 'invalid_path', 'Snapshot path must be absolute');
+	requireValue(
+		!existsSync(snapshot + '-wal') || statSync(snapshot + '-wal').size === 0,
+		'snapshot_changed',
+		'Snapshot has a live write-ahead log; create a new consistent snapshot'
+	);
+	const before = digest(snapshot);
 	const db = new DatabaseSync(snapshot, { readOnly: true });
 	try {
+		db.exec('BEGIN');
+		requireValue(
+			db.prepare('PRAGMA quick_check').get().quick_check === 'ok',
+			'integrity_failure',
+			'Snapshot integrity check failed'
+		);
 		const tables = db
 			.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
 			.all()
@@ -86,9 +99,15 @@ export function inspectLegacy(snapshot) {
 					missing
 				};
 			});
+		requireValue(
+			digest(snapshot) === before &&
+				(!existsSync(snapshot + '-wal') || statSync(snapshot + '-wal').size === 0),
+			'snapshot_changed',
+			'Snapshot changed while being inspected'
+		);
 		return {
 			snapshot,
-			sha256: digest(snapshot),
+			sha256: before,
 			source_entities: entities.map((x) => ({ id: String(x.id), type: String(x.type) })),
 			tables,
 			candidates,
@@ -156,7 +175,7 @@ export function convertLegacy({ snapshot, expected_sha256, target, dispositions 
 	let store;
 	try {
 		store = new WorkStore(path.join(target, 'work.db'));
-		const mapping = {},
+		const mapping = Object.create(null),
 			report = [];
 		for (const disposition of dispositions) {
 			if (disposition.action === 'archive') {
@@ -201,6 +220,11 @@ export function convertLegacy({ snapshot, expected_sha256, target, dispositions 
 			store.db.prepare('PRAGMA quick_check').get().quick_check === 'ok',
 			'integrity_failure',
 			'Converted database failed integrity verification'
+		);
+		requireValue(
+			inspectLegacy(snapshot).sha256 === inspection.sha256,
+			'snapshot_changed',
+			'Source archive changed during conversion'
 		);
 		store.close();
 		store = undefined;

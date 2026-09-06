@@ -129,12 +129,30 @@ user-owned executable resolver. The nonsecret directory comes from that provider
 configuration; the launch environment omitted the convenience variable. After durable Vault lock,
 the same native audit reported one unresolved reference with no value leakage or fallback.
 
-The **manifest-managed preset did not pass on this host**: its required `${node}` command resolves
-to root-owned `/usr/bin/node`, which the native exec-provider ownership guard rejects. No guard,
-permissions policy or system executable ownership was changed. The manual exec path satisfies the
-existing ownership check but does not carry the preset's automatic plugin-ownership revocation.
-Do not claim these two modes are equivalent or that managed-preset acceptance is complete. This
-needs a supported deployment decision or upstream compatibility fix before release.
+The managed preset rejects a Gateway launched with root-owned `/usr/bin/node` under uid 1000.
+Current SDK source confirms that manifest `command` must be `${node}` and materializes directly
+to `process.execPath`; an executable script wrapper cannot replace it in a managed preset.
+`trustedDirs` does not override the current-user ownership check.
+
+**A supported managed path is now verified:** launch the isolated Gateway with a non-symlink,
+user-owned, non-group/world-writable Node executable. The test used a byte-identical copy of Node
+22.23.2 under `artifacts/plugin-v4/owned-runtime/node` (uid 1000, mode 0755), leaving system Node
+unchanged. This is an isolated compatibility fixture, not a production Node installer.
+`scripts/verify-managed-secretref.mjs` verifies managed resolution, denial after plugin disable
+and removal, restoration, and denial after Vault lock. `scripts/verify-plugin-prompt.mjs` in
+`managed` mode verifies the actual Gateway inference path. Neither test substitutes a manual
+exec provider or weakens the ownership guard. The nonsecret `FALCON_VAULT_DIRECTORY` is supplied
+through the manifest's declared environment allowlist.
+
+This is not an unavoidable plugin/API blocker. Production deployment must select an appropriately
+owned Node runtime; no production runtime was changed. Ordinary system-Node installations remain
+incompatible with this preset on the pinned host. The old manual proof remains distinct and is
+not a substitute for plugin-managed revocation. Revocation checks cover new native resolution;
+previously issued values and cache lifetimes are not retroactively erased.
+
+Sources: installed OpenClaw 2026.9.2 `docs/plugins/manifest.md` (SecretRef section),
+`docs/gateway/secrets.md` (exec ownership), `dist/manifest-ByRdkf9X.js` (preset normalization), and
+`dist/resolve-224YoYfx.js` (materialization and path validation).
 
 TypeBox 1.3.18 is now bundled with its license by the build; the installed runtime has no npm
 runtime dependency installation step. This also avoids the installed host's npm `edgesOut` failure
@@ -206,3 +224,16 @@ Vault lock during provider preparation, direct encrypted publication denial, a r
 Documents mutation with delayed preparation, protected human return cancellation, scope loss,
 and the exact `flock → Node → delayed writer` timeout chain. The latter checks both group liveness
 at settlement and absence of the delayed write. These are not only static ownership assertions.
+
+## Additional domain and conversion refinements
+
+Default Task detail now uses the same Result applicability check as completion: a checkpoint for
+an old review target is not displayed as current applicable proof, while full history retains it.
+An explicit regression verifies dependency removal cascades to its Definition pins and removes
+the associated attention rather than leaving phantom dependencies.
+
+Offline conversion rejects a live nonempty snapshot WAL (the main-file digest alone can miss
+committed WAL changes), detects changes during inspection, and revalidates the archive digest
+before reporting conversion success. A changed archive removes only the new conversion target.
+Legacy-id lookup cannot resolve inherited Object properties. These are resolved implementation
+gaps, not deferred product decisions or reasons to migrate live data without approval.

@@ -398,8 +398,37 @@ test('A review checkpoint cannot be accepted for a different target artifact', (
 	});
 	const checkpoint = store.get(review).result_id;
 	call('review_target', review, { artifact_id: store.get(second).result_id });
+	assert.equal(store.detail(review).result, undefined);
+	assert.equal(store.detail(review, true).result.id, checkpoint);
+	assert.ok(store.detail(review).attention.some((a) => a.code === 'review_result_stale'));
 	assert.throws(() => call('complete', review, { result_id: checkpoint }), {
 		code: 'stale_artifact'
 	});
 	assert.equal(store.get(review).status, 'open');
+});
+
+test('Removing a dependency removes its pins and no longer derives stale dependency attention', (t) => {
+	const { store, call, create } = fixture(t),
+		task = create('task'),
+		upstream = create('task');
+	call('depends_on', task, { target: upstream });
+	assert.equal(
+		store.db.prepare('SELECT COUNT(*) AS count FROM dependency_pins WHERE source=?').get(task)
+			.count,
+		1
+	);
+	call('remove_dependency', task, {
+		target: upstream,
+		reason: 'The prerequisite is no longer part of this Task'
+	});
+	assert.equal(
+		store.db.prepare('SELECT COUNT(*) AS count FROM dependency_pins WHERE source=?').get(task)
+			.count,
+		0
+	);
+	assert.ok(
+		!store
+			.warnings(store.get(task))
+			.some((a) => ['dependency_unresolved', 'stale_dependency'].includes(a.code))
+	);
 });

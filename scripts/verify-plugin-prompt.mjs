@@ -7,7 +7,15 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { Vault } from '../plugin/vault/service.mjs';
 import { WorkStore } from '../plugin/work/store.mjs';
-const [entry, root] = process.argv.slice(2);
+const [entry, root, resolverMode = 'manual'] = process.argv.slice(2);
+if (!['manual', 'managed'].includes(resolverMode))
+	throw Error('Choose manual or managed resolver mode');
+if (
+	resolverMode === 'managed' &&
+	(fs.statSync(process.execPath).uid !== process.getuid() ||
+		fs.statSync(process.execPath).mode & 0o022)
+)
+	throw Error('Managed proof requires the user-owned Node runtime');
 const normalState = path.resolve(process.env.HOME ?? '/nonexistent', '.openclaw');
 const artifactRoot = fileURLToPath(new URL('../artifacts/', import.meta.url));
 if (
@@ -85,6 +93,11 @@ config.secrets = {
 		}
 	}
 };
+if (resolverMode === 'managed')
+	config.secrets.providers['falcon-vault'] = {
+		source: 'exec',
+		pluginIntegration: { pluginId: 'falcon-dash', integrationId: 'keepassxc' }
+	};
 config.models = {
 	providers: {
 		'falcon-fixture': {
@@ -114,6 +127,7 @@ const env = {
 	OPENCLAW_STATE_DIR: path.join(root, 'state'),
 	OPENCLAW_CONFIG_PATH: configFile
 };
+if (resolverMode === 'managed') env.FALCON_VAULT_DIRECTORY = vaultDir;
 let gateway,
 	agent,
 	requests = [];
@@ -258,6 +272,7 @@ try {
 		userInjection: false,
 		secretBodyLeak: false,
 		liveRecordLeak: false,
+		resolverMode,
 		credentialDeliveredToLocalFixture: true
 	};
 	fs.writeFileSync(

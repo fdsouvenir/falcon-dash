@@ -45,3 +45,12 @@ export function technicalAttention(x, { object, artifact, targets = [], pins = [
 	}
 	return warnings;
 }
+
+export function resultApplies(task, result) {
+	return (
+		result.task_id === task.id &&
+		result.kind === 'result' &&
+		result.definition_id === task.definition_id &&
+		(result.review_target?.artifact_id ?? null) === (task.review_target?.artifact_id ?? null)
+	);
+}

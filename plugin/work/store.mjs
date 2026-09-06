@@ -1,4 +1,4 @@
-import { technicalAttention } from './attention.mjs';
+import { technicalAttention, resultApplies } from './attention.mjs';
 import { definition as parseDefinition } from './definition.mjs';
 import { privateDatabase } from '../storage.mjs';
 import { Check } from '../schema.mjs';
@@ -213,6 +213,7 @@ export class WorkStore {
 		])
 			if (x[`${kind}_id`]) {
 				const a = this.artifact(x[`${kind}_id`]);
+				if (x.type === 'task' && kind === 'result' && !full && !resultApplies(x, a)) continue;
 				if (
 					x.type !== 'task' ||
 					kind === 'definition' ||
@@ -726,12 +727,9 @@ export class WorkStore {
 			if (input.result_id) {
 				const a = this.artifact(input.result_id);
 				requireValue(
-					a.task_id === x.id &&
-						a.kind === 'result' &&
-						a.definition_id === x.definition_id &&
-						(a.review_target?.artifact_id ?? null) === (x.review_target?.artifact_id ?? null),
+					resultApplies(x, a),
 					'stale_artifact',
-					'Result must pin current Definition'
+					'Result must pin the current Definition and review target'
 				);
 				x.result_id = a.id;
 			} else this.addArtifact(x, 'result', { content: text(input.content) }, actor, 'Completion');

@@ -37,10 +37,11 @@ This preview is pinned to **OpenClaw 2026.9.2**, **Node 22.16+**, and **Linux**.
 `flock`, and descriptor-anchored `/proc/self/fd` access are required. TypeBox is bundled with its
 license; OpenClaw's SDK remains supplied by the host.
 
-The manifest-managed SecretRef preset additionally encounters OpenClaw's executable-ownership
-check on hosts using a root-owned Node binary. A supported manual exec resolver was tested, but
-its plugin-revocation semantics differ. Do not bypass that check; read the
-[compatibility limitation](docs/Technical/plugin-v4-backend.md#native-resolver-verification-and-managed-preset-limitation).
+The managed SecretRef preset requires the Gateway's actual Node executable to be owned by the
+Gateway user and not group/world writable. A user-owned Node runtime is verified with the real
+managed preset, including plugin disable/removal denial; root-owned system Node is incompatible
+with this pinned ownership contract. No check was relaxed. See the
+[exact compatibility evidence](docs/Technical/plugin-v4-backend.md#native-resolver-verification-and-managed-preset-limitation).
 
 ## Build and validate
 

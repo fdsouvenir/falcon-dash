@@ -147,3 +147,15 @@ Protected worker cleanup owns a dedicated process group and verifies no runnable
 remains before reporting timeout failure. Runtime shutdown should still be supervised by the
 host: abrupt death of a JavaScript supervisor cannot execute its cleanup handlers. No production
 service/process policy was changed during this review repair.
+
+## Verified managed-runtime compatibility
+
+`npm run test:managed-runtime` now creates an isolated install, copies the current Node binary
+byte-for-byte into an owned test-runtime directory, verifies its owner/mode/hash, and uses that
+Node for the real managed preset and Gateway inference proof. It verifies disabled/removed plugin
+revocation and Vault-lock denial without a manual provider fallback, then confirms the system
+Node was unchanged. CI runs this gate and uploads only its nonsecret summary.
+
+The managed contract uses the Gateway's actual `process.execPath`; wrapping root-owned Node in
+a user-owned shell script does not change it. A production deployment must provide an
+appropriately user-owned Node runtime. No production installation or permission change was made.

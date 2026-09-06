@@ -142,3 +142,8 @@ Bounded list/queue/detail/history projections and minimal epoch/revision invalid
 SDK watch tests cover event coalescing, stale responses, reconnect rereads and disposal; stored
 Work remains canonical. See [backend continuation](plugin-v4-backend.md) for remaining domain audits
 and the engineering-only snapshot/conversion mechanism. No real dataset was migrated.
+
+Result applicability is shared between completion validation and compact detail, including the
+exact review target. Offline conversion now rejects live snapshot WALs, revalidates archive
+identity before success, and uses prototype-safe legacy-id mappings. Regression tests preserve
+source/archive files and remove only the newly created conversion target on a stale plan.

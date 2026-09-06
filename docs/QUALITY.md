@@ -78,3 +78,7 @@ Gateway and Sentry hooks; see [backend continuation](Technical/plugin-v4-backend
 Plugin source coverage excludes only the generated TypeBox bundle and test files from the
 coverage percentage. All plugin tests still execute, and all historical regressions remain
 separate CI gates.
+
+`test:managed-runtime` is a separate isolated native-install gate, not a replacement for unit or
+historical tests. It covers the managed owner lifecycle and a real provider-bound request using
+synthetic credentials; it does not claim live vendor authentication or native UI acceptance.
