@@ -292,7 +292,7 @@ test('Custom plugin UI off provides guidance instead of enabling native code', a
 }, info) => {
 	await request.post('/__fixture/ui', { data: { enabled: false } });
 	try {
-		await page.goto('/plugin?plugin=falcon-dash&id=work');
+		await page.goto('/plugins/falcon-dash/work');
 		await expect(page.getByText(/Custom plugin UI/)).toBeVisible();
 		await expect(page.locator('.falcon-native')).toHaveCount(0);
 		const dir = 'artifacts/plugin-v4/native-screenshots';

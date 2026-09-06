@@ -79,8 +79,8 @@ The Documents browser case also renames its unsaved conflict-recovered draft, ve
 buffer survives, saves it, restores the original path, then reloads and reads the saved text.
 
 Copy acceptance waits for the actual asynchronous clipboard result; a click alone does not
-mean the protected Gateway round-trip and clipboard write have completed. Every desktop/narrow case is required for a green run. The matrix fails fast on a failure,
-with zero retries and no success-skips. A complete diagnostic run can use `--max-failures=0`.
+mean the protected Gateway round-trip and clipboard write have completed. Every desktop/narrow case is required for a green run. The matrix reports all cases with zero retries and no success-skips. Use `--max-failures=1`
+when diagnosing a shared setup failure.
 
 Acceptance screenshots wait for the native request's `aria-busy` state to settle before
 capture. Clicking a record without this wait can capture its preceding list rather than the
@@ -115,3 +115,7 @@ The real Gateway still authenticates the connection and enforces custom-plugin o
 verification record is disabled or fabricated. A separate required desktop/narrow sidebar case
 opens Integrations using the real registered navigation link, then closes the host drawer.
 These routes run only on the authorized isolated CI runner, not through the denied local browser.
+
+The opt-in-off case intentionally uses the plugin's guarded fallback guidance route
+(`/plugins/falcon-dash/work`), which remains available when native registrations are disabled.
+Enabled native acceptance uses only the canonical host-generated `/plugin` route.
