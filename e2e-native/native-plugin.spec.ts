@@ -9,17 +9,29 @@ async function openModule(page: Page, name: string) {
 		.getByRole('link', { name, exact: true })
 		.first();
 	const backToApp = page.getByRole('button', { name: 'Back to app', exact: true });
+	const expand = page.getByRole('button', { name: 'Expand sidebar', exact: true });
+	await expect
+		.poll(
+			async () =>
+				(await destination.count()) > 0 ||
+				(await backToApp.count()) > 0 ||
+				(await expand.count()) > 0,
+			{ timeout: 60000 }
+		)
+		.toBeTruthy();
+	if (
+		(await expand.isVisible()) &&
+		!(await destination.isVisible()) &&
+		!(await backToApp.isVisible())
+	)
+		await expand.click();
 	await expect
 		.poll(async () => (await destination.count()) > 0 || (await backToApp.count()) > 0, {
 			timeout: 60000
 		})
 		.toBeTruthy();
-	if (await backToApp.count()) {
-		if (await backToApp.isVisible()) await backToApp.click();
-		else await page.keyboard.press('Escape');
-	}
-	await destination.waitFor({ state: 'attached', timeout: 60000 });
-	if (!(await destination.isVisible())) await page.keyboard.press('Control+b');
+	if (await backToApp.isVisible()) await backToApp.click();
+	if ((await expand.isVisible()) && !(await destination.isVisible())) await expand.click();
 	await expect(destination).toBeVisible({ timeout: 60000 });
 	await destination.click();
 	await expect(
@@ -28,6 +40,7 @@ async function openModule(page: Page, name: string) {
 	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
 }
 async function capture(page: Page, name: string, project: string) {
+	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
 	const dir = 'artifacts/plugin-v4/native-screenshots';
 	fs.mkdirSync(dir, { recursive: true });
 	await page.screenshot({
@@ -142,6 +155,7 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	});
 	await human.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(human.locator('output')).toHaveText('SYNTHETIC-HUMAN-UI-CANARY');
+	await page.evaluate(() => navigator.clipboard.writeText('SYNTHETIC-BEFORE-COPY'));
 	await human.getByRole('button', { name: 'Copy', exact: true }).click();
 	await expect
 		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
@@ -153,6 +167,7 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
 	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
+	await page.evaluate(() => navigator.clipboard.writeText('SYNTHETIC-BEFORE-COPY'));
 	await agent.getByRole('button', { name: 'Copy', exact: true }).click();
 	await expect
 		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
@@ -340,5 +355,28 @@ test('Project Milestone Decision and Ask details use the real canonical records'
 	await expect(app).toContainText('Please review the completion criteria.');
 	await capture(page, 'ask-detail', info.project.name);
 	await app.getByRole('button', { name: 'Open conversation', exact: true }).click();
+	await expect(page).toHaveURL(/\/chat\//);
 	await expect(page.getByText('Review follow-up', { exact: true }).first()).toBeVisible();
+});
+test('real native Markdown preview contains hostile markup without executing it', async ({
+	page
+}, info) => {
+	await openModule(page, 'Documents');
+	await page
+		.locator('.falcon-native')
+		.getByRole('button', { name: 'workspace', exact: true })
+		.click();
+	await page.locator('.record').filter({ hasText: 'Untrusted sample.md' }).click();
+	await expect(page.getByLabel('Document content', { exact: true })).toHaveValue(/documentEscaped/);
+	await page.getByRole('button', { name: 'Preview Markdown', exact: true }).click();
+	const preview = page.locator('iframe.document-preview');
+	await expect(preview).toHaveAttribute('sandbox', '');
+	await expect(
+		page
+			.frameLocator('iframe.document-preview')
+			.getByRole('heading', { name: 'Safe heading', exact: true })
+	).toBeVisible();
+	await expect(page.frameLocator('iframe.document-preview').locator('script,img')).toHaveCount(0);
+	expect(await page.evaluate(() => Reflect.get(window, 'documentEscaped'))).toBeUndefined();
+	await capture(page, 'documents-hostile-preview', info.project.name);
 });

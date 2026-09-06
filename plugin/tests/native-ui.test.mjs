@@ -437,3 +437,10 @@ for (const conflict of [false, true])
 		assert.equal(f.window.document.querySelector('textarea').value, 'Unsaved important edit');
 		assert.match(f.text(), /renamed.md/);
 	});
+test('Native select controls expose stable names independent of their option text', async (t) => {
+	const f = await fixture(t, 'work', async () => ({ ok: true, result: { buckets: {} } }));
+	const type = f.window.document.querySelector('select[aria-label="Work type"]');
+	assert.ok(type);
+	assert.equal(type.value, '');
+	assert.ok(type.textContent.includes('Decision'));
+});

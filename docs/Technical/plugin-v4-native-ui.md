@@ -94,3 +94,6 @@ fields choose their first declared option when no initial value is supplied.
 Rendered review found the host light theme's generic `.field` selector overriding the dark
 native input backgrounds. Native field classes are now namespaced to avoid this collision;
 actual desktop/narrow screenshots remain the acceptance evidence for contrast and layout.
+
+Native form controls explicitly expose their field label through `aria-label`, so a select's
+accessible name does not accidentally include all of its option text.

@@ -29,6 +29,7 @@ function field(label, { value = '', type = 'text', multiline = false, options } 
 	const wrap = el('label', null, { class: 'falcon-field' });
 	wrap.append(el('span', label));
 	const input = options ? el('select') : el(multiline ? 'textarea' : 'input');
+	input.setAttribute('aria-label', label);
 	if (options)
 		for (const option of options) {
 			const [value, text] = Array.isArray(option) ? option : [option, human(option)];

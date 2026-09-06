@@ -82,3 +82,24 @@ Copy acceptance waits for the actual asynchronous clipboard result; a click alon
 mean the protected Gateway round-trip and clipboard write have completed. The matrix reports
 all independent desktop/narrow cases rather than stopping at the first failure; every failed
 case still fails CI, with zero retries and no success-skips.
+
+Acceptance screenshots wait for the native request's `aria-busy` state to settle before
+capture. Clicking a record without this wait can capture its preceding list rather than the
+requested detail, even though subsequent assertions eventually pass.
+
+Before browser readiness, the real isolated Gateway also lists a regular workspace file,
+then reads its FIFO and symlink replacements through Documents RPC. Each unsafe read must
+reject and a subsequent Gateway status request must succeed within three seconds. Timeout
+fails the harness, whose bounded shutdown kills the isolated process group if necessary.
+The host proof records these responsiveness checks separately from child-process unit tests.
+
+Each Copy check first writes a different synthetic clipboard sentinel so a previous test's
+clipboard cannot satisfy the readback assertion without this action changing it.
+
+A real-shell hostile Markdown case opens the seeded untrusted document, checks its sandbox
+and rendered safe heading, asserts no script/image elements, and verifies no top-window
+execution marker. Ask navigation must also change to the host's chat route.
+
+Narrow first-run Model Setup hides **Back to app** inside the host sidebar drawer. The browser
+uses the visible **Expand sidebar** control, then **Back to app**, and reopens navigation when
+needed. It does not bypass setup verification or navigate through a synthetic replacement UI.

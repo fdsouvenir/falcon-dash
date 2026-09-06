@@ -521,6 +521,44 @@ try {
 		}
 	});
 
+	const boundedRequest = async (method, input) => {
+		let timer;
+		try {
+			return await Promise.race([
+				client.request(method, input),
+				new Promise((_, reject) => {
+					timer = setTimeout(() => reject(Error('Gateway responsiveness deadline exceeded')), 3000);
+				})
+			]);
+		} finally {
+			clearTimeout(timer);
+		}
+	};
+	const documentRoots = await boundedRequest('falcon.documents.read', { action: 'roots' });
+	const documentRoot = (documentRoots.roots ?? documentRoots).find((r) => r.id === 'workspace');
+	if (!documentRoot) throw Error('Fixture document root missing');
+	const swapPath = path.join(workspace, 'Swapped fixture.md');
+	for (const kind of ['fifo', 'symlink']) {
+		fs.writeFileSync(swapPath, 'Listed regular document');
+		await boundedRequest('falcon.documents.read', { action: 'list', root_id: documentRoot.id });
+		fs.unlinkSync(swapPath);
+		if (kind === 'fifo') await run('mkfifo', 'mkfifo', [swapPath]);
+		else fs.symlinkSync('/dev/zero', swapPath);
+		let rejected = false;
+		try {
+			await boundedRequest('falcon.documents.read', {
+				action: 'read',
+				root_id: documentRoot.id,
+				path: 'Swapped fixture.md'
+			});
+		} catch (error) {
+			if (error.message === 'Gateway responsiveness deadline exceeded') throw error;
+			rejected = true;
+		}
+		if (!rejected) throw Error('Unsafe document read was accepted');
+		fs.unlinkSync(swapPath);
+		await boundedRequest('falcon.ui.status', {});
+	}
 	const status = await client.request('falcon.ui.status', {});
 	const nativeStatus = await client.request('plugins.controlUi.status', {});
 	if (status.modules.length !== 4) throw Error('Missing module registrations');
@@ -530,6 +568,7 @@ try {
 		profileId,
 		openclaw: '2026.9.2',
 		realGateway: true,
+		documentSwapResponsiveness: { fifo: true, symlink: true, deadlineMs: 3000 },
 		identity: 'trusted-proxy fixture',
 		nativeUiOptIn: true,
 		nativeStatus,
