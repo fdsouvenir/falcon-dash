@@ -1,3 +1,4 @@
+import { connectionAuthority, internalAuthority } from './authority.mjs';
 import { defineFeaturePlugin } from 'openclaw/plugin-sdk/feature-plugin';
 import { workFeature } from './work/feature-contract.mjs';
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
@@ -28,7 +29,16 @@ export default definePluginEntry({
 			integrations,
 			started = false;
 		const ready = () => requireValue(started, 'unavailable', 'Falcon Dash service is not running');
-		async function invoke(name, p, actor) {
+		async function invoke(name, p, actor, guard = internalAuthority) {
+			const original = guard;
+			guard = {
+				signal: original.signal,
+				assert() {
+					ready();
+					original.assert();
+				}
+			};
+			guard.assert();
 			ready();
 			exact(p, Object.keys(tools[name].parameters.properties));
 			if (name === 'falcon_work') {
@@ -57,13 +67,13 @@ export default definePluginEntry({
 				requireValue(actor, 'identity_required', 'A verified actor is required');
 				return p.action === 'list'
 					? { connections: integrations.list(actor) }
-					: integrations.run(p.id, p.action, actor);
+					: integrations.run(p.id, p.action, actor, guard);
 			}
 			if (name === 'falcon_vault') {
 				if (p.action === 'status') return { locked: vault.locked, protected_ui: 'unavailable' };
-				if (p.action === 'metadata') return vault.metadata(p.id, actor);
+				if (p.action === 'metadata') return vault.metadata(p.id, actor, guard);
 				requireValue(p.action === 'inventory', 'invalid_command', 'Unsupported Vault operation');
-				return vault.inventory(actor);
+				return vault.inventory(actor, '', guard);
 			}
 			if (name === 'falcon_documents') {
 				requireValue(actor, 'identity_required', 'A verified workspace actor is required');
@@ -84,7 +94,8 @@ export default definePluginEntry({
 					'invalid_command',
 					'Unsupported Documents operation'
 				);
-				return documents[p.action](p, actor);
+				guard.assert();
+				return documents[p.action](p, actor, guard);
 			}
 			throw new DomainError('invalid_command', 'Unsupported operation');
 		}
@@ -160,12 +171,22 @@ export default definePluginEntry({
 					label: name,
 					description: definition.description,
 					parameters: definition.parameters,
-					async execute(_id, params) {
+					async execute(_id, params, signal) {
 						try {
 							const result = await invoke(
 								name,
 								params,
-								ctx.agentId ? `agent:${ctx.agentId}` : null
+								ctx.agentId ? `agent:${ctx.agentId}` : null,
+								{
+									signal,
+									assert() {
+										requireValue(
+											!signal?.aborted,
+											'authority_changed',
+											'Tool execution was cancelled'
+										);
+									}
+								}
 							);
 							return { content: [{ type: 'text', text: JSON.stringify(result) }], details: result };
 						} catch (error) {
@@ -205,7 +226,9 @@ export default definePluginEntry({
 								authority?.kind === 'operator' && !client?.internal?.syntheticClient
 									? `human:${authority.profileId}`
 									: null;
-							const result = await invoke(name, params, actor);
+							const guard = connectionAuthority(client);
+							const result = await invoke(name, params, actor, guard);
+							guard.assert();
 							respond(true, result);
 						} catch (error) {
 							respond(false, undefined, {
@@ -289,7 +312,11 @@ export default definePluginEntry({
 					});
 					return;
 				}
-				principals.set(client.connId, { client, actor: `human:${principal.profileId}` });
+				principals.set(client.connId, {
+					client,
+					actor: `human:${principal.profileId}`,
+					guard: connectionAuthority(client)
+				});
 				client.connectionSignal?.addEventListener('abort', () => principals.delete(client.connId), {
 					once: true
 				});
@@ -322,6 +349,7 @@ export default definePluginEntry({
 							'identity_required',
 							'Bind this verified connection through falcon.identity first'
 						);
+						bound.guard.assert();
 						return work.execute(input, bound.actor);
 					}
 				})

@@ -1,3 +1,4 @@
+import { internalAuthority } from '../authority.mjs';
 import { randomBytes, createHash } from 'node:crypto';
 import { exact, requireValue, text, DomainError } from '../errors.mjs';
 const hash = (value) => createHash('sha256').update(value).digest('hex');
@@ -10,7 +11,8 @@ export class HighLevelOAuth {
 			'CREATE TABLE IF NOT EXISTS oauth_attempts(state_hash TEXT PRIMARY KEY,state TEXT NOT NULL,body TEXT NOT NULL) STRICT'
 		);
 	}
-	async begin(input, actor) {
+	async begin(input, actor, authority = internalAuthority) {
+		authority.assert();
 		exact(input, ['connection_id', 'redirect_uri', 'scopes']);
 		requireValue(
 			actor.startsWith('human:'),
@@ -41,10 +43,16 @@ export class HighLevelOAuth {
 			'access_denied',
 			'Connection cannot begin OAuth'
 		);
-		const material = await service.vault.resolveForExecution(c.vault_handle, actor, (record) => ({
-			client_id: text(record.material.client_id, 500),
-			vault_version: record.version
-		}));
+		const material = await service.vault.resolveForExecution(
+			c.vault_handle,
+			actor,
+			(record) => ({
+				client_id: text(record.material.client_id, 500),
+				vault_version: record.version
+			}),
+			{ authority }
+		);
+		authority.assert();
 		requireValue(
 			service.get(c.id).version === c.version,
 			'authority_changed',
@@ -71,7 +79,8 @@ export class HighLevelOAuth {
 		url.searchParams.set('state', state);
 		return { authorization_url: url.toString(), expires_in: 600 };
 	}
-	async complete(input, actor) {
+	async complete(input, actor, authority = internalAuthority) {
+		authority.assert();
 		exact(input, ['state', 'code']);
 		text(input.state, 200);
 		text(input.code, 4096);
@@ -114,30 +123,73 @@ export class HighLevelOAuth {
 			throw error;
 		}
 		const lease = c.version;
+		const guard = {
+			signal: authority.signal,
+			assert() {
+				authority.assert();
+				const now = service.get(c.id);
+				requireValue(
+					!service.closing &&
+						now.version === lease &&
+						now.phase === 'authorizing' &&
+						now.actors.includes(actor) &&
+						!now.disconnected &&
+						!now.paused,
+					'authority_changed',
+					'OAuth authority changed'
+				);
+			}
+		};
 		try {
 			const adapter = service.adapters.highlevel;
-			await service.vault.resolveForExecution(c.vault_handle, actor, async (record) => {
-				requireValue(
-					record.version === attempt.vault_version,
-					'authority_changed',
-					'Client credential changed during consent'
-				);
-				const output = await adapter.exchange(record.material, {
-					code: input.code,
-					redirect_uri: attempt.redirect_uri
-				});
-				requireValue(
-					service.get(c.id).version === lease,
-					'authority_changed',
-					'Connection changed before storing OAuth credentials'
-				);
-				await service.vault.rotate(c.vault_handle, output.material, record.version, actor, {
-					database: service.path,
-					id: c.id,
-					version: lease,
-					phase: 'authorizing'
-				});
-			});
+			await service.vault.resolveForExecution(
+				c.vault_handle,
+				actor,
+				async (record, credentialGuard) => {
+					const ioGuard = {
+						signal: credentialGuard?.signal ?? guard.signal,
+						assert() {
+							guard.assert();
+							credentialGuard?.assert();
+						}
+					};
+					ioGuard.assert();
+					requireValue(
+						record.version === attempt.vault_version,
+						'authority_changed',
+						'Client credential changed during consent'
+					);
+					const output = await adapter.exchange(
+						record.material,
+						{
+							code: input.code,
+							redirect_uri: attempt.redirect_uri
+						},
+						ioGuard
+					);
+					ioGuard.assert();
+					requireValue(
+						service.get(c.id).version === lease,
+						'authority_changed',
+						'Connection changed before storing OAuth credentials'
+					);
+					await service.vault.rotate(
+						c.vault_handle,
+						output.material,
+						record.version,
+						actor,
+						{
+							database: service.path,
+							id: c.id,
+							version: lease,
+							phase: 'authorizing'
+						},
+						ioGuard
+					);
+				},
+				{ authority: guard }
+			);
+			guard.assert();
 			c.phase = 'idle';
 			c.health = 'unavailable';
 			c.next_at = this.clock();

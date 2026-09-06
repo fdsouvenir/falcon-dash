@@ -1,3 +1,4 @@
+import { internalAuthority } from '../authority.mjs';
 import { privateDatabase } from '../storage.mjs';
 import { readFileSync } from 'node:fs';
 import { DomainError, requireValue, text, exact } from '../errors.mjs';
@@ -118,13 +119,14 @@ export class Integrations {
 			.prepare('INSERT INTO audit(connection_id,action,at,outcome) VALUES(?,?,?,?)')
 			.run(id, action, Date.now(), outcome);
 	}
-	run(id, action, actor) {
-		const operation = this.perform(id, action, actor);
+	run(id, action, actor, authority = internalAuthority) {
+		const operation = this.perform(id, action, actor, authority);
 		const tracked = operation.finally(() => this.inflight.delete(tracked));
 		this.inflight.add(tracked);
 		return tracked;
 	}
-	async perform(id, action, actor) {
+	async perform(id, action, actor, authority = internalAuthority) {
+		authority.assert();
 		requireValue(!this.closing, 'unavailable', 'Integration service is stopping');
 		requireValue(
 			['test', 'refresh', 'pause', 'resume', 'disconnect'].includes(action),
@@ -195,31 +197,73 @@ export class Integrations {
 			throw e;
 		}
 		const leaseVersion = c.version;
+		const assertCurrent = () => {
+			authority.assert();
+			requireValue(!this.closing, 'authority_changed', 'Integration service is stopping');
+			const current = this.get(id);
+			requireValue(
+				current.version === leaseVersion &&
+					current.phase === c.phase &&
+					current.actors.includes(actor) &&
+					!current.paused &&
+					!current.disconnected,
+				'authority_changed',
+				'Connection authority changed'
+			);
+		};
+		const guard = { assert: assertCurrent, signal: authority.signal };
 		let providerStarted = false;
 		try {
 			const adapter = this.adapters[c.provider];
-			const result = await this.vault.resolveForExecution(c.vault_handle, actor, async (record) => {
-				providerStarted = true;
-				const output = await adapter[action](record.material, c);
-				// No automatic lease steal: a refresh might have consumed the old provider token.
-				const current = this.get(id);
-				requireValue(
-					current.version === c.version &&
-						current.phase === c.phase &&
-						current.actors.includes(actor) &&
-						!current.paused,
-					'authority_changed',
-					'Connection changed while preparing provider operation'
-				);
-				if (output.material)
-					await this.vault.rotate(c.vault_handle, output.material, record.version, actor, {
-						database: this.path,
-						id,
-						version: c.version,
-						phase: c.phase
-					});
-				return output;
-			});
+			const result = await this.vault.resolveForExecution(
+				c.vault_handle,
+				actor,
+				async (record, credentialGuard) => {
+					const ioGuard = {
+						assert: () => {
+							assertCurrent();
+							credentialGuard?.assert();
+						},
+						signal: credentialGuard?.signal ?? guard.signal,
+						beforeRequest() {
+							assertCurrent();
+							credentialGuard?.assert();
+							providerStarted = true;
+						}
+					};
+					ioGuard.assert();
+					if (adapter.dispatch_guarded !== true) providerStarted = true;
+					const output = await adapter[action](record.material, c, ioGuard);
+					ioGuard.assert();
+					// No automatic lease steal: a refresh might have consumed the old provider token.
+					const current = this.get(id);
+					requireValue(
+						current.version === c.version &&
+							current.phase === c.phase &&
+							current.actors.includes(actor) &&
+							!current.paused,
+						'authority_changed',
+						'Connection changed while preparing provider operation'
+					);
+					if (output.material)
+						await this.vault.rotate(
+							c.vault_handle,
+							output.material,
+							record.version,
+							actor,
+							{
+								database: this.path,
+								id,
+								version: c.version,
+								phase: c.phase
+							},
+							ioGuard
+						);
+					return output;
+				},
+				{ authority: guard }
+			);
+			assertCurrent();
 			const operationVersion = c.version;
 			c.phase = 'idle';
 			c.validated_capabilities = action === 'test' ? (result.validated_capabilities ?? []) : [];

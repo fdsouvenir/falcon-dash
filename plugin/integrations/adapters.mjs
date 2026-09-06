@@ -1,11 +1,17 @@
+import { internalAuthority } from '../authority.mjs';
 import { DomainError, requireValue } from '../errors.mjs';
 // Endpoint constants are adapter-owned, never caller-controlled destinations.
-async function request(fetcher, url, options) {
+async function request(fetcher, url, options, authority = internalAuthority) {
+	authority.assert();
+	authority.beforeRequest?.();
 	const r = await fetcher(url, {
 		...options,
 		redirect: 'error',
-		signal: AbortSignal.timeout(15000)
+		signal: authority.signal
+			? AbortSignal.any([authority.signal, AbortSignal.timeout(15000)])
+			: AbortSignal.timeout(15000)
 	});
+	authority.assert();
 	if (!r.ok)
 		throw new DomainError(
 			r.status === 403
@@ -42,7 +48,8 @@ export function adapters(fetcher = fetch) {
 	return {
 		highlevel: {
 			supports_refresh: true,
-			async exchange(material, { code, redirect_uri }) {
+			dispatch_guarded: true,
+			async exchange(material, { code, redirect_uri }, authority = internalAuthority) {
 				const body = new URLSearchParams({
 					grant_type: 'authorization_code',
 					client_id: material.client_id,
@@ -50,11 +57,16 @@ export function adapters(fetcher = fetch) {
 					code,
 					redirect_uri
 				});
-				const output = await request(fetcher, 'https://services.leadconnectorhq.com/oauth/token', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body
-				});
+				const output = await request(
+					fetcher,
+					'https://services.leadconnectorhq.com/oauth/token',
+					{
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body
+					},
+					authority
+				);
 				requireValue(
 					typeof output.access_token === 'string' &&
 						output.access_token.length &&
@@ -67,7 +79,7 @@ export function adapters(fetcher = fetch) {
 					material: { access_token: output.access_token, refresh_token: output.refresh_token }
 				};
 			},
-			async test(material, connection) {
+			async test(material, connection, authority = internalAuthority) {
 				requireValue(
 					connection.account_id,
 					'input_required',
@@ -76,7 +88,8 @@ export function adapters(fetcher = fetch) {
 				const result = await request(
 					fetcher,
 					`https://services.leadconnectorhq.com/locations/${encodeURIComponent(connection.account_id)}`,
-					{ headers: { Authorization: `Bearer ${material.access_token}`, Version: 'v3' } }
+					{ headers: { Authorization: `Bearer ${material.access_token}`, Version: 'v3' } },
+					authority
 				);
 				requireValue(
 					result.location?.id === connection.account_id,
@@ -85,18 +98,23 @@ export function adapters(fetcher = fetch) {
 				);
 				return { health: 'healthy', validated_capabilities: ['locations.readonly'] };
 			},
-			async refresh(material) {
+			async refresh(material, _connection, authority = internalAuthority) {
 				const body = new URLSearchParams({
 					grant_type: 'refresh_token',
 					client_id: material.client_id,
 					client_secret: material.client_secret,
 					refresh_token: material.refresh_token
 				});
-				const out = await request(fetcher, 'https://services.leadconnectorhq.com/oauth/token', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body
-				});
+				const out = await request(
+					fetcher,
+					'https://services.leadconnectorhq.com/oauth/token',
+					{
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body
+					},
+					authority
+				);
 				requireValue(
 					typeof out.access_token === 'string' &&
 						out.access_token.length &&
@@ -115,11 +133,13 @@ export function adapters(fetcher = fetch) {
 		},
 		cloudflare: {
 			supports_refresh: false,
-			async test(material) {
+			dispatch_guarded: true,
+			async test(material, _connection, authority = internalAuthority) {
 				const out = await request(
 					fetcher,
 					'https://api.cloudflare.com/client/v4/user/tokens/verify',
-					{ headers: { Authorization: `Bearer ${material.api_token}` } }
+					{ headers: { Authorization: `Bearer ${material.api_token}` } },
+					authority
 				);
 				requireValue(
 					out.success && out.result?.status === 'active',

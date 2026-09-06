@@ -1,3 +1,4 @@
+import { internalAuthority } from '../authority.mjs';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -270,7 +271,11 @@ export class Documents {
 			};
 		});
 	}
-	write({ root_id, path: relative, content, expected_version }, actor) {
+	write(
+		{ root_id, path: relative, content, expected_version },
+		actor,
+		authority = internalAuthority
+	) {
 		requireValue(typeof content === 'string', 'invalid_input', 'Expected text content');
 		const bytes = Buffer.from(content);
 		assertPublicText(bytes);
@@ -294,6 +299,7 @@ export class Documents {
 			const temporary = `/proc/self/fd/${dir}/.falcon-${randomUUID()}`;
 			let fd;
 			try {
+				authority.assert();
 				fd = fs.openSync(temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600);
 				fs.writeFileSync(fd, bytes);
 				fs.fsyncSync(fd);
@@ -306,8 +312,10 @@ export class Documents {
 						'version_conflict',
 						'Document changed during save'
 					);
+					authority.assert();
 					fs.renameSync(temporary, file);
 				} else {
+					authority.assert();
 					fs.linkSync(temporary, file);
 					fs.unlinkSync(temporary);
 				}
@@ -323,7 +331,11 @@ export class Documents {
 			}
 		});
 	}
-	rename({ root_id, path: relative, destination, expected_version }, actor) {
+	rename(
+		{ root_id, path: relative, destination, expected_version },
+		actor,
+		authority = internalAuthority
+	) {
 		const root = this.root(root_id, actor, true);
 		return this.file(root, relative, (source) =>
 			this.file(root, destination, (target) => {
@@ -338,6 +350,7 @@ export class Documents {
 					'already_exists',
 					'Destination already exists'
 				);
+				authority.assert();
 				fs.linkSync(source, target);
 				try {
 					const linked = fs.lstatSync(target),
@@ -366,10 +379,14 @@ export class Documents {
 			trust: 'untrusted-document'
 		};
 	}
-	upload(input, actor) {
-		return this.write(input, actor);
+	upload(input, actor, authority = internalAuthority) {
+		return this.write(input, actor, authority);
 	}
-	trash({ root_id, path: relative, expected_version, confirmed }, actor) {
+	trash(
+		{ root_id, path: relative, expected_version, confirmed },
+		actor,
+		authority = internalAuthority
+	) {
 		requireValue(
 			confirmed === true,
 			'confirmation_required',
@@ -385,6 +402,7 @@ export class Documents {
 			);
 			const location = `/proc/self/fd/${root.fd}/.falcon-trash`;
 			try {
+				authority.assert();
 				fs.mkdirSync(location, { mode: 0o700 });
 			} catch (error) {
 				if (error.code !== 'EEXIST') throw error;
@@ -403,6 +421,7 @@ export class Documents {
 					}),
 					{ flag: 'wx', mode: 0o600 }
 				);
+				authority.assert();
 				fs.renameSync(source, file);
 				fs.fsyncSync(fd);
 				return { trash_id: id, recoverable: true };
@@ -411,7 +430,7 @@ export class Documents {
 			}
 		});
 	}
-	restore({ root_id, trash_id }, actor) {
+	restore({ root_id, trash_id }, actor, authority = internalAuthority) {
 		requireValue(
 			typeof trash_id === 'string' && /^[0-9a-f-]{36}$/.test(trash_id),
 			'invalid_input',
@@ -437,6 +456,7 @@ export class Documents {
 					'version_conflict',
 					'Trash content failed integrity check'
 				);
+				authority.assert();
 				fs.linkSync(source, target);
 				fs.unlinkSync(source);
 				fs.unlinkSync(source + '.json');
@@ -448,11 +468,12 @@ export class Documents {
 		}
 	}
 
-	mkdir({ root_id, path: relative }, actor) {
+	mkdir({ root_id, path: relative }, actor, authority = internalAuthority) {
 		const root = this.root(root_id, actor, true),
 			parts = this.parts(relative),
 			fd = this.parent(root, parts.slice(0, -1));
 		try {
+			authority.assert();
 			fs.mkdirSync(`/proc/self/fd/${fd}/${parts.at(-1)}`, { mode: 0o700 });
 			fs.fsyncSync(fd);
 			return { created: true };

@@ -91,3 +91,8 @@ This is not a live vendor-authentication claim or proof for every harness.
 
 See [current backend coverage](plugin-v4-backend.md) for SecretRef ownership limitations and
 remaining gates. No native browser entry or production opt-in has been activated.
+
+The authority review now carries the original connection identity, scope snapshot and retirement
+signal through async work and rechecks it before effects and replies. A synthetic delayed
+Documents implementation verifies the real Gateway handler does not lose this guard.
+See [authority/lifetime review](plugin-v4-backend.md#parent-review-authority-and-worker-lifetime).

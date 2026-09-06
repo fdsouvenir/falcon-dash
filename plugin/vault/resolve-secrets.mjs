@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // OpenClaw exec-provider protocol v1. stdout is exclusively the protected resolver pipe.
 // No HOME/state fallback and no general tool registration. The owner grants exact IDs.
-import { spawn } from 'node:child_process';
+import { protectedProcess } from './process.mjs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 let input = '';
@@ -20,34 +20,40 @@ try {
 		throw new Error();
 	const directory = process.env.FALCON_VAULT_DIRECTORY;
 	if (!directory || !path.isAbsolute(directory)) throw new Error();
-	const child = spawn(
-		'flock',
-		[
-			'--exclusive',
-			'--timeout',
-			'10',
-			path.join(directory, 'transaction.lock'),
-			process.execPath,
-			fileURLToPath(new URL('./worker.mjs', import.meta.url)),
-			directory
-		],
-		{ stdio: ['pipe', 'pipe', 'pipe'] }
-	);
-	let output = '';
-	child.stderr.resume();
-	child.stdout.on('data', (chunk) => {
-		output += chunk;
-		if (Buffer.byteLength(output) > 1048576) child.kill('SIGKILL');
-	});
-	const timer = setTimeout(() => child.kill('SIGKILL'), 15000);
-	child.stdin.end(JSON.stringify({ action: 'resolve_refs', ids: request.ids }));
-	const code = await new Promise((resolve, reject) => {
-		child.on('error', reject);
-		child.on('close', resolve);
-	});
-	clearTimeout(timer);
+	const controller = new AbortController(),
+		cancel = () => controller.abort();
+	process.once('SIGTERM', cancel);
+	process.once('SIGINT', cancel);
+	let output;
+	try {
+		output = await protectedProcess(
+			'flock',
+			[
+				'--exclusive',
+				'--timeout',
+				'10',
+				path.join(directory, 'transaction.lock'),
+				process.execPath,
+				fileURLToPath(new URL('./worker.mjs', import.meta.url)),
+				directory
+			],
+			{ action: 'resolve_refs', ids: request.ids },
+			{
+				timeoutMs: 12000,
+				authority: {
+					signal: controller.signal,
+					assert() {
+						if (controller.signal.aborted) throw new Error('cancelled');
+					}
+				}
+			}
+		);
+	} finally {
+		process.removeListener('SIGTERM', cancel);
+		process.removeListener('SIGINT', cancel);
+	}
 	const response = JSON.parse(output);
-	if (code !== 0 || response.protocolVersion !== 1) throw new Error();
+	if (response.protocolVersion !== 1) throw new Error();
 	process.stdout.write(JSON.stringify(response));
 } catch {
 	process.stdout.write(

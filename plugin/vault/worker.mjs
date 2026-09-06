@@ -16,6 +16,22 @@ function policyWrite(policy) {
 	fs.closeSync(fd);
 	fs.renameSync(temp, policyPath);
 }
+let commitChannel = false;
+function authorizeCommit() {
+	if (!commitChannel) return;
+	fs.writeSync(3, 'commit\n');
+	const reply = Buffer.alloc(1);
+	for (;;) {
+		try {
+			if (fs.readSync(3, reply, 0, 1, null) !== 1 || reply[0] !== 49)
+				throw new Error('authority_changed');
+			return;
+		} catch (error) {
+			if (error.code !== 'EAGAIN') throw error;
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
+		}
+	}
+}
 function mutateDatabase(change) {
 	const temp = path.join(directory, `transaction-${randomUUID()}.kdbx`);
 	try {
@@ -25,6 +41,7 @@ function mutateDatabase(change) {
 		const fd = fs.openSync(temp, 'r');
 		fs.fsyncSync(fd);
 		fs.closeSync(fd);
+		authorizeCommit();
 		fs.renameSync(temp, database);
 		const dir = fs.openSync(directory, 'r');
 		fs.fsyncSync(dir);
@@ -76,6 +93,7 @@ function reply(value) {
 let guardDb;
 try {
 	const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+	commitChannel = request.commit_channel === true;
 	auditDb = new DatabaseSync(path.join(directory, 'audit.db'));
 	fs.chmodSync(path.join(directory, 'audit.db'), 0o600);
 	auditDb.exec(
@@ -304,25 +322,7 @@ try {
 			} else {
 				if (request.action !== 'create' && request.expected_version !== current.version)
 					throw new Error('version_conflict');
-				if (request.guard) {
-					if (request.guard.database !== path.join(path.dirname(directory), 'integrations.db'))
-						throw new Error('access_denied');
-					guardDb = new DatabaseSync(request.guard.database);
-					guardDb.exec('PRAGMA busy_timeout=5000;BEGIN IMMEDIATE');
-					const row = guardDb
-						.prepare('SELECT version,body FROM connections WHERE id=?')
-						.get(request.guard.id);
-					const connection = row ? JSON.parse(String(row.body)) : null;
-					if (
-						!row ||
-						row.version !== request.guard.version ||
-						connection.phase !== request.guard.phase ||
-						connection.disconnected ||
-						connection.paused ||
-						!connection.actors.includes(request.actor)
-					)
-						throw new Error('authority_changed');
-				}
+
 				const material =
 					request.action === 'rotate'
 						? { ...current.material, ...request.material }
@@ -368,6 +368,26 @@ try {
 					const fd = fs.openSync(temp, 'r');
 					fs.fsyncSync(fd);
 					fs.closeSync(fd);
+					authorizeCommit();
+					if (request.guard) {
+						if (request.guard.database !== path.join(path.dirname(directory), 'integrations.db'))
+							throw new Error('access_denied');
+						guardDb = new DatabaseSync(request.guard.database);
+						guardDb.exec('PRAGMA busy_timeout=5000;BEGIN IMMEDIATE');
+						const row = guardDb
+							.prepare('SELECT version,body FROM connections WHERE id=?')
+							.get(request.guard.id);
+						const connection = row ? JSON.parse(String(row.body)) : null;
+						if (
+							!row ||
+							row.version !== request.guard.version ||
+							connection.phase !== request.guard.phase ||
+							connection.disconnected ||
+							connection.paused ||
+							!connection.actors.includes(request.actor)
+						)
+							throw new Error('authority_changed');
+					}
 					fs.renameSync(temp, database);
 					const dir = fs.openSync(directory, 'r');
 					fs.fsyncSync(dir);

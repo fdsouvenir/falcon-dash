@@ -179,3 +179,30 @@ agent harness, or rendered UI acceptance. The actual operator dataset, legacy cr
 remaining domain/connection refinements, Cloudflare permission coverage, Schwab adapter, native UI
 and managed-SecretRef deployment compatibility remain acceptance work. The original request and
 source issues must remain open.
+
+## Parent review: authority and worker lifetime
+
+The review found a real gap: an integration could begin physical I/O after secret preparation
+finished under a revoked connection. Original connection identity/scopes, retirement signal and
+service lifetime now travel as a guard rather than being reduced to an actor string. Integration
+leases are checked after secret resolution and immediately before adapter dispatch; owned
+adapters check again at `fetch`. Credential epoch guards and cancellation propagate into that
+path. OAuth uses the same boundary. Gateway replies and field-specific human returns recheck
+the original authority; Documents checks immediately before filesystem mutation.
+
+The encrypted writer now requests a private parent authorization at its publication point. It
+then acquires/rechecks the connection transaction immediately before replacement. It never waits
+for parent IPC while holding the connection write lock. This prevents a queued stale operation
+from publishing, but does not retract a request or commit already authorized before revocation.
+
+Vault subprocesses now have a dedicated owned process group. Timeout, output overflow and
+cancellation terminate the group, not just `flock`; failure does not settle while runnable group
+members remain. Vault lock cancels its owned credential operations. The native resolver reuses
+this cleanup and forwards graceful termination. Abrupt host death still depends on host process
+supervision; no claim is made that a killed JavaScript supervisor can run cleanup afterward.
+
+Deterministic races exercise revocation/disconnect during secret preparation, revocation and real
+Vault lock during provider preparation, direct encrypted publication denial, a real Gateway
+Documents mutation with delayed preparation, protected human return cancellation, scope loss,
+and the exact `flock → Node → delayed writer` timeout chain. The latter checks both group liveness
+at settlement and absence of the delayed write. These are not only static ownership assertions.

@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { protectedProcess } from './process.mjs';
+import { internalAuthority } from '../authority.mjs';
 import { DomainError, requireValue } from '../errors.mjs';
 
 export class Vault {
@@ -23,10 +24,17 @@ export class Vault {
 		this.executors = new Set(executors);
 		this.locked = true;
 		this.generation = 0;
+		this.operationController = new AbortController();
 	}
 	lock(actor = 'system:vault') {
+		requireValue(
+			actor === 'system:vault' || (this.owners.has(actor) && actor.startsWith('human:')),
+			'access_denied',
+			'Only an owner can lock Vault'
+		);
 		this.locked = true;
 		this.generation++;
+		this.operationController.abort();
 		if (!fs.existsSync(path.join(this.directory, 'policy.json')))
 			return Promise.resolve({ locked: true });
 		return this.worker({ action: 'lock', actor });
@@ -41,49 +49,45 @@ export class Vault {
 			'Credential access is not authorized'
 		);
 	}
-	async worker(request) {
-		const result = await new Promise((resolve, reject) => {
-			const child = spawn(
-				'flock',
-				[
-					'--exclusive',
-					'--timeout',
-					'15',
-					path.join(this.directory, 'transaction.lock'),
-					process.execPath,
-					fileURLToPath(new URL('./worker.mjs', import.meta.url)),
-					this.directory
-				],
-				{ stdio: ['pipe', 'pipe', 'pipe'] }
-			);
-			let output = '',
-				size = 0;
-			const timer = setTimeout(() => child.kill('SIGKILL'), 60000);
-			child.stdout.on('data', (chunk) => {
-				size += chunk.length;
-				if (size > 1048576) child.kill('SIGKILL');
-				else output += chunk;
-			});
-			child.stderr.resume();
-			child.on('error', () => {
-				clearTimeout(timer);
-				reject(new DomainError('vault_unavailable', 'Protected storage is unavailable'));
-			});
-			child.on('close', () => {
-				clearTimeout(timer);
-				try {
-					const data = JSON.parse(output);
-					if (data.error) reject(new DomainError(data.error, 'Protected storage operation failed'));
-					else resolve(data);
-				} catch {
-					reject(new DomainError('vault_unavailable', 'Protected storage is unavailable'));
+	async worker(request, authority = internalAuthority) {
+		if (!['initialize', 'unlock', 'lock', 'audit'].includes(request.action)) {
+			const original = authority,
+				signal = original.signal
+					? AbortSignal.any([original.signal, this.operationController.signal])
+					: this.operationController.signal;
+			authority = {
+				signal,
+				assert() {
+					original.assert();
+					requireValue(!signal.aborted, 'authority_changed', 'Vault operation was cancelled');
 				}
-			});
-			child.stdin.on('error', () => {});
-			child.stdin.end(JSON.stringify(request));
-		});
+			};
+		}
+
+		const output = await protectedProcess(
+			'flock',
+			[
+				'--exclusive',
+				'--timeout',
+				'15',
+				path.join(this.directory, 'transaction.lock'),
+				process.execPath,
+				fileURLToPath(new URL('./worker.mjs', import.meta.url)),
+				this.directory
+			],
+			request,
+			{ authority }
+		);
+		let result;
+		try {
+			result = JSON.parse(output);
+		} catch {
+			throw new DomainError('vault_unavailable', 'Protected storage is unavailable');
+		}
+		if (result.error) throw new DomainError(result.error, 'Protected storage operation failed');
 		return result;
 	}
+
 	async initialize(actor) {
 		requireValue(
 			this.owners.has(actor) && actor.startsWith('human:'),
@@ -112,15 +116,22 @@ export class Vault {
 		);
 		this.policyGeneration = result.generation;
 		this.locked = false;
+		this.operationController = new AbortController();
 		return { locked: false };
 	}
-	async inventory(actor, group = '') {
+	async inventory(actor, group = '', authority = internalAuthority) {
 		this.authorize(actor);
-		return this.worker({ action: 'inventory', actor, group, generation: this.policyGeneration });
+		return this.worker(
+			{ action: 'inventory', actor, group, generation: this.policyGeneration },
+			authority
+		);
 	}
-	async metadata(id, actor) {
+	async metadata(id, actor, authority = internalAuthority) {
 		this.authorize(actor);
-		return this.worker({ action: 'metadata', id, actor, generation: this.policyGeneration });
+		return this.worker(
+			{ action: 'metadata', id, actor, generation: this.policyGeneration },
+			authority
+		);
 	}
 	async grantEntryExecutors(id, expected_version, executors, actor) {
 		this.authorize(actor, true);
@@ -174,36 +185,83 @@ export class Vault {
 			generation: this.policyGeneration
 		});
 	}
-	async rotate(id, material, expected_version, actor, guard = undefined) {
+	async rotate(
+		id,
+		material,
+		expected_version,
+		actor,
+		guard = undefined,
+		authority = internalAuthority
+	) {
 		this.authorize(actor);
-		return this.worker({
-			action: 'rotate',
-			id,
-			material,
-			expected_version,
-			actor,
-			generation: this.policyGeneration,
-			guard
-		});
+		const epoch = this.generation,
+			original = authority;
+		authority = {
+			signal: original.signal,
+			assert: () => {
+				original.assert();
+				this.authorize(actor);
+				requireValue(
+					epoch === this.generation,
+					'authority_changed',
+					'Vault authorization changed before publication'
+				);
+			}
+		};
+		return this.worker(
+			{
+				action: 'rotate',
+				id,
+				material,
+				expected_version,
+				actor,
+				generation: this.policyGeneration,
+				guard
+			},
+			authority
+		);
 	}
-	async resolveForExecution(id, actor, execute, { human = false, purpose = 'execute' } = {}) {
+	async resolveForExecution(
+		id,
+		actor,
+		execute,
+		{ human = false, purpose = 'execute', authority = internalAuthority } = {}
+	) {
 		this.authorize(actor);
 		const generation = this.generation;
-		const record = await this.worker({
-			action: 'resolve',
-			id,
-			human,
-			purpose,
-			actor,
-			generation: this.policyGeneration
-		});
+		const assert = () => {
+			authority.assert();
+			this.authorize(actor, human);
+			requireValue(this.generation === generation, 'authority_changed', 'Vault authority changed');
+		};
+		const guard = {
+			assert,
+			signal: authority.signal
+				? AbortSignal.any([authority.signal, this.operationController.signal])
+				: this.operationController.signal
+		};
+		assert();
+		const record = await this.worker(
+			{
+				action: 'resolve',
+				id,
+				human,
+				purpose,
+				actor,
+				generation: this.policyGeneration
+			},
+			guard
+		);
 		this.authorize(actor);
 		requireValue(
 			generation === this.generation,
 			'authority_changed',
 			'Vault authorization changed'
 		);
-		return execute(record);
+		assert();
+		const result = await execute(record, guard);
+		assert();
+		return result;
 	}
 	async revokeSecretRefs(ids, actor) {
 		this.authorize(actor, true);
@@ -221,7 +279,7 @@ export class Vault {
 		);
 		return this.worker({ action: 'audit', actor, limit, before });
 	}
-	async revealField(id, field, actor) {
+	async revealField(id, field, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
 		requireValue(
 			typeof field === 'string' && /^[a-z_]{1,80}$/.test(field),
@@ -239,10 +297,10 @@ export class Vault {
 				);
 				return record.material[field];
 			},
-			{ human: true, purpose: 'reveal' }
+			{ human: true, purpose: 'reveal', authority }
 		);
 	}
-	async copyField(id, field, actor) {
+	async copyField(id, field, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
 		requireValue(
 			typeof field === 'string' && /^[a-z_]{1,80}$/.test(field),
@@ -260,14 +318,15 @@ export class Vault {
 				);
 				return record.material[field];
 			},
-			{ human: true, purpose: 'copy' }
+			{ human: true, purpose: 'copy', authority }
 		);
 	}
-	async reveal(id, actor) {
+	async reveal(id, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
 		return this.resolveForExecution(id, actor, (record) => record.material, {
 			human: true,
-			purpose: 'reveal'
+			purpose: 'reveal',
+			authority
 		});
 	}
 }

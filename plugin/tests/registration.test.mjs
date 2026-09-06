@@ -79,3 +79,54 @@ test('Synthetic delegated clients cannot bind a human principal or mint Work aut
 	});
 	assert.equal(response[0], false);
 });
+test('Gateway keeps original authority through awaited document preparation', async (t) => {
+	const fs = await import('node:fs'),
+		{ tmpdir } = await import('node:os'),
+		{ Documents } = await import('../documents/service.mjs');
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-gateway-race-'),
+		workspace = directory + '/workspace';
+	fs.mkdirSync(workspace);
+	let release, entered;
+	const prepared = new Promise((r) => (entered = r)),
+		resume = new Promise((r) => (release = r)),
+		original = Documents.prototype.write;
+	Documents.prototype.write = async function (input, actor, guard) {
+		entered();
+		await resume;
+		return original.call(this, input, actor, guard);
+	};
+	const c = register({
+		dataDir: directory + '/data',
+		modules: { work: false, vault: false, integrations: false },
+		documentRoots: [{ id: 'docs', path: workspace, actors: ['human:owner'], writable: true }]
+	});
+	await c.services[0].start({ stateDir: directory + '/state' });
+	t.after(async () => {
+		Documents.prototype.write = original;
+		await c.services[0].stop();
+		fs.rmSync(directory, { recursive: true });
+	});
+	const client = {
+		connId: 'human',
+		invalidated: false,
+		internal: { operatorRoleActor: { kind: 'operator', profileId: 'owner' } }
+	};
+	let response;
+	const call = c.methods.find(([name]) => name === 'falcon.documents.write')[1]({
+		params: {
+			action: 'write',
+			root_id: 'docs',
+			path: 'note.md',
+			content: 'not allowed',
+			expected_version: null
+		},
+		client,
+		respond: (...r) => (response = r)
+	});
+	await prepared;
+	client.invalidated = true;
+	release();
+	await call;
+	assert.equal(response[0], false);
+	assert.equal(fs.existsSync(workspace + '/note.md'), false);
+});

@@ -142,3 +142,8 @@ that guard, but is not equivalent to preset-owned automatic revocation.
 
 The [backend continuation](plugin-v4-backend.md) is the current source for compatibility, proof
 and gaps. No production rollout or cutover is authorized by these preparation notes.
+
+Protected worker cleanup owns a dedicated process group and verifies no runnable descendant
+remains before reporting timeout failure. Runtime shutdown should still be supervised by the
+host: abrupt death of a JavaScript supervisor cannot execute its cleanup handlers. No production
+service/process policy was changed during this review repair.
