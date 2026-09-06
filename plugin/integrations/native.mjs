@@ -12,6 +12,8 @@ export const integrationInputs = {
 		account_id: S,
 		actors: Type.Array(S, { maxItems: 100 })
 	}),
+	rebind: O({ connection_id: S, vault_handle: S, expected_version: Type.Integer({ minimum: 1 }) }),
+	reconnect: O({ connection_id: S, expected_version: Type.Integer({ minimum: 1 }) }),
 	consent: O({
 		connection_id: S,
 		redirect_uri: S,
@@ -55,6 +57,25 @@ export async function nativeIntegration(service, oauth, params, client, ready) {
 			actor
 		);
 	}
+	if (params.action === 'rebind') {
+		service.vault.authorize(actor, true);
+		await service.vault.metadata(params.input.vault_handle, actor, guard);
+		guard.assert();
+		return service.rebind(
+			params.input.connection_id,
+			params.input.vault_handle,
+			params.input.expected_version,
+			actor,
+			guard
+		);
+	}
+	if (params.action === 'reconnect')
+		return service.reconnect(
+			params.input.connection_id,
+			params.input.expected_version,
+			actor,
+			guard
+		);
 	requireValue(oauth, 'unavailable', 'Configure an approved OAuth callback URI before consent');
 	const result = await (params.action === 'consent'
 		? oauth.begin(params.input, actor, guard)

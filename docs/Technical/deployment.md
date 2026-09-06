@@ -17,6 +17,12 @@ v4 or registry/production acceptance: release/upgrade guards, full operator reco
 and connection gaps remain in the packaged checklist. No tag, publication, service replacement,
 production config/restart or data migration was performed.
 
+The [current installation/recovery guide](plugin-v4-installation.md) defines the implemented
+tag/package/registry checks, archive/checksum flow, private recovery helpers and read-only offline
+retirement validator. Source directories and mutable build outputs are not production artifacts.
+The running legacy service is preserved until a separately authorized artifact-based replacement;
+no live stop, move, restart or data mutation is part of these development tests.
+
 ## Historical standalone deployment (not the plugin install path)
 
 Falcon Dash is an adapter-node SvelteKit application packaged as

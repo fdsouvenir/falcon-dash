@@ -34,7 +34,8 @@
 		"dist/control-ui/",
 		"docs/Technical/plugin-v4-native-ui.md",
 		"docs/Technical/plugin-native-e2e.md",
-		"docs/Technical/plugin-v4-scope.md"
+		"docs/Technical/plugin-v4-scope.md",
+		"docs/Technical/plugin-v4-installation.md"
 	],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"

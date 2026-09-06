@@ -474,7 +474,7 @@ test('Integrations keeps formatted operator status primary and record internals 
 	assert.match(details.textContent, /Owner/);
 	assert.match(details.textContent, /Phase/);
 	const primary = section.cloneNode(true);
-	primary.querySelector('details').remove();
+	primary.querySelectorAll('details').forEach((node) => node.remove());
 	assert.doesNotMatch(primary.textContent, /1788714483520|Owner|Version|Phase/);
 	assert.match(primary.textContent, /Not recorded/);
 	assert.match(primary.textContent, /Unknown \(invalid timestamp\)/);

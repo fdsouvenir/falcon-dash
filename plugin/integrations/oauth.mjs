@@ -192,6 +192,12 @@ export class HighLevelOAuth {
 			guard.assert();
 			c.phase = 'idle';
 			c.health = 'unavailable';
+			c.refresh_uncertain = false;
+			c.uncertain_credential_version = null;
+			c.last_success = null;
+			c.validated_capabilities = [];
+			c.expires_at = null;
+			c.next_refresh_at = null;
 			c.next_at = this.clock();
 			c.next_action = 'test';
 			c.requested_scopes = attempt.scopes;

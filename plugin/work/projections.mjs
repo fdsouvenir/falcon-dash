@@ -225,8 +225,14 @@ export function listProjection(store, query = {}) {
 	});
 }
 export function queueProjection(store, query = {}) {
-	exact(query, ['agent_id', 'limit']);
-	const limit = query.limit ?? 5;
+	exact(query, ['agent_id', 'limit', 'offset']);
+	const limit = query.limit ?? 5,
+		offset = query.offset ?? 0;
+	requireValue(
+		Number.isInteger(offset) && offset >= 0,
+		'invalid_filter',
+		'Queue offset must be nonnegative'
+	);
 	requireValue(
 		Number.isInteger(limit) && limit >= 1 && limit <= 25,
 		'invalid_filter',
@@ -234,13 +240,16 @@ export function queueProjection(store, query = {}) {
 	);
 	return snapshot(store, (state) => {
 		const rows = rowsFrom(state).filter((x) => !query.agent_id || x.agent_id === query.agent_id),
-			buckets = Object.fromEntries(BUCKETS.map((x) => [x, { total: 0, items: [] }]));
+			buckets = Object.fromEntries(
+				BUCKETS.map((x) => [x, { total: 0, items: [], next_offset: null }])
+			);
 		const seen = Object.fromEntries(BUCKETS.map((key) => [key, new Set()]));
 		const add = (bucket, row) => {
 			if (seen[bucket].has(row.id)) return;
 			seen[bucket].add(row.id);
 			buckets[bucket].total++;
-			if (buckets[bucket].items.length < limit) buckets[bucket].items.push(row);
+			if (buckets[bucket].total > offset && buckets[bucket].items.length < limit)
+				buckets[bucket].items.push(row);
 		};
 		for (const row of rows) {
 			if (row.type === 'task' && ['ready', 'in_progress'].includes(row.status)) {
@@ -271,6 +280,9 @@ export function queueProjection(store, query = {}) {
 				if (row.attention.some((a) => a.kind === 'change')) add('change_control', row);
 			}
 		}
+		for (const bucket of Object.values(buckets))
+			bucket.next_offset =
+				offset + bucket.items.length < bucket.total ? offset + bucket.items.length : null;
 		return { ...state.stamp, buckets };
 	});
 }

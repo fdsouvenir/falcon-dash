@@ -214,12 +214,20 @@ export const workFeature = defineFeatureContract({
 		work_queue: {
 			kind: 'query',
 			description: 'Read bounded server-computed attention buckets without N+1 calls.',
-			input: Obj({ agent_id: Opt(Id), limit: Opt(Type.Integer({ minimum: 1, maximum: 25 })) }),
+			input: Obj({
+				agent_id: Opt(Id),
+				limit: Opt(Type.Integer({ minimum: 1, maximum: 25 })),
+				offset: Opt(Type.Integer({ minimum: 0 }))
+			}),
 			output: Obj({
 				...stamp,
 				buckets: Type.Record(
 					Str(64),
-					Obj({ total: Type.Integer({ minimum: 0 }), items: Type.Array(row, { maxItems: 25 }) })
+					Obj({
+						total: Type.Integer({ minimum: 0 }),
+						items: Type.Array(row, { maxItems: 25 }),
+						next_offset: Type.Union([Type.Integer({ minimum: 0 }), Type.Null()])
+					})
 				)
 			})
 		},

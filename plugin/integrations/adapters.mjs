@@ -118,7 +118,8 @@ export function adapters(fetcher = fetch) {
 				requireValue(
 					typeof out.access_token === 'string' &&
 						out.access_token.length &&
-						Number.isFinite(out.expires_in),
+						Number.isFinite(out.expires_in) &&
+						out.expires_in > 0,
 					'provider_response_invalid',
 					'Provider omitted token or expiry'
 				);
@@ -127,7 +128,8 @@ export function adapters(fetcher = fetch) {
 				return {
 					material: next,
 					health: 'healthy',
-					next_at: Date.now() + Math.max(60, out.expires_in - 300) * 1000
+					expires_at: Date.now() + out.expires_in * 1000,
+					next_at: Date.now() + Math.max(1, out.expires_in - 300) * 1000
 				};
 			}
 		},
@@ -165,6 +167,7 @@ export function adapters(fetcher = fetch) {
 				return {
 					health: 'healthy',
 					validated_capabilities: ['account_numbers.read'],
+					reauthorize_at: cutoff,
 					next_at: Math.min(Date.now() + 3600000, cutoff)
 				};
 			},
@@ -210,6 +213,8 @@ export function adapters(fetcher = fetch) {
 				return {
 					material: next,
 					health: 'healthy',
+					expires_at: Date.now() + out.expires_in * 1000,
+					reauthorize_at: cutoff,
 					next_at: Math.min(Date.now() + Math.max(1, out.expires_in - 300) * 1000, cutoff)
 				};
 			}
@@ -252,7 +257,14 @@ export function adapters(fetcher = fetch) {
 					'scope_failure',
 					'Account read permission was not verified'
 				);
-				return { health: 'healthy', validated_capabilities: ['account.read'] };
+				return {
+					health: 'healthy',
+					validated_capabilities: ['account.read'],
+					...(typeof out.result?.expires_on === 'string' &&
+					Number.isFinite(Date.parse(out.result.expires_on))
+						? { expires_at: Date.parse(out.result.expires_on) }
+						: {})
+				};
 			},
 			async refresh() {
 				throw new DomainError(

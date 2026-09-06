@@ -145,7 +145,7 @@ of a real installation or provider-bound system prompt; report each separately.
 
 ## Deferred controlled cutover (not executed)
 
-1. Independently review and finish every domain/security/UI gap above; choose the host UI boundary.
+1. Independently review the remaining domain/security/UI acceptance; the native host UI boundary is already approved.
 2. Identify the old service, its actual database paths, schema versions, attachments and credential
    ownership without reading credential values. Record the exact old binary/package and config.
 3. During an authorized maintenance window, quiesce old writers. Take consistent SQLite backups

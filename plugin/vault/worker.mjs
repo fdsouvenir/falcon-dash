@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { snapshotVault, listSnapshots } from './recovery.mjs';
 const directory = process.argv[2];
 const database = path.join(directory, 'credentials.kdbx'),
 	key = path.join(directory, 'unlock.key');
@@ -14,6 +15,7 @@ function policyWrite(policy) {
 	const fd = fs.openSync(temp, 'r');
 	fs.fsyncSync(fd);
 	fs.closeSync(fd);
+	authorizeCommit();
 	fs.renameSync(temp, policyPath);
 }
 let commitChannel = false;
@@ -115,7 +117,12 @@ try {
 		'revoke_entry',
 		'restore_entry',
 		'grant_executors',
-		'audit'
+		'audit',
+		'backup',
+		'recovery_list',
+		'relocate',
+		'remove_entry',
+		'group_remove'
 	]);
 	requestMeta = {
 		action:
@@ -161,6 +168,15 @@ try {
 		reply({ initialized: true });
 	} else {
 		const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+		if (['backup', 'recovery_list'].includes(request.action)) {
+			authorize(policy, request.actor, true);
+			reply(
+				request.action === 'backup'
+					? snapshotVault(directory, auditDb, authorizeCommit)
+					: listSnapshots(directory)
+			);
+			process.exit(0);
+		}
 		if (request.action === 'audit') {
 			authorize(policy, request.actor, true);
 			const limit = request.limit ?? 25,
@@ -227,6 +243,11 @@ try {
 			if (!Array.isArray(request.ids) || request.ids.length > 50) throw new Error('invalid_handle');
 			const values = {},
 				errors = {};
+			const exactPaths = new Set(
+				cli(['ls', '-q', '--no-password', '--key-file', key, '-R', '-f', database])
+					.trim()
+					.split('\n')
+			);
 			for (const id of request.ids) {
 				try {
 					if (typeof id !== 'string' || !policy.secretref_ids.includes(id))
@@ -235,7 +256,7 @@ try {
 						/^entries\/((?:[a-z][a-z0-9-]{0,79}\/){0,4}[a-z][a-z0-9-]{0,79})\/(password|api-key|access-token|refresh-token|client-secret)$/.exec(
 							id
 						);
-					if (!match) throw new Error('invalid_handle');
+					if (!match || !exactPaths.has(match[1])) throw new Error('invalid_handle');
 					const record = JSON.parse(
 						cli([
 							'show',
@@ -270,6 +291,23 @@ try {
 		if (id && !/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(id))
 			throw new Error('invalid_handle');
 		const args = ['-q', '--no-password', '--key-file', key];
+		// `show` may fall back to a title search (including recycled entries). Never use that
+		// behavior as handle resolution: require an exact flattened path in current inventory.
+		const paths = new Set(
+			cli(['ls', ...args, '-R', '-f', database])
+				.trim()
+				.split('\n')
+		);
+		if (
+			id &&
+			!['create', 'group_create'].includes(request.action) &&
+			!paths.has(id) &&
+			!paths.has(id + '/')
+		)
+			throw Error('not_found');
+		if (request.action === 'create' && (paths.has(id) || paths.has(id + '/')))
+			throw Error('already_exists');
+
 		if (request.action === 'group_create') {
 			authorize(policy, request.actor, true);
 			if (!id) throw new Error('invalid_handle');
@@ -280,10 +318,27 @@ try {
 			reply({ id, kind: 'group' });
 			process.exit(0);
 		}
+
+		if (request.action === 'group_remove') {
+			authorize(policy, request.actor, true);
+			if (
+				!request.confirmed ||
+				!id ||
+				!['', '[empty]'].includes(cli(['ls', ...args, database, id]).trim())
+			)
+				throw Error('group_not_empty_or_unconfirmed');
+			const recovery = snapshotVault(directory, auditDb, authorizeCommit);
+			mutateDatabase((temp) => {
+				cli(['rmdir', ...args, temp, id]);
+			});
+			reply({ id, removed: true, recovery_id: recovery.id });
+			process.exit(0);
+		}
 		if (request.action === 'inventory') {
 			const group = request.group ?? '';
 			if (group && !/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(group))
 				throw new Error('invalid_handle');
+			if (group && !paths.has(group + '/')) throw Error('not_found');
 			const names = cli(['ls', ...args, database, ...(group ? [group] : [])])
 				.trim()
 				.split('\n')
@@ -298,6 +353,51 @@ try {
 			let current = null;
 			if (request.action !== 'create')
 				current = JSON.parse(cli(['show', ...args, '-s', '-a', 'Password', database, id]));
+
+			if (['relocate', 'remove_entry'].includes(request.action)) {
+				authorize(policy, request.actor, true);
+				if (request.expected_version !== current.version) throw Error('version_conflict');
+				if (!request.confirmed) throw Error('confirmation_required');
+				const destination = request.destination;
+				if (request.action === 'relocate') {
+					if (
+						typeof destination !== 'string' ||
+						!/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(destination) ||
+						destination === id
+					)
+						throw Error('invalid_handle');
+					const group = destination.split('/').slice(0, -1).join('/'),
+						name = destination.split('/').at(-1);
+					const names = cli(['ls', ...args, database, ...(group ? [group] : [])])
+						.trim()
+						.split('\n');
+					if (names.includes(name) || names.includes(name + '/')) throw Error('already_exists');
+				}
+				const recovery = snapshotVault(directory, auditDb, authorizeCommit);
+				mutateDatabase((temp) => {
+					if (request.action === 'relocate') {
+						const next = { ...current, version: current.version + 1 };
+						cli(['add', ...args, '-p', temp, destination], JSON.stringify(next) + '\n');
+						const check = JSON.parse(
+							cli(['show', ...args, '-s', '-a', 'Password', temp, destination])
+						);
+						if (JSON.stringify(check) !== JSON.stringify(next)) throw Error('verification_failed');
+					}
+					cli(
+						['edit', ...args, '-p', temp, id],
+						JSON.stringify({ ...current, revoked: true, version: current.version + 1 }) + '\n'
+					);
+					cli(['rm', ...args, temp, id]);
+				});
+				if (destination) requestMeta.entry = destination;
+				reply({
+					id: destination ?? id,
+					removed: request.action === 'remove_entry',
+					version: current.version + 1,
+					recovery_id: recovery.id
+				});
+				process.exit(0);
+			}
 			if (request.action === 'metadata') {
 				reply({
 					id,

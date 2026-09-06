@@ -227,6 +227,7 @@ export class WorkStore {
 		for (const collection of [
 			'relationships',
 			'asks',
+			'participants',
 			...(['project', 'milestone'].includes(x.type) ? ['associated_work'] : []),
 			...(full ? ['artifacts', 'history'] : [])
 		]) {
@@ -262,6 +263,12 @@ export class WorkStore {
 			args = [id],
 			kind = 'json';
 		switch (collection) {
+			case 'participants':
+				sql =
+					"SELECT actor FROM events WHERE object_id=? UNION SELECT 'agent:'||json_extract(body,'$.thread.agent_id') AS actor FROM asks WHERE subject=? ORDER BY actor";
+				args = [id, id];
+				kind = 'raw';
+				break;
 			case 'relationships':
 				sql =
 					'SELECT source,target,kind FROM links WHERE source=? OR target=? ORDER BY source,target,kind';
@@ -326,7 +333,9 @@ export class WorkStore {
 	queue(query = {}) {
 		return queueProjection(this, query);
 	}
-	history(id, { offset = 0, limit = 25 } = {}) {
+	history(id, query = {}) {
+		exact(query, ['offset', 'limit']);
+		const { offset = 0, limit = 25 } = query;
 		this.get(id);
 		requireValue(
 			Number.isInteger(offset) &&

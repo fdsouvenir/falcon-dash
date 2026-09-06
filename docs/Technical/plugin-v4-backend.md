@@ -43,9 +43,9 @@ credentials or establish live proxy connections. No historical tests were remove
   cleanup. Feature mutations fail closed until bound; they never infer a human from payload fields
   or use an agent id as the human principal.
 
-Still under audit: complete type-specific update/supersession vocabulary, Task waiting-reference typing, complete revision/history pagination metadata, source/upstream
-reference availability, independent-review derivations, token benchmarks, and remaining Project /
-Milestone ordering/closure reconciliation. Do not call the complete #363 domain finished.
+The current [acceptance map](plugin-v4-scope.md) separates implemented read/history/participant/
+reference workflows from #363's explicitly unsettled Milestone/Area/Tag/structured-content
+semantics. Those decisions remain external; no implicit new domain rule is invented.
 
 ## Documents
 
@@ -276,3 +276,25 @@ human explanation and resume condition. Upstream identities remain owned by Open
 suggests current host agent/session rows and identifies absent assigned agents without reassignment.
 An Ask's Resolve request form resubmits its original supported semantic command with its Ask id;
 the existing server transaction revalidates and closes it only after successful mutation.
+
+## Continued lifecycle and recovery acceptance
+
+Integrations now exposes scoped audit pages, account/usage/opaque credential references, typed
+failure guidance, expiry and next action, and explicit paused/unvalidated reconnect/rebinding.
+Sustained failures and scope/reauthorization failures create one deduplicated ordinary Work review
+Task through semantic commands. They do not become an agent Automation. Human credential changes
+pause dependent connections; failed storage operations may conservatively leave them paused.
+Uncertain refresh/restart outcomes cannot replay the same credential revision; a new reviewed
+revision/binding or completed consent is required. Expired access alone is not treated as proof
+that provider consent must restart.
+
+Vault adds protected audit/grant controls, recoverable relocation/removal and empty-group removal.
+Exact flattened entry paths prevent KeePassXC title-search fallback from resurrecting old/recycled
+handles. Private snapshots and fresh-destination offline restore are tested with the real CLI.
+An engineering-only legacy converter verifies the reviewed database digest and each explicit
+source Uuid before copying selected attributes into new entries; all old entries/history remain
+in the original encrypted archive and no execution grants are inferred. See the installation guide.
+
+Documents exposes bounded durable trash discovery with corruption/unavailable counts and
+no-clobber restore. Native UI restoration survives reload; the earlier in-memory Undo remains
+only a convenience, not the sole recovery route.

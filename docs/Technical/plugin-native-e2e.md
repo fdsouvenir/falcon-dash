@@ -120,3 +120,12 @@ Date unit tests cover daylight-saving offsets, UTC epoch, missing values and mal
 The browser captures both widths after these assertions; this is a focused finish, not a redesign.
 
 Passing browser cases do not certify full v4 scope. See [the current scope checklist](plugin-v4-scope.md).
+
+## Expanded required matrix
+
+Additional cases cover full Work text and multiple history pages, retained Documents folder/
+upload/download/copy-path and durable trash restoration after reload, protected Vault entry move/
+removal/private recovery listing, safe missing-material connection diagnostics and native Work
+attention, and keyboard dialog interaction plus 320px reduced-motion reflow across all modules.
+The missing-material fixture fails before provider I/O; it is not a live Cloudflare test. Private
+Vault/recovery directories are excluded from evidence uploads. No success-skip closes these cases.

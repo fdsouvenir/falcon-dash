@@ -27,6 +27,9 @@ jobs:
           registry-url: https://npm.pkg.github.com
           scope: '@fdsouvenir'
 
+      - name: Verify exact release tag and registry
+        run: node scripts/verify-release-metadata.mjs "$GITHUB_REF_NAME"
+
       - run: npm ci
 
       - name: Install pinned plugin SDK and Vault prerequisite
@@ -36,6 +39,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y keepassxc
 
-      - run: npm publish
+      - run: npm publish --tag "$NPM_DIST_TAG"
         env:
+          NPM_DIST_TAG: ${{ contains(github.ref_name, '-') && 'next' || 'latest' }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

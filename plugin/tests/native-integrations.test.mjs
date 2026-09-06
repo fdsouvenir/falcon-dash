@@ -80,3 +80,64 @@ test('Native OAuth fails explicitly without a configured callback and rechecks c
 		{ code: 'authority_changed' }
 	);
 });
+
+test('Credential rebinding requires Vault ownership before metadata or connection writes', async () => {
+	let touched = 0;
+	const service = {
+		vault: {
+			authorize() {
+				throw Error('owner required');
+			},
+			async metadata() {
+				touched++;
+			}
+		},
+		rebind() {
+			touched++;
+		}
+	};
+	await assert.rejects(
+		nativeIntegration(
+			service,
+			null,
+			{
+				action: 'rebind',
+				input: { connection_id: 'one', vault_handle: 'private', expected_version: 1 }
+			},
+			client(),
+			() => {}
+		),
+		/owner required/
+	);
+	assert.equal(touched, 0);
+});
+test('Credential rebinding retires original connection authority during metadata preparation', async () => {
+	let writes = 0;
+	const c = client(),
+		service = {
+			vault: {
+				authorize() {},
+				async metadata() {
+					c.invalidated = true;
+					return { version: 1 };
+				}
+			},
+			rebind() {
+				writes++;
+			}
+		};
+	await assert.rejects(
+		nativeIntegration(
+			service,
+			null,
+			{
+				action: 'rebind',
+				input: { connection_id: 'one', vault_handle: 'private', expected_version: 1 }
+			},
+			c,
+			() => {}
+		),
+		{ code: 'authority_changed' }
+	);
+	assert.equal(writes, 0);
+});

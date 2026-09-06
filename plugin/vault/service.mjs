@@ -51,7 +51,9 @@ export class Vault {
 		);
 	}
 	async worker(request, authority = internalAuthority) {
-		if (!['initialize', 'unlock', 'lock', 'audit'].includes(request.action)) {
+		if (
+			!['initialize', 'unlock', 'lock', 'audit', 'backup', 'recovery_list'].includes(request.action)
+		) {
 			const original = authority,
 				signal = original.signal
 					? AbortSignal.any([original.signal, this.operationController.signal])
@@ -282,21 +284,25 @@ export class Vault {
 		assert();
 		return result;
 	}
-	async revokeSecretRefs(ids, actor) {
+	async revokeSecretRefs(ids, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({ action: 'revoke_secretrefs', ids, actor });
+		return this.worker({ action: 'revoke_secretrefs', ids, actor }, authority);
 	}
-	async grantSecretRefs(ids, actor) {
+	async grantSecretRefs(ids, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({ action: 'grant_secretrefs', ids, actor });
+		return this.worker({ action: 'grant_secretrefs', ids, actor }, authority);
 	}
-	async audit(actor, { limit = 25, before = Number.MAX_SAFE_INTEGER } = {}) {
+	async audit(
+		actor,
+		{ limit = 25, before = Number.MAX_SAFE_INTEGER } = {},
+		authority = internalAuthority
+	) {
 		requireValue(
 			this.owners.has(actor) && actor.startsWith('human:'),
 			'access_denied',
 			'Only an owner can read Vault access history'
 		);
-		return this.worker({ action: 'audit', actor, limit, before });
+		return this.worker({ action: 'audit', actor, limit, before }, authority);
 	}
 	async revealField(id, field, actor, authority = internalAuthority) {
 		this.authorize(actor, true);

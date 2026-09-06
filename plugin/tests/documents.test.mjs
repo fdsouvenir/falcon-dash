@@ -191,3 +191,22 @@ test('Document growth after fstat cannot trigger an unbounded allocation or read
 	assert.equal(child.error, undefined);
 	assert.equal(child.status, 0, child.stderr);
 });
+
+test('Durable trash can be rediscovered after UI state loss, excludes corrupt records and denies other actors', (t) => {
+	const { service, actor, input, path } = setup(t);
+	service.write({ ...input, content: 'Recover me', expected_version: null }, actor);
+	const read = service.read(input, actor);
+	const item = service.trash({ ...input, expected_version: read.version, confirmed: true }, actor);
+	assert.equal(service.trash_list({ root_id: 'test' }, actor).entries[0].trash_id, item.trash_id);
+	assert.throws(() => service.trash_list({ root_id: 'test' }, 'human:other'), {
+		code: 'access_denied'
+	});
+	fs.writeFileSync(
+		`${path}/.falcon-trash/00000000-0000-0000-0000-000000000000.json`,
+		'{"path":"../credentials.json"}'
+	);
+	assert.equal(service.trash_list({ root_id: 'test' }, actor).unavailable, 1);
+	service.restore({ root_id: 'test', trash_id: item.trash_id }, actor);
+	assert.equal(service.read(input, actor).content, 'Recover me');
+	assert.equal(service.trash_list({ root_id: 'test' }, actor).entries.length, 0);
+});

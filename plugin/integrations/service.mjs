@@ -11,13 +11,14 @@ function processStart(pid) {
 	}
 }
 export class Integrations {
-	constructor(path, vault, adapters) {
+	constructor(path, vault, adapters, onAttention = null) {
 		this.db = privateDatabase(path, { maxVersion: 1, allowUnversioned: true });
 		this.path = path;
 		this.inflight = new Set();
 		this.closing = false;
 		this.vault = vault;
 		this.adapters = adapters;
+		this.onAttention = onAttention;
 		this.db.exec(`PRAGMA journal_mode=WAL;PRAGMA synchronous=FULL;PRAGMA busy_timeout=5000;
   CREATE TABLE IF NOT EXISTS connections(id TEXT PRIMARY KEY,version INTEGER NOT NULL,body TEXT NOT NULL) STRICT;
   CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,connection_id TEXT NOT NULL,action TEXT NOT NULL,at INTEGER NOT NULL,outcome TEXT NOT NULL) STRICT;PRAGMA user_version=1;`);
@@ -46,43 +47,200 @@ export class Integrations {
 			.run(c.version, JSON.stringify(c), c.id, expected);
 		requireValue(result.changes === 1, 'authority_changed', 'Connection changed during operation');
 	}
+	invalidateCredential(handle, authority) {
+		authority.assert();
+		requireValue(!this.closing, 'unavailable', 'Integration service is stopping');
+		this.db.exec('BEGIN IMMEDIATE');
+		try {
+			for (const row of this.db.prepare('SELECT body FROM connections').all()) {
+				const c = JSON.parse(String(row.body));
+				if (c.vault_handle !== handle || c.owner !== 'falcon') continue;
+				c.version++;
+				c.phase = 'idle';
+				c.paused = true;
+				c.health = 'unavailable';
+				c.validated_capabilities = [];
+				c.last_success = null;
+				c.expires_at = null;
+				c.reauthorize_at = null;
+				c.next_refresh_at = null;
+				c.next_at = null;
+				c.error_code = null;
+				this.save(c);
+				this.audit(c.id, 'credential_change', 'paused_unvalidated');
+			}
+			authority.assert();
+			this.db.exec('COMMIT');
+		} catch (error) {
+			this.db.exec('ROLLBACK');
+			throw error;
+		}
+	}
+
 	list(actor) {
 		return this.db
 			.prepare('SELECT body FROM connections')
 			.all()
 			.map((r) => JSON.parse(String(r.body)))
 			.filter((c) => c.actors.includes(actor))
-			.map(
-				({
-					id,
-					provider,
-					purpose,
-					owner,
+			.map((c) => {
+				const freshness =
+					c.last_success && Date.now() - c.last_success < 3600000 ? 'current' : 'stale';
+				const expiring =
+					c.health === 'healthy' &&
+					Number.isFinite(c.expires_at) &&
+					c.expires_at <= Date.now() + 300000;
+				const health = c.refresh_uncertain
+					? 'reauthorization_required'
+					: expiring
+						? 'expiring'
+						: c.health;
+				const guidance = c.refresh_uncertain
+					? 'The previous refresh outcome is uncertain. Supply renewed protected credentials or a new binding before retrying; successful access validation does not prove refresh-token lineage.'
+					: expiring
+						? 'The recorded credential expiry is near or has passed. Refresh supported credentials, or rotate static tokens in Vault, then test; access-token expiry alone does not imply fresh consent is required.'
+						: c.disconnected
+							? 'Replace or renew the credential in Vault, then explicitly prepare reconnection. Reconnection does not validate access.'
+							: c.owner === 'native'
+								? 'Use the native credential owner; Falcon does not refresh this connection.'
+								: c.error_code === 'scope_failure'
+									? 'Review the provider account and required permissions, then test again.'
+									: health === 'reauthorization_required'
+										? 'Complete provider consent or rotate the credential in Vault before testing again.'
+										: c.error_code === 'vault_locked'
+											? 'Unlock Vault and check execution grants before retrying.'
+											: c.paused
+												? 'Maintenance is paused. Resume explicitly when the credential is ready.'
+												: c.health === 'healthy' && freshness === 'current' && !expiring
+													? 'Last validation succeeded for the listed capabilities only.'
+													: 'Validation is unavailable, stale or expiring. Test before relying on this connection.';
+				return {
+					id: c.id,
+					provider: c.provider,
+					purpose: c.purpose,
+					owner: c.owner,
 					health,
-					last_success,
-					last_failure,
-					next_at,
-					paused,
-					version,
-					phase,
-					validated_capabilities = []
-				}) => ({
-					id,
-					provider,
-					purpose,
-					owner,
-					health,
-					last_success,
-					last_failure,
-					next_at,
-					paused,
-					version,
-					phase,
-					validated_capabilities,
-					freshness: last_success && Date.now() - last_success < 3600000 ? 'current' : 'stale'
-				})
-			);
+					last_success: c.last_success,
+					last_failure: c.last_failure,
+					next_at: c.next_at,
+					paused: c.paused,
+					version: c.version,
+					phase: c.phase,
+					validated_capabilities: c.validated_capabilities ?? [],
+					freshness,
+					account_id: c.account_id ?? null,
+					credential_ref:
+						c.owner === 'falcon'
+							? { kind: 'vault', handle: c.vault_handle ?? null }
+							: { kind: 'native' },
+					attention_work_id: c.attention_work_id ?? null,
+					actors: c.actors,
+					disconnected: !!c.disconnected,
+					expires_at: c.expires_at ?? null,
+					reauthorize_at: c.reauthorize_at ?? null,
+					next_action: c.next_action ?? (c.next_at ? 'test' : null),
+					failure_code: c.error_code ?? null,
+					guidance,
+					agent_use:
+						health === 'healthy' && freshness === 'current' && !c.disconnected
+							? 'validated_capabilities_only'
+							: 'not_currently_validated'
+				};
+			});
 	}
+	history(id, actor, query = {}) {
+		exact(query, ['offset', 'limit']);
+		const { offset = 0, limit = 25 } = query;
+		const c = this.get(id);
+		requireValue(c.actors.includes(actor), 'access_denied', 'Connection access is not authorized');
+		requireValue(
+			Number.isInteger(offset) &&
+				offset >= 0 &&
+				Number.isInteger(limit) &&
+				limit > 0 &&
+				limit <= 100,
+			'invalid_filter',
+			'Invalid audit pagination'
+		);
+		const rows = this.db
+			.prepare(
+				'SELECT id,action,at,outcome FROM audit WHERE connection_id=? ORDER BY id DESC LIMIT ? OFFSET ?'
+			)
+			.all(id, limit + 1, offset);
+		return {
+			entries: rows.slice(0, limit),
+			next_offset: rows.length > limit ? offset + limit : null
+		};
+	}
+	rebind(id, handle, expectedVersion, actor, authority) {
+		authority.assert();
+		const c = this.get(id);
+		requireValue(
+			actor.startsWith('human:') && c.actors.includes(actor) && c.owner === 'falcon',
+			'access_denied',
+			'Human connection owner required'
+		);
+		requireValue(
+			c.version === expectedVersion && c.phase === 'idle',
+			'version_conflict',
+			'Pause maintenance and review the current connection first'
+		);
+		if (handle !== c.vault_handle) {
+			c.refresh_uncertain = false;
+			c.uncertain_credential_version = null;
+		}
+		c.vault_handle = handle;
+		c.health = 'unavailable';
+		c.paused = true;
+		c.validated_capabilities = [];
+		c.last_success = null;
+		c.expires_at = null;
+		c.reauthorize_at = null;
+		c.next_at = null;
+		c.next_refresh_at = null;
+		c.error_code = null;
+		c.version++;
+		authority.assert();
+		this.compareAndSave(c, expectedVersion);
+		this.audit(id, 'credential_rebind', 'paused_unvalidated');
+		return { id, version: c.version, health: c.health, paused: true };
+	}
+
+	reconnect(id, expectedVersion, actor, authority = internalAuthority) {
+		authority.assert();
+		const c = this.get(id);
+		requireValue(
+			actor.startsWith('human:') && c.actors.includes(actor) && c.owner === 'falcon',
+			'access_denied',
+			'Human connection owner required'
+		);
+		requireValue(
+			c.version === expectedVersion && c.phase === 'idle',
+			'version_conflict',
+			'Connection changed; refresh before reconnecting'
+		);
+		requireValue(
+			c.disconnected || c.health === 'reauthorization_required',
+			'invalid_transition',
+			'Connection does not need reconnection'
+		);
+		c.disconnected = false;
+		c.last_success = null;
+		c.expires_at = null;
+		c.reauthorize_at = null;
+		c.next_refresh_at = null;
+		c.paused = true;
+		c.health = 'unavailable';
+		c.validated_capabilities = [];
+		c.next_at = null;
+		c.error_code = null;
+		c.version++;
+		authority.assert();
+		this.compareAndSave(c, expectedVersion);
+		this.audit(id, 'prepare_reconnection', 'unvalidated');
+		return { id, version: c.version, paused: true, health: 'unavailable' };
+	}
+
 	create(input, actor) {
 		exact(input, ['id', 'provider', 'purpose', 'owner', 'vault_handle', 'actors', 'account_id']);
 		requireValue(this.adapters[input.provider], 'unsupported_provider', 'Adapter is unavailable');
@@ -232,6 +390,15 @@ export class Integrations {
 						}
 					};
 					ioGuard.assert();
+					if (action === 'refresh' && c.refresh_uncertain)
+						requireValue(
+							Number.isInteger(c.uncertain_credential_version) &&
+								record.version > c.uncertain_credential_version,
+							'reauthorization_required',
+							'Renew the credential before retrying an uncertain refresh'
+						);
+					c.operation_vault_version = record.version;
+					this.compareAndSave(c, c.version);
 					if (adapter.dispatch_guarded !== true) providerStarted = true;
 					const output = await adapter[action](record.material, c, ioGuard);
 					ioGuard.assert();
@@ -271,6 +438,14 @@ export class Integrations {
 			if (action === 'test') c.last_success = Date.now();
 			else c.last_maintenance_success = Date.now();
 			c.last_failure = null;
+			c.error_code = null;
+			c.failures = 0;
+			if (action === 'refresh') {
+				c.refresh_uncertain = false;
+				c.uncertain_credential_version = null;
+			}
+			if (Number.isFinite(result.expires_at)) c.expires_at = result.expires_at;
+			if (Number.isFinite(result.reauthorize_at)) c.reauthorize_at = result.reauthorize_at;
 			if (action === 'refresh') {
 				c.next_refresh_at = result.next_at ?? null;
 				c.next_at = Date.now();
@@ -304,6 +479,19 @@ export class Integrations {
 			const operationVersion = c.version;
 			c.phase = 'idle';
 			c.last_failure = Date.now();
+			if (action === 'refresh' && providerStarted) {
+				c.refresh_uncertain = true;
+				c.uncertain_credential_version = c.operation_vault_version ?? null;
+			}
+			c.error_code = [
+				'scope_failure',
+				'reauthorization_required',
+				'vault_locked',
+				'provider_unavailable',
+				'provider_response_invalid'
+			].includes(e.code)
+				? e.code
+				: 'provider_unavailable';
 			c.health =
 				(action === 'refresh' && providerStarted) || e.code === 'reauthorization_required'
 					? 'reauthorization_required'
@@ -320,6 +508,28 @@ export class Integrations {
 			c.version++;
 			this.compareAndSave(c, operationVersion);
 			this.audit(id, action, c.health);
+			if (
+				this.onAttention &&
+				(c.failures >= 3 || ['scope_failure', 'reauthorization_required'].includes(c.error_code))
+			) {
+				try {
+					const attention = this.onAttention({
+						id: c.id,
+						provider: c.provider,
+						health: c.health,
+						version: c.version
+					});
+					if (attention) {
+						const savedVersion = c.version;
+						c.attention_work_id = attention;
+						c.version++;
+						this.compareAndSave(c, savedVersion);
+					}
+				} catch {
+					/* The failure remains visible in Integrations; never echo callback/provider data. */
+				}
+			}
+
 			throw new DomainError(
 				c.health,
 				action === 'refresh' && providerStarted
@@ -336,6 +546,10 @@ export class Integrations {
 				(!c.operation_pid || processStart(c.operation_pid) !== c.operation_start)
 			) {
 				c.health = c.phase !== 'testing' ? 'reauthorization_required' : 'unavailable';
+				if (c.phase !== 'testing') {
+					c.refresh_uncertain = true;
+					c.uncertain_credential_version = c.operation_vault_version ?? null;
+				}
 				c.phase = 'idle';
 				c.next_at = null;
 				c.version++;

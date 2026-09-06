@@ -438,6 +438,65 @@ export class Documents {
 			}
 		});
 	}
+	trash_list({ root_id, offset = 0, limit = 50 }, actor, authority = internalAuthority) {
+		const root = this.root(root_id, actor, true);
+		requireValue(
+			Number.isInteger(offset) &&
+				offset >= 0 &&
+				Number.isInteger(limit) &&
+				limit > 0 &&
+				limit <= 200,
+			'invalid_input',
+			'Invalid trash pagination'
+		);
+		authority.assert();
+		let fd;
+		try {
+			fd = fs.openSync(
+				`/proc/self/fd/${root.fd}/.falcon-trash`,
+				O_RDONLY | O_DIRECTORY | O_NOFOLLOW
+			);
+		} catch (e) {
+			if (e.code === 'ENOENT') return { entries: [], next_offset: null, total: 0, unavailable: 0 };
+			throw new DomainError('unsafe_path', 'Trash directory is unavailable');
+		}
+		try {
+			const names = fs
+				.readdirSync(`/proc/self/fd/${fd}`)
+				.filter((n) => /^[0-9a-f-]{36}\.json$/.test(n))
+				.sort();
+			let unavailable = 0;
+			const entries = [];
+			for (const name of names.slice(offset, offset + limit)) {
+				try {
+					const metadata = JSON.parse(
+						this.readBytes(`/proc/self/fd/${fd}/${name}`).bytes.toString('utf8')
+					);
+					this.parts(metadata.path);
+					const item = name.slice(0, -5),
+						content = this.readBytes(`/proc/self/fd/${fd}/${item}`);
+					requireValue(
+						hash(content.bytes) === metadata.version,
+						'version_conflict',
+						'Trash integrity mismatch'
+					);
+					entries.push({ trash_id: item, path: metadata.path, at: metadata.at });
+				} catch {
+					unavailable++;
+				}
+			}
+			authority.assert();
+			return {
+				entries,
+				total: names.length,
+				unavailable,
+				next_offset: offset + limit < names.length ? offset + limit : null
+			};
+		} finally {
+			fs.closeSync(fd);
+		}
+	}
+
 	restore({ root_id, trash_id }, actor, authority = internalAuthority) {
 		requireValue(
 			typeof trash_id === 'string' && /^[0-9a-f-]{36}$/.test(trash_id),

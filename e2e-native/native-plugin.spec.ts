@@ -405,3 +405,205 @@ test('native sidebar navigation opens the registered page on desktop and narrow 
 	}
 	await capture(page, 'native-sidebar-navigation', info.project.name);
 });
+
+test('Work full-content recovery and paginated history are reachable in the real shell', async ({
+	page
+}, info) => {
+	await openModule(page, 'Work');
+	const app = page.locator('.falcon-native');
+	await app.getByRole('button', { name: 'Browse', exact: true }).click();
+	await app.getByLabel('Search work').fill('Inspect full history and saved evidence');
+	await app.getByLabel('Search work').press('Tab');
+	await app
+		.locator('.record')
+		.filter({ hasText: 'Inspect full history and saved evidence' })
+		.click();
+	await expect(app).toContainText('Some saved text is shortened');
+	await app.getByRole('button', { name: 'Read full saved content', exact: true }).click();
+	await expect(app).toContainText('FULL-SAVED-CONTENT-END');
+	await app.getByRole('button', { name: 'Load history', exact: true }).click();
+	await expect(app.getByRole('button', { name: 'Load more history', exact: true })).toBeVisible();
+	await app.getByRole('button', { name: 'Load more history', exact: true }).click();
+	await expect(app.getByRole('button', { name: 'Load more history', exact: true })).toBeHidden();
+	await capture(page, 'work-full-history', info.project.name);
+	await app.getByLabel('Action', { exact: true }).selectOption('wait');
+	let form = page.locator('openclaw-modal-dialog');
+	await form.getByLabel('Waiting For *', { exact: true }).fill('Independent review');
+	await form.getByLabel('Resume When *', { exact: true }).fill('Review is returned');
+	await form.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(form).toHaveCount(0);
+	await expect(app.getByText('Task · Waiting', { exact: true })).toBeVisible();
+	await app.getByLabel('Action', { exact: true }).selectOption('resume');
+	form = page.locator('openclaw-modal-dialog');
+	await form.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(form).toHaveCount(0);
+	await expect(app.getByText('Task · Ready', { exact: true })).toBeVisible();
+});
+
+test('Documents retained folder upload download and durable trash workflows survive reload', async ({
+	page
+}, info) => {
+	await openModule(page, 'Documents');
+	const app = page.locator('.falcon-native');
+	await app.getByRole('button', { name: 'workspace', exact: true }).click();
+	await app.getByRole('button', { name: 'New folder', exact: true }).click();
+	let dialog = page.locator('openclaw-modal-dialog');
+	const folder = 'retained-' + info.project.name;
+	await dialog.getByLabel('Name', { exact: true }).fill(folder);
+	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	await app.locator('.record').filter({ hasText: folder }).click();
+	await app.getByLabel('Upload text file', { exact: true }).setInputFiles({
+		name: 'retained.md',
+		mimeType: 'text/markdown',
+		buffer: Buffer.from('# Retained document\nSynthetic upload acceptance.')
+	});
+	await app.locator('.record').filter({ hasText: 'retained.md' }).click();
+	await expect(app.getByLabel('Document content', { exact: true })).toHaveValue(
+		/Synthetic upload acceptance/
+	);
+	await app.getByRole('button', { name: 'Copy path', exact: true }).click();
+	await expect
+		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+		.toContain(folder + '/retained.md');
+	const downloading = page.waitForEvent('download');
+	await app.getByRole('button', { name: 'Download', exact: true }).click();
+	expect((await downloading).suggestedFilename()).toBe('retained.md');
+	await app.getByRole('button', { name: 'Move to trash', exact: true }).click();
+	dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByRole('button', { name: 'Confirm', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	await openModule(page, 'Documents');
+	await app.getByRole('button', { name: 'workspace', exact: true }).click();
+	await app.locator('.record').filter({ hasText: folder }).click();
+	await app.getByRole('button', { name: 'Browse trash', exact: true }).click();
+	await app
+		.getByRole('button', { name: 'Restore ' + folder + '/retained.md', exact: true })
+		.click();
+	await page
+		.locator('openclaw-modal-dialog')
+		.getByRole('button', { name: 'Confirm', exact: true })
+		.click();
+	await app.locator('.record').filter({ hasText: 'retained.md' }).click();
+	await expect(app.getByLabel('Document content', { exact: true })).toHaveValue(
+		/Synthetic upload acceptance/
+	);
+	await capture(page, 'documents-retained-workflows', info.project.name);
+});
+
+test('Vault management preserves readback and exposes private recovery after removal', async ({
+	page
+}, info) => {
+	await openModule(page, 'Vault');
+	await unlock(page);
+	const app = page.locator('.falcon-native'),
+		id = 'managed-' + info.project.name,
+		group = 'managed-group-' + info.project.name;
+	await app.getByRole('button', { name: 'Add credential', exact: true }).click();
+	let dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByLabel('Entry path', { exact: true }).fill(id);
+	await dialog.getByLabel('Protected value', { exact: true }).fill('SYNTHETIC-MANAGED-UI');
+	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	await app.getByRole('button', { name: 'New group', exact: true }).click();
+	dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByLabel('Group path', { exact: true }).fill(group);
+	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	const entry = app
+		.locator('.list-zone')
+		.filter({ has: page.getByRole('heading', { name: id, exact: true }) });
+	await entry.getByRole('button', { name: 'Rename or move entry', exact: true }).click();
+	dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByLabel('Destination entry path', { exact: true }).fill(group + '/moved');
+	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	await app.getByRole('button', { name: group, exact: true }).click();
+	const moved = app
+		.locator('.list-zone')
+		.filter({ has: page.getByRole('heading', { name: group + '/moved', exact: true }) });
+	await moved.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(moved.locator('output')).toHaveText('SYNTHETIC-MANAGED-UI');
+	await moved.getByRole('button', { name: 'Hide', exact: true }).click();
+	await moved.getByRole('button', { name: 'Remove credential', exact: true }).click();
+	await page
+		.locator('openclaw-modal-dialog')
+		.getByRole('button', { name: 'Confirm', exact: true })
+		.click();
+	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
+	await app.getByRole('button', { name: 'Remove empty group', exact: true }).click();
+	await page
+		.locator('openclaw-modal-dialog')
+		.getByRole('button', { name: 'Confirm', exact: true })
+		.click();
+	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
+	await app.getByRole('button', { name: 'Recovery snapshots', exact: true }).click();
+	await expect(app).toContainText('Private recovery snapshots');
+	await expect(app).toContainText('protected host storage');
+	await capture(page, 'vault-management-recovery', info.project.name);
+});
+
+test('Missing provider material produces real explanations and a native Work review without provider I/O', async ({
+	page
+}, info) => {
+	await openModule(page, 'Vault');
+	await unlock(page);
+	await openModule(page, 'Integrations');
+	const app = page.locator('.falcon-native'),
+		purpose = 'Attention fixture ' + info.project.name;
+	await app.getByRole('button', { name: 'Add connection', exact: true }).click();
+	const dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByLabel('Id', { exact: true }).fill('attention-' + info.project.name);
+	await dialog.getByLabel('Provider', { exact: true }).selectOption('cloudflare');
+	await dialog.getByLabel('Purpose', { exact: true }).fill(purpose);
+	await dialog.getByLabel('Vault entry path', { exact: true }).fill('agent-created');
+	await dialog.getByLabel('Provider account ID', { exact: true }).fill('a'.repeat(32));
+	await dialog.getByLabel('Authorized agents/services (comma-separated)', { exact: true }).fill('');
+	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(dialog).toHaveCount(0);
+	const connection = app
+		.locator('.list-zone')
+		.filter({ has: page.getByRole('heading', { name: purpose, exact: true }) });
+	await connection.getByRole('button', { name: 'Test connection', exact: true }).click();
+	await expect(app.locator('[role=alert]')).toBeVisible();
+	await app.getByRole('button', { name: 'Refresh', exact: true }).click();
+	await expect(connection).toContainText('Reauthorization Required');
+	await connection.getByText('Account, usage and lifecycle', { exact: true }).click();
+	await connection.getByRole('button', { name: 'Load connection history', exact: true }).click();
+	await expect(connection).toContainText('Reauthorization Required');
+	await capture(page, 'integrations-explanation-audit', info.project.name);
+	await connection.getByRole('button', { name: 'Open connection review', exact: true }).click();
+	await expect(page.locator('.falcon-native')).toContainText(
+		'Review cloudflare connection failure'
+	);
+});
+
+test('Native keyboard forms and reduced-motion 320px reflow remain usable', async ({
+	page
+}, info) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await openModule(page, 'Work');
+	const app = page.locator('.falcon-native');
+	await app.getByRole('button', { name: 'Create work', exact: true }).focus();
+	await page.keyboard.press('Enter');
+	const dialog = page.locator('openclaw-modal-dialog');
+	await dialog.getByLabel('Type', { exact: true }).focus();
+	await page.keyboard.press('Tab');
+	await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toBeFocused();
+	await page.keyboard.press('Escape');
+	await expect(dialog).toHaveCount(0);
+	await page.setViewportSize({ width: 320, height: 900 });
+	for (const module of ['Work', 'Integrations', 'Vault', 'Documents']) {
+		await openModule(page, module);
+		await capture(page, module.toLowerCase() + '-reflow-reduced-motion', info.project.name);
+		expect(
+			await app
+				.locator('button')
+				.first()
+				.evaluate((node) => getComputedStyle(node).transitionDuration)
+		).toBe('0s');
+	}
+	expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+		true
+	);
+});

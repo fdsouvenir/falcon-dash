@@ -106,3 +106,45 @@ test('Protected selected-value return is discarded after connection revocation',
 		{ code: 'authority_changed' }
 	);
 });
+
+test('Owner credential relocation and removal fence old handles and retain private recovery snapshots', async (t) => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-manage-vault-')),
+		vault = new Vault(dir, { owners: ['human:owner'], executors: ['agent:worker'] });
+	t.after(async () => {
+		await vault.lock();
+		fs.rmSync(dir, { recursive: true });
+	});
+	const c = client(),
+		run = (action, input = {}) => protectedVault(vault, { action, input }, c, () => {});
+	await run('initialize');
+	await run('unlock');
+	await run('group', { id: 'team' });
+	await run('create', { id: 'first', material: { api_key: 'SYNTHETIC-MOVABLE' } });
+	await run('create', { id: 'occupied', material: { api_key: 'SYNTHETIC-OTHER' } });
+	await assert.rejects(
+		run('relocate', { id: 'first', destination: 'occupied', expected_version: 1, confirmed: true })
+	);
+	const moved = await run('relocate', {
+		id: 'first',
+		destination: 'team/renamed',
+		expected_version: 1,
+		confirmed: true
+	});
+	assert.ok(moved.recovery_id);
+	await assert.rejects(run('reveal', { id: 'first', field: 'api_key' }));
+	assert.equal(
+		(await run('reveal', { id: 'team/renamed', field: 'api_key' })).value,
+		'SYNTHETIC-MOVABLE'
+	);
+	await assert.rejects(run('group_remove', { id: 'team', confirmed: true }));
+	await run('remove_entry', {
+		id: 'team/renamed',
+		expected_version: moved.version,
+		confirmed: true
+	});
+	await assert.rejects(run('reveal', { id: 'team/renamed', field: 'api_key' }));
+	await run('group_remove', { id: 'team', confirmed: true });
+	const snapshots = await run('recovery_list');
+	assert.ok(snapshots.snapshots.length >= 3);
+	assert.equal(JSON.stringify(snapshots).includes('SYNTHETIC-MOVABLE'), false);
+});

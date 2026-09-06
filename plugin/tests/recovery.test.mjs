@@ -56,3 +56,32 @@ test('Quiesced encrypted Vault and private key backup restores synthetic owner a
 	assert.equal((await restored.reveal('sample', owners[0])).password, 'SYNTHETIC-RESTORE-CANARY');
 	await restored.lock();
 });
+
+test('Private Vault snapshot restores only into a new offline destination and rejects corruption', async (t) => {
+	const { restoreVaultSnapshot } = await import('../vault/recovery.mjs');
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-private-recovery-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const owners = ['human:recovery'];
+	const source = new Vault(path.join(directory, 'source'), { owners });
+	await source.initialize(owners[0]);
+	await source.unlock(owners[0]);
+	await source.create('sample', { password: 'SYNTHETIC-RECOVERY-ONLY' }, owners[0]);
+	const snapshot = await source.worker({ action: 'backup', actor: owners[0] });
+	assert.equal(JSON.stringify(snapshot).includes('SYNTHETIC-RECOVERY-ONLY'), false);
+	const from = path.join(source.directory, 'recovery', snapshot.id),
+		target = path.join(directory, 'restored');
+	assert.throws(() => restoreVaultSnapshot(from, target));
+	assert.equal(restoreVaultSnapshot(from, target, { quiesced: true }).locked, true);
+	assert.throws(() => restoreVaultSnapshot(from, target, { quiesced: true }));
+	const restored = new Vault(target, { owners });
+	await restored.unlock(owners[0]);
+	assert.equal((await restored.reveal('sample', owners[0])).password, 'SYNTHETIC-RECOVERY-ONLY');
+	await restored.lock();
+	fs.appendFileSync(path.join(from, 'credentials.kdbx'), 'corrupt');
+	assert.throws(
+		() => restoreVaultSnapshot(from, path.join(directory, 'corrupt-restore'), { quiesced: true }),
+		/integrity/
+	);
+	assert.equal(fs.existsSync(path.join(directory, 'corrupt-restore')), false);
+	await source.lock();
+});

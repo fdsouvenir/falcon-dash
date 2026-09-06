@@ -77,11 +77,13 @@ arguments. It does not activate native UI, send channel messages, or use real pr
 
 ## Not a release or cutover
 
-Remaining gates include complete domain/relationship audits, data-specific v2/v3 conversion,
-complete UI workflows/accessibility, integration explanation/audit/attention and additional adapter
-capabilities, live proof, production SecretRef deployment compatibility, current runtime skills,
-release/upgrade guards and full recovery acceptance. Protected native credential transport and the
-scoped browser matrix are implemented, not awaiting UI approval.
+Remaining gates are the explicitly unsettled #363 domain decisions, current packaged skill
+authoring, real provider/application consent and dataset-specific identity/disposition review.
+Work read/history/Ask workflows, Vault management/private recovery and legacy conversion,
+connection explanations/audit/rebinding/Work attention, durable Documents trash, and release/
+offline-placement guards are now implemented. See the [acceptance map](docs/Technical/plugin-v4-scope.md)
+and [installed-artifact/recovery guide](docs/Technical/plugin-v4-installation.md). No full-product
+or production readiness is inferred from a bounded browser matrix.
 The current supported provider-request fixture is not proof for every OpenClaw harness/provider.
 
 [Conversion and rollback preparation](docs/Technical/plugin-v4.md#deferred-controlled-cutover-not-executed)

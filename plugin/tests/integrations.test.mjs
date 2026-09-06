@@ -64,6 +64,16 @@ test('Refresh concurrency, restart ambiguity, and native owner separation', asyn
 	service.save(c);
 	service.recover();
 	assert.equal(service.get('test').health, 'reauthorization_required');
+	await assert.rejects(() => service.run('test', 'refresh', 'agent:test'), {
+		code: 'reauthorization_required'
+	});
+	assert.equal(calls, 1, 'uncertain refresh must not replay the previous credential');
+	service.adapters.fixture.test = async () => ({ health: 'healthy' });
+	await service.run('test', 'test', 'agent:test');
+	await assert.rejects(() => service.run('test', 'refresh', 'agent:test'), {
+		code: 'reauthorization_required'
+	});
+	assert.equal(calls, 1, 'access validation cannot clear uncertain refresh lineage');
 	service.create(
 		{
 			id: 'native',
@@ -199,4 +209,113 @@ test('HighLevel readiness validates the documented API version and exact configu
 		() => wrong.highlevel.test({ access_token: 'SYNTHETIC' }, { account_id: 'synthetic-location' }),
 		{ code: 'provider_response_invalid' }
 	);
+});
+
+test('Connection explanations preserve safe expiry/usage, scoped audit and explicit unvalidated reconnection', async (t) => {
+	const dir = mkdtempSync(tmpdir() + '/falcon-explanation-');
+	const service = new Integrations(
+		dir + '/integrations.db',
+		{},
+		{ fixture: { supports_refresh: false } }
+	);
+	t.after(async () => {
+		await service.close();
+		rmSync(dir, { recursive: true });
+	});
+	service.create(
+		{
+			id: 'metadata',
+			provider: 'fixture',
+			purpose: 'Review connection access',
+			owner: 'falcon',
+			vault_handle: 'opaque',
+			actors: ['human:owner'],
+			account_id: 'synthetic-account'
+		},
+		'human:owner'
+	);
+	let c = service.get('metadata');
+	c.health = 'healthy';
+	c.last_success = Date.now();
+	c.expires_at = Date.now() + 1000;
+	service.save(c);
+	const row = service.list('human:owner')[0];
+	assert.equal(row.health, 'expiring');
+	assert.equal(row.agent_use, 'not_currently_validated');
+	assert.equal(row.account_id, 'synthetic-account');
+	assert.equal(row.vault_handle, undefined);
+	await service.run(c.id, 'disconnect', 'human:owner');
+	c = service.get(c.id);
+	assert.throws(() => service.reconnect(c.id, c.version, 'agent:other'), { code: 'access_denied' });
+	service.reconnect(c.id, c.version, 'human:owner');
+	assert.equal(service.get(c.id).health, 'unavailable');
+	assert.equal(service.get(c.id).paused, true);
+	assert.ok(
+		service.history(c.id, 'human:owner').entries.some((e) => e.action === 'prepare_reconnection')
+	);
+	assert.throws(() => service.history(c.id, 'human:other'), { code: 'access_denied' });
+});
+
+test('Actionable connection attention creates one ordinary review Task and preserves its lifecycle', async (t) => {
+	const { WorkStore } = await import('../work/store.mjs');
+	const { recordConnectionAttention } = await import('../integrations/attention.mjs');
+	const dir = mkdtempSync(tmpdir() + '/falcon-connection-attention-');
+	const work = new WorkStore(dir + '/work.db');
+	t.after(() => {
+		work.close();
+		rmSync(dir, { recursive: true });
+	});
+	const connection = { id: 'fixture', provider: 'cloudflare', health: 'broken', version: 3 };
+	const id = recordConnectionAttention(work, connection);
+	assert.equal(work.get(id).status, 'ready');
+	assert.equal(recordConnectionAttention(work, { ...connection, version: 4 }), id);
+	assert.equal(work.all().length, 1);
+	assert.equal(work.get(id).agent_id, undefined);
+	assert.equal(JSON.stringify(work.detail(id)).includes('access_token'), false);
+});
+
+test('Human credential changes pause dependent maintenance and discard stale expiry/validation', async (t) => {
+	const dir = mkdtempSync(tmpdir() + '/falcon-invalidate-'),
+		service = new Integrations(dir + '/integrations.db', {}, { fixture: {} });
+	t.after(async () => {
+		await service.close();
+		rmSync(dir, { recursive: true });
+	});
+	for (const id of ['changed', 'unrelated'])
+		service.create(
+			{
+				id,
+				provider: 'fixture',
+				purpose: 'Scoped credential lifecycle',
+				owner: 'falcon',
+				vault_handle: id,
+				actors: ['human:owner']
+			},
+			'human:owner'
+		);
+	const before = service.get('changed');
+	before.health = 'healthy';
+	before.last_success = Date.now();
+	before.expires_at = Date.now() + 3600000;
+	service.save(before);
+	assert.throws(
+		() =>
+			service.invalidateCredential('changed', {
+				assert() {
+					throw Error('retired');
+				}
+			}),
+		/retired/
+	);
+	assert.equal(service.get('changed').paused, false);
+	service.invalidateCredential('changed', { assert() {} });
+	const after = service.get('changed');
+	assert.equal(after.paused, true);
+	assert.equal(after.health, 'unavailable');
+	assert.equal(after.expires_at, null);
+	assert.ok(after.version > before.version);
+	assert.equal(service.get('unrelated').paused, false);
+	service.rebind('changed', 'replacement', after.version, 'human:owner', { assert() {} });
+	assert.equal(service.get('changed').vault_handle, 'replacement');
+	assert.equal(service.get('changed').health, 'unavailable');
 });

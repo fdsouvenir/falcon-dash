@@ -1,3 +1,4 @@
+import { recordConnectionAttention } from './integrations/attention.mjs';
 import { connectionAuthority, internalAuthority, humanIdentity } from './authority.mjs';
 import { defineFeaturePlugin } from 'openclaw/plugin-sdk/feature-plugin';
 import { workFeature } from './work/feature-contract.mjs';
@@ -70,6 +71,7 @@ export default definePluginEntry({
 			}
 			if (name === 'falcon_integrations') {
 				requireValue(actor, 'identity_required', 'A verified actor is required');
+				if (p.action === 'history') return integrations.history(p.id, actor, p.query);
 				return p.action === 'list'
 					? { connections: integrations.list(actor) }
 					: integrations.run(p.id, p.action, actor, guard);
@@ -100,7 +102,8 @@ export default definePluginEntry({
 						'download',
 						'upload',
 						'trash',
-						'restore'
+						'restore',
+						'trash_list'
 					].includes(p.action),
 					'invalid_command',
 					'Unsupported Documents operation'
@@ -148,8 +151,12 @@ export default definePluginEntry({
 						integrations = new Integrations(
 							path.join(directory, 'integrations.db'),
 							vault,
-							adapters()
+							adapters(),
+							work ? (connection) => recordConnectionAttention(work, connection) : null
 						);
+					if (integrations)
+						vault.beforeHumanChange = (handle, authority) =>
+							integrations.invalidateCredential(handle, authority);
 					if (integrations && config.oauthRedirectUris?.length)
 						oauth = new HighLevelOAuth(integrations, { redirectUris: config.oauthRedirectUris });
 					if (integrations) integrations.start('service:falcon-integrations');
@@ -222,9 +229,9 @@ export default definePluginEntry({
 						try {
 							const readActions = {
 								falcon_work: ['list', 'get', 'queue', 'brief', 'history', 'related'],
-								falcon_integrations: ['list'],
+								falcon_integrations: ['list', 'history'],
 								falcon_vault: ['status', 'inventory', 'metadata'],
-								falcon_documents: ['list', 'read', 'download', 'roots', 'copy_path']
+								falcon_documents: ['list', 'read', 'download', 'roots', 'copy_path', 'trash_list']
 							};
 							const writes =
 								typeof params.action !== 'string' || !readActions[name].includes(params.action);

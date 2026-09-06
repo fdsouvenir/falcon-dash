@@ -39,9 +39,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y keepassxc
 
+      - name: Verify package and registry metadata
+        run: node scripts/verify-release-metadata.mjs
+
       - name: Security audit
         run: npm audit --audit-level=high --omit=dev
-        continue-on-error: true
 
       - name: Format check
         run: npm run format:check

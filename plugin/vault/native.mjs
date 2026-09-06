@@ -4,6 +4,26 @@ import { connectionAuthority, humanIdentity } from '../authority.mjs';
 const S = Type.String({ minLength: 1, maxLength: 512 }),
 	O = (p) => Type.Object(p, { additionalProperties: false });
 export const protectedInputs = {
+	relocate: O({
+		id: S,
+		destination: S,
+		expected_version: Type.Integer({ minimum: 1 }),
+		confirmed: Type.Literal(true)
+	}),
+	remove_entry: O({
+		id: S,
+		expected_version: Type.Integer({ minimum: 1 }),
+		confirmed: Type.Literal(true)
+	}),
+	group_remove: O({ id: S, confirmed: Type.Literal(true) }),
+	backup: O({}),
+	recovery_list: O({}),
+	audit: O({
+		limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		before: Type.Optional(Type.Integer({ minimum: 0 }))
+	}),
+	grant_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
+	revoke_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	inventory: O({ group: Type.String({ maxLength: 512 }) }),
 	initialize: O({}),
 	unlock: O({}),
@@ -67,8 +87,40 @@ export async function protectedVault(vault, params, client, ready) {
 		'Invalid protected operation'
 	);
 	const p = params.input;
+	if (
+		vault.beforeHumanChange &&
+		['rotate', 'relocate', 'remove_entry', 'revoke', 'grant'].includes(params.action)
+	) {
+		const metadata = await vault.metadata(p.id, actor, authority);
+		authority.assert();
+		requireValue(
+			metadata.version === p.expected_version,
+			'version_conflict',
+			'Credential changed; refresh before retrying'
+		);
+		vault.beforeHumanChange(p.id, authority);
+	}
 	let result;
 	switch (params.action) {
+		case 'relocate':
+		case 'remove_entry':
+		case 'group_remove':
+			vault.authorize(actor, true);
+			result = await vault.worker({ action: params.action, ...p, actor }, authority);
+			break;
+		case 'backup':
+		case 'recovery_list':
+			result = await vault.worker({ action: params.action, actor }, authority);
+			break;
+		case 'audit':
+			result = await vault.audit(actor, p, authority);
+			break;
+		case 'grant_refs':
+			result = await vault.grantSecretRefs(p.ids, actor, authority);
+			break;
+		case 'revoke_refs':
+			result = await vault.revokeSecretRefs(p.ids, actor, authority);
+			break;
 		case 'inventory':
 			result = await vault.inventory(actor, p.group, authority);
 			break;

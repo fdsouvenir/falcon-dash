@@ -20,7 +20,7 @@ export const tools = {
 				full: { type: 'boolean' },
 				collection: {
 					type: 'string',
-					enum: ['relationships', 'asks', 'associated_work', 'artifacts', 'history']
+					enum: ['relationships', 'asks', 'associated_work', 'artifacts', 'history', 'participants']
 				},
 				query: {
 					type: 'object',
@@ -61,9 +61,17 @@ export const tools = {
 			properties: {
 				action: {
 					type: 'string',
-					enum: ['list', 'test', 'refresh', 'pause', 'resume', 'disconnect']
+					enum: ['list', 'history', 'test', 'refresh', 'pause', 'resume', 'disconnect']
 				},
-				id: { type: 'string' }
+				id: { type: 'string' },
+				query: {
+					type: 'object',
+					additionalProperties: false,
+					properties: {
+						offset: { type: 'integer', minimum: 0 },
+						limit: { type: 'integer', minimum: 1, maximum: 100 }
+					}
+				}
 			}
 		}
 	},
@@ -87,6 +95,7 @@ export const tools = {
 						'upload',
 						'trash',
 						'restore',
+						'trash_list',
 						'roots',
 						'copy_path'
 					]

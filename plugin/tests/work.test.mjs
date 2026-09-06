@@ -226,3 +226,26 @@ test('Waiting preserves explicit typed references without fabricating upstream a
 		{ code: 'invalid_input' }
 	);
 });
+
+test('Attention pages are bounded and participants derive from events rather than assignment lists', (t) => {
+	const { store, call, create } = fixture(t);
+	const ids = [];
+	for (let i = 0; i < 6; i++) {
+		const id = create();
+		call('ready', id);
+		ids.push(id);
+	}
+	const first = store.queue({ limit: 2 });
+	assert.equal(first.buckets.actionable_now.total, 6);
+	assert.equal(first.buckets.actionable_now.next_offset, 2);
+	const second = store.queue({ limit: 2, offset: 2 });
+	assert.equal(second.buckets.actionable_now.items.length, 2);
+	assert.equal(
+		first.buckets.actionable_now.items.some((a) =>
+			second.buckets.actionable_now.items.some((b) => a.id === b.id)
+		),
+		false
+	);
+	assert.ok(store.related(ids[0], 'participants').items.some((x) => x.actor === 'agent:test'));
+	assert.throws(() => store.queue({ offset: -1 }), { code: 'invalid_filter' });
+});

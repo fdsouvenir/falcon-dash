@@ -113,8 +113,10 @@ function schemaEditor(schema, label, value) {
 		toggle.input.value = '';
 		toggle.input.checked = false;
 		part.node.hidden = true;
+		part.node.disabled = true;
 		toggle.input.onchange = () => {
 			part.node.hidden = !toggle.input.checked;
+			part.node.disabled = !toggle.input.checked;
 		};
 		node.append(toggle.wrap, part.node);
 		return { node, read: () => (toggle.input.checked ? part.read() : undefined) };
@@ -181,7 +183,7 @@ function schemaEditor(schema, label, value) {
 		node.append(el('legend', label));
 		const add = (value) => {
 			if (items.length >= (schema.maxItems ?? 50)) return;
-			const part = schemaEditor(schema.items, 'Item', value),
+			const part = schemaEditor(schema.items, 'Item *', value),
 				row = el('div', null, { class: 'array-item' });
 			row.append(
 				part.node,
@@ -238,7 +240,7 @@ function mount(container, context, module) {
 		status.textContent = message(error);
 		status.setAttribute('role', 'alert');
 	};
-	let selected = null,
+	let selected = module === 'work' && context.props?.work_id ? { id: context.props.work_id } : null,
 		refresh = async () => {},
 		refreshTimer,
 		busy = false,
@@ -298,7 +300,10 @@ function mount(container, context, module) {
 	let consentUrl,
 		dialog,
 		vaultEpoch,
-		vaultGroup = '';
+		vaultGroup =
+			module === 'vault' && context.props?.entry_id
+				? context.props.entry_id.split('/').slice(0, -1).join('/')
+				: '';
 	function closeDialog() {
 		clearSecrets();
 		dialog?.dispose();
@@ -405,6 +410,55 @@ function mount(container, context, module) {
 			content,
 			'Agent/session suggestions come from the current OpenClaw roster. Missing references are preserved, never reassigned.'
 		);
+		for (const input of editor.node.querySelectorAll('input')) {
+			const label = input.getAttribute('aria-label') ?? '';
+			const kind = label.startsWith('Milestone Id')
+				? 'milestone'
+				: label.startsWith('Project Id')
+					? 'project'
+					: label.startsWith('Area Id')
+						? 'area'
+						: label.startsWith('Successor Id')
+							? target?.type
+							: label.startsWith('Target')
+								? ''
+								: null;
+			if (kind === null) continue;
+			const list = el('datalist', null, { id: 'work-reference-' + crypto.randomUUID() }),
+				help = el('p', 'Search a Work title or enter an exact existing ID.', { class: 'status' });
+			input.setAttribute('list', list.id);
+			input.parentElement.append(list, help);
+			let timer,
+				revision = 0;
+			const search = async () => {
+				if (!input.isConnected || life.dead) return;
+				const token = ++revision;
+				try {
+					const response = await feature.invoke('work_list', {
+						...(kind ? { type: kind } : {}),
+						limit: 25,
+						fields: ['id', 'type', 'title', 'project_id'],
+						...(input.value ? { search: input.value } : {})
+					});
+					if (token !== revision || !input.isConnected || life.dead) return;
+					list.replaceChildren();
+					for (const item of response.items) {
+						if (kind === 'milestone' && target?.project_id && item.project_id !== target.project_id)
+							continue;
+						list.append(el('option', item.title, { value: item.id }));
+					}
+					help.textContent = `${response.items.length} of ${response.total} matches; refine the title to narrow the search. Exact IDs are validated on Save.`;
+				} catch {
+					if (input.isConnected)
+						help.textContent = 'Reference search unavailable; existing IDs are preserved.';
+				}
+			};
+			input.addEventListener('input', () => {
+				clearTimeout(timer);
+				timer = setTimeout(search, 250);
+			});
+			queueMicrotask(search);
+		}
 
 		const recovery = el('div', null, { class: 'toolbar' });
 		recovery.hidden = true;
@@ -596,6 +650,7 @@ function mount(container, context, module) {
 			'milestones'
 		])
 			if (record[key] != null) detailText(body, human(key), record[key]);
+		detailText(body, 'Participants (event/session provenance)', record.participants);
 		for (const child of record.associated_work ?? [])
 			body.append(row(child, () => workDetail(child.id)));
 		for (const ask of record.asks ?? []) {
@@ -726,6 +781,27 @@ function mount(container, context, module) {
 				const section = el('section', null, { class: 'list-zone' });
 				section.append(el('h2', human(name)));
 				for (const item of bucket.items) section.append(row(item, () => workDetail(item.id)));
+				const total = bucket.total ?? bucket.items.length;
+				paragraph(section, `Showing ${bucket.items.length} of ${total}.`, 'status');
+				if (total > bucket.items.length) {
+					let offset = bucket.next_offset ?? bucket.items.length;
+					const more = button('Load more ' + human(name).toLowerCase(), () =>
+						protect(async () => {
+							const page = await feature.invoke('work_queue', {
+								limit: 15,
+								offset,
+								...(agentFilter ? { agent_id: agentFilter } : {})
+							});
+							if (!valid()) return;
+							const next = page.buckets[name];
+							for (const item of next.items) section.append(row(item, () => workDetail(item.id)));
+							offset = next.next_offset;
+							more.hidden = offset === null;
+						})
+					);
+					section.append(more);
+				}
+
 				body.append(section);
 			}
 			if (!body.children.length) paragraph(body, 'Nothing needs attention.');
@@ -768,6 +844,61 @@ function mount(container, context, module) {
 		status.textContent = state.locked ? 'Vault locked' : 'Vault unlocked';
 		const actions = el('div', null, { class: 'toolbar' });
 		body.append(actions);
+
+		actions.append(
+			button('Recovery snapshots', () =>
+				protect(async () => {
+					const listing = await rpc('recovery_list');
+					if (!valid()) return;
+					const section = el('section', null, { class: 'list-zone' });
+					section.append(el('h2', 'Private recovery snapshots'));
+					paragraph(
+						section,
+						'Snapshots include the encrypted database and private unlock key. They stay in protected host storage—not browser downloads or Documents. Restore offline into a new private directory, never over a live Vault.'
+					);
+					detailText(
+						section,
+						'Available snapshots',
+						listing.snapshots.map((item) => ({
+							...item,
+							created_at: formatOperatorTime(
+								item.created_at ? Date.parse(item.created_at) : undefined
+							)
+						}))
+					);
+					section.append(
+						button('Create private recovery snapshot', () =>
+							confirm(
+								'Create private recovery snapshot including key material in protected host storage',
+								() => rpc('backup')
+							)
+						)
+					);
+					body.append(section);
+				})
+			),
+			button('Vault access history', () =>
+				protect(async () => {
+					const section = el('section');
+					body.append(section);
+					let before;
+					const more = button('Load more access history', () => protect(load));
+					section.append(more);
+					async function load() {
+						const result = await rpc('audit', { limit: 25, ...(before ? { before } : {}) });
+						if (!section.isConnected || life.dead) return;
+						detailText(
+							section,
+							'Redacted access history',
+							result.entries.map((item) => ({ ...item, at: formatOperatorTime(item.at) }))
+						);
+						before = result.next_before;
+						more.hidden = before === null;
+					}
+					await load();
+				})
+			)
+		);
 		if (state.locked) {
 			actions.append(
 				button('Unlock', () =>
@@ -808,6 +939,30 @@ function mount(container, context, module) {
 				form('New group', { id: { label: 'Group path' } }, (v) => rpc('group', v))
 			)
 		);
+
+		actions.append(
+			button('Manage SecretRef grants', () =>
+				form(
+					'Exact managed SecretRef grants',
+					{
+						ids: { multiline: true, label: 'Exact entries/<handle>/<field> IDs (one per line)' },
+						operation: {
+							options: [
+								['grant', 'Grant'],
+								['revoke', 'Revoke']
+							]
+						}
+					},
+					(values) =>
+						rpc(values.operation === 'grant' ? 'grant_refs' : 'revoke_refs', {
+							ids: values.ids
+								.split(/\n/)
+								.map((s) => s.trim())
+								.filter(Boolean)
+						})
+				)
+			)
+		);
 		const data = vaultGroup
 			? await rpc('inventory', { group: vaultGroup })
 			: await request('vault', 'inventory');
@@ -819,6 +974,15 @@ function mount(container, context, module) {
 					protect(async () => {
 						vaultGroup = vaultGroup.split('/').slice(0, -1).join('/');
 						await refresh();
+					})
+				)
+			);
+		if (vaultGroup && !entries.length)
+			body.append(
+				button('Remove empty group', () =>
+					confirm('Remove empty group ' + vaultGroup, async () => {
+						await rpc('group_remove', { id: vaultGroup, confirmed: true });
+						vaultGroup = '';
 					})
 				)
 			);
@@ -838,7 +1002,9 @@ function mount(container, context, module) {
 			section.append(el('h2', entry.id ?? entry.title));
 			paragraph(
 				section,
-				entry.execution_disabled ? 'Agent execution disabled' : 'Values masked by default'
+				entry.execution_disabled
+					? 'Agent execution disabled'
+					: 'Values masked by default. Credential changes pause dependent Falcon connections until you resume and test them.'
 			);
 			const controls = el('div', null, { class: 'toolbar' }),
 				f = field('Field', { value: 'api_key' }),
@@ -939,6 +1105,41 @@ function mount(container, context, module) {
 					})
 				)
 			);
+
+			controls.append(
+				button('Rename or move entry', () =>
+					protect(async () => {
+						const metadata = await request('vault', 'metadata', { id: entry.id });
+						if (!section.isConnected || life.dead) return;
+						form(
+							'Rename or move credential — old handles and SecretRefs stop resolving',
+							{ destination: { label: 'Destination entry path', value: entry.id } },
+							(values) =>
+								rpc('relocate', {
+									id: entry.id,
+									destination: values.destination,
+									expected_version: metadata.version,
+									confirmed: true
+								})
+						);
+					})
+				),
+				button('Remove credential', () =>
+					protect(async () => {
+						const metadata = await request('vault', 'metadata', { id: entry.id });
+						if (!section.isConnected || life.dead) return;
+						confirm(
+							'Remove ' + entry.id + ' and invalidate its handle; keep a private recovery snapshot',
+							() =>
+								rpc('remove_entry', {
+									id: entry.id,
+									expected_version: metadata.version,
+									confirmed: true
+								})
+						);
+					})
+				)
+			);
 			section.append(controls, value);
 			body.append(section);
 		}
@@ -1019,6 +1220,76 @@ function mount(container, context, module) {
 					: formatOperatorTime(connection.next_at, { missing: 'Not scheduled' })
 			);
 			section.append(summary);
+			if (connection.guidance) paragraph(section, connection.guidance, 'status');
+			if (connection.attention_work_id)
+				section.append(
+					button('Open connection review', () =>
+						host.navigation.openPage({
+							id: 'work',
+							params: { work_id: connection.attention_work_id }
+						})
+					)
+				);
+			const operating = el('details');
+			operating.append(el('summary', 'Account, usage and lifecycle'));
+			detailText(operating, 'Account', connection.account_id ?? 'Not recorded');
+			detailText(operating, 'Credential reference', connection.credential_ref ?? 'Not recorded');
+			detailText(operating, 'Authorized agents/services', connection.actors ?? []);
+			detailText(operating, 'Agent use', human(connection.agent_use ?? 'not_currently_validated'));
+			detailText(operating, 'Credential expires', formatOperatorTime(connection.expires_at));
+			detailText(
+				operating,
+				'Explicit renewal cutoff (not a universal provider policy)',
+				formatOperatorTime(connection.reauthorize_at)
+			);
+			detailText(
+				operating,
+				'Next action',
+				connection.next_action ? human(connection.next_action) : 'Not scheduled'
+			);
+			detailText(
+				operating,
+				'Failure category',
+				connection.failure_code ? human(connection.failure_code) : 'Not recorded'
+			);
+			const portals = {
+				highlevel: 'https://marketplace.gohighlevel.com/',
+				cloudflare: 'https://dash.cloudflare.com/profile/api-tokens',
+				schwab: 'https://developer.schwab.com/'
+			};
+			if (portals[connection.provider])
+				operating.append(
+					el('a', 'Open provider portal', {
+						href: portals[connection.provider],
+						target: '_blank',
+						rel: 'noopener noreferrer'
+					})
+				);
+			paragraph(
+				operating,
+				'Portal sign-in is not validation. Supply renewed material only through Vault, then resume and test this connection. Remote token revocation remains a provider action.'
+			);
+			let auditOffset = 0;
+			const auditMore = button('Load connection history', () =>
+				protect(async () => {
+					const result = await request('integrations', 'history', {
+						id: connection.id,
+						query: { offset: auditOffset, limit: 25 }
+					});
+					if (!operating.isConnected || life.dead) return;
+					for (const entry of result.entries)
+						paragraph(
+							operating,
+							`${formatOperatorTime(entry.at)} · ${human(entry.action)} · ${human(entry.outcome)}`
+						);
+					auditOffset = result.next_offset;
+					auditMore.hidden = auditOffset === null;
+					auditMore.textContent = 'Load more connection history';
+				})
+			);
+			operating.append(auditMore);
+			section.append(operating);
+
 			detailText(
 				section,
 				'Verified capabilities',
@@ -1045,19 +1316,67 @@ function mount(container, context, module) {
 				['resume', 'Resume maintenance'],
 				['disconnect', 'Disconnect']
 			])
+				if (
+					(action === 'refresh' && connection.provider === 'cloudflare') ||
+					(connection.owner === 'native' && action !== 'disconnect')
+				)
+					continue;
+				else
+					actions.append(
+						button(label, () =>
+							action === 'disconnect'
+								? confirm('Disconnect this connection', () =>
+										request('integrations', action, { id: connection.id }, true)
+									)
+								: protect(async () => {
+										await request('integrations', action, { id: connection.id }, true);
+										await refresh();
+									})
+						)
+					);
+
+			if (connection.owner === 'falcon')
 				actions.append(
-					button(label, () =>
-						action === 'disconnect'
-							? confirm('Disconnect this connection', () =>
-									request('integrations', action, { id: connection.id }, true)
-								)
-							: protect(async () => {
-									await request('integrations', action, { id: connection.id }, true);
-									await refresh();
+					button('Open credential in Vault', () =>
+						host.navigation.openPage({
+							id: 'vault',
+							params: { entry_id: connection.credential_ref?.handle ?? '' }
+						})
+					),
+					button('Change credential binding', () =>
+						form(
+							'Bind an existing Vault entry; maintenance stays paused and unvalidated',
+							{
+								vault_handle: {
+									label: 'Vault entry path',
+									value: connection.credential_ref?.handle ?? ''
+								}
+							},
+							(values) =>
+								host.request('falcon.integrations.manage', {
+									action: 'rebind',
+									input: {
+										connection_id: connection.id,
+										expected_version: connection.version,
+										vault_handle: values.vault_handle
+									}
 								})
+						)
 					)
 				);
-
+			if (connection.disconnected || connection.health === 'reauthorization_required')
+				actions.append(
+					button('Prepare reconnection', () =>
+						confirm(
+							'Prepare reconnection after reviewing renewed Vault credentials; maintenance stays paused and unvalidated',
+							() =>
+								host.request('falcon.integrations.manage', {
+									action: 'reconnect',
+									input: { connection_id: connection.id, expected_version: connection.version }
+								})
+						)
+					)
+				);
 			if (connection.provider === 'highlevel')
 				actions.append(
 					button('Authorize HighLevel', () =>
@@ -1375,6 +1694,58 @@ function mount(container, context, module) {
 				});
 			})
 		);
+
+		actions.append(
+			button('Browse trash', () =>
+				protect(async () => {
+					const trashRoot = rootId;
+					const trash = el('section', null, { class: 'list-zone' });
+					trash.append(el('h2', 'Recoverable trash'));
+					body.append(trash);
+					let offset = 0;
+					const more = button('Load more trash', () => protect(load));
+					async function load() {
+						const result = await request('documents', 'trash_list', {
+							root_id: trashRoot,
+							offset,
+							limit: 50
+						});
+						if (!trash.isConnected || life.dead) return;
+						for (const item of result.entries) {
+							const line = el('div', null, { class: 'toolbar' });
+							line.append(
+								el('span', item.path),
+								button('Restore ' + item.path, () =>
+									confirm(
+										'Restore ' + item.path + ' without overwriting any current file',
+										async () => {
+											await request(
+												'documents',
+												'restore',
+												{ root_id: trashRoot, trash_id: item.trash_id },
+												true
+											);
+										}
+									)
+								)
+							);
+							trash.append(line);
+						}
+						if (!result.total) paragraph(trash, 'Trash is empty.');
+						if (result.unavailable)
+							paragraph(
+								trash,
+								`${result.unavailable} items are unavailable or failed integrity checks.`,
+								'attention'
+							);
+						offset = result.next_offset;
+						more.hidden = offset === null;
+					}
+					trash.append(more);
+					await load();
+				})
+			)
+		);
 		for (const saved of lastTrash)
 			actions.append(
 				button(`Undo trash: ${saved.name}`, () =>
@@ -1444,7 +1815,10 @@ function mount(container, context, module) {
 		if (!data.entries.length) paragraph(body, 'This folder is empty.');
 		status.textContent = documentNotice || 'Authorized workspace';
 	}
-	refresh = () => ({ work, integrations, vault, documents })[module]();
+	refresh = () => {
+		status.setAttribute('role', 'status');
+		return { work, integrations, vault, documents }[module]();
+	};
 	toolbar.append(button('Refresh', () => protect(refresh)));
 	if (module === 'work') {
 		for (const [id, label] of [

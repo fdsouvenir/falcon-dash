@@ -122,3 +122,24 @@ pagination and additional related collection pages. Resolve request uses the sha
 and original Ask id; it does not acknowledge a request without committing its validated action.
 Agent/session fields suggest the current host roster; missing identities remain visible. Typed
 waiting references are optional and never replace the required waiting/resume explanation.
+
+## Continued operator workflows
+
+- Work collections/attention pages have totals and continuation controls; participants derive from
+  event and linked-session provenance. Reference fields offer host-owned identity suggestions and
+  bounded title search rather than requiring CLI syntax. Missing identities remain visible.
+- Vault supports protected SecretRef grants, redacted access history, private recovery snapshots,
+  guarded entry relocation/removal and removal of empty groups. Recovery material is not a browser
+  download. Moving an entry invalidates old handles; changing a credential pauses dependent Falcon
+  connections until explicit review/resume/test.
+- Integrations includes collapsible account/usage/expiry/failure/audit detail, provider portal
+  handoffs, explicit credential rebinding, paused reconnection preparation and native Work review
+  links. Static tokens do not offer Refresh, and native-owned references do not offer Falcon
+  maintenance. Sign-in, rebinding and refresh are not represented as successful validation.
+- Documents' Browse trash reads durable server metadata and restores without overwriting current
+  files, even after the prior view's Undo state is gone. Folder/upload/download/path-copy workflows
+  are exercised in the real shell.
+
+The expanded browser matrix also checks long Work text/history, keyboard dialog interaction,
+320px reflow and reduced-motion presentation. These are not claims of every browser, actual
+browser zoom, or live provider consent. Exact-head results and inspected captures remain required.

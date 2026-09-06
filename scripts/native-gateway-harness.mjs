@@ -471,6 +471,24 @@ try {
 		recommendation: { option_id: 'morning', rationale: 'Keep time for follow-up.' },
 		consequence_of_no_decision: 'The final review cannot be scheduled.'
 	});
+
+	const longTask = command('create', {
+		type: 'task',
+		title: 'Inspect full history and saved evidence',
+		description:
+			'A detailed observation with its supporting context. '.repeat(55) + 'FULL-SAVED-CONTENT-END',
+		done_when: 'The complete saved text and every history page can be read.'
+	}).target;
+	for (let i = 0; i < 31; i++)
+		command(
+			'checkpoint',
+			{
+				content: `Saved checkpoint ${i + 1} for the review trail`,
+				reason: 'Preserve a meaningful fixture checkpoint'
+			},
+			longTask
+		);
+	command('ready', {}, longTask);
 	work.close();
 	const integrations = new Integrations(path.join(root, 'data/integrations.db'), vault, adapters());
 	integrations.create(
