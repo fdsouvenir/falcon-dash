@@ -86,3 +86,7 @@ Native Work forms now retain one idempotency key across an uncertain reply and e
 review/reapply controls after a version conflict. Updating the reviewed command version does not
 silently repin Plan, Result or authorization references. Closed real transport sockets also retire
 server-side authority, even if a synthetic `invalidated` flag was never attached.
+
+Review repairs retire pending Reveal/Copy responses on Hide as well as existing lifecycle
+cleanup. Renaming a dirty document keeps its edit buffer and reviewed version. Native select
+fields choose their first declared option when no initial value is supplied.

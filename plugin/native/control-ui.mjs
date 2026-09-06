@@ -35,7 +35,8 @@ function field(label, { value = '', type = 'text', multiline = false, options } 
 			input.append(el('option', text, { value }));
 		}
 	else if (!multiline) input.type = type;
-	input.value = value;
+	input.value =
+		options && value === '' ? (Array.isArray(options[0]) ? options[0][0] : options[0]) : value;
 	wrap.append(input);
 	return { wrap, input };
 }
@@ -260,7 +261,14 @@ function mount(container, context, module) {
 	const request = (mod, action, input = {}, write = false) =>
 		host.request(`falcon.${mod}.${write ? 'write' : 'read'}`, { action, ...input });
 	const secretNodes = new Set();
+	let secretRevision = 0;
+	const secretTicket = () => {
+		const revision = ++secretRevision;
+		const valid = life.ticket();
+		return () => valid() && revision === secretRevision;
+	};
 	const clearSecrets = () => {
+		secretRevision++;
 		secretNodes.forEach((n) => {
 			if ('value' in n) n.value = '';
 			else n.textContent = '';
@@ -727,7 +735,7 @@ function mount(container, context, module) {
 				button('Reveal', () =>
 					protect(async () => {
 						clearSecrets();
-						const ticket = life.ticket();
+						const ticket = secretTicket();
 						const result = await rpc('reveal', { id: entry.id, field: f.input.value });
 						if (ticket() && host.connection.connected) {
 							value.textContent = result.value;
@@ -738,11 +746,11 @@ function mount(container, context, module) {
 					})
 				),
 				button('Hide', () => {
-					value.textContent = '';
+					clearSecrets();
 				}),
 				button('Copy', () =>
 					protect(async () => {
-						const ticket = life.ticket();
+						const ticket = secretTicket();
 						const result = await rpc('copy', { id: entry.id, field: f.input.value });
 						if (ticket() && host.connection.connected) {
 							await navigator.clipboard.writeText(result.value);
@@ -1075,7 +1083,7 @@ function mount(container, context, module) {
 							true
 						).then(() => {
 							file = v.destination;
-							docDraft = null;
+							// Rename moves the saved file; preserve unsaved content and its reviewed version.
 						})
 					)
 				),

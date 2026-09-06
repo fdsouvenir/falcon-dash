@@ -78,9 +78,9 @@ test('real Gateway native Work renders and commits schema-backed edits', async (
 		.locator('.falcon-native')
 		.getByRole('button', { name: 'Create work', exact: true })
 		.click();
-	let dialog = page.getByRole('dialog');
+	let dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-	dialog = page.getByRole('dialog');
+	dialog = page.locator('openclaw-modal-dialog');
 	await dialog
 		.getByLabel('Title *', { exact: true })
 		.fill(`Native acceptance ${info.project.name}`);
@@ -91,7 +91,7 @@ test('real Gateway native Work renders and commits schema-backed edits', async (
 		.getByLabel('Done When *', { exact: true })
 		.fill('The real Gateway stores this Task and it remains after reload.');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
 	await page.locator('.falcon-native').getByRole('button', { name: 'Browse', exact: true }).click();
 	await page
 		.locator('.falcon-native')
@@ -108,6 +108,20 @@ test('real Gateway native Work renders and commits schema-backed edits', async (
 	await capture(page, 'task-detail', info.project.name);
 	await page.reload();
 	await expect(page.locator('.falcon-native')).toBeVisible();
+	await openModule(page, 'Work');
+	await page.locator('.falcon-native').getByRole('button', { name: 'Browse', exact: true }).click();
+	await page.getByLabel('Search work').fill(`Native acceptance ${info.project.name}`);
+	await page.getByLabel('Search work').press('Tab');
+	await expect(
+		page.locator('.record').filter({ hasText: `Native acceptance ${info.project.name}` })
+	).toBeVisible();
+	await page
+		.locator('.record')
+		.filter({ hasText: `Native acceptance ${info.project.name}` })
+		.click();
+	await expect(page.locator('.falcon-native')).toContainText(
+		'The real Gateway stores this Task and it remains after reload.'
+	);
 });
 test('real native Vault supports protected owner entry and agent-created reveal copy cleanup', async ({
 	page,
@@ -116,11 +130,24 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await openModule(page, 'Vault');
 	await unlock(page);
 	await page.getByRole('button', { name: 'Add credential', exact: true }).click();
-	const dialog = page.getByRole('dialog');
+	const dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Entry path', { exact: true }).fill(`owner-${info.project.name}`);
 	await dialog.getByLabel('Protected value', { exact: true }).fill('SYNTHETIC-HUMAN-UI-CANARY');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
+	await openModule(page, 'Vault');
+	await unlock(page);
+	const human = page.locator('.list-zone').filter({
+		has: page.getByRole('heading', { name: `owner-${info.project.name}`, exact: true })
+	});
+	await human.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(human.locator('output')).toHaveText('SYNTHETIC-HUMAN-UI-CANARY');
+	await human.getByRole('button', { name: 'Copy', exact: true }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+		'SYNTHETIC-HUMAN-UI-CANARY'
+	);
+	await human.getByRole('button', { name: 'Hide', exact: true }).click();
+	await expect(human.locator('output')).toHaveText('');
 	const agent = page
 		.locator('.list-zone')
 		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
@@ -158,6 +185,15 @@ test('native Documents saves through the Gateway and preserves stale edits', asy
 	await page.getByRole('button', { name: 'Compare latest version', exact: true }).click();
 	await expect(page.locator('.falcon-native')).toContainText('Changed by another writer');
 	await page.getByRole('button', { name: 'Use latest version for next save', exact: true }).click();
+	await page.getByRole('button', { name: 'Rename', exact: true }).click();
+	const rename = page.locator('openclaw-modal-dialog');
+	await rename
+		.getByLabel('Destination', { exact: true })
+		.fill(`Renamed notes ${info.project.name}.md`);
+	await rename.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(rename).toHaveCount(0);
+	await expect(editor).toHaveValue(new RegExp(`My preserved draft ${info.project.name}`));
+	await capture(page, 'documents-dirty-rename', info.project.name);
 	await page.locator('.falcon-native').getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(page.locator('.falcon-native')).toContainText('Text view');
 	await page.getByRole('button', { name: 'Preview Markdown', exact: true }).click();
@@ -167,6 +203,23 @@ test('native Documents saves through the Gateway and preserves stale edits', asy
 			.getByRole('heading', { name: `My preserved draft ${info.project.name}` })
 	).toBeVisible();
 	await capture(page, 'documents-editor', info.project.name);
+	await page.getByRole('button', { name: 'Rename', exact: true }).click();
+	await page
+		.locator('openclaw-modal-dialog')
+		.getByLabel('Destination', { exact: true })
+		.fill('Operating notes.md');
+	await page
+		.locator('openclaw-modal-dialog')
+		.getByRole('button', { name: 'Save', exact: true })
+		.click();
+	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
+	await openModule(page, 'Documents');
+	await page
+		.locator('.falcon-native')
+		.getByRole('button', { name: 'workspace', exact: true })
+		.click();
+	await page.locator('.record').filter({ hasText: 'Operating notes.md' }).click();
+	await expect(editor).toHaveValue(new RegExp(`My preserved draft ${info.project.name}`));
 });
 test('native Integrations performs real persisted maintenance controls without contacting live providers', async ({
 	page
@@ -176,9 +229,41 @@ test('native Integrations performs real persisted maintenance controls without c
 		.locator('.list-zone')
 		.filter({ hasText: 'Synthetic connection — not live authentication' });
 	await expect(connection).toBeVisible();
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Paused$/ })
+			.locator('+ dd')
+	).toHaveText('true');
 	await connection.getByRole('button', { name: 'Resume maintenance', exact: true }).click();
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Paused$/ })
+			.locator('+ dd')
+	).toHaveText('false');
+	await openModule(page, 'Integrations');
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Paused$/ })
+			.locator('+ dd')
+	).toHaveText('false');
 	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
 	await connection.getByRole('button', { name: 'Pause maintenance', exact: true }).click();
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Paused$/ })
+			.locator('+ dd')
+	).toHaveText('true');
+	await openModule(page, 'Integrations');
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Paused$/ })
+			.locator('+ dd')
+	).toHaveText('true');
 	await capture(page, 'integrations', info.project.name);
 });
 test('real transport disconnect clears revealed values and reconnect recovers native reads', async ({

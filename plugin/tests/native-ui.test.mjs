@@ -385,3 +385,55 @@ test('Retrying a native create after a lost reply reuses its actor-bound receipt
 	assert.equal(keys[0], keys[1]);
 	assert.equal(f.window.document.querySelectorAll('[role=dialog]').length, 0);
 });
+for (const action of ['reveal', 'copy'])
+	test(`Hide retires a pending ${action} response`, async (t) => {
+		let release;
+		const f = await fixture(t, 'vault', async (method, p) => {
+			if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+			if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
+			if (p.action === action) return new Promise((r) => (release = r));
+		});
+		f.button(action === 'reveal' ? 'Reveal' : 'Copy');
+		await settle();
+		f.button('Hide');
+		release({ value: 'SYNTHETIC-LATE-HIDDEN' });
+		await settle();
+		assert.ok(!f.text().includes('SYNTHETIC-LATE-HIDDEN'));
+		assert.notEqual(await f.window.navigator.clipboard.readText(), 'SYNTHETIC-LATE-HIDDEN');
+	});
+for (const conflict of [false, true])
+	test(`Dirty document rename preserves edit buffer (preceding conflict: ${conflict})`, async (t) => {
+		let version = 'one';
+		const f = await fixture(t, 'documents', async (method, p) => {
+			if (p.action === 'roots') return { roots: [{ id: 'workspace', writable: true }] };
+			if (p.action === 'list') return { entries: [{ name: 'note.md', kind: 'file' }] };
+			if (p.action === 'read') return { content: 'Saved content', version };
+			if (p.action === 'write') throw Error('version_conflict');
+			if (p.action === 'rename') {
+				assert.equal(p.expected_version, version);
+				return { path: p.destination, version };
+			}
+		});
+		f.button('workspace');
+		await settle();
+		f.window.document.querySelector('.record').click();
+		await settle();
+		const editor = f.window.document.querySelector('textarea');
+		editor.value = 'Unsaved important edit';
+		editor.dispatchEvent(new f.window.Event('input'));
+		if (conflict) {
+			version = 'two';
+			f.button('Save');
+			await settle();
+			f.button('Compare latest version');
+			await settle();
+			f.button('Use latest version for next save');
+		}
+		f.button('Rename');
+		const dialog = f.window.document.querySelector('[role=dialog]');
+		dialog.querySelector('input').value = 'renamed.md';
+		dialog.querySelector('button[type=submit]').click();
+		await settle();
+		assert.equal(f.window.document.querySelector('textarea').value, 'Unsaved important edit');
+		assert.match(f.text(), /renamed.md/);
+	});

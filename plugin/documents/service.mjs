@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { DomainError, requireValue } from '../errors.mjs';
 
-const { O_RDONLY, O_DIRECTORY, O_NOFOLLOW, O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
+const { O_RDONLY, O_NONBLOCK, O_DIRECTORY, O_NOFOLLOW, O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
 const forbidden =
 	/(^\.|^openclaw\.json$|credential|secret|password|token|vault|auth|\.kdbx$|\.key$|\.pem$|\.p12$|\.sqlite|\.db$)/i;
 const extensions = new Set([
@@ -189,14 +189,22 @@ export class Documents {
 	readBytes(file) {
 		let fd;
 		try {
-			fd = fs.openSync(file, O_RDONLY | O_NOFOLLOW);
+			fd = fs.openSync(file, O_RDONLY | O_NOFOLLOW | O_NONBLOCK);
 			const stat = fs.fstatSync(fd);
 			requireValue(
 				stat.isFile() && stat.nlink === 1 && stat.size <= 262144,
 				'unsafe_file',
 				'Only bounded regular files without hard links are available'
 			);
-			const bytes = fs.readFileSync(fd);
+			// Read at most one byte beyond the limit, even if the file grows after fstat.
+			const buffer = Buffer.alloc(262145);
+			let length = 0;
+			while (length < buffer.length) {
+				const count = fs.readSync(fd, buffer, length, buffer.length - length, length);
+				if (!count) break;
+				length += count;
+			}
+			const bytes = buffer.subarray(0, length);
 			requireValue(
 				bytes.length <= 262144 && !bytes.includes(0),
 				'unsupported_file',

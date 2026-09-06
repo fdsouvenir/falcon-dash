@@ -157,3 +157,37 @@ test('Workspace discovery is actor-scoped, listing is sorted/paged, and copy pat
 	assert.equal(listing.next_offset, 1);
 	assert.equal(service.copyPath({ ...input, path: 'a.md' }, actor).path, path + '/a.md');
 });
+test('Listed documents replaced by FIFO or symlink fail promptly in a timeout-bounded child', async (t) => {
+	const { spawnSync } = await import('node:child_process');
+	const { path } = setup(t);
+	const source = new URL('../documents/service.mjs', import.meta.url).href;
+	for (const kind of ['fifo', 'symlink']) {
+		const child = spawnSync(
+			process.execPath,
+			[
+				'--input-type=module',
+				'-e',
+				`import fs from 'node:fs';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';import {Documents} from ${JSON.stringify(source)};const root=${JSON.stringify(path)};const s=new Documents([{id:'test',path:root,actors:['human:test'],writable:true}]);const file=root+'/swap.md';fs.writeFileSync(file,'listed');s.list({root_id:'test'},'human:test');fs.unlinkSync(file);if(${JSON.stringify(kind)}==='fifo')execFileSync('mkfifo',[file]);else fs.symlinkSync('/dev/zero',file);assert.throws(()=>s.read({root_id:'test',path:'swap.md'},'human:test'));fs.unlinkSync(file);fs.writeFileSync(file,'still responsive');assert.equal(s.read({root_id:'test',path:'swap.md'},'human:test').content,'still responsive');s.close();`
+			],
+			{ timeout: 2000, encoding: 'utf8' }
+		);
+		assert.equal(child.error, undefined, `${kind} read timed out`);
+		assert.equal(child.status, 0, child.stderr);
+	}
+});
+test('Document growth after fstat cannot trigger an unbounded allocation or read', async (t) => {
+	const { spawnSync } = await import('node:child_process');
+	const { path } = setup(t);
+	const source = new URL('../documents/service.mjs', import.meta.url).href;
+	const child = spawnSync(
+		process.execPath,
+		[
+			'--input-type=module',
+			'-e',
+			`import fs from 'node:fs';import assert from 'node:assert/strict';import {syncBuiltinESMExports} from 'node:module';import {Documents} from ${JSON.stringify(source)};const file=${JSON.stringify(path + '/growing.md')};fs.writeFileSync(file,'small');const original=fs.fstatSync;let grew=false;fs.fstatSync=(fd)=>{const stat=original(fd);if(stat.isFile()&&!grew){grew=true;fs.appendFileSync(file,'x'.repeat(1048576));}return stat;};let total=0;const read=fs.readSync;fs.readSync=(...args)=>{const n=read(...args);total+=n;return n;};syncBuiltinESMExports();const service=new Documents([]);assert.throws(()=>service.readBytes(file),{code:'unsupported_file'});assert.equal(total,262145);service.close();`
+		],
+		{ timeout: 2000, encoding: 'utf8' }
+	);
+	assert.equal(child.error, undefined);
+	assert.equal(child.status, 0, child.stderr);
+});

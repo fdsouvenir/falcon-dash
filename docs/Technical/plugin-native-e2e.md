@@ -63,3 +63,17 @@ mock host. Its screenshot showed the supported **Back to app** affordance. The b
 now uses that normal navigation before selecting native pages; it does not disable model
 verification or invent a verified-model record. Provider-bound inference remains a separate
 real-Gateway synthetic-endpoint gate in the quality job.
+
+Independent review regressions cover a listed document replaced by a FIFO or symlink in a
+child process with a two-second timeout, pending Reveal/Copy followed by Hide, and dirty
+rename both with and without a preceding version conflict. Reads open nonblocking, validate
+the descriptor as a single-link regular file, and read no more than 262145 bytes.
+
+The required browser suite now reloads and reads the exact created Task, reloads and
+reveals/copies the human-created credential as well as the agent-created credential, and
+asserts saved integration pause state after each action and navigation reload. It scopes
+slotted form controls through the host modal element: the host's shadow dialog and its
+light-DOM content are not DOM descendants for nested Playwright locators.
+
+The Documents browser case also renames its unsaved conflict-recovered draft, verifies the
+buffer survives, saves it, restores the original path, then reloads and reads the saved text.
