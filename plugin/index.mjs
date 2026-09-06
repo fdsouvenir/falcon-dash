@@ -8,8 +8,11 @@ import { Documents } from './documents/service.mjs';
 import { Vault } from './vault/service.mjs';
 import { Integrations } from './integrations/service.mjs';
 import { adapters } from './integrations/adapters.mjs';
+import { HighLevelOAuth } from './integrations/oauth.mjs';
+import { nativeIntegration } from './integrations/native.mjs';
 import { tools, buildContract } from './contract.mjs';
 import { render } from './ui.mjs';
+import { protectedVault } from './vault/native.mjs';
 
 export default definePluginEntry({
 	id: 'falcon-dash',
@@ -17,7 +20,7 @@ export default definePluginEntry({
 	description: 'Work, Integrations, KeePassXC Vault and Documents implementation preview',
 	register(api) {
 		const config =
-			/** @type {{dataDir?: string, modules?: Record<string, boolean>, vaultOwners?: string[], vaultExecutors?: string[], documentRoots?: Array<{id:string,path:string,actors:string[],writable?:boolean}>}} */ (
+			/** @type {{dataDir?: string, modules?: Record<string, boolean>, oauthRedirectUris?:string[], vaultOwners?: string[], vaultExecutors?: string[], documentRoots?: Array<{id:string,path:string,actors:string[],writable?:boolean}>}} */ (
 				api.pluginConfig ?? {}
 			);
 		const enabled = ['work', 'integrations', 'vault', 'documents'].filter(
@@ -27,6 +30,7 @@ export default definePluginEntry({
 			documents,
 			vault,
 			integrations,
+			oauth,
 			started = false;
 		const ready = () => requireValue(started, 'unavailable', 'Falcon Dash service is not running');
 		async function invoke(name, p, actor, guard = internalAuthority) {
@@ -70,7 +74,13 @@ export default definePluginEntry({
 					: integrations.run(p.id, p.action, actor, guard);
 			}
 			if (name === 'falcon_vault') {
-				if (p.action === 'status') return { locked: vault.locked, protected_ui: 'unavailable' };
+				if (p.action === 'status')
+					return {
+						locked: vault.locked,
+						protected_ui: 'native',
+						epoch: vault.generation,
+						can_manage: vault.owners.has(actor)
+					};
 				if (p.action === 'metadata') return vault.metadata(p.id, actor, guard);
 				requireValue(p.action === 'inventory', 'invalid_command', 'Unsupported Vault operation');
 				return vault.inventory(actor, '', guard);
@@ -139,6 +149,8 @@ export default definePluginEntry({
 							vault,
 							adapters()
 						);
+					if (integrations && config.oauthRedirectUris?.length)
+						oauth = new HighLevelOAuth(integrations, { redirectUris: config.oauthRedirectUris });
 					if (integrations) integrations.start('service:falcon-integrations');
 					started = true;
 				} catch (error) {
@@ -295,6 +307,48 @@ export default definePluginEntry({
 				}
 			});
 		}
+		api.registerGatewayMethod(
+			'falcon.ui.status',
+			({ respond }) => respond(true, { modules: enabled }),
+			{ scope: 'operator.read' }
+		);
+		if (enabled.includes('vault'))
+			api.registerGatewayMethod(
+				'falcon.vault.protected',
+				async ({ params, client, respond }) => {
+					try {
+						ready();
+						const result = await protectedVault(vault, params, client, ready);
+						respond(true, result);
+					} catch (error) {
+						respond(false, undefined, {
+							code: 'INVALID_REQUEST',
+							message: 'Protected operation failed',
+							details: safeError(error)
+						});
+					}
+				},
+				{ scope: 'operator.write' }
+			);
+
+		if (enabled.includes('integrations'))
+			api.registerGatewayMethod(
+				'falcon.integrations.manage',
+				async ({ params, client, respond }) => {
+					try {
+						ready();
+						respond(true, await nativeIntegration(integrations, oauth, params, client, ready));
+					} catch (error) {
+						respond(false, undefined, {
+							code: 'INVALID_REQUEST',
+							message: 'Integration operation failed',
+							details: safeError(error)
+						});
+					}
+				},
+				{ scope: 'operator.write' }
+			);
+
 		const principals = new Map();
 		api.registerGatewayMethod(
 			'falcon.identity',

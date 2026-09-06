@@ -71,6 +71,13 @@
 						}
 					}
 				}
+			},
+			"oauthRedirectUris": {
+				"type": "array",
+				"items": {
+					"type": "string"
+				},
+				"maxItems": 10
 			}
 		}
 	},
@@ -86,5 +93,9 @@
 			"timeoutMs": 20000,
 			"maxOutputBytes": 1048576
 		}
+	},
+	"controlUi": {
+		"entry": "dist/control-ui/falcon/index.js",
+		"styles": ["dist/control-ui/falcon/index.css"]
 	}
 }

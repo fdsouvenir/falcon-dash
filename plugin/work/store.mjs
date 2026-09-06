@@ -222,6 +222,32 @@ export class WorkStore {
 				)
 					out[kind] = a;
 			}
+
+		out.relationships = this.db
+			.prepare('SELECT source,target,kind FROM links WHERE source=? OR target=? LIMIT 100')
+			.all(id, id);
+		out.asks = this.db
+			.prepare("SELECT body FROM asks WHERE subject=? AND state='open' LIMIT 25")
+			.all(id)
+			.map((row) => JSON.parse(String(row.body)));
+		if (x.type === 'project')
+			out.associated_work = this.all()
+				.filter((item) => item.project_id === id)
+				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+				.slice(0, 100)
+				.map((item) => ({
+					id: item.id,
+					type: item.type,
+					title: item.title,
+					status: item.status,
+					success_condition: item.success_condition,
+					achievement_basis: item.achievement_basis
+				}));
+		if (x.type === 'milestone')
+			out.associated_work = out.relationships
+				.filter((link) => link.target === id && link.kind === 'milestone')
+				.map((link) => this.get(link.source))
+				.map((item) => ({ id: item.id, type: item.type, title: item.title, status: item.status }));
 		if (full) {
 			out.artifacts = this.db
 				.prepare('SELECT body FROM artifacts WHERE task_id=? ORDER BY kind,revision LIMIT 100')

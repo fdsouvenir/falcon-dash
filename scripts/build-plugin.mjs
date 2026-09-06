@@ -27,6 +27,19 @@ function check(directory) {
 	}
 }
 check('plugin');
+await build({
+	entryPoints: ['plugin/native/control-ui.mjs'],
+	outdir: 'dist/control-ui/falcon',
+	entryNames: 'index',
+	bundle: true,
+	format: 'esm',
+	platform: 'browser',
+	target: 'es2022',
+	loader: { '.woff2': 'dataurl' },
+	minify: true,
+	legalComments: 'inline'
+});
+
 const manifest = JSON.parse(readFileSync('openclaw.plugin.json'));
 const pkg = JSON.parse(readFileSync('package.json'));
 if (manifest.id !== 'falcon-dash' || pkg.openclaw.extensions.length !== 1)

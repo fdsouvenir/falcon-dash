@@ -26,7 +26,8 @@ export class Vault {
 		this.generation = 0;
 		this.operationController = new AbortController();
 	}
-	lock(actor = 'system:vault') {
+	lock(actor = 'system:vault', authority = internalAuthority) {
+		authority.assert();
 		requireValue(
 			actor === 'system:vault' || (this.owners.has(actor) && actor.startsWith('human:')),
 			'access_denied',
@@ -37,7 +38,7 @@ export class Vault {
 		this.operationController.abort();
 		if (!fs.existsSync(path.join(this.directory, 'policy.json')))
 			return Promise.resolve({ locked: true });
-		return this.worker({ action: 'lock', actor });
+		return this.worker({ action: 'lock', actor }, authority);
 	}
 	authorize(actor, human = false) {
 		requireValue(!this.locked, 'vault_locked', 'Unlock Vault before use');
@@ -88,27 +89,30 @@ export class Vault {
 		return result;
 	}
 
-	async initialize(actor) {
+	async initialize(actor, authority = internalAuthority) {
 		requireValue(
 			this.owners.has(actor) && actor.startsWith('human:'),
 			'access_denied',
 			'Only an authorized human can provision Vault'
 		);
-		return this.worker({
-			action: 'initialize',
-			actor,
-			owners: [...this.owners],
-			executors: [...this.executors]
-		});
+		return this.worker(
+			{
+				action: 'initialize',
+				actor,
+				owners: [...this.owners],
+				executors: [...this.executors]
+			},
+			authority
+		);
 	}
-	async unlock(actor) {
+	async unlock(actor, authority = internalAuthority) {
 		requireValue(
 			this.owners.has(actor) && actor.startsWith('human:'),
 			'access_denied',
 			'Only an authorized human can unlock Vault'
 		);
 		const epoch = ++this.generation;
-		const result = await this.worker({ action: 'unlock', actor });
+		const result = await this.worker({ action: 'unlock', actor }, authority);
 		requireValue(
 			this.generation === epoch,
 			'authority_changed',
@@ -133,57 +137,72 @@ export class Vault {
 			authority
 		);
 	}
-	async grantEntryExecutors(id, expected_version, executors, actor) {
+	async grantEntryExecutors(id, expected_version, executors, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({
-			action: 'grant_executors',
-			id,
-			expected_version,
-			executors,
-			actor,
-			generation: this.policyGeneration
-		});
+		return this.worker(
+			{
+				action: 'grant_executors',
+				id,
+				expected_version,
+				executors,
+				actor,
+				generation: this.policyGeneration
+			},
+			authority
+		);
 	}
 
-	async revokeEntryExecution(id, expected_version, actor) {
+	async revokeEntryExecution(id, expected_version, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({
-			action: 'revoke_entry',
-			id,
-			expected_version,
-			actor,
-			generation: this.policyGeneration
-		});
+		return this.worker(
+			{
+				action: 'revoke_entry',
+				id,
+				expected_version,
+				actor,
+				generation: this.policyGeneration
+			},
+			authority
+		);
 	}
-	async restoreEntryExecution(id, expected_version, actor) {
+	async restoreEntryExecution(id, expected_version, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({
-			action: 'restore_entry',
-			id,
-			expected_version,
-			actor,
-			generation: this.policyGeneration
-		});
+		return this.worker(
+			{
+				action: 'restore_entry',
+				id,
+				expected_version,
+				actor,
+				generation: this.policyGeneration
+			},
+			authority
+		);
 	}
 
-	async createGroup(id, actor) {
+	async createGroup(id, actor, authority = internalAuthority) {
 		this.authorize(actor, true);
-		return this.worker({ action: 'group_create', id, actor, generation: this.policyGeneration });
+		return this.worker(
+			{ action: 'group_create', id, actor, generation: this.policyGeneration },
+			authority
+		);
 	}
-	async create(id, material, actor) {
+	async create(id, material, actor, authority = internalAuthority) {
 		this.authorize(actor);
 		requireValue(
 			material && typeof material === 'object' && !Array.isArray(material),
 			'invalid_input',
 			'Expected protected credential material'
 		);
-		return this.worker({
-			action: 'create',
-			id,
-			material,
-			actor,
-			generation: this.policyGeneration
-		});
+		return this.worker(
+			{
+				action: 'create',
+				id,
+				material,
+				actor,
+				generation: this.policyGeneration
+			},
+			authority
+		);
 	}
 	async rotate(
 		id,

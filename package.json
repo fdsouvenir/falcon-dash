@@ -30,7 +30,9 @@
 		"docs/Technical/plugin-v4-evidence.md",
 		"docs/Technical/plugin-v4-backend.md",
 		"plugin/schema.mjs",
-		"plugin/typebox-license.txt"
+		"plugin/typebox-license.txt",
+		"dist/control-ui/",
+		"docs/Technical/plugin-v4-native-ui.md"
 	],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"

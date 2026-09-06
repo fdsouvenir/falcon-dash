@@ -163,3 +163,5 @@ appropriately user-owned Node runtime. No production installation or permission 
 The fresh runtime fixture tightens **only its newly created Node copy** to mode 0700, because CI
 toolcache binaries can carry broader source modes. It verifies ownership before doing so and
 checks the original runtime hash/uid/mode remain unchanged. No system Node chmod/chown is used.
+
+Native Control UI is approved and bundled. The isolated managed-install proof now sets only its own `gateway.controlUi.experimental.customPlugins` opt-in. Production opt-in/restart remains out of scope. See [native UI prerequisites and current browser-policy blocker](plugin-v4-native-ui.md).

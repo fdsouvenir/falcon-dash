@@ -147,3 +147,5 @@ Result applicability is shared between completion validation and compact detail,
 exact review target. Offline conversion now rejects live snapshot WALs, revalidates archive
 identity before success, and uses prototype-safe legacy-id mappings. Regression tests preserve
 source/archive files and remove only the newly created conversion target on a stale plan.
+
+Native Work uses the canonical command schemas to render action forms and the supported feature client to submit them. Detail now includes bounded associated Work, relationships and open Asks; these are projections of the existing stores, not a parallel UI state machine.

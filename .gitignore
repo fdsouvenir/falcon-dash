@@ -26,3 +26,6 @@ artifacts/*
 # Bundled schema runtime (created by build)
 plugin/schema.mjs
 plugin/typebox-license.txt
+
+# Agent temporary approval/inspection artifacts
+.openclaw/tmp/

@@ -24,8 +24,10 @@ not require Fredbot Backend or a separate Falcon web server.
   transfer, no-clobber rename and recoverable deletion.
 
 The package registers real tools, Gateway methods, typed feature operations, services and four
-sandboxed Control UI tabs. The tabs remain **read-only previews**. Interactive UI, human protected
-entry/reveal/copy transport and desktop/narrow rendered acceptance are not complete.
+native Control UI pages, including protected human credential entry/reveal/copy. Native UI is
+approved; its implementation and [remaining rendered acceptance](docs/Technical/plugin-v4-native-ui.md)
+are tracked separately. The browser currently denies the isolated Gateway URL, so no desktop/narrow
+rendered acceptance or release-ready claim is made.
 
 See [current backend coverage and remaining audits](docs/Technical/plugin-v4-backend.md).
 The [first checkpoint evidence](docs/Technical/plugin-v4-evidence.md) is explicitly historical;

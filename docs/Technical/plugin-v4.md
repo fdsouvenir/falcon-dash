@@ -1,6 +1,6 @@
 # Single-plugin implementation preview
 
-**Backend continuation:** [current implementation and remaining audits](plugin-v4-backend.md) supersedes the initial checkpoint status below. The UI decision does not block backend work.
+**Backend continuation:** [current implementation and remaining audits](plugin-v4-backend.md) supersedes the initial checkpoint status below. Native UI is approved; [current native implementation and acceptance](plugin-v4-native-ui.md) supersedes the historical read-only preview below.
 
 **Status: incomplete, not release-ready.** Branch `feat/falcon-plugin-v4` implements an isolated
 engineering checkpoint for [#364](https://github.com/fdsouvenir/falcon-dash/issues/364), not the
@@ -38,11 +38,11 @@ The inspected installed host is OpenClaw 2026.9.2, build `3928bad`.
   Control UI origin and requires the separate Custom plugin UI opt-in. This is a different trust
   boundary, not something an external iframe receives automatically.
 
-The preview therefore serves **read-only iframe content**. It does not use GET mutations,
-credentials in URLs, permissive CORS, or a bearer token handed into the frame. Approval to use a
-minimal native bridge around sandboxed application content was requested but not received.
-This is a consequential unresolved boundary for interactive Work, Documents, protected Vault
-entry and human Reveal/Hide/Copy. Do not ship those actions through generic tool payloads instead.
+The historical checkpoint served read-only iframe content. Native feature-plugin UI was approved
+on 2026-09-06 and now provides interactive pages directly—no generic iframe bridge. The old
+read-only route remains a useful opt-in-off fallback. No GET mutations, credential-bearing URLs,
+permissive CORS or frame bearer tokens are introduced. Untrusted document preview alone remains
+sandboxed. See [current native acceptance and browser-policy blocker](plugin-v4-native-ui.md).
 
 ## Implemented backend checkpoint
 

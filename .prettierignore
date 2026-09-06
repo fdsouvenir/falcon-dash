@@ -17,3 +17,6 @@ artifacts
 # Generated dependency runtime
 plugin/schema.mjs
 plugin/typebox-license.txt
+
+# Agent temporary approval/inspection artifacts, not product sources
+.openclaw/tmp/

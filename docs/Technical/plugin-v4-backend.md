@@ -1,8 +1,8 @@
 # Backend continuation after the initial checkpoint
 
 This is the current backend status for [PR #366](https://github.com/fdsouvenir/falcon-dash/pull/366).
-The initial checkpoint remains incomplete, but the UI hosting decision is **not a blocker to
-backend implementation**. No native UI activation or production configuration change is included.
+Native feature-plugin UI is approved and implemented; there is no remaining UI-trust decision.
+The complete build remains unverified pending [real-shell acceptance](plugin-v4-native-ui.md).
 
 ## Regression recovery
 
@@ -77,7 +77,8 @@ outside the stated trusted-workspace concurrency model; atomic rename is not cro
   Gateway detail/list methods, audit payloads or error messages. Tests use synthetic credentials
   and check denial, durable lock and the real child process protocol.
 
-Protected human entry/reveal/copy transport and UI remain gated on the UI decision. Per-entry
+Protected human entry/reveal/copy now has an approved native implementation; see
+[its tests and remaining real-shell acceptance](plugin-v4-native-ui.md). Per-entry
 execution-policy refinement, revocation/removal workflows and complete key recovery need further
 review. Filesystem key protection is not an external key-management service.
 

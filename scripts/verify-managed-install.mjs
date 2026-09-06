@@ -37,7 +37,13 @@ fs.writeFileSync(
 	configFile,
 	JSON.stringify(
 		{
-			gateway: { mode: 'local', bind: 'loopback', auth: { mode: 'none' }, port: 28971 },
+			gateway: {
+				mode: 'local',
+				bind: 'loopback',
+				auth: { mode: 'none' },
+				port: 28971,
+				controlUi: { experimental: { customPlugins: true } }
+			},
 			agents: { defaults: { workspace: path.join(root, 'workspace') } },
 			plugins: {
 				allow: ['falcon-dash'],
@@ -58,6 +64,10 @@ const env = {
 };
 async function run(name, command, args) {
 	const child = spawn(command, args, { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] });
+	let stdout = '';
+	child.stdout.on('data', (chunk) => {
+		if (stdout.length < 1048576) stdout += chunk.toString();
+	});
 	const output = fs.createWriteStream(path.join(root, `${name}.log`), { mode: 0o600 });
 	let bytes = 0,
 		truncated = false;
@@ -77,6 +87,7 @@ async function run(name, command, args) {
 	});
 	output.end();
 	if (code !== 0) throw Error(`${name} failed; inspect its synthetic log`);
+	return stdout;
 }
 await run('pack', 'npm', ['pack', '--ignore-scripts', '--pack-destination', root]);
 const archives = fs.readdirSync(root).filter((p) => p.endsWith('.tgz'));
@@ -89,6 +100,21 @@ await run('install', node, [
 	'--accept-capabilities',
 	'--force'
 ]);
+const inspection = JSON.parse(
+	await run('runtime-inspect', node, [
+		entry,
+		'plugins',
+		'inspect',
+		'falcon-dash',
+		'--runtime',
+		'--json'
+	])
+);
+if (
+	inspection.plugin?.status !== 'loaded' ||
+	!inspection.plugin.toolNames?.includes('falcon_vault')
+)
+	throw Error('Packaged runtime registration failed');
 await run('managed-audit', node, [
 	path.join(repo, 'scripts/verify-managed-secretref.mjs'),
 	entry,
@@ -112,6 +138,9 @@ const proof = {
 	node: process.version,
 	nodeSha256: digest,
 	systemRuntimeUnchanged: true,
+	nativeUiDeclared: JSON.parse(fs.readFileSync(path.join(repo, 'openclaw.plugin.json'))).controlUi,
+	isolatedCustomPlugins: true,
+	runtimeStatus: inspection.plugin.status,
 	copiedRuntimeMode: (copied.mode & 0o777).toString(8),
 	fixtureRuntimeMode: (fs.statSync(node).mode & 0o777).toString(8),
 	preset: JSON.parse(fs.readFileSync(path.join(root, 'managed-preset-proof.json'))),

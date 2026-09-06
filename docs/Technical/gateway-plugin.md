@@ -96,3 +96,15 @@ The authority review now carries the original connection identity, scope snapsho
 signal through async work and rechecks it before effects and replies. A synthetic delayed
 Documents implementation verifies the real Gateway handler does not lose this guard.
 See [authority/lifetime review](plugin-v4-backend.md#parent-review-authority-and-worker-lifetime).
+
+## Native Falcon UI
+
+The single plugin now declares a prebuilt native Control UI entry and stylesheet. Approved native
+pages use host page/navigation/dialog APIs; Work uses the typed feature client. Owner-only
+`falcon.vault.protected` handles selected-value and protected-entry operations outside the agent
+tool surface. `falcon.integrations.manage` derives human connection identity for create/consent.
+Both preserve the original connection guard across asynchronous effects.
+
+Only the synthetic managed-install harness enables Custom plugin UI. It installs the archive,
+inspects the loaded runtime, and exercises the managed resolver/provider path; this does not
+prove actual rendered native pages. See [native UI evidence and remaining gates](plugin-v4-native-ui.md).
