@@ -62,3 +62,11 @@ CI also runs a docs ownership check for high-signal directories. If a change tou
 surfaces, stores, Work flows, Vault behavior, or gateway-facing integration without touching every
 required owner group, the build should fail and force an explicit documentation decision. The
 harness separately rejects broken local links and orphaned files under `docs/`.
+
+## Plugin v4 checkpoint
+
+Canonical `check`, `test`, `test:coverage`, and `build` now target the plugin. CI installs the
+exact 2026.9.2 SDK into a runner-temporary prefix and KeePassXC for synthetic credential tests,
+with explicit isolated OpenClaw state/config paths. Historical Svelte checks use the
+`*:historical-standalone` scripts and do not constitute plugin UI acceptance. See
+[checkpoint evidence](Technical/plugin-v4-evidence.md) for failed and unavailable gates.

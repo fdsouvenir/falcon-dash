@@ -10,3 +10,6 @@ dist
 node_modules
 coverage
 .stitch
+
+# Isolated validation artifacts
+artifacts

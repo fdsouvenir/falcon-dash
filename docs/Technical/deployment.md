@@ -1,5 +1,7 @@
 # Deployment
 
+> **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
+
 Falcon Dash is an adapter-node SvelteKit application packaged as
 `@fdsouvenir/falcon-dash`. It runs on the same host as OpenClaw. Docker images, remote gateways,
 fredbot-backend, and an external vault are not current product requirements.

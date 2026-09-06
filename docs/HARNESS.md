@@ -94,3 +94,9 @@ When automation is not practical, record:
 4. expected visible result
 
 That format should appear in PR notes, issue notes, or the relevant spec.
+
+## Plugin conversion checkpoint
+
+The isolated single-plugin runtime and its explicit validation/release gaps are documented in
+[Technical/plugin-v4.md](Technical/plugin-v4.md). Use `npm run build:plugin` and
+`npm run test:plugin` for its backend checks; historical Svelte checks do not prove plugin delivery.

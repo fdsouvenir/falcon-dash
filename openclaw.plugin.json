@@ -1,37 +1,77 @@
 {
 	"id": "falcon-dash",
 	"name": "Falcon Dash",
-	"description": "Operator dashboard with Work, Vault, Channels, Shell, and Labs modules",
-	"modules": [
-		{
-			"id": "work",
-			"name": "Work",
-			"description": "Work Management schema, queue, migration, context, and agent operations"
-		},
-		{
-			"id": "vault",
-			"name": "Vault",
-			"description": "KeePassXC-backed password vault and SecretRef operations"
-		},
-		{
-			"id": "channels",
-			"name": "Channels",
-			"description": "Channel onboarding, readiness, validation, and recovery"
-		},
-		{
-			"id": "shell",
-			"name": "Shell",
-			"description": "Falcon Dash UI shell and readiness"
-		},
-		{
-			"id": "labs",
-			"name": "Labs / Advanced",
-			"description": "Advanced operator surfaces outside the default workflow"
-		}
-	],
+	"version": "4.0.0-alpha.0",
+	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
+	"activation": {
+		"onStartup": true
+	},
+	"contracts": {
+		"tools": ["falcon_work", "falcon_integrations", "falcon_vault", "falcon_documents"],
+		"gatewayMethodDispatch": ["authenticated-request"]
+	},
 	"configSchema": {
 		"type": "object",
 		"additionalProperties": false,
-		"properties": {}
+		"properties": {
+			"dataDir": {
+				"type": "string"
+			},
+			"modules": {
+				"type": "object",
+				"additionalProperties": false,
+				"properties": {
+					"work": {
+						"type": "boolean"
+					},
+					"integrations": {
+						"type": "boolean"
+					},
+					"vault": {
+						"type": "boolean"
+					},
+					"documents": {
+						"type": "boolean"
+					}
+				}
+			},
+			"vaultOwners": {
+				"type": "array",
+				"items": {
+					"type": "string"
+				}
+			},
+			"vaultExecutors": {
+				"type": "array",
+				"items": {
+					"type": "string"
+				}
+			},
+			"documentRoots": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["id", "path", "actors"],
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"path": {
+							"type": "string"
+						},
+						"actors": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						},
+						"writable": {
+							"type": "boolean"
+						}
+					}
+				}
+			}
+		}
 	}
 }

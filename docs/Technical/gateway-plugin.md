@@ -1,5 +1,7 @@
 # Falcon Dash Gateway Plugin
 
+> **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
+
 The Falcon Dash gateway plugin complements the native gateway client. The client handles standard
 OpenClaw transport; the plugin supplies bounded Falcon-specific context and capabilities.
 

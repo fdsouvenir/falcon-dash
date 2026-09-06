@@ -1,5 +1,7 @@
 # Work Management
 
+> **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
+
 This is the current implementation guide for Falcon Dash v3 Work. The approved semantic contracts
 remain in [v3/](v3/); this document explains how the shipped code realizes them.
 

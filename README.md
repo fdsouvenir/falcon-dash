@@ -1,3 +1,5 @@
+> **v4 implementation preview — not release-ready.** This branch packages one OpenClaw plugin with Work, Integrations, KeePassXC Vault and Documents. See [implemented scope and known blockers](docs/Technical/plugin-v4.md). The standalone setup below is historical and is not the installation path for this prerelease.
+
 # Falcon Dash
 
 [![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml)

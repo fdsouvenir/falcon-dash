@@ -14,6 +14,9 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      OPENCLAW_STATE_DIR: ${{ runner.temp }}/falcon-openclaw-state
+      OPENCLAW_CONFIG_PATH: ${{ runner.temp }}/falcon-openclaw-config.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,6 +31,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install pinned SDK and synthetic Vault prerequisite
+        run: |
+          npm install --prefix "$RUNNER_TEMP/falcon-sdk" --ignore-scripts --no-audit --no-fund openclaw@2026.9.2
+          test -e node_modules/openclaw || ln -s "$RUNNER_TEMP/falcon-sdk/node_modules/openclaw" node_modules/openclaw
+          sudo apt-get update
+          sudo apt-get install -y keepassxc
 
       - name: Security audit
         run: npm audit --audit-level=high --omit=dev
@@ -55,7 +65,9 @@ jobs:
         run: npm run check
 
       - name: Test with coverage
-        run: npm run test:coverage -- --reporter=verbose
+        run: |
+          mkdir -p coverage
+          npm run test:coverage | tee coverage/plugin-tests.txt
 
       - name: Upload coverage
         if: always()

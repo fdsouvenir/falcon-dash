@@ -39,6 +39,7 @@ export default ts.config(
 	},
 	{
 		ignores: [
+			'artifacts/',
 			'build/',
 			'.svelte-kit/',
 			'dist/',

@@ -1,5 +1,7 @@
 # Architecture
 
+> **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
+
 This document describes the current Falcon Dash implementation. Approved future modules are kept
 separately in [../ROADMAP.md](../ROADMAP.md).
 
