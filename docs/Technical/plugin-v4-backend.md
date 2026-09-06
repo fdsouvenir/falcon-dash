@@ -97,9 +97,9 @@ review. Filesystem key protection is not an external key-management service.
   confidential-client exchange, connection/Vault-version revalidation and guarded token storage.
   Raw authorization codes are neither persisted nor logged. Callback success says connected but
   unvalidated, and replay is denied. The OAuth URL is a protected human-flow output, never an
-  ordinary agent tool response. No callback HTTP route or native UI handoff has been activated.
+  ordinary agent tool response. The native UI now exposes the protected consent/completion handoff; no public callback HTTP route is deployed.
 - OAuth tests are **provider HTTP fixtures**, not actual HighLevel consent/authentication.
-  Cloudflare permission proof and Schwab's actual adapter remain unfinished.
+  Cloudflare now tests the configured account-read capability, and Schwab has bounded account-hash validation/refresh fixtures. These do not establish live provider authorization.
 
 The current public Schwab guide was read at
 [OAuth restart vs refresh](https://developer.schwab.com/user-guides/apis-and-apps/oauth-restart-vs-refresh-token).
@@ -238,3 +238,24 @@ committed WAL changes), detects changes during inspection, and revalidates the a
 before reporting conversion success. A changed archive removes only the new conversion target.
 Legacy-id lookup cannot resolve inherited Object properties. These are resolved implementation
 gaps, not deferred product decisions or reasons to migrate live data without approval.
+
+## Third provider and native runtime refinements
+
+- Cloudflare validates both token activity and the exact configured account via its account-read
+  endpoint. A healthy result claims only `account.read`, not Workers deployment, DNS write, or
+  every permission on the token. Protected field: `api_token`.
+- Schwab uses its token and account-number mapping endpoints, verifies the expected account hash,
+  and returns no account numbers/balances. Protected fields: `access_token`, `refresh_token`,
+  `client_id`, `client_secret`, and an explicit ISO `reauthorize_at` cutoff. Missing/elapsed cutoff
+  refuses provider I/O. Refresh preserves an omitted refresh token and never advances this cutoff.
+  This is an explicit local renewal boundary, **not** an invented universal provider lifetime.
+  Earlier provider revocation still requires consent; it stops automatic retries.
+- The current public Schwab portal is a client-rendered shell to the lightweight fetcher. Endpoint
+  and Basic-auth conventions were cross-checked against maintained `schwab-py` auth/client source
+  and documentation; these are secondary implementation references, not proof that a live account
+  is authorized. No indefinite-session or seven-day guarantee is asserted.
+- Real Gateway profile fields are now used at native RPC boundaries. The earlier tests' explicit
+  internal role actor alone did not cover ordinary trusted-proxy connections. The host-only
+  installation proof establishes a real profile through `users.self` and binds `falcon.identity`.
+
+See [required real-Gateway native E2E](plugin-native-e2e.md) for CI/runtime/browser distinctions.

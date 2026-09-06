@@ -84,3 +84,5 @@ historical tests. It covers the managed owner lifecycle and a real provider-boun
 synthetic credentials; it does not claim live vendor authentication or native UI acceptance.
 
 Native DOM interaction tests run the actual browser bundle in Happy DOM, including real WorkStore commands and secret cleanup outside the view container. They do not count as rendered desktop/narrow or real-shell acceptance; that gate is currently blocked by browser navigation policy.
+
+The required `native-e2e` job in CI launches the packaged plugin in a real pinned isolated Gateway and tests its native Control UI in Chromium. It is not a success skip or a standalone server. See [the acceptance harness](Technical/plugin-native-e2e.md).

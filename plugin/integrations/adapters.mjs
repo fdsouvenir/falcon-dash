@@ -131,10 +131,99 @@ export function adapters(fetcher = fetch) {
 				};
 			}
 		},
+		schwab: {
+			supports_refresh: true,
+			dispatch_guarded: true,
+			async test(material, connection, authority = internalAuthority) {
+				requireValue(
+					typeof material.access_token === 'string' && material.access_token.length > 0,
+					'reauthorization_required',
+					'Protected access token is unavailable'
+				);
+				const cutoff = Date.parse(material.reauthorize_at);
+				requireValue(
+					Number.isFinite(cutoff) && cutoff > Date.now(),
+					'reauthorization_required',
+					'An explicit current renewal cutoff is required; complete consent rather than assuming indefinite refresh'
+				);
+				requireValue(
+					typeof connection.account_id === 'string' && connection.account_id.length > 0,
+					'invalid_input',
+					'Configure the expected Schwab account hash'
+				);
+				const out = await request(
+					fetcher,
+					'https://api.schwabapi.com/trader/v1/accounts/accountNumbers',
+					{ headers: { Authorization: `Bearer ${material.access_token}` } },
+					authority
+				);
+				requireValue(
+					Array.isArray(out) && out.some((account) => account.hashValue === connection.account_id),
+					'scope_failure',
+					'The configured account was not verified'
+				);
+				return {
+					health: 'healthy',
+					validated_capabilities: ['account_numbers.read'],
+					next_at: Math.min(Date.now() + 3600000, cutoff)
+				};
+			},
+			async refresh(material, _connection, authority = internalAuthority) {
+				const cutoff = Date.parse(material.reauthorize_at);
+				requireValue(
+					Number.isFinite(cutoff) && cutoff > Date.now(),
+					'reauthorization_required',
+					'Renew consent before attempting another refresh'
+				);
+				for (const field of ['client_id', 'client_secret', 'refresh_token'])
+					requireValue(
+						typeof material[field] === 'string' && material[field].length > 0,
+						'reauthorization_required',
+						'Required protected OAuth material is unavailable'
+					);
+				const out = await request(
+					fetcher,
+					'https://api.schwabapi.com/v1/oauth/token',
+					{
+						method: 'POST',
+						headers: {
+							Authorization: `Basic ${Buffer.from(material.client_id + ':' + material.client_secret).toString('base64')}`,
+							'Content-Type': 'application/x-www-form-urlencoded'
+						},
+						body: new URLSearchParams({
+							grant_type: 'refresh_token',
+							refresh_token: material.refresh_token
+						})
+					},
+					authority
+				);
+				requireValue(
+					typeof out.access_token === 'string' &&
+						out.access_token.length > 0 &&
+						Number.isFinite(out.expires_in) &&
+						out.expires_in > 0,
+					'provider_response_invalid',
+					'Provider omitted access token or expiry'
+				);
+				const next = { access_token: out.access_token };
+				if (out.refresh_token) next.refresh_token = out.refresh_token;
+				return {
+					material: next,
+					health: 'healthy',
+					next_at: Math.min(Date.now() + Math.max(1, out.expires_in - 300) * 1000, cutoff)
+				};
+			}
+		},
+
 		cloudflare: {
 			supports_refresh: false,
 			dispatch_guarded: true,
-			async test(material, _connection, authority = internalAuthority) {
+			async test(material, connection, authority = internalAuthority) {
+				requireValue(
+					typeof material.api_token === 'string' && material.api_token.length > 0,
+					'reauthorization_required',
+					'Protected API token is unavailable'
+				);
 				const out = await request(
 					fetcher,
 					'https://api.cloudflare.com/client/v4/user/tokens/verify',
@@ -146,7 +235,24 @@ export function adapters(fetcher = fetch) {
 					'scope_failure',
 					'Token is not active'
 				);
-				return { health: 'unavailable', validation: 'token_active_permissions_unverified' };
+				requireValue(
+					typeof connection.account_id === 'string' &&
+						/^[a-fA-F0-9]{32}$/.test(connection.account_id),
+					'invalid_input',
+					'Configure the exact Cloudflare account id'
+				);
+				const account = await request(
+					fetcher,
+					`https://api.cloudflare.com/client/v4/accounts/${connection.account_id}`,
+					{ headers: { Authorization: `Bearer ${material.api_token}` } },
+					authority
+				);
+				requireValue(
+					account.success && account.result?.id === connection.account_id,
+					'scope_failure',
+					'Account read permission was not verified'
+				);
+				return { health: 'healthy', validated_capabilities: ['account.read'] };
 			},
 			async refresh() {
 				throw new DomainError(

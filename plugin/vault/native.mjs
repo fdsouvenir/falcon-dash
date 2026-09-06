@@ -1,6 +1,6 @@
 import { Type, Check } from '../schema.mjs';
 import { requireValue } from '../errors.mjs';
-import { connectionAuthority } from '../authority.mjs';
+import { connectionAuthority, humanIdentity } from '../authority.mjs';
 const S = Type.String({ minLength: 1, maxLength: 512 }),
 	O = (p) => Type.Object(p, { additionalProperties: false });
 export const protectedInputs = {
@@ -38,7 +38,7 @@ export const protectedInputs = {
 };
 // Deliberately not a tool or feature query: selected-value reads require an explicit human call.
 export async function protectedVault(vault, params, client, ready) {
-	const identity = client?.internal?.operatorRoleActor;
+	const identity = humanIdentity(client);
 	requireValue(
 		client?.connId &&
 			!client.invalidated &&

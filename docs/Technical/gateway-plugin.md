@@ -108,3 +108,5 @@ Both preserve the original connection guard across asynchronous effects.
 Only the synthetic managed-install harness enables Custom plugin UI. It installs the archive,
 inspects the loaded runtime, and exercises the managed resolver/provider path; this does not
 prove actual rendered native pages. See [native UI evidence and remaining gates](plugin-v4-native-ui.md).
+
+Native identity binding now recognizes the Gateway-populated authenticated personal profile and verified user identity, not only an explicit internal role actor. Shared system/gateway-owner, synthetic and conflicting identities remain denied. The new real-Gateway acceptance harness obtains the profile through the supported `users.self` RPC.

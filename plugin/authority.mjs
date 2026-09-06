@@ -2,8 +2,22 @@ import { requireValue } from './errors.mjs';
 /** @typedef {{assert:()=>void,signal?:AbortSignal,beforeRequest?:()=>void}} Authority */
 /** @type {Authority} */
 export const internalAuthority = Object.freeze({ assert() {}, signal: undefined });
+// Gateway-populated connection fields, never params or browser-supplied actors.
+export function humanIdentity(client) {
+	if (client?.internal?.syntheticClient || client?.internal?.operatorRoleActor?.kind === 'system')
+		return null;
+	const role = client?.internal?.operatorRoleActor,
+		profile = client?.authenticatedUserProfile?.profileId;
+	if (profile && profile !== 'gateway-owner' && client?.authenticatedUserId) {
+		if (role?.kind === 'operator' && role.profileId !== profile) return null;
+		return { kind: 'operator', profileId: profile };
+	}
+	return role?.kind === 'operator' ? role : null;
+}
 export function connectionAuthority(client) {
-	const identity = client?.internal?.operatorRoleActor;
+	const identity = humanIdentity(client),
+		authenticatedUserId = client?.authenticatedUserId,
+		authenticatedProfileId = client?.authenticatedUserProfile?.profileId;
 	const scopes = JSON.stringify([...(client?.connect?.scopes ?? [])].sort());
 	const kind = identity?.kind,
 		profileId = identity?.profileId,
@@ -16,8 +30,10 @@ export function connectionAuthority(client) {
 				!client?.invalidated &&
 					!client?.connectionSignal?.aborted &&
 					client?.connId === connId &&
-					client?.internal?.operatorRoleActor?.kind === kind &&
-					client?.internal?.operatorRoleActor?.profileId === profileId &&
+					humanIdentity(client)?.kind === kind &&
+					humanIdentity(client)?.profileId === profileId &&
+					client?.authenticatedUserId === authenticatedUserId &&
+					client?.authenticatedUserProfile?.profileId === authenticatedProfileId &&
 					client?.internal?.syntheticClient === synthetic &&
 					JSON.stringify([...(client?.connect?.scopes ?? [])].sort()) === scopes,
 				'authority_changed',

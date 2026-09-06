@@ -78,3 +78,5 @@ cutover remain outside this synthetic build's evidence.
   navigation; **no rendered evidence or screenshots**.
 - `artifacts/plugin-v4/native-types.txt`, `native-lint.txt`, `native-format.txt`, `native-docs.txt`,
   `native-harness.txt`, `native-skills.txt`: source/package quality checks.
+
+The local browser-policy limitation is unchanged. A required, separately authorized CI browser job now exercises the real isolated Gateway on its own runner; see [native E2E](plugin-native-e2e.md). Host-only proof is already local; browser acceptance must be reported from actual CI results, not inferred from the test implementation.

@@ -6,8 +6,15 @@ on:
       - 'v*'
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: ci
     runs-on: ubuntu-latest
+    env:
+      OPENCLAW_STATE_DIR: ${{ github.workspace }}/artifacts/plugin-v4/publish-state
+      OPENCLAW_CONFIG_PATH: ${{ github.workspace }}/artifacts/plugin-v4/publish-config.json
     permissions:
       contents: read
       packages: write
@@ -16,11 +23,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.nvmrc'
           registry-url: https://npm.pkg.github.com
           scope: '@fdsouvenir'
 
       - run: npm ci
+
+      - name: Install pinned plugin SDK and Vault prerequisite
+        run: |
+          npm install --prefix "$RUNNER_TEMP/falcon-sdk" --ignore-scripts --no-audit --no-fund openclaw@2026.9.2
+          test -e node_modules/openclaw || ln -s "$RUNNER_TEMP/falcon-sdk/node_modules/openclaw" node_modules/openclaw
+          sudo apt-get update
+          sudo apt-get install -y keepassxc
 
       - run: npm publish
         env:

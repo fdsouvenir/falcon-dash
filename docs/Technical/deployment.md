@@ -165,3 +165,5 @@ toolcache binaries can carry broader source modes. It verifies ownership before 
 checks the original runtime hash/uid/mode remain unchanged. No system Node chmod/chown is used.
 
 Native Control UI is approved and bundled. The isolated managed-install proof now sets only its own `gateway.controlUi.experimental.customPlugins` opt-in. Production opt-in/restart remains out of scope. See [native UI prerequisites and current browser-policy blocker](plugin-v4-native-ui.md).
+
+Release and package publication now depend on the complete reusable CI workflow, including real-Gateway native E2E. Publication uses the pinned SDK/Node and isolated state for package checks. No tag/release/publication has been triggered; see [CI/runtime boundaries](plugin-native-e2e.md).

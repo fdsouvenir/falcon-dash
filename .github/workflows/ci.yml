@@ -102,3 +102,7 @@ jobs:
             artifacts/plugin-v4/managed-install-*/managed-audit.log
             artifacts/plugin-v4/managed-install-*/managed-provider.log
           retention-days: 14
+
+  native-e2e:
+    needs: quality
+    uses: ./.github/workflows/e2e.yml

@@ -1,4 +1,4 @@
-import { connectionAuthority, internalAuthority } from './authority.mjs';
+import { connectionAuthority, internalAuthority, humanIdentity } from './authority.mjs';
 import { defineFeaturePlugin } from 'openclaw/plugin-sdk/feature-plugin';
 import { workFeature } from './work/feature-contract.mjs';
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
@@ -233,7 +233,7 @@ export default definePluginEntry({
 								'Use the scoped write operation'
 							);
 							requireValue(!client?.invalidated, 'access_denied', 'Connection was revoked');
-							const authority = client?.internal?.operatorRoleActor;
+							const authority = humanIdentity(client);
 							const actor =
 								authority?.kind === 'operator' && !client?.internal?.syntheticClient
 									? `human:${authority.profileId}`
@@ -353,7 +353,7 @@ export default definePluginEntry({
 		api.registerGatewayMethod(
 			'falcon.identity',
 			({ client, respond }) => {
-				const principal = client?.internal?.operatorRoleActor;
+				const principal = humanIdentity(client);
 				if (
 					!client?.connId ||
 					client.invalidated ||

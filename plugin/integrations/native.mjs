@@ -1,6 +1,6 @@
 import { Type, Check } from '../schema.mjs';
 import { requireValue } from '../errors.mjs';
-import { connectionAuthority } from '../authority.mjs';
+import { connectionAuthority, humanIdentity } from '../authority.mjs';
 const S = Type.String({ minLength: 1, maxLength: 512 }),
 	O = (p) => Type.Object(p, { additionalProperties: false });
 export const integrationInputs = {
@@ -20,7 +20,7 @@ export const integrationInputs = {
 	complete: O({ state: S, code: Type.String({ minLength: 1, maxLength: 4096 }) })
 };
 export async function nativeIntegration(service, oauth, params, client, ready) {
-	const identity = client?.internal?.operatorRoleActor;
+	const identity = humanIdentity(client);
 	requireValue(
 		client?.connId &&
 			!client.invalidated &&

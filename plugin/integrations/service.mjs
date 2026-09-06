@@ -276,10 +276,11 @@ export class Integrations {
 				c.next_at = Date.now();
 				c.next_action = 'test';
 			} else {
-				c.next_at =
-					c.next_refresh_at && c.next_refresh_at < Date.now() + 3600000
-						? c.next_refresh_at
-						: Date.now() + 3600000;
+				c.next_at = Math.min(
+					Date.now() + 3600000,
+					c.next_refresh_at ?? Infinity,
+					result.next_at ?? Infinity
+				);
 				c.next_action = c.next_at === c.next_refresh_at ? 'refresh' : 'test';
 			}
 			c.version++;
@@ -304,7 +305,7 @@ export class Integrations {
 			c.phase = 'idle';
 			c.last_failure = Date.now();
 			c.health =
-				action === 'refresh' && providerStarted
+				(action === 'refresh' && providerStarted) || e.code === 'reauthorization_required'
 					? 'reauthorization_required'
 					: e.code === 'scope_failure'
 						? 'broken'
@@ -313,7 +314,7 @@ export class Integrations {
 							: 'broken';
 			c.failures = (c.failures ?? 0) + 1;
 			c.next_at =
-				action === 'refresh' && providerStarted
+				c.health === 'reauthorization_required'
 					? null
 					: Date.now() + Math.min(3600000, 30000 * 2 ** Math.min(c.failures, 7));
 			c.version++;
