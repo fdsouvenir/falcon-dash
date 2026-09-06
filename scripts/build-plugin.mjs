@@ -1,3 +1,19 @@
+import { build } from 'esbuild';
+import { copyFileSync } from 'node:fs';
+await build({
+	stdin: {
+		contents: "export {Type} from 'typebox'; export {Check} from 'typebox/value';",
+		resolveDir: process.cwd(),
+		sourcefile: 'schema-runtime.mjs'
+	},
+	outfile: 'plugin/schema.mjs',
+	bundle: true,
+	format: 'esm',
+	platform: 'node',
+	target: 'node22',
+	legalComments: 'inline'
+});
+copyFileSync('node_modules/typebox/license', 'plugin/typebox-license.txt');
 import { readdirSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 function check(directory) {

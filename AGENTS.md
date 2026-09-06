@@ -8,6 +8,8 @@ agent receives the same instructions.
 
 ## Start Here
 
+- For the active single-plugin conversion, read [docs/Technical/plugin-v4-backend.md](docs/Technical/plugin-v4-backend.md). Current issue bodies #326/#347/#363/#364/#365 govern scope. Historical standalone descriptions below do not override them.
+
 - Read [docs/PURPOSE.md](docs/PURPOSE.md) for product intent and audience.
 - Read [docs/ROADMAP.md](docs/ROADMAP.md) when a change affects version scope or future architecture.
 - Read [docs/HARNESS.md](docs/HARNESS.md) for the repo-level execution and validation model.
@@ -16,9 +18,9 @@ agent receives the same instructions.
 
 ## Product and Sources of Truth
 
-- Falcon Dash is a standalone, self-hostable operator dashboard that requires a co-resident
-  OpenClaw Gateway over loopback or a same-host container network. Remote gateways are outside the
-  supported product scope.
+- Falcon Dash is becoming one installable OpenClaw plugin with internal Work, Integrations,
+  KeePassXC Vault and Documents. The prior standalone source is retained for regression and
+  controlled conversion, not shipped as a second runtime. `docs/PURPOSE.md` remains owner-protected.
 - OpenClaw changes rapidly. For upstream behavior, consult the current official documentation at
   `docs.openclaw.ai`, its `llms-full.txt`, and the public `github.com/openclaw/openclaw` repository.
 - Repository docs, code, and tests should agree. When they do not, investigate the discrepancy and
@@ -59,10 +61,14 @@ agent receives the same instructions.
 - [skills/falcon-dash-work/SKILL.md](skills/falcon-dash-work/SKILL.md) — current v3 Work CLI and API workflow
 - [skills/falcon-dash-vault/SKILL.md](skills/falcon-dash-vault/SKILL.md) — built-in Vault and SecretRef workflow
 
-These skills ship to OpenClaw agents. Repo-development workflows belong in this guide and `docs/`,
+These are historical v3 skill sources and are not currently shipped in the plugin preview. Do not inject their obsolete standalone workflows as the new contract. Repo-development workflows belong in this guide and `docs/`,
 or in environment-provided skills such as Stitch; do not add developer-only skills to `skills/`.
 
 ## Project Structure
+
+- `plugin/` — active plugin backend, contracts, protected storage and synthetic tests
+- `scripts/verify-plugin-prompt.mjs` — isolated pinned-host provider-request proof
+- The `src/` routes and stores below are historical/conversion-regression source, not the plugin runtime.
 
 - `src/routes/` — SvelteKit pages and API handlers
 - `src/lib/components/` — shared UI components
@@ -79,15 +85,15 @@ or in environment-provided skills such as Stitch; do not add developer-only skil
 Use Node 20+.
 
 - `npm install` — install dependencies and repo skills
-- `npm run dev` — start the local Vite dev server
-- `npm run build` — create the production build in `build/`
-- `npm run preview` — serve the built app locally
-- `npm run check` — run Svelte and TypeScript checks
+- `npm run dev:historical-standalone` — explicitly start the historical Vite application
+- `npm run build` — bundle the schema dependency and validate executable plugin JavaScript
+- `npm run preview` — historical Vite preview only, not plugin UI acceptance
+- `npm run check` — check plugin JavaScript against the pinned SDK types; historical Svelte uses `check:historical-standalone`
 - `npm run lint` — run ESLint
 - `npm run format` — apply Prettier
 - `npm run format:check` — verify Prettier formatting
-- `npm run test` — run Vitest unit tests
-- `npm run test:coverage` — run unit tests with coverage
+- `npm run test` — run plugin/security tests; preserve historical Vitest coverage with `test:historical-standalone`
+- `npm run test:coverage` — run plugin tests with Node coverage
 - `npm run test:e2e` — run Playwright tests
 - `npm run check:harness` — verify the harness doc map
 - `npm run check:docs` — verify high-signal code changes touched matching docs

@@ -27,8 +27,12 @@ function fixture(t) {
 		call('create', undefined, {
 			type,
 			title: 'Implement scoped document editing',
-			description: 'Keep the workspace and credential boundaries intact',
-			done_when: 'Security regression tests pass',
+			...(type === 'task'
+				? {
+						description: 'Keep the workspace and credential boundaries intact',
+						done_when: 'Security regression tests pass'
+					}
+				: {}),
 			...more
 		}).target;
 	return { store, call, create, dir };
@@ -111,7 +115,10 @@ test('Abandonment requires every disposition and detach preserves lifecycle', (t
 		code: 'input_required'
 	});
 	assert.equal(store.get(p).status, 'open');
-	call('abandon', p, { dispositions: { [a]: 'detach', [b]: 'abandon' } });
+	call('abandon', p, {
+		dispositions: { [a]: 'detach', [b]: 'abandon' },
+		versions: { [a]: store.get(a).version, [b]: store.get(b).version }
+	});
 	assert.equal(store.get(a).status, 'open');
 	assert.equal(store.get(a).project_id, undefined);
 	assert.equal(store.get(b).status, 'abandoned');
@@ -143,4 +150,26 @@ test('Separate database connections see committed state and reject stale version
 			),
 		{ code: 'version_conflict' }
 	);
+});
+test('Observer errors cannot invalidate a committed command and external writers trigger canonical invalidation', (t) => {
+	const { store, create, dir } = fixture(t);
+	const seen = [];
+	store.subscribe((stamp) => {
+		seen.push(stamp);
+		throw new Error('Synthetic observer failure');
+	});
+	const id = create();
+	assert.equal(store.get(id).status, 'open');
+	assert.equal(seen.length, 1);
+	assert.deepEqual(Object.keys(seen[0]).sort(), ['epoch', 'revision']);
+	const other = new WorkStore(dir + '/work.db');
+	t.after(() => other.close());
+	other.execute(
+		{ command: 'ready', id, expected_version: 1, idempotency_key: 'external-notify', input: {} },
+		'agent:external'
+	);
+	assert.equal(store.checkExternalChanges(), true);
+	assert.equal(store.get(id).status, 'ready');
+	assert.equal(seen.length, 2);
+	assert.equal(store.checkExternalChanges(), false);
 });

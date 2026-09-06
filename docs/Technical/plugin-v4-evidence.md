@@ -1,5 +1,7 @@
 # Plugin v4 checkpoint evidence
 
+This records the first checkpoint. See [backend continuation](plugin-v4-backend.md) for newer coverage; the historical suites have since been repaired and all 402 tests pass.
+
 This records a **partial implementation**, not completion of #364 or its source issues.
 See [scope and gaps](plugin-v4.md). No production cutover or package publication was performed.
 

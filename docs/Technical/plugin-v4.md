@@ -1,5 +1,7 @@
 # Single-plugin implementation preview
 
+**Backend continuation:** [current implementation and remaining audits](plugin-v4-backend.md) supersedes the initial checkpoint status below. The UI decision does not block backend work.
+
 **Status: incomplete, not release-ready.** Branch `feat/falcon-plugin-v4` implements an isolated
 engineering checkpoint for [#364](https://github.com/fdsouvenir/falcon-dash/issues/364), not the
 completed next major version. Current issue bodies #326, #329, #330, #345, #347, #360, #361, #363

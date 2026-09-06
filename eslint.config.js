@@ -40,6 +40,7 @@ export default ts.config(
 	{
 		ignores: [
 			'artifacts/',
+			'plugin/schema.mjs',
 			'build/',
 			'.svelte-kit/',
 			'dist/',

@@ -69,6 +69,12 @@ jobs:
           mkdir -p coverage
           npm run test:coverage | tee coverage/plugin-tests.txt
 
+      - name: Historical Svelte types
+        run: npm run check:historical-standalone
+
+      - name: Retained historical regressions
+        run: npm run test:historical-standalone -- --maxWorkers=1 --no-file-parallelism
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4

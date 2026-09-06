@@ -1,21 +1,30 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, chmodSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { DomainError, requireValue, text, exact } from '../work/store.mjs';
+import { privateDatabase } from '../storage.mjs';
+import { readFileSync } from 'node:fs';
+import { DomainError, requireValue, text, exact } from '../errors.mjs';
 
+function processStart(pid) {
+	try {
+		return readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ').at(-1).split(' ')[19];
+	} catch {
+		return null;
+	}
+}
 export class Integrations {
 	constructor(path, vault, adapters) {
-		mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-		this.db = new DatabaseSync(path);
-		chmodSync(path, 0o600);
+		this.db = privateDatabase(path, { maxVersion: 1, allowUnversioned: true });
+		this.path = path;
+		this.inflight = new Set();
+		this.closing = false;
 		this.vault = vault;
 		this.adapters = adapters;
 		this.db.exec(`PRAGMA journal_mode=WAL;PRAGMA synchronous=FULL;PRAGMA busy_timeout=5000;
   CREATE TABLE IF NOT EXISTS connections(id TEXT PRIMARY KEY,version INTEGER NOT NULL,body TEXT NOT NULL) STRICT;
-  CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,connection_id TEXT NOT NULL,action TEXT NOT NULL,at INTEGER NOT NULL,outcome TEXT NOT NULL) STRICT;`);
+  CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,connection_id TEXT NOT NULL,action TEXT NOT NULL,at INTEGER NOT NULL,outcome TEXT NOT NULL) STRICT;PRAGMA user_version=1;`);
 	}
-	close() {
+	async close() {
+		this.closing = true;
 		if (this.timer) clearInterval(this.timer);
+		await Promise.allSettled([...this.inflight]);
 		this.db.close();
 	}
 	get(id) {
@@ -29,6 +38,12 @@ export class Integrations {
 				'INSERT INTO connections VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET version=excluded.version,body=excluded.body'
 			)
 			.run(c.id, c.version, JSON.stringify(c));
+	}
+	compareAndSave(c, expected) {
+		const result = this.db
+			.prepare('UPDATE connections SET version=?,body=? WHERE id=? AND version=?')
+			.run(c.version, JSON.stringify(c), c.id, expected);
+		requireValue(result.changes === 1, 'authority_changed', 'Connection changed during operation');
 	}
 	list(actor) {
 		return this.db
@@ -48,7 +63,8 @@ export class Integrations {
 					next_at,
 					paused,
 					version,
-					phase
+					phase,
+					validated_capabilities = []
 				}) => ({
 					id,
 					provider,
@@ -61,6 +77,7 @@ export class Integrations {
 					paused,
 					version,
 					phase,
+					validated_capabilities,
 					freshness: last_success && Date.now() - last_success < 3600000 ? 'current' : 'stale'
 				})
 			);
@@ -101,9 +118,16 @@ export class Integrations {
 			.prepare('INSERT INTO audit(connection_id,action,at,outcome) VALUES(?,?,?,?)')
 			.run(id, action, Date.now(), outcome);
 	}
-	async run(id, action, actor) {
+	run(id, action, actor) {
+		const operation = this.perform(id, action, actor);
+		const tracked = operation.finally(() => this.inflight.delete(tracked));
+		this.inflight.add(tracked);
+		return tracked;
+	}
+	async perform(id, action, actor) {
+		requireValue(!this.closing, 'unavailable', 'Integration service is stopping');
 		requireValue(
-			['test', 'refresh', 'pause', 'resume'].includes(action),
+			['test', 'refresh', 'pause', 'resume', 'disconnect'].includes(action),
 			'invalid_command',
 			'Unsupported integration action'
 		);
@@ -115,6 +139,25 @@ export class Integrations {
 				c.actors.includes(actor),
 				'access_denied',
 				'Connection access is not authorized'
+			);
+			if (action === 'disconnect' || action === 'pause') {
+				c.version++;
+				c.phase = 'idle';
+				c.paused = true;
+				if (action === 'disconnect') {
+					c.disconnected = true;
+					c.health = 'reauthorization_required';
+					c.next_at = null;
+				}
+				this.save(c);
+				this.audit(id, action, 'committed');
+				this.db.exec('COMMIT');
+				return { id, paused: true, disconnected: !!c.disconnected };
+			}
+			requireValue(
+				!c.disconnected,
+				'disconnected',
+				'Reconnect explicitly before using this connection'
 			);
 			requireValue(
 				c.phase === 'idle',
@@ -135,8 +178,15 @@ export class Integrations {
 				'Use the upstream credential owner; Falcon does not refresh native credentials'
 			);
 			requireValue(!c.paused, 'maintenance_paused', 'Resume maintenance first');
+			requireValue(
+				action !== 'refresh' || this.adapters[c.provider].supports_refresh !== false,
+				'unsupported_operation',
+				'This provider uses explicit rotation rather than token refresh'
+			);
 			c.phase = action === 'refresh' ? 'refreshing' : 'testing';
 			c.operation_started = Date.now();
+			c.operation_pid = process.pid;
+			c.operation_start = processStart(process.pid);
 			c.version++;
 			this.save(c);
 			this.db.exec('COMMIT');
@@ -144,9 +194,12 @@ export class Integrations {
 			this.db.exec('ROLLBACK');
 			throw e;
 		}
+		const leaseVersion = c.version;
+		let providerStarted = false;
 		try {
 			const adapter = this.adapters[c.provider];
 			const result = await this.vault.resolveForExecution(c.vault_handle, actor, async (record) => {
+				providerStarted = true;
 				const output = await adapter[action](record.material, c);
 				// No automatic lease steal: a refresh might have consumed the old provider token.
 				const current = this.get(id);
@@ -159,36 +212,72 @@ export class Integrations {
 					'Connection changed while preparing provider operation'
 				);
 				if (output.material)
-					await this.vault.rotate(c.vault_handle, output.material, record.version, actor);
+					await this.vault.rotate(c.vault_handle, output.material, record.version, actor, {
+						database: this.path,
+						id,
+						version: c.version,
+						phase: c.phase
+					});
 				return output;
 			});
+			const operationVersion = c.version;
 			c.phase = 'idle';
-			c.health = result.health ?? 'healthy';
-			c.last_success = Date.now();
+			c.validated_capabilities = action === 'test' ? (result.validated_capabilities ?? []) : [];
+			c.health = action === 'refresh' ? 'unavailable' : (result.health ?? 'healthy');
+			if (action === 'test') c.last_success = Date.now();
+			else c.last_maintenance_success = Date.now();
 			c.last_failure = null;
-			c.next_at = result.next_at ?? Date.now() + 3600000;
+			if (action === 'refresh') {
+				c.next_refresh_at = result.next_at ?? null;
+				c.next_at = Date.now();
+				c.next_action = 'test';
+			} else {
+				c.next_at =
+					c.next_refresh_at && c.next_refresh_at < Date.now() + 3600000
+						? c.next_refresh_at
+						: Date.now() + 3600000;
+				c.next_action = c.next_at === c.next_refresh_at ? 'refresh' : 'test';
+			}
 			c.version++;
-			this.save(c);
+			this.compareAndSave(c, operationVersion);
 			this.audit(id, action, 'success');
-			return { id, health: c.health, next_at: c.next_at };
+			return {
+				id,
+				health: c.health,
+				next_at: c.next_at,
+				validated_capabilities: c.validated_capabilities
+			};
 		} catch (e) {
+			const current = this.get(id);
+			if (current.version !== leaseVersion) {
+				this.audit(id, action, 'superseded');
+				throw new DomainError(
+					'authority_changed',
+					'Connection was changed or disconnected during operation'
+				);
+			}
+			const operationVersion = c.version;
 			c.phase = 'idle';
 			c.last_failure = Date.now();
 			c.health =
-				action === 'refresh'
+				action === 'refresh' && providerStarted
 					? 'reauthorization_required'
 					: e.code === 'scope_failure'
 						? 'broken'
 						: e.code === 'vault_locked'
 							? 'unavailable'
 							: 'broken';
-			c.next_at = action === 'refresh' ? null : Date.now() + 300000;
+			c.failures = (c.failures ?? 0) + 1;
+			c.next_at =
+				action === 'refresh' && providerStarted
+					? null
+					: Date.now() + Math.min(3600000, 30000 * 2 ** Math.min(c.failures, 7));
 			c.version++;
-			this.save(c);
+			this.compareAndSave(c, operationVersion);
 			this.audit(id, action, c.health);
 			throw new DomainError(
 				c.health,
-				action === 'refresh'
+				action === 'refresh' && providerStarted
 					? 'Refresh outcome is uncertain. Reauthorize; automatic retry could reuse a consumed token.'
 					: 'Validation failed; inspect access and retry'
 			);
@@ -197,8 +286,11 @@ export class Integrations {
 	recover() {
 		for (const row of this.db.prepare('SELECT body FROM connections').all()) {
 			const c = JSON.parse(String(row.body));
-			if (c.phase !== 'idle') {
-				c.health = c.phase === 'refreshing' ? 'reauthorization_required' : 'unavailable';
+			if (
+				c.phase !== 'idle' &&
+				(!c.operation_pid || processStart(c.operation_pid) !== c.operation_start)
+			) {
+				c.health = c.phase !== 'testing' ? 'reauthorization_required' : 'unavailable';
 				c.phase = 'idle';
 				c.next_at = null;
 				c.version++;
@@ -219,7 +311,7 @@ export class Integrations {
 					.slice(0, 1);
 				for (const c of due) {
 					try {
-						await this.run(c.id, 'test', actor);
+						await this.run(c.id, this.get(c.id).next_action ?? 'test', actor);
 					} catch {
 						/* redacted status persisted */
 					}

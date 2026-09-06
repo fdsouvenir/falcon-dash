@@ -1,3 +1,5 @@
+import { defineFeaturePlugin } from 'openclaw/plugin-sdk/feature-plugin';
+import { workFeature } from './work/feature-contract.mjs';
 import { definePluginEntry } from 'openclaw/plugin-sdk/plugin-entry';
 import path from 'node:path';
 import { WorkStore, DomainError, exact, requireValue } from './work/store.mjs';
@@ -31,10 +33,21 @@ export default definePluginEntry({
 			exact(p, Object.keys(tools[name].parameters.properties));
 			if (name === 'falcon_work') {
 				if (p.action === 'list') {
-					if (p.query) exact(p.query, ['type', 'limit', 'offset', 'agent_id', 'search']);
+					if (p.query)
+						exact(p.query, [
+							'type',
+							'limit',
+							'offset',
+							'agent_id',
+							'search',
+							'fields',
+							'include_terminal'
+						]);
 					return work.list(p.query);
 				}
 				if (p.action === 'get') return work.detail(p.id, p.full === true);
+				if (p.action === 'queue' || p.action === 'brief') return work.queue(p.query);
+				if (p.action === 'history') return work.history(p.id, p.query);
 				if (p.action === 'command') {
 					requireValue(actor, 'identity_required', 'A verified actor is required');
 					return work.execute(p.request, actor);
@@ -48,12 +61,26 @@ export default definePluginEntry({
 			}
 			if (name === 'falcon_vault') {
 				if (p.action === 'status') return { locked: vault.locked, protected_ui: 'unavailable' };
+				if (p.action === 'metadata') return vault.metadata(p.id, actor);
 				requireValue(p.action === 'inventory', 'invalid_command', 'Unsupported Vault operation');
 				return vault.inventory(actor);
 			}
 			if (name === 'falcon_documents') {
+				requireValue(actor, 'identity_required', 'A verified workspace actor is required');
+				if (p.action === 'roots') return documents.rootsFor(actor);
+				if (p.action === 'copy_path') return documents.copyPath(p, actor);
 				requireValue(
-					['list', 'read', 'write', 'mkdir'].includes(p.action),
+					[
+						'list',
+						'read',
+						'write',
+						'mkdir',
+						'rename',
+						'download',
+						'upload',
+						'trash',
+						'restore'
+					].includes(p.action),
 					'invalid_command',
 					'Unsupported Documents operation'
 				);
@@ -63,29 +90,62 @@ export default definePluginEntry({
 		}
 		api.registerService({
 			id: 'falcon-dash',
-			start(ctx) {
-				const directory = config.dataDir ?? path.join(ctx.stateDir, 'falcon-dash');
-				if (enabled.includes('work')) work = new WorkStore(path.join(directory, 'work.db'));
-				if (enabled.includes('vault') || enabled.includes('integrations'))
-					vault = new Vault(path.join(directory, 'vault'), {
-						owners: config.vaultOwners ?? [],
-						executors: config.vaultExecutors ?? []
-					});
-				if (enabled.includes('documents')) documents = new Documents(config.documentRoots ?? []);
-				if (enabled.includes('integrations'))
-					integrations = new Integrations(
-						path.join(directory, 'integrations.db'),
-						vault,
-						adapters()
-					);
-				started = true;
+			async start(ctx) {
+				try {
+					const directory = config.dataDir ?? path.join(ctx.stateDir, 'falcon-dash');
+					if (enabled.includes('work')) {
+						work = new WorkStore(path.join(directory, 'work.db'));
+						work.subscribe((stamp) =>
+							ctx.gatewayEvents?.emit('falcon_work_changed', stamp, { scope: 'operator.read' })
+						);
+						work.changeTimer = setInterval(() => {
+							try {
+								work.checkExternalChanges();
+							} catch {
+								ctx.serviceHealth?.reportFailure(new Error('Work change tracking is unavailable'));
+							}
+						}, 1000);
+						work.changeTimer.unref();
+					}
+					if (enabled.includes('vault') || enabled.includes('integrations'))
+						vault = new Vault(path.join(directory, 'vault'), {
+							owners: config.vaultOwners ?? [],
+							executors: config.vaultExecutors ?? []
+						});
+					if (enabled.includes('documents'))
+						documents = new Documents(config.documentRoots ?? [], {
+							forbiddenRoots: [ctx.stateDir],
+							protectedRoots: [
+								path.join(ctx.stateDir, 'state'),
+								path.join(ctx.stateDir, 'credentials'),
+								path.join(ctx.stateDir, 'identity'),
+								path.join(directory, 'vault')
+							]
+						});
+					if (enabled.includes('integrations'))
+						integrations = new Integrations(
+							path.join(directory, 'integrations.db'),
+							vault,
+							adapters()
+						);
+					if (integrations) integrations.start('service:falcon-integrations');
+					started = true;
+				} catch (error) {
+					documents?.close();
+					await integrations?.close();
+					work?.close();
+					documents = integrations = work = vault = undefined;
+					started = false;
+					throw error;
+				}
 			},
-			stop() {
+			async stop() {
+				started = false;
 				documents?.close();
-				integrations?.close();
-				vault?.lock();
+				await vault?.lock();
+				await integrations?.close();
 				work?.close();
-				work = undefined;
+				work = documents = integrations = vault = undefined;
 				started = false;
 			}
 		});
@@ -126,10 +186,14 @@ export default definePluginEntry({
 					`falcon.${module}.${mode}`,
 					async ({ params, client, respond }) => {
 						try {
+							const readActions = {
+								falcon_work: ['list', 'get', 'queue', 'brief', 'history'],
+								falcon_integrations: ['list'],
+								falcon_vault: ['status', 'inventory', 'metadata'],
+								falcon_documents: ['list', 'read', 'download', 'roots', 'copy_path']
+							};
 							const writes =
-								params.action === 'command' ||
-								(typeof params.action === 'string' &&
-									['test', 'refresh', 'pause', 'resume', 'write', 'mkdir'].includes(params.action));
+								typeof params.action !== 'string' || !readActions[name].includes(params.action);
 							requireValue(
 								mode === 'write' || !writes,
 								'access_denied',
@@ -137,7 +201,10 @@ export default definePluginEntry({
 							);
 							requireValue(!client?.invalidated, 'access_denied', 'Connection was revoked');
 							const authority = client?.internal?.operatorRoleActor;
-							const actor = authority?.kind === 'operator' ? `human:${authority.profileId}` : null;
+							const actor =
+								authority?.kind === 'operator' && !client?.internal?.syntheticClient
+									? `human:${authority.profileId}`
+									: null;
 							const result = await invoke(name, params, actor);
 							respond(true, result);
 						} catch (error) {
@@ -205,6 +272,60 @@ export default definePluginEntry({
 				}
 			});
 		}
+		const principals = new Map();
+		api.registerGatewayMethod(
+			'falcon.identity',
+			({ client, respond }) => {
+				const principal = client?.internal?.operatorRoleActor;
+				if (
+					!client?.connId ||
+					client.invalidated ||
+					client.internal?.syntheticClient ||
+					principal?.kind !== 'operator'
+				) {
+					respond(false, undefined, {
+						code: 'INVALID_REQUEST',
+						message: 'Verified human connection required'
+					});
+					return;
+				}
+				principals.set(client.connId, { client, actor: `human:${principal.profileId}` });
+				client.connectionSignal?.addEventListener('abort', () => principals.delete(client.connId), {
+					once: true
+				});
+				respond(true, { bound: true });
+			},
+			{ scope: 'operator.read' }
+		);
+		if (enabled.includes('work'))
+			defineFeaturePlugin({
+				contract: workFeature,
+				name: 'Falcon Work',
+				description: 'Typed backend operations shared with the Control UI',
+				setup: () => ({
+					work_list: (input) => {
+						ready();
+						return work.list(input);
+					},
+					work_queue: (input) => {
+						ready();
+						return work.queue(input);
+					},
+					work_command: (input, context) => {
+						ready();
+						const bound =
+							context.source === 'session-action'
+								? principals.get(context.action.client?.connId)
+								: null;
+						requireValue(
+							bound && !bound.client.invalidated && !bound.client.connectionSignal?.aborted,
+							'identity_required',
+							'Bind this verified connection through falcon.identity first'
+						);
+						return work.execute(input, bound.actor);
+					}
+				})
+			}).register(api);
 		api.on('before_prompt_build', () => ({ prependSystemContext: buildContract(enabled) }));
 	}
 });

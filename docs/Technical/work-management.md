@@ -128,3 +128,17 @@ return enough state for a deliberate retry.
 - Test command guards, versions, idempotency, outbox/event transfer, and derived readers.
 - Verify both UI and agent paths because neither is secondary.
 - Keep prompt context bounded and best-effort; deeper state belongs behind `falcon` or `/api/v3`.
+
+## Active single-plugin Work backend
+
+The conversion backend uses `plugin/work/` and schema version 3, not the historical route/CLI
+runtime above. Typed command schemas are shared with the store and supported feature operations.
+Immutable artifacts/events, exact Definition/dependency pins, explicit per-child abandonment
+versions, review targets, contextual Asks, source references and knowledge lifecycles are covered
+by synthetic regressions. Dependency satisfaction is distinct from terminal-state Milestone
+closure: abandoning a prerequisite does not manufacture its expected result.
+
+Bounded list/queue/detail/history projections and minimal epoch/revision invalidations are current.
+SDK watch tests cover event coalescing, stale responses, reconnect rereads and disposal; stored
+Work remains canonical. See [backend continuation](plugin-v4-backend.md) for remaining domain audits
+and the engineering-only snapshot/conversion mechanism. No real dataset was migrated.

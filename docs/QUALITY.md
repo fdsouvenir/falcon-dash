@@ -70,3 +70,11 @@ exact 2026.9.2 SDK into a runner-temporary prefix and KeePassXC for synthetic cr
 with explicit isolated OpenClaw state/config paths. Historical Svelte checks use the
 `*:historical-standalone` scripts and do not constitute plugin UI acceptance. See
 [checkpoint evidence](Technical/plugin-v4-evidence.md) for failed and unavailable gates.
+
+The backend continuation restores all retained historical suites to CI, in separate Node and
+happy-dom projects, alongside the plugin contract/security tests. Test mode excludes live dev
+Gateway and Sentry hooks; see [backend continuation](Technical/plugin-v4-backend.md).
+
+Plugin source coverage excludes only the generated TypeBox bundle and test files from the
+coverage percentage. All plugin tests still execute, and all historical regressions remain
+separate CI gates.

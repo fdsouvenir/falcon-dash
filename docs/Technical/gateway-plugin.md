@@ -78,3 +78,16 @@ file.
 
 Each addition should prove that native gateway capabilities are insufficient before expanding the
 plugin surface.
+
+## Active conversion backend
+
+The current entry is `plugin/index.mjs`. It registers scoped methods and tools, typed Work feature
+operations, a connection-bound human principal path, minimal Work invalidation events, and one
+composed `before_prompt_build` injection. Synthetic clients cannot bind human authority.
+`scripts/verify-plugin-prompt.mjs` has verified the full generated contract exactly once in the
+system/developer portion of a real pinned Gateway request to a local OpenAI-compatible fixture,
+not in the user message; credential and live-Work canaries were absent from that body.
+This is not a live vendor-authentication claim or proof for every harness.
+
+See [current backend coverage](plugin-v4-backend.md) for SecretRef ownership limitations and
+remaining gates. No native browser entry or production opt-in has been activated.

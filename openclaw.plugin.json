@@ -73,5 +73,18 @@
 				}
 			}
 		}
+	},
+	"secretProviderIntegrations": {
+		"keepassxc": {
+			"providerAlias": "falcon-vault",
+			"displayName": "Falcon KeePassXC Vault",
+			"source": "exec",
+			"command": "${node}",
+			"args": ["./plugin/vault/resolve-secrets.mjs"],
+			"passEnv": ["PATH", "FALCON_VAULT_DIRECTORY"],
+			"jsonOnly": true,
+			"timeoutMs": 20000,
+			"maxOutputBytes": 1048576
+		}
 	}
 }

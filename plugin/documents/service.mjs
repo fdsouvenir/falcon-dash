@@ -1,11 +1,11 @@
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { DomainError, requireValue } from '../work/store.mjs';
+import { DomainError, requireValue } from '../errors.mjs';
 
 const { O_RDONLY, O_DIRECTORY, O_NOFOLLOW, O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
 const forbidden =
-	/(^\.|credential|secret|password|token|vault|auth|\.kdbx$|\.key$|\.pem$|\.p12$|\.sqlite|\.db$)/i;
+	/(^\.|^openclaw\.json$|credential|secret|password|token|vault|auth|\.kdbx$|\.key$|\.pem$|\.p12$|\.sqlite|\.db$)/i;
 const extensions = new Set([
 	'.md',
 	'.txt',
@@ -20,23 +20,79 @@ const extensions = new Set([
 	'.yml'
 ]);
 const hash = (value) => createHash('sha256').update(value).digest('hex');
+function assertPublicText(bytes) {
+	const text = bytes.toString('utf8');
+	requireValue(
+		!/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(text),
+		'protected_content',
+		'Credential material is not available through Documents'
+	);
+	if (text.trimStart().startsWith('{') || text.trimStart().startsWith('[')) {
+		let data;
+		try {
+			data = JSON.parse(text);
+		} catch {
+			return;
+		}
+		const visit = (value) => {
+			if (!value || typeof value !== 'object') return;
+			for (const [key, child] of Object.entries(value)) {
+				requireValue(
+					!/^(?:password|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key)$/i.test(
+						key
+					) ||
+						typeof child !== 'string' ||
+						!child.length,
+					'protected_content',
+					'Use Vault for credential material'
+				);
+				visit(child);
+			}
+		};
+		visit(data);
+	}
+}
 export class Documents {
-	constructor(roots) {
+	constructor(roots, { protectedRoots = [], forbiddenRoots = [] } = {}) {
 		this.roots = new Map();
-		for (const root of roots) {
-			requireValue(
-				path.isAbsolute(root.path) && Array.isArray(root.actors) && root.actors.length,
-				'invalid_config',
-				'Documents roots need an absolute path and explicit actors'
-			);
-			const real = fs.realpathSync(root.path);
-			requireValue(
-				real === root.path && !real.split(path.sep).includes('.openclaw'),
-				'unsafe_root',
-				'Use a dedicated authorized documents workspace, never OpenClaw state'
-			);
-			const fd = fs.openSync(real, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
-			this.roots.set(root.id, { ...root, fd });
+		protectedRoots = protectedRoots.map((p) =>
+			fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p)
+		);
+		forbiddenRoots = forbiddenRoots.map((p) =>
+			fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p)
+		);
+		try {
+			for (const root of roots) {
+				requireValue(
+					typeof root.id === 'string' &&
+						root.id.length > 0 &&
+						root.id.length <= 128 &&
+						!this.roots.has(root.id),
+					'invalid_config',
+					'Workspace root ids must be nonempty and unique'
+				);
+				requireValue(
+					path.isAbsolute(root.path) && Array.isArray(root.actors) && root.actors.length,
+					'invalid_config',
+					'Documents roots need an absolute path and explicit actors'
+				);
+				const real = fs.realpathSync(root.path);
+				requireValue(
+					real === root.path &&
+						path.basename(real) !== '.openclaw' &&
+						!forbiddenRoots.includes(real) &&
+						!protectedRoots.some(
+							(p) => real === p || real.startsWith(p + path.sep) || p.startsWith(real + path.sep)
+						),
+					'unsafe_root',
+					'Use an authorized workspace root, not runtime or credential storage'
+				);
+				const fd = fs.openSync(real, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+				this.roots.set(root.id, { ...root, fd });
+			}
+		} catch (error) {
+			this.close();
+			throw error;
 		}
 	}
 	close() {
@@ -50,7 +106,37 @@ export class Documents {
 			'access_denied',
 			'Workspace access is not authorized'
 		);
+		let current;
+		try {
+			current = fs.statSync(r.path);
+			requireValue(
+				fs.realpathSync(r.path) === r.path,
+				'stale_root',
+				'Workspace root was moved or replaced'
+			);
+		} catch {
+			throw new DomainError('stale_root', 'Workspace root was moved or replaced');
+		}
+		const pinned = fs.fstatSync(r.fd);
+		requireValue(
+			current.ino === pinned.ino && current.dev === pinned.dev,
+			'stale_root',
+			'Workspace root was moved or replaced'
+		);
 		return r;
+	}
+	rootsFor(actor) {
+		return {
+			roots: [...this.roots.values()]
+				.filter((r) => r.actors.includes(actor))
+				.slice(0, 100)
+				.map((r) => ({ id: r.id, writable: r.writable === true }))
+		};
+	}
+	copyPath(input, actor) {
+		this.read(input, actor);
+		const root = this.root(input.root_id, actor);
+		return { path: path.join(root.path, input.path) };
 	}
 	parts(value, empty = false) {
 		requireValue(
@@ -115,6 +201,7 @@ export class Documents {
 				'unsupported_file',
 				'Only bounded text documents are available'
 			);
+			assertPublicText(bytes);
 			return { bytes, stat };
 		} catch (e) {
 			if (e instanceof DomainError) throw e;
@@ -123,7 +210,22 @@ export class Documents {
 			if (fd !== undefined) fs.closeSync(fd);
 		}
 	}
-	list({ root_id, path: relative = '', search = '' }, actor) {
+	list(
+		{ root_id, path: relative = '', search = '', limit = 200, offset = 0, sort = 'name' },
+		actor
+	) {
+		requireValue(
+			typeof search === 'string' &&
+				search.length <= 500 &&
+				Number.isInteger(limit) &&
+				limit >= 1 &&
+				limit <= 200 &&
+				Number.isInteger(offset) &&
+				offset >= 0 &&
+				['name', 'name_desc'].includes(sort),
+			'invalid_input',
+			'Unsupported sort, search, or pagination'
+		);
 		const root = this.root(root_id, actor);
 		const fd = this.parent(root, this.parts(relative, true));
 		try {
@@ -133,12 +235,26 @@ export class Documents {
 					(e) =>
 						!forbidden.test(e.name) &&
 						!e.isSymbolicLink() &&
-						(e.isDirectory() || extensions.has(path.extname(e.name).toLowerCase())) &&
+						(e.isDirectory() ||
+							(e.isFile() && extensions.has(path.extname(e.name).toLowerCase()))) &&
 						e.name.toLowerCase().includes(search.toLowerCase())
 				)
-				.slice(0, 200)
+				.sort(
+					(a, b) =>
+						Number(b.isDirectory()) -
+						Number(a.isDirectory()) +
+						(a.isDirectory() === b.isDirectory()
+							? sort === 'name'
+								? a.name.localeCompare(b.name)
+								: b.name.localeCompare(a.name)
+							: 0)
+				)
 				.map((e) => ({ name: e.name, kind: e.isDirectory() ? 'directory' : 'file' }));
-			return { entries, limit: 200 };
+			return {
+				entries: entries.slice(offset, offset + limit),
+				total: entries.length,
+				next_offset: offset + limit < entries.length ? offset + limit : null
+			};
 		} finally {
 			fs.closeSync(fd);
 		}
@@ -146,12 +262,18 @@ export class Documents {
 	read({ root_id, path: relative }, actor) {
 		return this.file(this.root(root_id, actor), relative, (file) => {
 			const { bytes } = this.readBytes(file);
-			return { content: bytes.toString('utf8'), version: hash(bytes), render: 'text' };
+			return {
+				content: bytes.toString('utf8'),
+				version: hash(bytes),
+				render: 'text',
+				trust: 'untrusted-document'
+			};
 		});
 	}
 	write({ root_id, path: relative, content, expected_version }, actor) {
 		requireValue(typeof content === 'string', 'invalid_input', 'Expected text content');
 		const bytes = Buffer.from(content);
+		assertPublicText(bytes);
 		requireValue(
 			bytes.length <= 262144 && !bytes.includes(0),
 			'invalid_input',
@@ -201,6 +323,131 @@ export class Documents {
 			}
 		});
 	}
+	rename({ root_id, path: relative, destination, expected_version }, actor) {
+		const root = this.root(root_id, actor, true);
+		return this.file(root, relative, (source) =>
+			this.file(root, destination, (target) => {
+				const original = this.readBytes(source);
+				requireValue(
+					expected_version === hash(original.bytes),
+					'version_conflict',
+					'Document changed before rename'
+				);
+				requireValue(
+					!fs.lstatSync(target, { throwIfNoEntry: false }),
+					'already_exists',
+					'Destination already exists'
+				);
+				fs.linkSync(source, target);
+				try {
+					const linked = fs.lstatSync(target),
+						current = fs.lstatSync(source);
+					requireValue(
+						linked.isFile() &&
+							linked.ino === original.stat.ino &&
+							current.ino === original.stat.ino,
+						'version_conflict',
+						'Document changed during rename'
+					);
+					fs.unlinkSync(source);
+				} catch (error) {
+					fs.unlinkSync(target);
+					throw error;
+				}
+				return { path: destination, version: hash(original.bytes) };
+			})
+		);
+	}
+	download(input, actor) {
+		return {
+			...this.read(input, actor),
+			filename: path.basename(input.path),
+			content_type: 'text/plain; charset=utf-8',
+			trust: 'untrusted-document'
+		};
+	}
+	upload(input, actor) {
+		return this.write(input, actor);
+	}
+	trash({ root_id, path: relative, expected_version, confirmed }, actor) {
+		requireValue(
+			confirmed === true,
+			'confirmation_required',
+			'Explicitly confirm targeted recoverable deletion'
+		);
+		const root = this.root(root_id, actor, true);
+		return this.file(root, relative, (source) => {
+			const original = this.readBytes(source);
+			requireValue(
+				expected_version === hash(original.bytes),
+				'version_conflict',
+				'Document changed before deletion'
+			);
+			const location = `/proc/self/fd/${root.fd}/.falcon-trash`;
+			try {
+				fs.mkdirSync(location, { mode: 0o700 });
+			} catch (error) {
+				if (error.code !== 'EEXIST') throw error;
+			}
+			const fd = fs.openSync(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW),
+				id = randomUUID();
+			try {
+				const file = `/proc/self/fd/${fd}/${id}`;
+				fs.writeFileSync(
+					file + '.json',
+					JSON.stringify({
+						path: relative,
+						version: expected_version,
+						actor,
+						at: new Date().toISOString()
+					}),
+					{ flag: 'wx', mode: 0o600 }
+				);
+				fs.renameSync(source, file);
+				fs.fsyncSync(fd);
+				return { trash_id: id, recoverable: true };
+			} finally {
+				fs.closeSync(fd);
+			}
+		});
+	}
+	restore({ root_id, trash_id }, actor) {
+		requireValue(
+			typeof trash_id === 'string' && /^[0-9a-f-]{36}$/.test(trash_id),
+			'invalid_input',
+			'Invalid trash item'
+		);
+		const root = this.root(root_id, actor, true),
+			fd = fs.openSync(
+				`/proc/self/fd/${root.fd}/.falcon-trash`,
+				O_RDONLY | O_DIRECTORY | O_NOFOLLOW
+			);
+		try {
+			const source = `/proc/self/fd/${fd}/${trash_id}`,
+				metadata = JSON.parse(this.readBytes(source + '.json').bytes.toString('utf8'));
+			return this.file(root, metadata.path, (target) => {
+				requireValue(
+					!fs.lstatSync(target, { throwIfNoEntry: false }),
+					'already_exists',
+					'Restore destination already exists'
+				);
+				const original = this.readBytes(source);
+				requireValue(
+					hash(original.bytes) === metadata.version,
+					'version_conflict',
+					'Trash content failed integrity check'
+				);
+				fs.linkSync(source, target);
+				fs.unlinkSync(source);
+				fs.unlinkSync(source + '.json');
+				fs.fsyncSync(fd);
+				return { path: metadata.path, version: metadata.version };
+			});
+		} finally {
+			fs.closeSync(fd);
+		}
+	}
+
 	mkdir({ root_id, path: relative }, actor) {
 		const root = this.root(root_id, actor, true),
 			parts = this.parts(relative),

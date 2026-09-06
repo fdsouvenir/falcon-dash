@@ -42,6 +42,88 @@ test('Real KeePassXC synthetic credentials: protected inventory, human access, p
 		assert.equal(record.version, 2);
 		assert.ok(record.material.refresh_token);
 	});
-	vault.lock();
+	await vault.lock();
 	await assert.rejects(() => vault.reveal('agent-added', 'human:owner'), { code: 'vault_locked' });
+});
+test('Groups and nested credential handles use the real encrypted database without value-bearing inventory', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-groups-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, { owners: ['human:owner'], executors: ['agent:worker'] });
+	await vault.initialize('human:owner');
+	await vault.unlock('human:owner');
+	await vault.createGroup('services', 'human:owner');
+	await vault.create('services/client', { password: 'SYNTHETIC-GROUP-CANARY' }, 'agent:worker');
+	const root = await vault.inventory('human:owner');
+	assert.deepEqual(root.entries, [{ id: 'services', kind: 'group' }]);
+	const group = await vault.inventory('human:owner', 'services');
+	assert.deepEqual(group.entries, [{ id: 'services/client', kind: 'entry' }]);
+	assert.equal(
+		(await vault.reveal('services/client', 'human:owner')).password,
+		'SYNTHETIC-GROUP-CANARY'
+	);
+	await assert.rejects(() => vault.createGroup('../outside', 'human:owner'), {
+		code: 'invalid_handle'
+	});
+	await vault.lock();
+});
+test('Disabling entry execution denies agents while the human owner can still reveal and restore', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-entry-policy-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, { owners: ['human:owner'], executors: ['agent:worker'] });
+	await vault.initialize('human:owner');
+	await vault.unlock('human:owner');
+	await vault.create('sample', { password: 'SYNTHETIC-OWNED-VALUE' }, 'agent:worker');
+	await vault.revokeEntryExecution('sample', 1, 'human:owner');
+	await assert.rejects(() => vault.resolveForExecution('sample', 'agent:worker', (x) => x), {
+		code: 'access_denied'
+	});
+	assert.equal((await vault.reveal('sample', 'human:owner')).password, 'SYNTHETIC-OWNED-VALUE');
+	assert.equal((await vault.metadata('sample', 'agent:worker')).execution_disabled, true);
+	await vault.restoreEntryExecution('sample', 2, 'human:owner');
+	assert.equal(await vault.resolveForExecution('sample', 'agent:worker', (x) => x.version), 3);
+	await vault.lock();
+});
+test('Human reveal/copy returns only the selected field and access audit excludes values even while locked', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-vault-audit-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, { owners: ['human:owner'], executors: ['agent:worker'] });
+	await vault.initialize('human:owner');
+	await vault.unlock('human:owner');
+	await vault.create(
+		'sample',
+		{ password: 'SYNTHETIC-SELECTED-CANARY', api_key: 'SYNTHETIC-OTHER-CANARY' },
+		'agent:worker'
+	);
+	assert.equal(
+		await vault.revealField('sample', 'password', 'human:owner'),
+		'SYNTHETIC-SELECTED-CANARY'
+	);
+	assert.equal(await vault.copyField('sample', 'api_key', 'human:owner'), 'SYNTHETIC-OTHER-CANARY');
+	await vault.lock('human:owner');
+	const history = await vault.audit('human:owner', { limit: 100 });
+	assert.ok(history.entries.some((x) => x.action === 'human_reveal' && x.entry_id === 'sample'));
+	assert.ok(history.entries.some((x) => x.action === 'human_copy' && x.entry_id === 'sample'));
+	assert.ok(!JSON.stringify(history).includes('SYNTHETIC-'));
+	await assert.rejects(() => vault.audit('agent:worker'), { code: 'access_denied' });
+});
+test('Global Vault eligibility does not grant another agent access to a credential entry', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-entry-grants-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, {
+		owners: ['human:owner'],
+		executors: ['agent:one', 'agent:two']
+	});
+	await vault.initialize('human:owner');
+	await vault.unlock('human:owner');
+	await vault.create('sample', { password: 'SYNTHETIC-SCOPED' }, 'agent:one');
+	await assert.rejects(() => vault.resolveForExecution('sample', 'agent:two', (x) => x), {
+		code: 'access_denied'
+	});
+	await vault.grantEntryExecutors('sample', 1, ['agent:two'], 'human:owner');
+	assert.equal(await vault.resolveForExecution('sample', 'agent:two', (x) => x.version), 2);
+	await assert.rejects(() => vault.resolveForExecution('sample', 'agent:one', (x) => x), {
+		code: 'access_denied'
+	});
+	assert.equal(await vault.revealField('sample', 'password', 'human:owner'), 'SYNTHETIC-SCOPED');
+	await vault.lock();
 });

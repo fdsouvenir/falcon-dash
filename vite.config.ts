@@ -126,7 +126,7 @@ export default defineConfig(({ mode }) => {
 			__SENTRY_ENVIRONMENT__: JSON.stringify(envVars.SENTRY_ENVIRONMENT || 'production')
 		},
 		plugins: [
-			gatewayWsProxy(),
+			...(mode === 'test' ? [] : [gatewayWsProxy()]),
 			tailwindcss(),
 			sveltekit(),
 			...(process.env.ANALYZE === 'true'
@@ -139,7 +139,7 @@ export default defineConfig(({ mode }) => {
 						})
 					]
 				: []),
-			...(envVars.SENTRY_AUTH_TOKEN
+			...(mode !== 'test' && envVars.SENTRY_AUTH_TOKEN
 				? [
 						sentryVitePlugin({
 							org: envVars.SENTRY_ORG,
@@ -164,8 +164,25 @@ export default defineConfig(({ mode }) => {
 			}
 		},
 		test: {
-			include: ['src/**/*.test.ts'],
-			environment: 'happy-dom',
+			projects: [
+				{
+					extends: true,
+					test: {
+						name: 'server',
+						environment: 'node',
+						include: ['src/lib/server/**/*.test.ts', 'src/lib/work3/contract.test.ts']
+					}
+				},
+				{
+					extends: true,
+					test: {
+						name: 'browser',
+						environment: 'happy-dom',
+						include: ['src/**/*.test.ts'],
+						exclude: ['src/lib/server/**/*.test.ts', 'src/lib/work3/contract.test.ts']
+					}
+				}
+			],
 			coverage: {
 				provider: 'v8',
 				reporter: ['text', 'lcov']

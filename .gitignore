@@ -22,3 +22,7 @@ mockups/
 stats.html
 artifacts/*
 !artifacts/.gitkeep
+
+# Bundled schema runtime (created by build)
+plugin/schema.mjs
+plugin/typebox-license.txt

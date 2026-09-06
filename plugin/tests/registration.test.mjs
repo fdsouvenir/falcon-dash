@@ -5,7 +5,9 @@ import { buildContract } from '../contract.mjs';
 function register(config = {}) {
 	const calls = { tools: [], methods: [], tabs: [], routes: [], hooks: [], services: [] };
 	plugin.register({
+		id: 'falcon-dash',
 		pluginConfig: config,
+		registerSessionAction: () => {},
 		registerTool: (...a) => calls.tools.push(a),
 		registerGatewayMethod: (...a) => calls.methods.push(a),
 		session: { controls: { registerControlUiDescriptor: (x) => calls.tabs.push(x) } },
@@ -22,7 +24,10 @@ test('One runtime registers four real tabs, scoped methods, four tools and one s
 		['work', 'integrations', 'vault', 'documents']
 	);
 	assert.equal(c.tools.length, 4);
-	assert.equal(c.services.length, 1);
+	assert.deepEqual(
+		c.services.map((x) => x.id),
+		['falcon-dash', 'falcon-dash:feature-events']
+	);
 	assert.equal(c.hooks.length, 1);
 	assert.equal(c.hooks[0][0], 'before_prompt_build');
 	assert.ok(c.hooks[0][1]().prependSystemContext);
@@ -44,4 +49,33 @@ test('Ordinary read Gateway methods reject mutation dispatch', async () => {
 	await method({ params: { action: 'command' }, client: {}, respond: (...r) => (result = r) });
 	assert.equal(result[0], false);
 	assert.equal(result[2].details.code, 'access_denied');
+});
+
+test('Read-scoped RPCs deny every newly added mutation, including disconnect and file deletion', async () => {
+	const c = register();
+	for (const [module, actions] of Object.entries({
+		integrations: ['disconnect', 'refresh', 'pause'],
+		documents: ['rename', 'upload', 'trash', 'restore', 'write', 'mkdir']
+	})) {
+		const handler = c.methods.find(([name]) => name === `falcon.${module}.read`)[1];
+		for (const action of actions) {
+			let response;
+			await handler({ params: { action }, client: {}, respond: (...r) => (response = r) });
+			assert.equal(response[0], false);
+			assert.equal(response[2].details.code, 'access_denied');
+		}
+	}
+});
+test('Synthetic delegated clients cannot bind a human principal or mint Work authorization', async () => {
+	const c = register();
+	const client = {
+		connId: 'synthetic-connection',
+		internal: { syntheticClient: true, operatorRoleActor: { kind: 'operator', profileId: 'owner' } }
+	};
+	let response;
+	await c.methods.find(([name]) => name === 'falcon.identity')[1]({
+		client,
+		respond: (...r) => (response = r)
+	});
+	assert.equal(response[0], false);
 });

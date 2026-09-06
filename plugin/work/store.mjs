@@ -1,3 +1,11 @@
+import { technicalAttention } from './attention.mjs';
+import { definition as parseDefinition } from './definition.mjs';
+import { privateDatabase } from '../storage.mjs';
+import { Check } from '../schema.mjs';
+import { commandInputs } from './feature-contract.mjs';
+import { taskContext } from './task-context.mjs';
+import { listProjection, queueProjection, boundedText } from './projections.mjs';
+import { initializeKnowledge, transitionKnowledge, sourceRefs } from './knowledge.mjs';
 /**
  * @typedef {object} WorkRecord
  * @property {string} id
@@ -12,87 +20,93 @@
  * @property {string[]} [options]
  * @property {string} [prompt]
  * @property {string} [description]
+ * @property {Array<object>} [sources]
  */
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, chmodSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 
-export class DomainError extends Error {
-	constructor(code, message, details = {}) {
-		super(message);
-		this.code = code;
-		this.details = details;
-	}
-}
-export function requireValue(test, code, message, details) {
-	if (!test) throw new DomainError(code, message, details);
-}
-export function exact(value, keys) {
-	requireValue(
-		value && typeof value === 'object' && !Array.isArray(value),
-		'invalid_input',
-		'Expected an object'
-	);
-	requireValue(
-		Object.keys(value).every((k) => keys.includes(k)),
-		'unknown_field',
-		'Unsupported field'
-	);
-}
-export function text(value, max = 12000) {
-	requireValue(
-		typeof value === 'string' && value.trim().length > 0 && value.length <= max,
-		'invalid_input',
-		'Text is required and must fit its limit',
-		{ max }
-	);
-	return value.trim();
-}
+export { DomainError, requireValue, exact, text } from '../errors.mjs';
+import { DomainError, requireValue, exact, text, timestamp } from '../errors.mjs';
 export const TYPES = ['project', 'milestone', 'task', 'question', 'decision', 'finding', 'area'];
 export const TASK_STATES = ['open', 'ready', 'in_progress', 'waiting', 'completed', 'abandoned'];
 const terminal = (x) =>
-	['completed', 'abandoned', 'answered', 'recorded', 'achieved', 'retired'].includes(x.status);
+	[
+		'completed',
+		'abandoned',
+		'answered',
+		'decided',
+		'withdrawn',
+		'achieved',
+		'retired',
+		'superseded',
+		'retracted',
+		'archived'
+	].includes(x.status) || x.type === 'finding';
 const digest = (x) => createHash('sha256').update(JSON.stringify(x)).digest('hex');
 
 export class WorkStore {
 	constructor(path) {
-		mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-		this.db = new DatabaseSync(path);
-		chmodSync(path, 0o600);
-		this.db.exec(
-			`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;`
-		);
-		const version = Number(this.db.prepare('PRAGMA user_version').get().user_version);
-		requireValue(version <= 1, 'unsupported_schema', 'Database is newer than this plugin');
-		requireValue(
-			version !== 0 ||
-				this.db
-					.prepare(
-						"SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-					)
-					.get().n === 0,
-			'migration_required',
-			'Existing data requires explicit offline conversion; it is never adopted implicitly'
-		);
-		this.db.exec(`
+		this.db = privateDatabase(path, { maxVersion: 3 });
+		this.db.exec('BEGIN IMMEDIATE');
+		try {
+			this.db.exec(`
    CREATE TABLE IF NOT EXISTS objects(id TEXT PRIMARY KEY, type TEXT NOT NULL, version INTEGER NOT NULL, body TEXT NOT NULL) STRICT;
    CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES objects(id), kind TEXT NOT NULL, revision INTEGER NOT NULL, definition_id TEXT, body TEXT NOT NULL, UNIQUE(task_id,kind,revision)) STRICT;
    CREATE TABLE IF NOT EXISTS events(revision INTEGER PRIMARY KEY AUTOINCREMENT, object_id TEXT NOT NULL, actor TEXT NOT NULL, command TEXT NOT NULL, at TEXT NOT NULL, body TEXT NOT NULL) STRICT;
    CREATE TABLE IF NOT EXISTS receipts(key TEXT PRIMARY KEY, actor TEXT NOT NULL, digest TEXT NOT NULL, response TEXT NOT NULL) STRICT;
    CREATE TABLE IF NOT EXISTS links(source TEXT NOT NULL REFERENCES objects(id), target TEXT NOT NULL REFERENCES objects(id), kind TEXT NOT NULL, PRIMARY KEY(source,target,kind)) STRICT;
-   PRAGMA user_version=1;
+   CREATE TABLE IF NOT EXISTS asks(id TEXT PRIMARY KEY,subject TEXT NOT NULL REFERENCES objects(id),state TEXT NOT NULL,body TEXT NOT NULL) STRICT;
+   CREATE TRIGGER IF NOT EXISTS artifacts_immutable_update BEFORE UPDATE ON artifacts BEGIN SELECT RAISE(ABORT,'immutable_artifact'); END;
+   CREATE TRIGGER IF NOT EXISTS artifacts_immutable_delete BEFORE DELETE ON artifacts BEGIN SELECT RAISE(ABORT,'immutable_artifact'); END;
+   CREATE TRIGGER IF NOT EXISTS artifacts_definition_owner BEFORE INSERT ON artifacts
+    WHEN NEW.kind IN ('plan','result','change','authorization') AND NOT EXISTS
+    (SELECT 1 FROM artifacts WHERE id=NEW.definition_id AND task_id=NEW.task_id AND kind='definition')
+    BEGIN SELECT RAISE(ABORT,'invalid_definition_pin'); END;
+   CREATE TRIGGER IF NOT EXISTS events_immutable_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'immutable_event'); END;
+   CREATE TRIGGER IF NOT EXISTS events_immutable_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'immutable_event'); END;
+   CREATE TABLE IF NOT EXISTS dependency_pins(source TEXT NOT NULL,target TEXT NOT NULL,kind TEXT NOT NULL DEFAULT 'depends_on',source_definition TEXT NOT NULL REFERENCES artifacts(id),target_definition TEXT REFERENCES artifacts(id),PRIMARY KEY(source,target),FOREIGN KEY(source,target,kind) REFERENCES links(source,target,kind) ON DELETE CASCADE) STRICT;
+   PRAGMA user_version=3;
   `);
-		for (const suffix of ['-wal', '-shm']) {
-			try {
-				chmodSync(path + suffix, 0o600);
-			} catch (e) {
-				if (e.code !== 'ENOENT') throw e;
-			}
+			this.db.exec('COMMIT');
+		} catch (error) {
+			this.db.exec('ROLLBACK');
+			this.db.close();
+			throw error;
 		}
 		this.epoch = randomUUID();
+		this.listeners = new Set();
+		this.changeTimer = undefined;
+		this.dataVersion = this.db.prepare('PRAGMA data_version').get().data_version;
+	}
+	isTerminal(x) {
+		return x.type === 'project'
+			? this.projectState(x) === 'completed' || x.status === 'abandoned'
+			: terminal(x);
+	}
+	subscribe(listener) {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
+	notify(stamp) {
+		for (const listener of this.listeners) {
+			try {
+				listener(stamp);
+			} catch {
+				/* A post-commit observer cannot roll back or misreport committed Work. */
+			}
+		}
+	}
+	checkExternalChanges() {
+		const version = this.db.prepare('PRAGMA data_version').get().data_version;
+		if (version !== this.dataVersion) {
+			this.dataVersion = version;
+			this.notify(this.stamp());
+			return true;
+		}
+		return false;
 	}
 	close() {
+		if (this.changeTimer) clearInterval(this.changeTimer);
+		this.listeners.clear();
 		this.db.close();
 	}
 	stamp() {
@@ -130,15 +144,17 @@ export class WorkStore {
 			.get(task.id, kind).n;
 		const artifact = {
 			id: randomUUID(),
-			task_id: task.id,
+			owner_id: task.id,
+			...(task.type === 'task' ? { task_id: task.id } : {}),
 			kind,
 			revision,
-			definition_id: kind === 'definition' ? null : task.definition_id,
+			definition_id: kind === 'definition' ? null : (task.definition_id ?? null),
 			supersedes: task[`${kind}_id`] ?? null,
 			actor,
 			at: new Date().toISOString(),
 			reason,
-			...body
+			...body,
+			...(kind === 'result' ? { review_target: task.review_target ?? null } : {})
 		};
 		this.db
 			.prepare('INSERT INTO artifacts VALUES(?,?,?,?,?,?)')
@@ -147,19 +163,27 @@ export class WorkStore {
 		return artifact;
 	}
 	warnings(x) {
-		/** @type {Array<{code: string, target?: string, kind?: string}>} */
-		const warnings = this.db
-			.prepare("SELECT target FROM links WHERE source=? AND kind='depends_on'")
-			.all(x.id)
-			.map((r) => this.get(r.target))
-			.filter((y) => !terminal(y))
-			.map((y) => ({ code: 'dependency_unresolved', target: y.id }));
-		for (const kind of ['plan', 'result', 'change'])
-			if (x[`${kind}_id`] && this.artifact(x[`${kind}_id`]).definition_id !== x.definition_id)
-				warnings.push({ code: 'stale_artifact', kind, target: x[`${kind}_id`] });
-		if (x.status === 'waiting') warnings.push({ code: 'waiting', ...x.wait });
-		return warnings;
+		const optional = (fn, id) => {
+			try {
+				return fn.call(this, id);
+			} catch (error) {
+				if (error.code === 'not_found') return null;
+				throw error;
+			}
+		};
+		const result = technicalAttention(x, {
+			object: (id) => optional(this.get, id),
+			artifact: (id) => optional(this.artifact, id),
+			targets: this.db
+				.prepare("SELECT target FROM links WHERE source=? AND kind='depends_on'")
+				.all(x.id)
+				.map((r) => String(r.target)),
+			pins: this.db.prepare('SELECT * FROM dependency_pins WHERE source=?').all(x.id)
+		});
+		if (x.status === 'waiting') result.push({ code: 'waiting', ...x.wait });
+		return result;
 	}
+
 	projectState(project) {
 		if (project.status === 'abandoned') return 'abandoned';
 		const milestones = this.all().filter(
@@ -176,66 +200,90 @@ export class WorkStore {
 			status: x.type === 'project' ? this.projectState(x) : x.status,
 			attention: this.warnings(x)
 		};
-		for (const kind of ['definition', 'plan', 'result', 'change'])
+		for (const kind of [
+			'definition',
+			'plan',
+			'result',
+			'change',
+			'authorization',
+			'answer',
+			'hypothesis',
+			'package',
+			'outcome'
+		])
 			if (x[`${kind}_id`]) {
 				const a = this.artifact(x[`${kind}_id`]);
-				if (kind === 'definition' || a.definition_id === x.definition_id || full) out[kind] = a;
+				if (
+					x.type !== 'task' ||
+					kind === 'definition' ||
+					a.definition_id === x.definition_id ||
+					full
+				)
+					out[kind] = a;
 			}
 		if (full) {
 			out.artifacts = this.db
-				.prepare('SELECT body FROM artifacts WHERE task_id=? ORDER BY kind,revision')
+				.prepare('SELECT body FROM artifacts WHERE task_id=? ORDER BY kind,revision LIMIT 100')
 				.all(id)
 				.map((r) => JSON.parse(String(r.body)));
 			out.history = this.db
-				.prepare('SELECT * FROM events WHERE object_id=? ORDER BY revision')
+				.prepare('SELECT * FROM events WHERE object_id=? ORDER BY revision LIMIT 100')
 				.all(id)
 				.map((r) => ({ ...r, body: JSON.parse(String(r.body)) }));
 		}
-		return out;
-	}
-	/** @param {{type?: string, limit?: number, offset?: number, agent_id?: string, search?: string}} [query] */
-	list({ type, limit = 50, offset = 0, agent_id, search = '' } = {}) {
-		requireValue(
-			type === undefined || TYPES.includes(type),
-			'invalid_filter',
-			'Unsupported Work type'
-		);
-		requireValue(
-			Number.isInteger(limit) &&
-				limit > 0 &&
-				limit <= 100 &&
-				Number.isInteger(offset) &&
-				offset >= 0 &&
-				typeof search === 'string',
-			'invalid_filter',
-			'Invalid pagination or search'
-		);
-		const rows = this.all().filter(
-			(x) =>
-				(!type || x.type === type) &&
-				(!agent_id || x.agent_id === agent_id) &&
-				x.title.toLowerCase().includes(search.toLowerCase())
-		);
+		if (full) return out;
+		const projection = boundedText(out);
 		return {
-			...this.stamp(),
-			total: rows.length,
-			items: rows.slice(offset, offset + limit).map((x) => ({
-				id: x.id,
-				type: x.type,
-				title: x.title,
-				status: x.type === 'project' ? this.projectState(x) : x.status,
-				version: x.version,
-				agent_id: x.agent_id ?? null,
-				project_id: x.project_id ?? null,
-				attention: this.warnings(x)
-			}))
+			...projection.value,
+			truncation: {
+				truncated: projection.truncated,
+				fields: projection.sizes,
+				full: { action: 'get', id, full: true }
+			}
 		};
 	}
+	list(query = {}) {
+		return listProjection(this, query);
+	}
+	queue(query = {}) {
+		return queueProjection(this, query);
+	}
+	history(id, { offset = 0, limit = 25 } = {}) {
+		this.get(id);
+		requireValue(
+			Number.isInteger(offset) &&
+				offset >= 0 &&
+				Number.isInteger(limit) &&
+				limit >= 1 &&
+				limit <= 100,
+			'invalid_filter',
+			'Invalid history pagination'
+		);
+		const rows = this.db
+			.prepare('SELECT * FROM events WHERE object_id=? ORDER BY revision LIMIT ? OFFSET ?')
+			.all(id, limit + 1, offset);
+		return {
+			items: rows.slice(0, limit).map((r) => ({ ...r, body: JSON.parse(String(r.body)) })),
+			next_offset: rows.length > limit ? offset + limit : null
+		};
+	}
+
 	execute(request, actor) {
-		exact(request, ['command', 'id', 'expected_version', 'idempotency_key', 'input']);
+		exact(request, ['command', 'id', 'expected_version', 'idempotency_key', 'input', 'ask_id']);
 		text(actor, 256);
 		text(request.idempotency_key, 128);
 		const input = request.input ?? {};
+		requireValue(
+			Object.hasOwn(commandInputs, request.command),
+			'invalid_command',
+			'Unsupported semantic command'
+		);
+		requireValue(
+			Check(commandInputs[request.command], input),
+			'invalid_input',
+			'Input does not match the command contract',
+			{ command: request.command }
+		);
 		this.db.exec('BEGIN IMMEDIATE');
 		try {
 			const hash = digest(request);
@@ -249,7 +297,12 @@ export class WorkStore {
 					'Key was used for a different request'
 				);
 				this.db.exec('COMMIT');
-				return { ...JSON.parse(String(old.response)), noop: true };
+				return {
+					...JSON.parse(String(old.response)),
+					noop: true,
+					outcome: 'noop',
+					...this.stamp()
+				};
 			}
 			/** @type {WorkRecord} */
 			let x;
@@ -265,7 +318,16 @@ export class WorkStore {
 					'success_condition',
 					'order',
 					'prompt',
-					'options'
+					'options',
+					'deciders',
+					'recommendation',
+					'consequence_of_no_decision',
+					'impact',
+					'answerable_by',
+					'conclusion',
+					'confidence',
+					'sources',
+					'targets'
 				]);
 				requireValue(TYPES.includes(input.type), 'invalid_input', 'Unsupported Work type');
 				x = {
@@ -285,7 +347,11 @@ export class WorkStore {
 					x.project_id = input.project_id;
 				}
 				if (input.area_id) {
-					requireValue(this.get(input.area_id).type === 'area', 'invalid_parent', 'Expected Area');
+					requireValue(
+						this.get(input.area_id).type === 'area' && this.get(input.area_id).status === 'active',
+						'invalid_parent',
+						'Expected Area'
+					);
 					x.area_id = input.area_id;
 				}
 				if (x.type === 'milestone') {
@@ -294,29 +360,13 @@ export class WorkStore {
 					x.order = input.order ?? 0;
 					requireValue(Number.isInteger(x.order), 'invalid_input', 'Order must be an integer');
 				}
-				if (x.type === 'decision') {
-					requireValue(
-						Array.isArray(input.options) &&
-							input.options.length >= 2 &&
-							new Set(input.options).size === input.options.length,
-						'input_required',
-						'A Decision needs distinct options'
-					);
-					x.options = input.options.map((v) => text(v, 2000));
-				}
+
 				if (input.prompt) x.prompt = text(input.prompt);
+				if (input.sources) x.sources = sourceRefs(input.sources);
 				this.save(x);
+				initializeKnowledge(this, x, input, actor);
 				if (x.type === 'task') {
-					const definition = {
-						title: x.title,
-						description: text(input.description),
-						done_when: text(input.done_when)
-					};
-					requireValue(
-						new Set(Object.values(definition).map((v) => v.toLowerCase())).size === 3,
-						'invalid_definition',
-						'Title, context, and finish line must be distinct'
-					);
+					const definition = parseDefinition(input);
 					this.addArtifact(x, 'definition', definition, actor, 'Created');
 				} else if (input.description) x.description = text(input.description);
 			} else {
@@ -332,7 +382,8 @@ export class WorkStore {
 				this.transition(x, request.command, input, actor);
 				if (
 					JSON.stringify(x) === before &&
-					!['depends_on', 'associate'].includes(request.command)
+					!request.ask_id &&
+					!['associate'].includes(request.command)
 				) {
 					const response = {
 						command: request.command,
@@ -349,6 +400,19 @@ export class WorkStore {
 					this.db.exec('COMMIT');
 					return { ...response, ...this.stamp() };
 				}
+				if (request.ask_id) {
+					const row = this.db
+						.prepare("SELECT body FROM asks WHERE id=? AND subject=? AND state='open'")
+						.get(request.ask_id, x.id);
+					requireValue(row, 'not_found', 'Open Ask does not match this subject');
+					const ask = JSON.parse(String(row.body));
+					requireValue(
+						ask.intended_command === request.command,
+						'invalid_command',
+						'Resubmit the Ask intended operation'
+					);
+					this.db.prepare("UPDATE asks SET state='resolved' WHERE id=?").run(request.ask_id);
+				}
 				x.version++;
 			}
 			this.save(x);
@@ -362,29 +426,67 @@ export class WorkStore {
 				noop: false,
 				warnings
 			};
-			this.db
-				.prepare('INSERT INTO events(object_id,actor,command,at,body) VALUES(?,?,?,?,?)')
-				.run(
-					x.id,
-					actor,
-					request.command,
-					new Date().toISOString(),
-					JSON.stringify({ before_version: prior, after: x, warnings })
-				);
+			this.db.prepare('INSERT INTO events(object_id,actor,command,at,body) VALUES(?,?,?,?,?)').run(
+				x.id,
+				actor,
+				request.command,
+				new Date().toISOString(),
+				JSON.stringify({
+					before_version: prior,
+					after: x,
+					input,
+					warnings,
+					...(['depends_on', 'reaffirm_dependency'].includes(request.command)
+						? {
+								dependency_pin: this.db
+									.prepare('SELECT * FROM dependency_pins WHERE source=? AND target=?')
+									.get(x.id, input.target)
+							}
+						: {})
+				})
+			);
 			this.db
 				.prepare('INSERT INTO receipts VALUES(?,?,?,?)')
 				.run(request.idempotency_key, actor, hash, JSON.stringify(response));
+			const stamp = this.stamp();
 			this.db.exec('COMMIT');
-			return { ...response, ...this.stamp() };
+			this.notify(stamp);
+			return { ...response, ...stamp };
 		} catch (error) {
 			this.db.exec('ROLLBACK');
 			throw error;
 		}
 	}
 	transition(x, command, input, actor) {
+		if (
+			taskContext(this, x, command, input, actor) ||
+			transitionKnowledge(this, x, command, input, actor)
+		)
+			return;
+		if (command === 'reaffirm_dependency') {
+			exact(input, ['target', 'reason']);
+			text(input.reason, 1000);
+			const target = this.get(input.target);
+			const previous = this.db
+				.prepare('SELECT * FROM dependency_pins WHERE source=? AND target=?')
+				.get(x.id, target.id);
+			requireValue(previous, 'not_found', 'Dependency is not present');
+			this.db
+				.prepare(
+					'UPDATE dependency_pins SET source_definition=?,target_definition=? WHERE source=? AND target=?'
+				)
+				.run(x.definition_id, target.definition_id ?? null, x.id, target.id);
+			x.relationship_revision = (x.relationship_revision ?? 0) + 1;
+			return;
+		}
 		if (command === 'depends_on') {
 			exact(input, ['target']);
-			this.get(input.target);
+			const dependency = this.get(input.target);
+			requireValue(
+				x.type === 'task' && ['task', 'question', 'decision'].includes(dependency.type),
+				'invalid_relationship',
+				'Task dependencies target Tasks, Questions or Decisions'
+			);
 			requireValue(input.target !== x.id, 'cycle', 'Self dependency is invalid');
 			const reaches = (id, seen = new Set()) => {
 				if (id === x.id) return true;
@@ -396,9 +498,17 @@ export class WorkStore {
 					.some((r) => reaches(r.target, seen));
 			};
 			requireValue(!reaches(input.target), 'cycle', 'Dependency would form a cycle');
-			this.db
+			const inserted = this.db
 				.prepare("INSERT OR IGNORE INTO links VALUES(?,?,'depends_on')")
 				.run(x.id, input.target);
+			if (inserted.changes) {
+				this.db
+					.prepare(
+						'INSERT INTO dependency_pins(source,target,source_definition,target_definition) VALUES(?,?,?,?)'
+					)
+					.run(x.id, input.target, x.definition_id, dependency.definition_id ?? null);
+				x.relationship_revision = (x.relationship_revision ?? 0) + 1;
+			}
 			return;
 		}
 		if (command === 'associate') {
@@ -418,7 +528,7 @@ export class WorkStore {
 		}
 		if (x.type === 'milestone') {
 			if (command === 'achieve') {
-				exact(input, ['basis', 'sources']);
+				exact(input, ['basis', 'sources', 'work_refs']);
 				const unresolved = this.db
 					.prepare("SELECT source FROM links WHERE target=? AND kind='milestone'")
 					.all(x.id)
@@ -432,7 +542,21 @@ export class WorkStore {
 				);
 				x.achievement = {
 					basis: text(input.basis, 4000),
-					sources: input.sources ?? [],
+					supporting_work: (input.work_refs ?? []).map((id) => {
+						const item = this.get(id);
+						return {
+							id: item.id,
+							version: item.version,
+							definition_id: item.definition_id ?? null,
+							result_id:
+								item.accepted_result_id ??
+								item.result_id ??
+								item.answer_id ??
+								item.outcome_id ??
+								null
+						};
+					}),
+					sources: sourceRefs(input.sources),
 					actor,
 					at: new Date().toISOString()
 				};
@@ -446,7 +570,7 @@ export class WorkStore {
 			}
 		}
 		if (x.type === 'project' && command === 'abandon') {
-			exact(input, ['dispositions']);
+			exact(input, ['dispositions', 'versions']);
 			const children = this.all().filter(
 				(y) => y.project_id === x.id && !terminal(y) && y.type !== 'milestone'
 			);
@@ -458,8 +582,31 @@ export class WorkStore {
 				'Resolve each unfinished item separately',
 				{ requirements: children.map((y) => ({ subject: y.id, choices: ['abandon', 'detach'] })) }
 			);
+			requireValue(
+				input.versions && Object.keys(input.versions).length === children.length,
+				'input_required',
+				'Provide the reviewed version for each child disposition',
+				{
+					requirements: children.map((y) => ({
+						subject: y.id,
+						expected_version: y.version,
+						choices: ['abandon', 'detach']
+					}))
+				}
+			);
+			requireValue(
+				children.every((y) => input.versions[y.id] === y.version),
+				'version_conflict',
+				'A disposition subject changed; reread that Work before abandoning the Project',
+				{
+					objects: children
+						.filter((y) => input.versions[y.id] !== y.version)
+						.map((y) => ({ id: y.id, current: y.version }))
+				}
+			);
 			for (const child of children) {
-				if (input.dispositions[child.id] === 'abandon') child.status = 'abandoned';
+				if (input.dispositions[child.id] === 'abandon')
+					child.status = ['question', 'decision'].includes(child.type) ? 'withdrawn' : 'abandoned';
 				else {
 					delete child.project_id;
 					this.db.prepare("DELETE FROM links WHERE source=? AND kind='milestone'").run(child.id);
@@ -494,16 +641,7 @@ export class WorkStore {
 			);
 			if (command === 'revise_definition') {
 				exact(input, ['title', 'description', 'done_when', 'reason']);
-				const body = {
-					title: text(input.title, 240),
-					description: text(input.description),
-					done_when: text(input.done_when)
-				};
-				requireValue(
-					new Set(Object.values(body).map((v) => v.toLowerCase())).size === 3,
-					'invalid_definition',
-					'Definition fields must be distinct'
-				);
+				const body = parseDefinition(input);
 				this.addArtifact(x, 'definition', body, actor, text(input.reason, 1000));
 				x.title = body.title;
 			} else {
@@ -559,12 +697,7 @@ export class WorkStore {
 				'invalid_transition',
 				'Only ready or running Tasks can wait'
 			);
-			if (input.follow_up_at)
-				requireValue(
-					Number.isFinite(Date.parse(input.follow_up_at)),
-					'invalid_input',
-					'Expected a valid date'
-				);
+			if (input.follow_up_at) timestamp(input.follow_up_at);
 			x.wait = {
 				waiting_for: text(input.waiting_for, 2000),
 				resume_when: text(input.resume_when, 2000),
@@ -593,7 +726,10 @@ export class WorkStore {
 			if (input.result_id) {
 				const a = this.artifact(input.result_id);
 				requireValue(
-					a.task_id === x.id && a.kind === 'result' && a.definition_id === x.definition_id,
+					a.task_id === x.id &&
+						a.kind === 'result' &&
+						a.definition_id === x.definition_id &&
+						(a.review_target?.artifact_id ?? null) === (x.review_target?.artifact_id ?? null),
 					'stale_artifact',
 					'Result must pin current Definition'
 				);

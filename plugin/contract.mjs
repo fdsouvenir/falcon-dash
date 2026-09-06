@@ -1,23 +1,8 @@
+import { compactContract } from './compact-contract.mjs';
+import { commandInputs, workFeature } from './work/feature-contract.mjs';
 import { TYPES, TASK_STATES } from './work/store.mjs';
-export const workCommands = [
-	'create',
-	'ready',
-	'unready',
-	'start',
-	'wait',
-	'resume',
-	'complete',
-	'reopen',
-	'abandon',
-	'assign',
-	'revise_definition',
-	'revise_plan',
-	'checkpoint',
-	'revise_change',
-	'depends_on',
-	'associate',
-	'achieve'
-];
+export const workCommands = Object.keys(commandInputs);
+
 export const tools = {
 	falcon_work: {
 		description:
@@ -27,7 +12,7 @@ export const tools = {
 			additionalProperties: false,
 			required: ['action'],
 			properties: {
-				action: { type: 'string', enum: ['list', 'get', 'command'] },
+				action: { type: 'string', enum: ['list', 'get', 'queue', 'brief', 'history', 'command'] },
 				id: { type: 'string' },
 				full: { type: 'boolean' },
 				query: {
@@ -38,7 +23,9 @@ export const tools = {
 						limit: { type: 'integer', minimum: 1, maximum: 100 },
 						offset: { type: 'integer', minimum: 0 },
 						agent_id: { type: 'string' },
-						search: { type: 'string' }
+						search: { type: 'string' },
+						fields: { type: 'array', items: { type: 'string' } },
+						include_terminal: { type: 'boolean' }
 					}
 				},
 				request: {
@@ -50,6 +37,7 @@ export const tools = {
 						id: { type: 'string' },
 						expected_version: { type: 'integer' },
 						idempotency_key: { type: 'string', maxLength: 128 },
+						ask_id: { type: 'string' },
 						input: { type: 'object' }
 					}
 				}
@@ -64,7 +52,10 @@ export const tools = {
 			additionalProperties: false,
 			required: ['action'],
 			properties: {
-				action: { type: 'string', enum: ['list', 'test', 'refresh', 'pause', 'resume'] },
+				action: {
+					type: 'string',
+					enum: ['list', 'test', 'refresh', 'pause', 'resume', 'disconnect']
+				},
 				id: { type: 'string' }
 			}
 		}
@@ -75,10 +66,31 @@ export const tools = {
 		parameters: {
 			type: 'object',
 			additionalProperties: false,
-			required: ['action', 'root_id'],
+			required: ['action'],
 			properties: {
-				action: { type: 'string', enum: ['list', 'read', 'write', 'mkdir'] },
+				action: {
+					type: 'string',
+					enum: [
+						'list',
+						'read',
+						'write',
+						'mkdir',
+						'rename',
+						'download',
+						'upload',
+						'trash',
+						'restore',
+						'roots',
+						'copy_path'
+					]
+				},
 				root_id: { type: 'string' },
+				sort: { type: 'string', enum: ['name', 'name_desc'] },
+				limit: { type: 'integer', minimum: 1, maximum: 200 },
+				offset: { type: 'integer', minimum: 0 },
+				destination: { type: 'string' },
+				trash_id: { type: 'string' },
+				confirmed: { type: 'boolean' },
 				path: { type: 'string' },
 				content: { type: 'string', maxLength: 262144 },
 				expected_version: { type: ['string', 'null'] },
@@ -93,15 +105,20 @@ export const tools = {
 			type: 'object',
 			additionalProperties: false,
 			required: ['action'],
-			properties: { action: { type: 'string', enum: ['status', 'inventory'] } }
+			properties: {
+				action: { type: 'string', enum: ['status', 'inventory', 'metadata'] },
+				id: { type: 'string' }
+			}
 		}
 	}
 };
-export function buildContract(enabled) {
-	return JSON.stringify({
+export function domainContract(enabled) {
+	return {
 		plugin: 'falcon-dash',
 		version: '4.0.0-alpha.0',
-		...(enabled.includes('work') ? { work: { types: TYPES, task_states: TASK_STATES } } : {}),
+		...(enabled.includes('work')
+			? { work: { types: TYPES, task_states: TASK_STATES, feature: workFeature } }
+			: {}),
 		operations: Object.fromEntries(
 			Object.entries(tools).filter(([name]) => enabled.includes(name.slice(7)))
 		),
@@ -114,5 +131,8 @@ export function buildContract(enabled) {
 			mode: 'sandboxed read-only preview',
 			writes: 'Unavailable pending authenticated iframe bridge decision'
 		}
-	});
+	};
+}
+export function buildContract(enabled) {
+	return JSON.stringify(compactContract(domainContract(enabled)));
 }

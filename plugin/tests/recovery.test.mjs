@@ -40,10 +40,10 @@ test('Quiesced encrypted Vault and private key backup restores synthetic owner a
 	await source.initialize(owners[0]);
 	await source.unlock(owners[0]);
 	await source.create('sample', { password: 'SYNTHETIC-RESTORE-CANARY' }, owners[0]);
-	source.lock();
+	await source.lock();
 	const target = path.join(directory, 'restored');
 	fs.mkdirSync(target, { mode: 0o700 });
-	for (const file of ['credentials.kdbx', 'unlock.key']) {
+	for (const file of ['credentials.kdbx', 'unlock.key', 'policy.json', 'audit.db']) {
 		fs.copyFileSync(
 			path.join(directory, 'source', file),
 			path.join(target, file),
@@ -54,5 +54,5 @@ test('Quiesced encrypted Vault and private key backup restores synthetic owner a
 	const restored = new Vault(target, { owners });
 	await restored.unlock(owners[0]);
 	assert.equal((await restored.reveal('sample', owners[0])).password, 'SYNTHETIC-RESTORE-CANARY');
-	restored.lock();
+	await restored.lock();
 });

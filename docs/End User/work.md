@@ -1,3 +1,5 @@
+> **Historical standalone guide.** The plugin conversion has no completed interactive Work UI yet. See [current backend status](../Technical/plugin-v4-backend.md); do not treat the old routes or retired objects below as the new product contract.
+
 # Work
 
 Work is Falcon Dash's shared dashboard and the agent-facing source of truth.

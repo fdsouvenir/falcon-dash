@@ -1,4 +1,4 @@
-import { DomainError, requireValue } from '../work/store.mjs';
+import { DomainError, requireValue } from '../errors.mjs';
 // Endpoint constants are adapter-owned, never caller-controlled destinations.
 async function request(fetcher, url, options) {
 	const r = await fetcher(url, {
@@ -15,23 +15,75 @@ async function request(fetcher, url, options) {
 					: 'provider_unavailable',
 			'Provider request failed'
 		);
-	return r.json();
+	try {
+		if (!r.body?.getReader) return await r.json();
+		const reader = r.body.getReader();
+		let size = 0;
+		const chunks = [];
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			size += value.byteLength;
+			if (size > 262144) {
+				await reader.cancel();
+				throw new Error('oversized');
+			}
+			chunks.push(Buffer.from(value));
+		}
+		return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+	} catch {
+		throw new DomainError(
+			'provider_response_invalid',
+			'Provider returned an invalid or oversized response'
+		);
+	}
 }
 export function adapters(fetcher = fetch) {
 	return {
 		highlevel: {
+			supports_refresh: true,
+			async exchange(material, { code, redirect_uri }) {
+				const body = new URLSearchParams({
+					grant_type: 'authorization_code',
+					client_id: material.client_id,
+					client_secret: material.client_secret,
+					code,
+					redirect_uri
+				});
+				const output = await request(fetcher, 'https://services.leadconnectorhq.com/oauth/token', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body
+				});
+				requireValue(
+					typeof output.access_token === 'string' &&
+						output.access_token.length &&
+						typeof output.refresh_token === 'string' &&
+						output.refresh_token.length,
+					'provider_response_invalid',
+					'Provider omitted required OAuth token pair'
+				);
+				return {
+					material: { access_token: output.access_token, refresh_token: output.refresh_token }
+				};
+			},
 			async test(material, connection) {
 				requireValue(
 					connection.account_id,
 					'input_required',
 					'HighLevel validation requires a location id'
 				);
-				await request(
+				const result = await request(
 					fetcher,
 					`https://services.leadconnectorhq.com/locations/${encodeURIComponent(connection.account_id)}`,
-					{ headers: { Authorization: `Bearer ${material.access_token}`, Version: '2021-07-28' } }
+					{ headers: { Authorization: `Bearer ${material.access_token}`, Version: 'v3' } }
 				);
-				return { health: 'healthy' };
+				requireValue(
+					result.location?.id === connection.account_id,
+					'provider_response_invalid',
+					'Provider did not confirm the configured sub-account identity'
+				);
+				return { health: 'healthy', validated_capabilities: ['locations.readonly'] };
 			},
 			async refresh(material) {
 				const body = new URLSearchParams({
@@ -62,6 +114,7 @@ export function adapters(fetcher = fetch) {
 			}
 		},
 		cloudflare: {
+			supports_refresh: false,
 			async test(material) {
 				const out = await request(
 					fetcher,

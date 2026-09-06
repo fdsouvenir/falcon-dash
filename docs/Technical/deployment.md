@@ -127,3 +127,18 @@ release must be produced and checked with the exact formatter version recorded i
 That clean-install test must include OpenClaw discovery, vault provisioning, SecretRef resolution,
 gateway extension installation, Work database creation, and agent context injection. At present,
 the vault and extension steps expose known packaging gaps.
+
+## Plugin preview packaging
+
+The active package has one OpenClaw entry and excludes historical standalone routes/server code.
+`npm run build` bundles TypeBox with its license and validates executable JavaScript; installation
+needs no runtime npm dependency execution. The OpenClaw SDK remains an exact host peer.
+
+Development and CI retain both the plugin tests and all historical regressions. Real-host tests
+use explicit pinned OpenClaw, isolated state/config/workspace, synthetic credentials and loopback
+fixtures. Managed SecretRef presets hit the documented current-user executable-ownership guard
+with a root-owned Node binary on this host. The manual exec resolver was tested without changing
+that guard, but is not equivalent to preset-owned automatic revocation.
+
+The [backend continuation](plugin-v4-backend.md) is the current source for compatibility, proof
+and gaps. No production rollout or cutover is authorized by these preparation notes.
