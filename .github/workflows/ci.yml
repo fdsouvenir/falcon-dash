@@ -15,8 +15,8 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     env:
-      OPENCLAW_STATE_DIR: ${{ runner.temp }}/falcon-openclaw-state
-      OPENCLAW_CONFIG_PATH: ${{ runner.temp }}/falcon-openclaw-config.json
+      OPENCLAW_STATE_DIR: ${{ github.workspace }}/artifacts/plugin-v4/ci-state
+      OPENCLAW_CONFIG_PATH: ${{ github.workspace }}/artifacts/plugin-v4/ci-config.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
