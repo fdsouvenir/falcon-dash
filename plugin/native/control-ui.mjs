@@ -26,7 +26,7 @@ function button(label, run, kind = '') {
 	return b;
 }
 function field(label, { value = '', type = 'text', multiline = false, options } = {}) {
-	const wrap = el('label', null, { class: 'field' });
+	const wrap = el('label', null, { class: 'falcon-field' });
 	wrap.append(el('span', label));
 	const input = options ? el('select') : el(multiline ? 'textarea' : 'input');
 	if (options)

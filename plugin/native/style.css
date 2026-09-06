@@ -164,7 +164,7 @@
 	grid-column: 1/-1;
 	font-size: 13px;
 }
-.falcon-native .field {
+.falcon-native .falcon-field {
 	display: grid;
 	gap: 5px;
 	min-width: 0;
@@ -236,7 +236,7 @@
 	.falcon-native .state {
 		padding-left: 79px;
 	}
-	.falcon-native .toolbar > .field {
+	.falcon-native .toolbar > .falcon-field {
 		flex-basis: 100%;
 	}
 }

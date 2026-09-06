@@ -143,9 +143,9 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await human.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(human.locator('output')).toHaveText('SYNTHETIC-HUMAN-UI-CANARY');
 	await human.getByRole('button', { name: 'Copy', exact: true }).click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-		'SYNTHETIC-HUMAN-UI-CANARY'
-	);
+	await expect
+		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+		.toBe('SYNTHETIC-HUMAN-UI-CANARY');
 	await human.getByRole('button', { name: 'Hide', exact: true }).click();
 	await expect(human.locator('output')).toHaveText('');
 	const agent = page
@@ -154,9 +154,9 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	await agent.getByRole('button', { name: 'Copy', exact: true }).click();
-	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-		'SYNTHETIC-AGENT-UI-CANARY'
-	);
+	await expect
+		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+		.toBe('SYNTHETIC-AGENT-UI-CANARY');
 	await agent.getByRole('button', { name: 'Hide', exact: true }).click();
 	await expect(agent.locator('output')).toHaveText('');
 	await capture(page, 'vault-masked', info.project.name);

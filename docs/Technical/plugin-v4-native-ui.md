@@ -90,3 +90,7 @@ server-side authority, even if a synthetic `invalidated` flag was never attached
 Review repairs retire pending Reveal/Copy responses on Hide as well as existing lifecycle
 cleanup. Renaming a dirty document keeps its edit buffer and reviewed version. Native select
 fields choose their first declared option when no initial value is supplied.
+
+Rendered review found the host light theme's generic `.field` selector overriding the dark
+native input backgrounds. Native field classes are now namespaced to avoid this collision;
+actual desktop/narrow screenshots remain the acceptance evidence for contrast and layout.

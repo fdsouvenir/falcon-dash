@@ -77,3 +77,8 @@ light-DOM content are not DOM descendants for nested Playwright locators.
 
 The Documents browser case also renames its unsaved conflict-recovered draft, verifies the
 buffer survives, saves it, restores the original path, then reloads and reads the saved text.
+
+Copy acceptance waits for the actual asynchronous clipboard result; a click alone does not
+mean the protected Gateway round-trip and clipboard write have completed. The matrix reports
+all independent desktop/narrow cases rather than stopping at the first failure; every failed
+case still fails CI, with zero retries and no success-skips.
