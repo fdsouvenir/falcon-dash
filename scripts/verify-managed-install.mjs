@@ -17,6 +17,11 @@ fs.mkdirSync(runtime, { mode: 0o700 });
 const node = path.join(runtime, 'node'),
 	systemStat = fs.statSync(process.execPath);
 fs.copyFileSync(process.execPath, node, fs.constants.COPYFILE_EXCL);
+const copied = fs.lstatSync(node);
+if (copied.uid !== process.getuid() || copied.isSymbolicLink())
+	throw Error('Fixture executable is not owned by this user');
+// CI toolcache modes may be writable by a group. Tighten only this newly created copy.
+fs.chmodSync(node, 0o700);
 const hash = (p) => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 const digest = hash(process.execPath),
 	ownedStat = fs.lstatSync(node);
@@ -54,8 +59,18 @@ const env = {
 async function run(name, command, args) {
 	const child = spawn(command, args, { cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'] });
 	const output = fs.createWriteStream(path.join(root, `${name}.log`), { mode: 0o600 });
-	child.stdout.pipe(output, { end: false });
-	child.stderr.pipe(output, { end: false });
+	let bytes = 0,
+		truncated = false;
+	const retain = (chunk) => {
+		bytes += chunk.length;
+		if (bytes <= 1048576) output.write(chunk);
+		else if (!truncated) {
+			truncated = true;
+			output.write('\nHarness log exceeded 1 MiB; remaining log omitted.\n');
+		}
+	};
+	child.stdout.on('data', retain);
+	child.stderr.on('data', retain);
 	const code = await new Promise((resolve, reject) => {
 		child.on('error', reject);
 		child.on('close', resolve);
@@ -97,6 +112,8 @@ const proof = {
 	node: process.version,
 	nodeSha256: digest,
 	systemRuntimeUnchanged: true,
+	copiedRuntimeMode: (copied.mode & 0o777).toString(8),
+	fixtureRuntimeMode: (fs.statSync(node).mode & 0o777).toString(8),
 	preset: JSON.parse(fs.readFileSync(path.join(root, 'managed-preset-proof.json'))),
 	provider: JSON.parse(fs.readFileSync(path.join(root, 'provider-bound-proof.json')))
 };

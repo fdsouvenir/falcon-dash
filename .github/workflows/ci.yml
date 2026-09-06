@@ -95,5 +95,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: managed-runtime-proof
-          path: artifacts/plugin-v4/managed-install-*/combined-proof.json
+          path: |
+            artifacts/plugin-v4/managed-install-*/combined-proof.json
+            artifacts/plugin-v4/managed-install-*/install.log
+            artifacts/plugin-v4/managed-install-*/managed-audit.log
+            artifacts/plugin-v4/managed-install-*/managed-provider.log
           retention-days: 14

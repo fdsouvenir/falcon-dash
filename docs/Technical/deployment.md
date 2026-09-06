@@ -154,8 +154,12 @@ service/process policy was changed during this review repair.
 byte-for-byte into an owned test-runtime directory, verifies its owner/mode/hash, and uses that
 Node for the real managed preset and Gateway inference proof. It verifies disabled/removed plugin
 revocation and Vault-lock denial without a manual provider fallback, then confirms the system
-Node was unchanged. CI runs this gate and uploads only its nonsecret summary.
+Node was unchanged. CI runs this gate and uploads its nonsecret summary and harness logs, not Vault files or provider request captures.
 
 The managed contract uses the Gateway's actual `process.execPath`; wrapping root-owned Node in
 a user-owned shell script does not change it. A production deployment must provide an
 appropriately user-owned Node runtime. No production installation or permission change was made.
+
+The fresh runtime fixture tightens **only its newly created Node copy** to mode 0700, because CI
+toolcache binaries can carry broader source modes. It verifies ownership before doing so and
+checks the original runtime hash/uid/mode remain unchanged. No system Node chmod/chown is used.
