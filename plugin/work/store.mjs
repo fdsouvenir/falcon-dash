@@ -223,40 +223,16 @@ export class WorkStore {
 					out[kind] = a;
 			}
 
-		out.relationships = this.db
-			.prepare('SELECT source,target,kind FROM links WHERE source=? OR target=? LIMIT 100')
-			.all(id, id);
-		out.asks = this.db
-			.prepare("SELECT body FROM asks WHERE subject=? AND state='open' LIMIT 25")
-			.all(id)
-			.map((row) => JSON.parse(String(row.body)));
-		if (x.type === 'project')
-			out.associated_work = this.all()
-				.filter((item) => item.project_id === id)
-				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-				.slice(0, 100)
-				.map((item) => ({
-					id: item.id,
-					type: item.type,
-					title: item.title,
-					status: item.status,
-					success_condition: item.success_condition,
-					achievement_basis: item.achievement_basis
-				}));
-		if (x.type === 'milestone')
-			out.associated_work = out.relationships
-				.filter((link) => link.target === id && link.kind === 'milestone')
-				.map((link) => this.get(link.source))
-				.map((item) => ({ id: item.id, type: item.type, title: item.title, status: item.status }));
-		if (full) {
-			out.artifacts = this.db
-				.prepare('SELECT body FROM artifacts WHERE task_id=? ORDER BY kind,revision LIMIT 100')
-				.all(id)
-				.map((r) => JSON.parse(String(r.body)));
-			out.history = this.db
-				.prepare('SELECT * FROM events WHERE object_id=? ORDER BY revision LIMIT 100')
-				.all(id)
-				.map((r) => ({ ...r, body: JSON.parse(String(r.body)) }));
+		out.pages = {};
+		for (const collection of [
+			'relationships',
+			'asks',
+			...(['project', 'milestone'].includes(x.type) ? ['associated_work'] : []),
+			...(full ? ['artifacts', 'history'] : [])
+		]) {
+			const page = this.related(id, collection, { limit: collection === 'asks' ? 25 : 100 });
+			out[collection] = page.items;
+			out.pages[collection] = { total: page.total, next_offset: page.next_offset };
 		}
 		if (full) return out;
 		const projection = boundedText(out);
@@ -269,6 +245,81 @@ export class WorkStore {
 			}
 		};
 	}
+	related(id, collection, query = {}) {
+		exact(query, ['offset', 'limit']);
+		const { offset = 0, limit = 25 } = query,
+			x = this.get(id);
+		requireValue(
+			Number.isInteger(offset) &&
+				offset >= 0 &&
+				Number.isInteger(limit) &&
+				limit >= 1 &&
+				limit <= 100,
+			'invalid_filter',
+			'Invalid collection pagination'
+		);
+		let sql,
+			args = [id],
+			kind = 'json';
+		switch (collection) {
+			case 'relationships':
+				sql =
+					'SELECT source,target,kind FROM links WHERE source=? OR target=? ORDER BY source,target,kind';
+				args = [id, id];
+				kind = 'raw';
+				break;
+			case 'asks':
+				sql = "SELECT body FROM asks WHERE subject=? AND state='open' ORDER BY id";
+				break;
+			case 'artifacts':
+				sql = 'SELECT body FROM artifacts WHERE task_id=? ORDER BY kind,revision';
+				break;
+			case 'history':
+				sql = 'SELECT * FROM events WHERE object_id=? ORDER BY revision';
+				kind = 'history';
+				break;
+			case 'associated_work':
+				requireValue(
+					['project', 'milestone'].includes(x.type),
+					'invalid_filter',
+					'Only Projects and Milestones have associated Work'
+				);
+				sql =
+					x.type === 'project'
+						? "SELECT body FROM objects WHERE json_extract(body,'$.project_id')=? ORDER BY coalesce(json_extract(body,'$.order'),0),id"
+						: "SELECT o.body FROM objects o JOIN links l ON l.source=o.id WHERE l.target=? AND l.kind='milestone' ORDER BY o.id";
+				kind = 'work';
+				break;
+			default:
+				requireValue(false, 'invalid_filter', 'Unknown Work collection');
+		}
+		const total = Number(this.db.prepare(`SELECT count(*) AS n FROM (${sql})`).get(...args).n);
+		const items = this.db
+			.prepare(`${sql} LIMIT ? OFFSET ?`)
+			.all(...args, limit, offset)
+			.map((row) => {
+				if (kind === 'raw') return row;
+				const body = JSON.parse(String(row.body));
+				if (kind === 'history') return { ...row, body };
+				if (kind === 'work')
+					return {
+						id: body.id,
+						type: body.type,
+						title: body.title,
+						status: body.status,
+						success_condition: body.success_condition,
+						achievement_basis: body.achievement_basis
+					};
+				return body;
+			});
+		return {
+			items,
+			total,
+			next_offset: offset + items.length < total ? offset + items.length : null,
+			version: x.version
+		};
+	}
+
 	list(query = {}) {
 		return listProjection(this, query);
 	}
@@ -718,7 +769,7 @@ export class WorkStore {
 			return;
 		}
 		if (command === 'wait') {
-			exact(input, ['waiting_for', 'resume_when', 'follow_up_at']);
+			exact(input, ['waiting_for', 'resume_when', 'follow_up_at', 'waiting_ref']);
 			requireValue(
 				['ready', 'in_progress'].includes(x.status),
 				'invalid_transition',
@@ -727,6 +778,7 @@ export class WorkStore {
 			if (input.follow_up_at) timestamp(input.follow_up_at);
 			x.wait = {
 				waiting_for: text(input.waiting_for, 2000),
+				...(input.waiting_ref ? { waiting_ref: input.waiting_ref } : {}),
 				resume_when: text(input.resume_when, 2000),
 				follow_up_at: input.follow_up_at ?? null,
 				since: new Date().toISOString(),

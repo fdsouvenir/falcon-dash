@@ -116,3 +116,9 @@ menu coverage or the 20-case browser matrix.
 
 Rendered follow-up caught flush-to-border summary/Technical details rows. They now use the
 existing card content inset; the real browser case checks that inset at both widths.
+
+Work now exposes full saved-content recovery with explicit historical-artifact labeling, history
+pagination and additional related collection pages. Resolve request uses the shared semantic form
+and original Ask id; it does not acknowledge a request without committing its validated action.
+Agent/session fields suggest the current host roster; missing identities remain visible. Typed
+waiting references are optional and never replace the required waiting/resume explanation.

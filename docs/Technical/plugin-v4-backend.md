@@ -262,3 +262,17 @@ gaps, not deferred product decisions or reasons to migrate live data without app
   installation proof establishes a real profile through `users.self` and binds `falcon.identity`.
 
 See [required real-Gateway native E2E](plugin-native-e2e.md) for CI/runtime/browser distinctions.
+
+## Continuing Work read-path acceptance
+
+Work detail now reports explicit collection totals/cursors. The scoped `related` read traverses
+relationships, active Asks, associated Work, immutable artifacts and history in bounded pages;
+unknown collections/filters reject. Native detail exposes shortened-text guidance and an explicit
+full saved-content disclosure labeled as including historical—not necessarily applicable—artifacts.
+History and capped collections can be traversed without silently stopping at the first page.
+
+Waiting may carry an optional typed agent/session/Work/external reference alongside the required
+human explanation and resume condition. Upstream identities remain owned by OpenClaw: the UI
+suggests current host agent/session rows and identifies absent assigned agents without reassignment.
+An Ask's Resolve request form resubmits its original supported semantic command with its Ask id;
+the existing server transaction revalidates and closes it only after successful mutation.

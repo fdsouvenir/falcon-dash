@@ -106,6 +106,19 @@ function schemaEditor(schema, label, value) {
 		}
 		return schemaEditor(nonnull, label, value);
 	}
+	if (schema.type === 'object' && schema.properties && value == null && !label.endsWith(' *')) {
+		const node = el('fieldset'),
+			toggle = field('Include ' + label, { type: 'checkbox' }),
+			part = schemaEditor(schema, label, {});
+		toggle.input.value = '';
+		toggle.input.checked = false;
+		part.node.hidden = true;
+		toggle.input.onchange = () => {
+			part.node.hidden = !toggle.input.checked;
+		};
+		node.append(toggle.wrap, part.node);
+		return { node, read: () => (toggle.input.checked ? part.read() : undefined) };
+	}
 	if (schema.type === 'object' && schema.properties) {
 		const node = el('fieldset');
 		node.append(el('legend', label));
@@ -124,7 +137,7 @@ function schemaEditor(schema, label, value) {
 				const out = {};
 				for (const [k, part] of Object.entries(parts)) {
 					const v = part.read();
-					if (v === '' && !schema.required?.includes(k)) continue;
+					if ((v === '' || v === undefined) && !schema.required?.includes(k)) continue;
 					out[k] = v;
 				}
 				return out;
@@ -356,13 +369,14 @@ function mount(container, context, module) {
 			);
 		return b;
 	}
-	async function command(target, command, input, idempotencyKey = crypto.randomUUID()) {
+	async function command(target, command, input, idempotencyKey = crypto.randomUUID(), askId) {
 		await host.request('falcon.identity', {});
 		await feature.invoke('work_command', {
 			command,
 			id: target?.id,
 			expected_version: target?.version,
 			idempotency_key: idempotencyKey,
+			...(askId ? { ask_id: askId } : {}),
 			input
 		});
 	}
@@ -373,6 +387,25 @@ function mount(container, context, module) {
 			error = el('p', '', { role: 'alert' }),
 			save = el('button', 'Save', { type: 'submit', class: 'primary' });
 		content.append(editor.node, error, save, button('Cancel', closeDialog));
+		for (const [prefix, rows, idOf, labelOf] of [
+			['Agent Id', host.agents?.rows ?? [], (x) => x.id, (x) => x.name ?? x.id],
+			['Session Key', host.sessions?.rows ?? [], (x) => x.key, (x) => x.label ?? x.key]
+		]) {
+			const list = el('datalist', null, { id: 'reference-' + crypto.randomUUID() });
+			for (const item of rows) {
+				const id = idOf(item);
+				if (id) list.append(el('option', labelOf(item), { value: id }));
+			}
+			for (const input of editor.node.querySelectorAll('input'))
+				if (input.getAttribute('aria-label')?.startsWith(prefix))
+					input.setAttribute('list', list.id);
+			content.append(list);
+		}
+		paragraph(
+			content,
+			'Agent/session suggestions come from the current OpenClaw roster. Missing references are preserved, never reassigned.'
+		);
+
 		const recovery = el('div', null, { class: 'toolbar' });
 		recovery.hidden = true;
 		if (target)
@@ -471,6 +504,50 @@ function mount(container, context, module) {
 			el('h2', record.title),
 			el('p', `${human(record.type)} · ${human(record.status)}`, { class: 'status' })
 		);
+		if (record.truncation?.truncated) {
+			paragraph(
+				body,
+				'Some saved text is shortened in this view. Read the full saved content before making a decision.',
+				'attention'
+			);
+			body.append(
+				button('Read full saved content', () =>
+					protect(async () => {
+						const full = await request('work', 'get', { id, full: true });
+						if (!valid()) return;
+						const disclosure = el('details');
+						disclosure.open = true;
+						disclosure.append(
+							el(
+								'summary',
+								'Full saved content — includes historical artifacts; not all are current applicable proof'
+							)
+						);
+						detailText(disclosure, 'Saved record', full);
+						body.append(disclosure);
+						for (const [collection, page] of Object.entries(full.pages ?? {}))
+							if (page.next_offset !== null)
+								collectionPager(collection, page.next_offset, disclosure);
+					})
+				)
+			);
+		}
+		function collectionPager(collection, offset, parent = body) {
+			const load = button('Load more ' + human(collection).toLowerCase(), () =>
+				protect(async () => {
+					const page = await request('work', 'related', {
+						id,
+						collection,
+						query: { offset, limit: 25 }
+					});
+					if (!valid()) return;
+					detailText(parent, human(collection) + ' (continued)', page.items);
+					offset = page.next_offset;
+					load.hidden = offset === null;
+				})
+			);
+			parent.append(load);
+		}
 		for (const warning of record.attention ?? [])
 			paragraph(
 				body,
@@ -484,7 +561,18 @@ function mount(container, context, module) {
 			for (const key of ['conclusion', 'confidence', 'targets'])
 				detailText(body, human(key), record[key]);
 		if (record.type === 'task')
-			detailText(body, 'Accountable agent', record.agent_id ?? 'Unassigned');
+			detailText(
+				body,
+				'Accountable agent',
+				record.agent_id
+					? {
+							id: record.agent_id,
+							availability: host.agents?.rows?.some((a) => a.id === record.agent_id)
+								? 'Present in current Gateway roster'
+								: 'Not present in the current Gateway roster; identity preserved'
+						}
+					: 'Unassigned'
+			);
 		if (record.project_id)
 			body.append(button('Open project', () => protect(() => workDetail(record.project_id))));
 		for (const key of [
@@ -514,6 +602,20 @@ function mount(container, context, module) {
 			const section = el('section', null, { class: 'list-zone' });
 			section.append(el('h2', ask.prompt));
 			detailText(section, 'Missing requirement', ask.requirement);
+			if (commandInputs[ask.intended_command])
+				section.append(
+					button('Resolve request', () => {
+						const nonce = crypto.randomUUID();
+						semanticForm(
+							'Resolve request: ' + human(ask.intended_command),
+							commandInputs[ask.intended_command],
+							{ ...record, ...(record.definition?.content ?? {}) },
+							(input) => command(record, ask.intended_command, input, nonce, ask.id),
+							record
+						);
+					})
+				);
+
 			if (ask.thread)
 				section.append(
 					button('Open conversation', () =>
@@ -575,14 +677,27 @@ function mount(container, context, module) {
 		choose.input.onchange = () => {
 			if (choose.input.value) commandForm(record, choose.input.value);
 		};
-		actions.append(
-			button('Load history', () =>
-				protect(async () => {
-					const data = await request('work', 'history', { id, query: { limit: 25 } });
-					detailText(body, 'History', data);
-				})
-			)
+
+		for (const [collection, page] of Object.entries(record.pages ?? {}))
+			if (page.next_offset !== null) collectionPager(collection, page.next_offset);
+		let historyOffset = 0;
+		const historySection = el('section');
+		const loadHistory = button('Load history', () =>
+			protect(async () => {
+				const data = await request('work', 'history', {
+					id,
+					query: { limit: 25, offset: historyOffset }
+				});
+				if (!valid()) return;
+				detailText(historySection, historyOffset ? 'More history' : 'History', data.items);
+				historyOffset = data.next_offset;
+				loadHistory.textContent = 'Load more history';
+				loadHistory.hidden = historyOffset === null;
+			})
 		);
+		actions.append(loadHistory);
+		body.append(historySection);
+
 		status.textContent = 'Current record';
 	}
 	async function work() {

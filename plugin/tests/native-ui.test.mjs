@@ -507,3 +507,42 @@ for (const [type, action] of [
 		const actionMenu = f.window.document.querySelector('select[aria-label="Action"]');
 		assert.ok([...actionMenu.options].some((o) => o.value === action));
 	});
+
+test('Native Work recovers truncated saved content and traverses history pages', async (t) => {
+	const record = {
+		id: 'large',
+		type: 'task',
+		title: 'Large saved record',
+		status: 'open',
+		version: 1,
+		truncation: {
+			truncated: true,
+			fields: [{ path: '$.description', original_size: 4000, returned_size: 2000 }]
+		}
+	};
+	const f = await fixture(t, 'work', async (method, p) => {
+		if (method === 'plugins.sessionAction')
+			return { ok: true, result: { buckets: { ready: { items: [record] } } } };
+		if (p.action === 'get')
+			return p.full
+				? { ...record, description: 'FULL CONTENT TAIL', artifacts: [], history: [] }
+				: record;
+		if (p.action === 'history')
+			return {
+				items: [{ summary: p.query.offset ? 'LAST HISTORY PAGE' : 'FIRST HISTORY PAGE' }],
+				next_offset: p.query.offset ? null : 25
+			};
+	});
+	f.window.document.querySelector('.record').click();
+	await settle();
+	f.button('Read full saved content');
+	await settle();
+	assert.match(f.text(), /FULL CONTENT TAIL/);
+	f.button('Load history');
+	await settle();
+	assert.match(f.text(), /FIRST HISTORY PAGE/);
+	f.button('Load more history');
+	await settle();
+	assert.match(f.text(), /LAST HISTORY PAGE/);
+	assert.equal(f.calls.filter((x) => x.p?.action === 'history')[1].p.query.offset, 25);
+});

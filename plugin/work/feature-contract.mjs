@@ -68,7 +68,20 @@ export const commandInputs = {
 	ready: Obj({}),
 	unready: Obj({}),
 	start: Obj({ claim: Opt(Type.Boolean()) }),
-	wait: Obj({ waiting_for: Str(2000), resume_when: Str(2000), follow_up_at: Opt(Str(64)) }),
+	wait: Obj({
+		waiting_for: Str(2000),
+		resume_when: Str(2000),
+		follow_up_at: Opt(Str(64)),
+		waiting_ref: Opt(
+			Obj({
+				kind: Type.Union(
+					['agent', 'session', 'work', 'external'].map((value) => Type.Literal(value))
+				),
+				ref: Str(4096),
+				agent_id: Opt(Id)
+			})
+		)
+	}),
 	resume: Obj({}),
 	complete: Obj({ result_id: Opt(Id), content: Opt(Str()) }),
 	reopen: Obj({}),

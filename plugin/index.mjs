@@ -62,6 +62,7 @@ export default definePluginEntry({
 				if (p.action === 'get') return work.detail(p.id, p.full === true);
 				if (p.action === 'queue' || p.action === 'brief') return work.queue(p.query);
 				if (p.action === 'history') return work.history(p.id, p.query);
+				if (p.action === 'related') return work.related(p.id, p.collection, p.query);
 				if (p.action === 'command') {
 					requireValue(actor, 'identity_required', 'A verified actor is required');
 					return work.execute(p.request, actor);
@@ -220,7 +221,7 @@ export default definePluginEntry({
 					async ({ params, client, respond }) => {
 						try {
 							const readActions = {
-								falcon_work: ['list', 'get', 'queue', 'brief', 'history'],
+								falcon_work: ['list', 'get', 'queue', 'brief', 'history', 'related'],
 								falcon_integrations: ['list'],
 								falcon_vault: ['status', 'inventory', 'metadata'],
 								falcon_documents: ['list', 'read', 'download', 'roots', 'copy_path']

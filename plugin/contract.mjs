@@ -12,9 +12,16 @@ export const tools = {
 			additionalProperties: false,
 			required: ['action'],
 			properties: {
-				action: { type: 'string', enum: ['list', 'get', 'queue', 'brief', 'history', 'command'] },
+				action: {
+					type: 'string',
+					enum: ['list', 'get', 'queue', 'brief', 'history', 'related', 'command']
+				},
 				id: { type: 'string' },
 				full: { type: 'boolean' },
+				collection: {
+					type: 'string',
+					enum: ['relationships', 'asks', 'associated_work', 'artifacts', 'history']
+				},
 				query: {
 					type: 'object',
 					additionalProperties: false,

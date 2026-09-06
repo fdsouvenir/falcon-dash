@@ -173,3 +173,56 @@ test('Observer errors cannot invalidate a committed command and external writers
 	assert.equal(seen.length, 2);
 	assert.equal(store.checkExternalChanges(), false);
 });
+
+test('Work collection pages expose every linked record and immutable artifact without silent caps', (t) => {
+	const { store, call, create } = fixture(t);
+	const project = create('project');
+	for (let i = 0; i < 105; i++)
+		create('task', { project_id: project, title: `Review synthetic linked item ${i}` });
+	const detail = store.detail(project);
+	assert.equal(detail.pages.associated_work.total, 105);
+	let offset = 0,
+		ids = [];
+	do {
+		const page = store.related(project, 'associated_work', { offset, limit: 30 });
+		ids.push(...page.items.map((x) => x.id));
+		offset = page.next_offset;
+	} while (offset !== null);
+	assert.equal(new Set(ids).size, 105);
+	assert.throws(() => store.related(project, 'unknown'), { code: 'invalid_filter' });
+	assert.throws(() => store.related(project, 'associated_work', { offset: -1 }), {
+		code: 'invalid_filter'
+	});
+	const task = create();
+	for (let i = 0; i < 105; i++)
+		call('checkpoint', task, { content: `Meaningful result ${i}`, reason: 'Evidence checkpoint' });
+	assert.equal(store.detail(task, true).pages.artifacts.total, 106);
+	assert.equal(store.related(task, 'artifacts', { offset: 100 }).items.length, 6);
+});
+
+test('Waiting preserves explicit typed references without fabricating upstream availability', (t) => {
+	const { store, call, create } = fixture(t),
+		id = create();
+	call('ready', id);
+	call('wait', id, {
+		waiting_for: 'Independent review',
+		resume_when: 'Reviewer returns findings',
+		waiting_ref: { kind: 'session', ref: 'agent:retired:session:preserved', agent_id: 'retired' }
+	});
+	assert.equal(store.detail(id).wait.waiting_ref.agent_id, 'retired');
+	call('resume', id);
+	assert.ok(
+		store
+			.history(id)
+			.items.some((e) => JSON.stringify(e).includes('agent:retired:session:preserved'))
+	);
+	assert.throws(
+		() =>
+			call('wait', id, {
+				waiting_for: 'Review',
+				resume_when: 'Done',
+				waiting_ref: { kind: 'invented', ref: 'anything' }
+			}),
+		{ code: 'invalid_input' }
+	);
+});
