@@ -25,9 +25,10 @@ not require Fredbot Backend or a separate Falcon web server.
 
 The package registers real tools, Gateway methods, typed feature operations, services and four
 native Control UI pages, including protected human credential entry/reveal/copy. Native UI is
-approved; its implementation and [remaining rendered acceptance](docs/Technical/plugin-v4-native-ui.md)
-are tracked separately. The browser currently denies the isolated Gateway URL, so no desktop/narrow
-rendered acceptance or release-ready claim is made.
+approved; [native implementation and evidence](docs/Technical/plugin-v4-native-ui.md) distinguish
+offline tests from actual rendered acceptance. The baseline at `215111f` passed 20 real-Gateway
+desktop/narrow cases on the authorized isolated CI runner. The separate local browser restriction
+remains unchanged. Passing those cases is not [full v4 readiness](docs/Technical/plugin-v4-scope.md).
 
 See [current backend coverage and remaining audits](docs/Technical/plugin-v4-backend.md).
 The [first checkpoint evidence](docs/Technical/plugin-v4-evidence.md) is explicitly historical;
@@ -77,8 +78,10 @@ arguments. It does not activate native UI, send channel messages, or use real pr
 ## Not a release or cutover
 
 Remaining gates include complete domain/relationship audits, data-specific v2/v3 conversion,
-interactive UI, protected human credential transport, additional provider capabilities and live
-proof, native SecretRef deployment compatibility, runtime skills, and full recovery acceptance.
+complete UI workflows/accessibility, integration explanation/audit/attention and additional adapter
+capabilities, live proof, production SecretRef deployment compatibility, current runtime skills,
+release/upgrade guards and full recovery acceptance. Protected native credential transport and the
+scoped browser matrix are implemented, not awaiting UI approval.
 The current supported provider-request fixture is not proof for every OpenClaw harness/provider.
 
 [Conversion and rollback preparation](docs/Technical/plugin-v4.md#deferred-controlled-cutover-not-executed)

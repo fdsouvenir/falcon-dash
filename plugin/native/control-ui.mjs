@@ -4,6 +4,7 @@ import { workFeature, commandInputs } from '../work/feature-contract.mjs';
 import { ViewLifetime, message } from './lifetime.mjs';
 import './style.css';
 import { documentPreview } from './markdown.mjs';
+import { formatOperatorTime } from './dates.mjs';
 const names = {
 	work: 'Work',
 	integrations: 'Integrations',
@@ -555,11 +556,11 @@ function mount(container, context, module) {
 				'revoke_authorization',
 				'abandon'
 			],
-			project: ['abandon'],
+			project: ['abandon', 'resume'],
 			milestone: ['achieve', 'reopen'],
-			question: ['edit_question', 'answer', 'hypothesis', 'reopen'],
+			question: ['edit_question', 'answer', 'hypothesis', 'reopen', 'withdraw'],
 			finding: ['retract', 'supersede'],
-			decision: ['decide', 'revise_decision', 'supersede_decision', 'defer', 'resume'],
+			decision: ['decide', 'revise_decision', 'supersede_decision', 'defer', 'resume', 'withdraw'],
 			area: ['edit_area', 'archive', 'restore']
 		};
 		const choose = field('Action', {
@@ -880,7 +881,47 @@ function mount(container, context, module) {
 				section,
 				`${human(connection.provider)} · ${human(connection.health)} · ${human(connection.freshness ?? 'validation unavailable')}`
 			);
-			detailText(section, 'Connection', connection);
+			const summary = el('dl', null, { class: 'structured-details' });
+			const row = (label, value) => {
+				summary.append(el('dt', label), el('dd', value));
+			};
+			row(
+				'Maintenance',
+				connection.owner === 'native'
+					? 'Managed by OpenClaw'
+					: connection.paused === true
+						? 'Paused'
+						: connection.paused === false
+							? 'Enabled'
+							: 'Unknown'
+			);
+			row('Last validated', formatOperatorTime(connection.last_success));
+			row('Last failure', formatOperatorTime(connection.last_failure));
+			row(
+				connection.paused ? 'Stored due time; maintenance is paused' : 'Next maintenance due',
+				connection.owner === 'native'
+					? 'Managed by OpenClaw'
+					: formatOperatorTime(connection.next_at, { missing: 'Not scheduled' })
+			);
+			section.append(summary);
+			detailText(
+				section,
+				'Verified capabilities',
+				connection.validated_capabilities?.length
+					? connection.validated_capabilities
+					: 'No verified capabilities'
+			);
+			const technical = el('details');
+			technical.append(
+				el('summary', 'Technical details'),
+				renderValue({
+					id: connection.id,
+					owner: connection.owner,
+					version: connection.version,
+					phase: connection.phase
+				})
+			);
+			section.append(technical);
 			const actions = el('div', null, { class: 'toolbar' });
 			for (const [action, label] of [
 				['test', 'Test connection'],

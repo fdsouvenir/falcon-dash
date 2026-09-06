@@ -444,3 +444,66 @@ test('Native select controls expose stable names independent of their option tex
 	assert.equal(type.value, '');
 	assert.ok(type.textContent.includes('Decision'));
 });
+
+test('Integrations keeps formatted operator status primary and record internals collapsed', async (t) => {
+	const f = await fixture(t, 'integrations', async () => ({
+		connections: [
+			{
+				id: 'fixture-connection',
+				provider: 'cloudflare',
+				purpose: 'Review connection',
+				owner: 'falcon',
+				phase: 'idle',
+				version: 4,
+				paused: true,
+				health: 'unavailable',
+				freshness: 'stale',
+				next_at: 1788714483520,
+				last_success: null,
+				last_failure: 'invalid',
+				validated_capabilities: []
+			}
+		]
+	}));
+	const section = f.window.document.querySelector('.list-zone');
+	const details = [...section.querySelectorAll('details')].find(
+		(n) => n.querySelector('summary')?.textContent === 'Technical details'
+	);
+	assert.ok(details);
+	assert.equal(details.open, false);
+	assert.match(details.textContent, /Owner/);
+	assert.match(details.textContent, /Phase/);
+	const primary = section.cloneNode(true);
+	primary.querySelector('details').remove();
+	assert.doesNotMatch(primary.textContent, /1788714483520|Owner|Version|Phase/);
+	assert.match(primary.textContent, /Not recorded/);
+	assert.match(primary.textContent, /Unknown \(invalid timestamp\)/);
+	assert.match(primary.textContent, /Paused/);
+	assert.match(primary.textContent, /2026/);
+	assert.match(primary.textContent, /Stored due time; maintenance is paused/);
+});
+
+for (const [type, action] of [
+	['project', 'resume'],
+	['question', 'withdraw'],
+	['decision', 'withdraw']
+])
+	test(`Native ${type} exposes existing ${action} semantic action`, async (t) => {
+		const record = {
+			id: 'review-item',
+			type,
+			title: 'Review item',
+			status: type === 'project' ? 'abandoned' : 'pending',
+			version: 1
+		};
+		const f = await fixture(t, 'work', async (method, p) => {
+			if (method === 'plugins.sessionAction')
+				return { ok: true, result: { buckets: { ready: { items: [record] } } } };
+			if (p.action === 'get') return record;
+			throw Error('Unexpected method');
+		});
+		f.window.document.querySelector('.record').click();
+		await settle();
+		const actionMenu = f.window.document.querySelector('select[aria-label="Action"]');
+		assert.ok([...actionMenu.options].some((o) => o.value === action));
+	});

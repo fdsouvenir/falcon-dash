@@ -2,6 +2,23 @@
 
 > **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
 
+## Current plugin preview
+
+The single plugin archive includes [the current scope checklist](plugin-v4-scope.md) alongside
+native UI, backend and E2E documentation. Install the archive through the supported OpenClaw
+plugin installer in isolated state for testing; do not use the historical standalone commands
+below for the plugin. The tested baseline is OpenClaw 2026.9.2 on Linux with Node 22.16+,
+KeePassXC and flock. Managed SecretRefs additionally require the appropriately user-owned Node
+runtime described in [the backend compatibility evidence](plugin-v4-backend.md).
+
+Native UI is approved; Custom plugin UI opt-in was enabled only in synthetic runtimes. Required
+CI includes actual desktop/narrow native pages and managed runtime proof. This is not complete
+v4 or registry/production acceptance: release/upgrade guards, full operator recovery, domain/UI
+and connection gaps remain in the packaged checklist. No tag, publication, service replacement,
+production config/restart or data migration was performed.
+
+## Historical standalone deployment (not the plugin install path)
+
 Falcon Dash is an adapter-node SvelteKit application packaged as
 `@fdsouvenir/falcon-dash`. It runs on the same host as OpenClaw. Docker images, remote gateways,
 fredbot-backend, and an external vault are not current product requirements.

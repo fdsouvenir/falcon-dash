@@ -58,11 +58,10 @@ E2E. `publish.yml` also depends on that complete CI workflow and uses pinned SDK
 state during its package checks. These are workflow edits only: no release tag, publication,
 production restart, production configuration change or data cutover was triggered.
 
-The first real CI run reached the Gateway's first-run Model Setup page, not a missing plugin or
-mock host. Its screenshot showed the supported **Back to app** affordance. The browser helper
-now uses that normal navigation before selecting native pages; it does not disable model
-verification or invent a verified-model record. Provider-bound inference remains a separate
-real-Gateway synthetic-endpoint gate in the quality job.
+Early Model Setup/Back to app navigation attempts did not pass the narrow suite and are not
+acceptance evidence. Current enabled tests open the host-generated native `/plugin` route;
+the separate required sidebar test verifies real navigation. No model verification record is
+fabricated or disabled. Provider-bound inference is a separate real-Gateway synthetic-endpoint gate.
 
 Independent review regressions cover a listed document replaced by a FIFO or symlink in a
 child process with a two-second timeout, pending Reveal/Copy followed by Hide, and dirty
@@ -99,14 +98,9 @@ A real-shell hostile Markdown case opens the seeded untrusted document, checks i
 and rendered safe heading, asserts no script/image elements, and verifies no top-window
 execution marker. Ask navigation must also change to the host's chat route.
 
-Narrow first-run Model Setup hides **Back to app** inside the host sidebar drawer. The browser
-uses the visible **Expand sidebar** control, then **Back to app**, and reopens navigation when
-needed. It does not bypass setup verification or navigate through a synthetic replacement UI.
-
-The mobile host replaces its topbar control with a chat-header control having the same name;
-locators select the currently visible control rather than retaining the hidden earlier one.
-After selecting a native page, the helper dismisses the real Navigation drawer with Escape
-and verifies it closed before interacting with the page behind it.
+After selecting a native page, the helper dismisses any visible Navigation drawer with Escape
+and verifies it closed before interacting with the page behind it. Sidebar controls are selected
+from the currently visible native-page shell, not the replaced onboarding/chat header.
 
 Canonical native page acceptance now opens the actual host-generated route observed in its
 navigation links (`/plugin?plugin=falcon-dash&id=work`, and the other registered page ids).
@@ -119,3 +113,10 @@ These routes run only on the authorized isolated CI runner, not through the deni
 The opt-in-off case intentionally uses the plugin's guarded fallback guidance route
 (`/plugins/falcon-dash/work`), which remains available when native registrations are disabled.
 Enabled native acceptance uses only the canonical host-generated `/plugin` route.
+
+Integrations acceptance asserts persisted Enabled/Paused maintenance state, a formatted due time
+with explicit timezone, truthful missing validation history, and closed Technical details.
+Date unit tests cover daylight-saving offsets, UTC epoch, missing values and malformed data.
+The browser captures both widths after these assertions; this is a focused finish, not a redesign.
+
+Passing browser cases do not certify full v4 scope. See [the current scope checklist](plugin-v4-scope.md).

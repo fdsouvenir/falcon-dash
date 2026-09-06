@@ -61,14 +61,15 @@ suite on its own runner. Use that required gate and its screenshots for desktop/
 do not bypass the local browser policy or infer acceptance from offline DOM tests. The initial
 native checkpoint was not release-ready; current acceptance is tracked in the E2E evidence.
 
-Other acceptance still requiring verification: full real-shell navigation and native descriptor
-placement, optimistic recovery/reconnect in that shell, clipboard permissions, high-density
-Project/Decision layouts, narrow viewport/focus/zoom/reduced motion, and independent review of the
-new native protected transport. DOM tests cannot close these gates. Live provider consent remains
-a separate, explicitly unperformed step. Legacy dataset-specific conversion and production
-cutover remain outside this synthetic build's evidence.
+The baseline at `215111f` passed all 20 required real-Gateway cases in
+[CI 34047399891](https://github.com/fdsouvenir/falcon-dash/actions/runs/34047399891): both widths,
+registered navigation, persisted writes, reconnect, clipboard, access denial, structured Work
+details and hostile Markdown. These are actual rendered CI fixtures, distinct from offline DOM
+or host-only tests. Independent re-review confirmed the four scoped repair findings closed.
+This is not comprehensive visual-design, keyboard/focus/zoom/reduced-motion acceptance or full
+Work/domain/provider completion. See [scope and remaining work](plugin-v4-scope.md).
 
-## Local candidate evidence
+## Historical local checkpoint evidence (not current totals)
 
 - `artifacts/plugin-v4/native-all-tests.txt`: 99 plugin tests passed, including the retained 80.
 - `artifacts/plugin-v4/native-historical-tests.txt`: 402 retained historical tests passed.
@@ -97,3 +98,18 @@ actual desktop/narrow screenshots remain the acceptance evidence for contrast an
 
 Native form controls explicitly expose their field label through `aria-label`, so a select's
 accessible name does not accidentally include all of its option text.
+
+## Operator connection presentation
+
+Connection cards show health/freshness, maintenance state, last validated/failure times, the
+stored due time and verified capabilities before actions. Unix milliseconds are formatted with
+the browser locale and explicit IANA timezone/offset label. Missing history says Not recorded;
+missing due time says Not scheduled; malformed timestamps say Unknown (invalid timestamp).
+Paused connections label the stored due time without promising execution; native-owned
+maintenance is explicitly Managed by OpenClaw. Owner/id/version/phase remain in initially
+collapsed Technical details rather than occupying the primary mobile layout.
+
+The Work action menu also exposes the existing Project resume and Question/Decision withdraw
+commands. Server validation remains authoritative; this does not add lifecycle rules or runtime
+permissions. Remaining UI/domain gaps are listed in the scope checklist, not implied closed by
+menu coverage or the 20-case browser matrix.

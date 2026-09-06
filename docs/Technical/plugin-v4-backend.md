@@ -2,7 +2,8 @@
 
 This is the current backend status for [PR #366](https://github.com/fdsouvenir/falcon-dash/pull/366).
 Native feature-plugin UI is approved and implemented; there is no remaining UI-trust decision.
-The complete build remains unverified pending [real-shell acceptance](plugin-v4-native-ui.md).
+The baseline real-shell matrix passed at `215111f`; the complete build remains incomplete for
+the concrete [scope gaps](plugin-v4-scope.md), not an unresolved native-UI approval.
 
 ## Regression recovery
 
@@ -36,7 +37,7 @@ credentials or establish live proxy connections. No historical tests were remove
   Detail text exposes size metadata and an explicit full read. History has pagination.
 - One TypeBox command schema serves the store and supported `defineFeatureContract` /
   `defineFeaturePlugin` backend operations: `work_list`, `work_queue`, `work_command`.
-  The real pinned SDK validates inputs **and outputs** in tests. No native browser code is activated.
+  The real pinned SDK validates inputs **and outputs** in tests. These contract tests alone do not prove rendered native behavior.
 - The SDK's session-action context supplies a connection id/scopes, not a verified human profile.
   `falcon.identity` therefore binds the real Gateway principal to that connection, with revocation
   cleanup. Feature mutations fail closed until bound; they never infer a human from payload fields
@@ -54,8 +55,9 @@ workspace subdirectory; normal Documents traversal cannot browse it. Restore ver
 never overwrites another file. Unknown operations remain errors. All operations retain root/actor
 checks, symlink/hardlink restrictions and text-size limits. Read/download content is untrusted.
 
-Directory moves, bulk transactions, richer binary/media handling, Markdown rendering and real
-browser editor acceptance remain separate gates. Same-UID hostile filesystem writers remain
+Directory moves, atomic bulk transactions and richer binary/media handling are unsupported.
+Native Markdown, selected-file trash with per-item outcomes, and real browser editor acceptance
+are now implemented; see the native UI and current scope documents. Same-UID hostile filesystem writers remain
 outside the stated trusted-workspace concurrency model; atomic rename is not cross-process CAS.
 
 ## KeePassXC and SecretRefs
@@ -78,7 +80,7 @@ outside the stated trusted-workspace concurrency model; atomic rename is not cro
   and check denial, durable lock and the real child process protocol.
 
 Protected human entry/reveal/copy now has an approved native implementation; see
-[its tests and remaining real-shell acceptance](plugin-v4-native-ui.md). Per-entry
+[its tests and real-shell acceptance](plugin-v4-native-ui.md). Per-entry
 execution-policy refinement, revocation/removal workflows and complete key recovery need further
 review. Filesystem key protection is not an external key-management service.
 
@@ -159,7 +161,7 @@ TypeBox 1.3.18 is now bundled with its license by the build; the installed runti
 runtime dependency installation step. This also avoids the installed host's npm `edgesOut` failure
 when updating a plugin that already has a linked OpenClaw peer. The SDK itself remains host-owned.
 
-## Latest continuation evidence
+## Historical 64-test continuation checkpoint
 
 - 64 plugin tests cover the current backend; all 402 retained historical tests pass in their
   corrected Node/happy-dom projects. No historical suite was removed to obtain that result.
@@ -194,9 +196,10 @@ when updating a plugin that already has a linked OpenClaw peer. The SDK itself r
 
 The reviewed provider-request harness remains limited to the pinned core OpenAI-compatible path
 against a local fixture. It is not live HighLevel/Cloudflare/Schwab authentication, proof for every
-agent harness, or rendered UI acceptance. The actual operator dataset, legacy credential import,
-remaining domain/connection refinements, Cloudflare permission coverage, Schwab adapter, native UI
-and managed-SecretRef deployment compatibility remain acceptance work. The original request and
+agent harness, or rendered UI acceptance. The actual operator dataset, legacy credential import, remaining domain/connection refinements,
+Cloudflare permission coverage and production deployment compatibility remain acceptance work.
+Schwab fixtures, native UI and the supported isolated managed-SecretRef path were subsequently
+implemented and verified; the current scope checklist separates those from live proof. The original request and
 source issues must remain open.
 
 ## Parent review: authority and worker lifetime

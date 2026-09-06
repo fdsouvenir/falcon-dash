@@ -223,38 +223,54 @@ test('native Integrations performs real persisted maintenance controls without c
 	await expect(
 		connection
 			.locator('dt')
-			.filter({ hasText: /^Paused$/ })
+			.filter({ hasText: /^Maintenance$/ })
 			.locator('+ dd')
-	).toHaveText('true');
+	).toHaveText('Paused');
 	await connection.getByRole('button', { name: 'Resume maintenance', exact: true }).click();
 	await expect(
 		connection
 			.locator('dt')
-			.filter({ hasText: /^Paused$/ })
+			.filter({ hasText: /^Maintenance$/ })
 			.locator('+ dd')
-	).toHaveText('false');
+	).toHaveText('Enabled');
 	await openModule(page, 'Integrations');
 	await expect(
 		connection
 			.locator('dt')
-			.filter({ hasText: /^Paused$/ })
+			.filter({ hasText: /^Maintenance$/ })
 			.locator('+ dd')
-	).toHaveText('false');
+	).toHaveText('Enabled');
 	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
 	await connection.getByRole('button', { name: 'Pause maintenance', exact: true }).click();
 	await expect(
 		connection
 			.locator('dt')
-			.filter({ hasText: /^Paused$/ })
+			.filter({ hasText: /^Maintenance$/ })
 			.locator('+ dd')
-	).toHaveText('true');
+	).toHaveText('Paused');
 	await openModule(page, 'Integrations');
 	await expect(
 		connection
 			.locator('dt')
-			.filter({ hasText: /^Paused$/ })
+			.filter({ hasText: /^Maintenance$/ })
 			.locator('+ dd')
-	).toHaveText('true');
+	).toHaveText('Paused');
+	const technical = connection
+		.locator('details')
+		.filter({ has: page.getByText('Technical details', { exact: true }) });
+	await expect(technical).toHaveJSProperty('open', false);
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Stored due time/ })
+			.locator('+ dd')
+	).toHaveText(/20\d{2}.*\([^)]+\)/);
+	await expect(
+		connection
+			.locator('dt')
+			.filter({ hasText: /^Last validated$/ })
+			.locator('+ dd')
+	).toHaveText('Not recorded');
 	await capture(page, 'integrations', info.project.name);
 });
 test('real transport disconnect clears revealed values and reconnect recovers native reads', async ({

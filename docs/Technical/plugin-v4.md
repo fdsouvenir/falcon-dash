@@ -1,5 +1,7 @@
 # Single-plugin implementation preview
 
+**Current readiness:** [issue-by-issue implemented and missing scope](plugin-v4-scope.md). No full-v4 readiness is implied by the passing browser matrix.
+
 **Backend continuation:** [current implementation and remaining audits](plugin-v4-backend.md) supersedes the initial checkpoint status below. Native UI is approved; [current native implementation and acceptance](plugin-v4-native-ui.md) supersedes the historical read-only preview below.
 
 **Status: incomplete, not release-ready.** Branch `feat/falcon-plugin-v4` implements an isolated
@@ -23,7 +25,7 @@ Development dependencies are not runtime plugin dependencies. OpenClaw is an exa
 at **2026.9.2**; Node **22.16+**, Linux `/proc/self/fd`, `flock`, and KeePassXC CLI are prerequisites.
 This Linux-only preview must not be advertised as portable or broadly version-compatible.
 
-## Verified host limitation: human UI writes
+## Historical iframe limitation (superseded by approved native UI)
 
 The inspected installed host is OpenClaw 2026.9.2, build `3928bad`.
 
@@ -42,9 +44,9 @@ The historical checkpoint served read-only iframe content. Native feature-plugin
 on 2026-09-06 and now provides interactive pages directly—no generic iframe bridge. The old
 read-only route remains a useful opt-in-off fallback. No GET mutations, credential-bearing URLs,
 permissive CORS or frame bearer tokens are introduced. Untrusted document preview alone remains
-sandboxed. See [current native acceptance and browser-policy blocker](plugin-v4-native-ui.md).
+sandboxed. See [current native acceptance and unchanged local browser-policy boundary](plugin-v4-native-ui.md).
 
-## Implemented backend checkpoint
+## Historical initial backend checkpoint (not current capability status)
 
 ### Work
 
