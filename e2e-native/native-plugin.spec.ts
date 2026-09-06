@@ -7,9 +7,15 @@ async function openModule(page: Page, name: string) {
 	const destination = page
 		.locator('openclaw-plugin-contributions')
 		.getByRole('link', { name, exact: true })
+		.filter({ visible: true })
 		.first();
-	const backToApp = page.getByRole('button', { name: 'Back to app', exact: true });
-	const expand = page.getByRole('button', { name: 'Expand sidebar', exact: true });
+	const backToApp = page
+		.getByRole('button', { name: 'Back to app', exact: true })
+		.filter({ visible: true });
+	const expand = page
+		.getByRole('button', { name: 'Expand sidebar', exact: true })
+		.filter({ visible: true })
+		.first();
 	await expect
 		.poll(
 			async () =>
@@ -30,7 +36,10 @@ async function openModule(page: Page, name: string) {
 			timeout: 60000
 		})
 		.toBeTruthy();
-	if (await backToApp.isVisible()) await backToApp.click();
+	if (await backToApp.isVisible()) {
+		await backToApp.click();
+		await expect(backToApp).toHaveCount(0);
+	}
 	if ((await expand.isVisible()) && !(await destination.isVisible())) await expand.click();
 	await expect(destination).toBeVisible({ timeout: 60000 });
 	await destination.click();
@@ -38,7 +47,13 @@ async function openModule(page: Page, name: string) {
 		page.locator('.falcon-native').getByRole('heading', { name, exact: true })
 	).toBeVisible();
 	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
+	const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true });
+	if (await drawer.isVisible()) {
+		await page.keyboard.press('Escape');
+		await expect(drawer).not.toBeVisible();
+	}
 }
+
 async function capture(page: Page, name: string, project: string) {
 	await expect(page.locator('.falcon-native').first()).not.toHaveAttribute('aria-busy', 'true');
 	const dir = 'artifacts/plugin-v4/native-screenshots';

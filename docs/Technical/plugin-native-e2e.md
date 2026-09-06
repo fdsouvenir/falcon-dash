@@ -79,9 +79,8 @@ The Documents browser case also renames its unsaved conflict-recovered draft, ve
 buffer survives, saves it, restores the original path, then reloads and reads the saved text.
 
 Copy acceptance waits for the actual asynchronous clipboard result; a click alone does not
-mean the protected Gateway round-trip and clipboard write have completed. The matrix reports
-all independent desktop/narrow cases rather than stopping at the first failure; every failed
-case still fails CI, with zero retries and no success-skips.
+mean the protected Gateway round-trip and clipboard write have completed. Every desktop/narrow case is required for a green run. The matrix fails fast on a failure,
+with zero retries and no success-skips. A complete diagnostic run can use `--max-failures=0`.
 
 Acceptance screenshots wait for the native request's `aria-busy` state to settle before
 capture. Clicking a record without this wait can capture its preceding list rather than the
@@ -103,3 +102,8 @@ execution marker. Ask navigation must also change to the host's chat route.
 Narrow first-run Model Setup hides **Back to app** inside the host sidebar drawer. The browser
 uses the visible **Expand sidebar** control, then **Back to app**, and reopens navigation when
 needed. It does not bypass setup verification or navigate through a synthetic replacement UI.
+
+The mobile host replaces its topbar control with a chat-header control having the same name;
+locators select the currently visible control rather than retaining the hidden earlier one.
+After selecting a native page, the helper dismisses the real Navigation drawer with Escape
+and verifies it closed before interacting with the page behind it.
