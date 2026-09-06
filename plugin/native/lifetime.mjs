@@ -28,7 +28,7 @@ export class ViewLifetime {
 export function message(error) {
 	const code = error?.details?.code ?? error?.error?.details?.code;
 	return code === 'version_conflict' ||
-		/version_conflict|version changed/i.test(error?.message ?? '')
+		/version_conflict|version changed|Work changed/i.test(error?.message ?? '')
 		? 'This record changed. Your input is preserved; refresh the record and review before reapplying.'
 		: code === 'vault_locked'
 			? 'Vault is locked. Unlock it to continue.'

@@ -5,9 +5,19 @@ const owner = 'owner@fixture.invalid';
 async function openModule(page: Page, name: string) {
 	await page.goto('/');
 	const destination = page
-		.locator('a,button')
-		.filter({ hasText: new RegExp(`^${name}$`) })
+		.locator('openclaw-plugin-contributions')
+		.getByRole('link', { name, exact: true })
 		.first();
+	const backToApp = page.getByRole('button', { name: 'Back to app', exact: true });
+	await expect
+		.poll(async () => (await destination.count()) > 0 || (await backToApp.count()) > 0, {
+			timeout: 60000
+		})
+		.toBeTruthy();
+	if (await backToApp.count()) {
+		if (await backToApp.isVisible()) await backToApp.click();
+		else await page.keyboard.press('Escape');
+	}
 	await destination.waitFor({ state: 'attached', timeout: 60000 });
 	if (!(await destination.isVisible())) await page.keyboard.press('Control+b');
 	await expect(destination).toBeVisible({ timeout: 60000 });
@@ -218,4 +228,32 @@ test('Custom plugin UI off provides guidance instead of enabling native code', a
 	} finally {
 		await request.post('/__fixture/ui', { data: { enabled: true } });
 	}
+});
+test('Project Milestone Decision and Ask details use the real canonical records', async ({
+	page
+}, info) => {
+	await openModule(page, 'Work');
+	const app = page.locator('.falcon-native');
+	await app.getByRole('button', { name: 'Projects', exact: true }).click();
+	await page
+		.locator('.record')
+		.filter({ hasText: 'Deliver the quarterly operations review' })
+		.click();
+	await capture(page, 'project-detail', info.project.name);
+	await page.locator('.record').filter({ hasText: 'Review accepted' }).click();
+	await expect(app).toContainText('The owner accepts the complete review.');
+	await capture(page, 'milestone-detail', info.project.name);
+	await app.getByRole('button', { name: 'Browse', exact: true }).click();
+	await app.getByLabel('Work type', { exact: true }).selectOption('decision');
+	await page.locator('.record').filter({ hasText: 'Choose the review window' }).click();
+	await expect(app).toContainText('Morning review');
+	await expect(app).toContainText('The final review cannot be scheduled.');
+	await capture(page, 'decision-detail', info.project.name);
+	await app.getByRole('button', { name: 'Browse', exact: true }).click();
+	await app.getByLabel('Work type', { exact: true }).selectOption('task');
+	await page.locator('.record').filter({ hasText: 'Review the migration plan' }).click();
+	await expect(app).toContainText('Please review the completion criteria.');
+	await capture(page, 'ask-detail', info.project.name);
+	await app.getByRole('button', { name: 'Open conversation', exact: true }).click();
+	await expect(page.getByText('Review follow-up', { exact: true }).first()).toBeVisible();
 });

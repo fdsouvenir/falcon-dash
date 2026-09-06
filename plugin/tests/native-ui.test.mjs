@@ -335,3 +335,53 @@ test('Disconnect clears protected values without discarding an ordinary open for
 	f.notify();
 	assert.equal(f.window.document.querySelector('[role=dialog]'), dialog);
 });
+test('Retrying a native create after a lost reply reuses its actor-bound receipt', async (t) => {
+	const fs = await import('node:fs'),
+		os = await import('node:os'),
+		path = await import('node:path'),
+		{ WorkStore } = await import('../work/store.mjs');
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-ui-retry-')),
+		store = new WorkStore(path.join(dir, 'work.db'));
+	t.after(() => {
+		store.close();
+		fs.rmSync(dir, { recursive: true });
+	});
+	let lost = true;
+	const keys = [];
+	const f = await fixture(t, 'work', async (method, p) => {
+		if (method === 'falcon.identity') return { bound: true };
+		if (p.actionId === 'work_queue') return { ok: true, result: store.queue({}) };
+		if (p.actionId === 'work_command') {
+			keys.push(p.payload.idempotency_key);
+			const result = store.execute(p.payload, 'human:owner');
+			if (lost) {
+				lost = false;
+				throw Error('Reply lost after commit');
+			}
+			return { ok: true, result };
+		}
+		throw Error('Unexpected call');
+	});
+	f.button('Create work');
+	f.button('Save');
+	await settle();
+	for (const [label, value] of [
+		['Title *', 'Only one record'],
+		['Description *', 'Preserve intent across an uncertain reply'],
+		['Done When *', 'One actor-bound receipt exists']
+	]) {
+		const wrap = [...f.window.document.querySelectorAll('label')].find(
+			(n) => n.querySelector('span')?.textContent === label
+		);
+		wrap.querySelector('input,textarea').value = value;
+	}
+	f.button('Save');
+	await settle();
+	assert.equal(store.list({}).items.length, 1);
+	assert.equal(f.window.document.querySelectorAll('[role=dialog]').length, 1);
+	f.button('Save');
+	await settle();
+	assert.equal(store.list({}).items.length, 1);
+	assert.equal(keys[0], keys[1]);
+	assert.equal(f.window.document.querySelectorAll('[role=dialog]').length, 0);
+});

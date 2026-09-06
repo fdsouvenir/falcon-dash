@@ -346,23 +346,46 @@ function mount(container, context, module) {
 			);
 		return b;
 	}
-	async function command(target, command, input) {
+	async function command(target, command, input, idempotencyKey = crypto.randomUUID()) {
 		await host.request('falcon.identity', {});
 		await feature.invoke('work_command', {
 			command,
 			id: target?.id,
 			expected_version: target?.version,
-			idempotency_key: crypto.randomUUID(),
+			idempotency_key: idempotencyKey,
 			input
 		});
 	}
-	function semanticForm(title, schema, initial, submit) {
+	function semanticForm(title, schema, initial, submit, target = null) {
 		closeDialog();
 		const editor = schemaEditor(schema, title, initial),
 			content = el('form', null, { class: 'falcon-native' }),
 			error = el('p', '', { role: 'alert' }),
 			save = el('button', 'Save', { type: 'submit', class: 'primary' });
 		content.append(editor.node, error, save, button('Cancel', closeDialog));
+		const recovery = el('div', null, { class: 'toolbar' });
+		recovery.hidden = true;
+		if (target)
+			recovery.append(
+				button('Review current record', async () => {
+					try {
+						const latest = await request('work', 'get', { id: target.id });
+						if (life.dead) return;
+						detailText(content, 'Latest saved record', latest);
+						recovery.append(
+							button('Use current version for this draft', () => {
+								target.version = latest.version;
+								error.textContent =
+									'Your draft is unchanged. Review its referenced versions before saving.';
+							})
+						);
+					} catch (e) {
+						error.textContent = message(e);
+					}
+				})
+			);
+		content.append(recovery);
+
 		content.onsubmit = async (e) => {
 			e.preventDefault();
 			if (save.disabled) return;
@@ -375,6 +398,7 @@ function mount(container, context, module) {
 				}
 			} catch (e) {
 				error.textContent = message(e);
+				recovery.hidden = false;
 			} finally {
 				save.disabled = false;
 			}
@@ -389,9 +413,14 @@ function mount(container, context, module) {
 		});
 	}
 	function commandForm(target, name) {
+		const nonce = crypto.randomUUID();
 		const initial = { ...target, ...(target?.definition?.content ?? {}) };
-		semanticForm(human(name), commandInputs[name], initial, (input) =>
-			command(target, name, input)
+		semanticForm(
+			human(name),
+			commandInputs[name],
+			initial,
+			(input) => command(target, name, input, nonce),
+			target
 		);
 	}
 	function createWork() {
@@ -404,9 +433,11 @@ function mount(container, context, module) {
 			},
 			async (v) => {
 				setTimeout(() => {
+					if (life.dead) return;
 					const schema = commandInputs.create.anyOf.find((s) => s.properties.type.const === v.type);
+					const nonce = crypto.randomUUID();
 					semanticForm('Create ' + human(v.type), schema, { type: v.type }, (input) =>
-						command(null, 'create', input)
+						command(null, 'create', input, nonce)
 					);
 				});
 			}
@@ -436,9 +467,21 @@ function mount(container, context, module) {
 				human(warning.code) + (warning.waiting_for ? `: ${warning.waiting_for}` : ''),
 				'attention'
 			);
+		if (record.type === 'question')
+			for (const key of ['prompt', 'context', 'impact', 'answerable_by'])
+				detailText(body, human(key), record[key]);
+		if (record.type === 'finding')
+			for (const key of ['conclusion', 'confidence', 'targets'])
+				detailText(body, human(key), record[key]);
+		if (record.type === 'task')
+			detailText(body, 'Accountable agent', record.agent_id ?? 'Unassigned');
+		if (record.project_id)
+			body.append(button('Open project', () => protect(() => workDetail(record.project_id))));
 		for (const key of [
 			'description',
 			'done_when',
+			'success_condition',
+			'achievement',
 			'definition',
 			'plan',
 			'result',
@@ -504,7 +547,7 @@ function mount(container, context, module) {
 				'abandon'
 			],
 			project: ['abandon'],
-			milestone: ['achieve'],
+			milestone: ['achieve', 'reopen'],
 			question: ['edit_question', 'answer', 'hypothesis', 'reopen'],
 			finding: ['retract', 'supersede'],
 			decision: ['decide', 'revise_decision', 'supersede_decision', 'defer', 'resume'],

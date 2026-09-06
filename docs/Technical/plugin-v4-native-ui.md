@@ -56,9 +56,10 @@ The configured managed browser is healthy (CDP and page readiness both true), bu
 explicitly denied `http://127.0.0.1:28971` with `browser navigation blocked by policy`. Installed
 `docs/tools/browser.md` distinguishes this from browser startup failure and says navigation policy
 is separate from healthy local CDP. No alternate URL, direct CDP/Playwright navigation or proxy was
-used to bypass the denial. Actual desktop/narrow-viewport inspection remains blocked until an
-owner-authorized browser route permits the isolated Gateway. No rendered screenshots exist for
-this implementation and it is **not release-ready**.
+used to bypass the denial. The local browser limitation does not block the separately authorized real-Gateway CI browser
+suite on its own runner. Use that required gate and its screenshots for desktop/narrow acceptance;
+do not bypass the local browser policy or infer acceptance from offline DOM tests. The initial
+native checkpoint was not release-ready; current acceptance is tracked in the E2E evidence.
 
 Other acceptance still requiring verification: full real-shell navigation and native descriptor
 placement, optimistic recovery/reconnect in that shell, clipboard permissions, high-density
@@ -80,3 +81,8 @@ cutover remain outside this synthetic build's evidence.
   `native-harness.txt`, `native-skills.txt`: source/package quality checks.
 
 The local browser-policy limitation is unchanged. A required, separately authorized CI browser job now exercises the real isolated Gateway on its own runner; see [native E2E](plugin-native-e2e.md). Host-only proof is already local; browser acceptance must be reported from actual CI results, not inferred from the test implementation.
+
+Native Work forms now retain one idempotency key across an uncertain reply and expose explicit
+review/reapply controls after a version conflict. Updating the reviewed command version does not
+silently repin Plan, Result or authorization references. Closed real transport sockets also retire
+server-side authority, even if a synthetic `invalidated` flag was never attached.

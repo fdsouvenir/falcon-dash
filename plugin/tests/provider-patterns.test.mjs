@@ -102,3 +102,17 @@ test('Real Gateway profile fields establish a human principal but owner, synthet
 		null
 	);
 });
+test('A closed real transport retires authority even when no synthetic invalidated flag exists', () => {
+	const client = {
+		connId: 'one',
+		socket: { readyState: 1 },
+		authenticatedUserId: 'person@fixture.invalid',
+		authenticatedUserProfile: { profileId: 'one' },
+		connect: { role: 'operator', scopes: ['operator.write'] }
+	};
+	const guard = connectionAuthority(client);
+	guard.assert();
+	client.socket.readyState = 3;
+	assert.throws(() => guard.assert(), { code: 'authority_changed' });
+	assert.equal(humanIdentity({ ...client, connect: { role: 'node' } }), null);
+});

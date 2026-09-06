@@ -57,3 +57,9 @@ result and its screenshots are required before claiming native acceptance.
 E2E. `publish.yml` also depends on that complete CI workflow and uses pinned SDK/Node/isolated
 state during its package checks. These are workflow edits only: no release tag, publication,
 production restart, production configuration change or data cutover was triggered.
+
+The first real CI run reached the Gateway's first-run Model Setup page, not a missing plugin or
+mock host. Its screenshot showed the supported **Back to app** affordance. The browser helper
+now uses that normal navigation before selecting native pages; it does not disable model
+verification or invent a verified-model record. Provider-bound inference remains a separate
+real-Gateway synthetic-endpoint gate in the quality job.

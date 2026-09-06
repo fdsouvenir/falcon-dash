@@ -4,6 +4,7 @@ import { requireValue } from './errors.mjs';
 export const internalAuthority = Object.freeze({ assert() {}, signal: undefined });
 // Gateway-populated connection fields, never params or browser-supplied actors.
 export function humanIdentity(client) {
+	if (client?.connect?.role && client.connect.role !== 'operator') return null;
 	if (client?.internal?.syntheticClient || client?.internal?.operatorRoleActor?.kind === 'system')
 		return null;
 	const role = client?.internal?.operatorRoleActor,
@@ -18,6 +19,7 @@ export function connectionAuthority(client) {
 	const identity = humanIdentity(client),
 		authenticatedUserId = client?.authenticatedUserId,
 		authenticatedProfileId = client?.authenticatedUserProfile?.profileId;
+	const socket = client?.socket;
 	const scopes = JSON.stringify([...(client?.connect?.scopes ?? [])].sort());
 	const kind = identity?.kind,
 		profileId = identity?.profileId,
@@ -28,6 +30,8 @@ export function connectionAuthority(client) {
 		assert() {
 			requireValue(
 				!client?.invalidated &&
+					client?.socket === socket &&
+					(!socket || socket.readyState === 1) &&
 					!client?.connectionSignal?.aborted &&
 					client?.connId === connId &&
 					humanIdentity(client)?.kind === kind &&

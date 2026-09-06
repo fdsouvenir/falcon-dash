@@ -330,3 +330,6 @@ form.falcon-native {
 	max-height: 75dvh;
 	overflow: auto;
 }
+.falcon-native [hidden] {
+	display: none !important;
+}

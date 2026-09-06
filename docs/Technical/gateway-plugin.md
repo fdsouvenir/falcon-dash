@@ -110,3 +110,7 @@ inspects the loaded runtime, and exercises the managed resolver/provider path; t
 prove actual rendered native pages. See [native UI evidence and remaining gates](plugin-v4-native-ui.md).
 
 Native identity binding now recognizes the Gateway-populated authenticated personal profile and verified user identity, not only an explicit internal role actor. Shared system/gateway-owner, synthetic and conflicting identities remain denied. The new real-Gateway acceptance harness obtains the profile through the supported `users.self` RPC.
+
+Original native authority checks now include the actual connection socket identity and open state,
+in addition to the authenticated profile, verified user, scopes and cancellation/invalidation.
+This closes the gap between mock connection flags and a real transport disconnect.

@@ -149,3 +149,7 @@ identity before success, and uses prototype-safe legacy-id mappings. Regression 
 source/archive files and remove only the newly created conversion target on a stale plan.
 
 Native Work uses the canonical command schemas to render action forms and the supported feature client to submit them. Detail now includes bounded associated Work, relationships and open Asks; these are projections of the existing stores, not a parallel UI state machine.
+
+Native details explicitly render Question impact, Finding confidence, Task accountability and
+Milestone success/achievement context. Work conflict recovery preserves draft fields and requires
+review before using a newer version; a lost reply retry uses the same idempotency receipt.

@@ -191,6 +191,25 @@ const proxy = http.createServer(async (req, res) => {
 				case '/__fixture/lock':
 					await client.request('falcon.vault.protected', { action: 'lock', input: {} });
 					break;
+				case '/__fixture/work': {
+					const task = await client.request('falcon.work.read', { action: 'get', id: input.id });
+					await client.request('falcon.work.write', {
+						action: 'command',
+						request: {
+							command: 'revise_definition',
+							id: input.id,
+							expected_version: task.version,
+							idempotency_key: `fixture-external-${Date.now()}`,
+							input: {
+								title: 'Externally revised Work',
+								description: 'Another writer updated this Definition.',
+								done_when: 'Review the external change before reapplying.',
+								reason: 'Synthetic concurrency fixture'
+							}
+						}
+					});
+					break;
+				}
 				case '/__fixture/document':
 					fs.writeFileSync(
 						path.join(workspace, 'Operating notes.md'),
@@ -394,7 +413,8 @@ try {
 	await vault.create('agent-created', { api_key: 'SYNTHETIC-AGENT-UI-CANARY' }, 'agent:fixture');
 	await vault.lock(actor);
 	const work = new WorkStore(path.join(root, 'data/work.db'));
-	let counter = 0;
+	let counter = 0,
+		firstTask;
 	const command = (name, input, id) =>
 		work.execute(
 			{
@@ -429,6 +449,7 @@ try {
 			done_when: 'The review is recorded and its source is linked.',
 			project_id: project
 		}).target;
+		if (i === 0) firstTask = id;
 		if (i % 3 === 0) command('assign', { agent_id: 'main' }, id);
 		command('ready', {}, id);
 	}
@@ -437,6 +458,18 @@ try {
 		title: 'Confirm the maintenance window',
 		prompt: 'Which maintenance window is confirmed?',
 		impact: 'Scheduling depends on the answer.'
+	});
+	command('create', {
+		type: 'decision',
+		title: 'Choose the review window',
+		prompt: 'When should the review take place?',
+		options: [
+			{ id: 'morning', label: 'Morning review', summary: 'Leaves time for follow-up.' },
+			{ id: 'afternoon', label: 'Afternoon review', summary: 'Allows more preparation.' }
+		],
+		deciders: [actor],
+		recommendation: { option_id: 'morning', rationale: 'Keep time for follow-up.' },
+		consequence_of_no_decision: 'The final review cannot be scheduled.'
 	});
 	work.close();
 	const integrations = new Integrations(path.join(root, 'data/integrations.db'), vault, adapters());
@@ -465,6 +498,29 @@ try {
 	await startGateway();
 	await connectOwner();
 	await client.request('falcon.identity', {});
+	const session = await client.request('sessions.create', {
+		agentId: 'main',
+		label: 'Review follow-up'
+	});
+	const sessionKey = session.key ?? session.sessionKey;
+	if (!sessionKey) throw Error('Native session key missing');
+	const currentTask = await client.request('falcon.work.read', { action: 'get', id: firstTask });
+	await client.request('falcon.work.write', {
+		action: 'command',
+		request: {
+			command: 'ask',
+			id: firstTask,
+			expected_version: currentTask.version,
+			idempotency_key: 'native-ask-fixture',
+			input: {
+				requirement: 'Owner review',
+				intended_command: 'complete',
+				thread: { session_key: sessionKey, agent_id: 'main' },
+				prompt: 'Please review the completion criteria.'
+			}
+		}
+	});
+
 	const status = await client.request('falcon.ui.status', {});
 	const nativeStatus = await client.request('plugins.controlUi.status', {});
 	if (status.modules.length !== 4) throw Error('Missing module registrations');
