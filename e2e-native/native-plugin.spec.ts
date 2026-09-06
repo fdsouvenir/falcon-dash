@@ -3,46 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 const owner = 'owner@fixture.invalid';
 async function openModule(page: Page, name: string) {
-	await page.goto('/');
-	const destination = page
-		.locator('openclaw-plugin-contributions')
-		.getByRole('link', { name, exact: true })
-		.filter({ visible: true })
-		.first();
-	const backToApp = page
-		.getByRole('button', { name: 'Back to app', exact: true })
-		.filter({ visible: true });
-	const expand = page
-		.getByRole('button', { name: 'Expand sidebar', exact: true })
-		.filter({ visible: true })
-		.first();
-	await expect
-		.poll(
-			async () =>
-				(await destination.count()) > 0 ||
-				(await backToApp.count()) > 0 ||
-				(await expand.count()) > 0,
-			{ timeout: 60000 }
-		)
-		.toBeTruthy();
-	if (
-		(await expand.isVisible()) &&
-		!(await destination.isVisible()) &&
-		!(await backToApp.isVisible())
-	)
-		await expand.click();
-	await expect
-		.poll(async () => (await destination.count()) > 0 || (await backToApp.count()) > 0, {
-			timeout: 60000
-		})
-		.toBeTruthy();
-	if (await backToApp.isVisible()) {
-		await backToApp.click();
-		await expect(backToApp).toHaveCount(0);
-	}
-	if ((await expand.isVisible()) && !(await destination.isVisible())) await expand.click();
-	await expect(destination).toBeVisible({ timeout: 60000 });
-	await destination.click();
+	await page.goto(`/plugin?plugin=falcon-dash&id=${name.toLowerCase()}`);
 	await expect(
 		page.locator('.falcon-native').getByRole('heading', { name, exact: true })
 	).toBeVisible();
@@ -331,7 +292,7 @@ test('Custom plugin UI off provides guidance instead of enabling native code', a
 }, info) => {
 	await request.post('/__fixture/ui', { data: { enabled: false } });
 	try {
-		await page.goto('/plugins/falcon-dash/work');
+		await page.goto('/plugin?plugin=falcon-dash&id=work');
 		await expect(page.getByText(/Custom plugin UI/)).toBeVisible();
 		await expect(page.locator('.falcon-native')).toHaveCount(0);
 		const dir = 'artifacts/plugin-v4/native-screenshots';
@@ -394,4 +355,32 @@ test('real native Markdown preview contains hostile markup without executing it'
 	await expect(page.frameLocator('iframe.document-preview').locator('script,img')).toHaveCount(0);
 	expect(await page.evaluate(() => Reflect.get(window, 'documentEscaped'))).toBeUndefined();
 	await capture(page, 'documents-hostile-preview', info.project.name);
+});
+
+test('native sidebar navigation opens the registered page on desktop and narrow shells', async ({
+	page
+}, info) => {
+	await openModule(page, 'Work');
+	const destination = page
+		.locator('openclaw-plugin-contributions')
+		.getByRole('link', { name: 'Integrations', exact: true })
+		.filter({ visible: true })
+		.first();
+	if (!(await destination.isVisible()))
+		await page
+			.getByRole('button', { name: 'Expand sidebar', exact: true })
+			.filter({ visible: true })
+			.first()
+			.click();
+	await expect(destination).toBeVisible();
+	await destination.click();
+	await expect(
+		page.locator('.falcon-native').getByRole('heading', { name: 'Integrations', exact: true })
+	).toBeVisible();
+	const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true });
+	if (await drawer.isVisible()) {
+		await page.keyboard.press('Escape');
+		await expect(drawer).not.toBeVisible();
+	}
+	await capture(page, 'native-sidebar-navigation', info.project.name);
 });

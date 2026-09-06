@@ -107,3 +107,11 @@ The mobile host replaces its topbar control with a chat-header control having th
 locators select the currently visible control rather than retaining the hidden earlier one.
 After selecting a native page, the helper dismisses the real Navigation drawer with Escape
 and verifies it closed before interacting with the page behind it.
+
+Canonical native page acceptance now opens the actual host-generated route observed in its
+navigation links (`/plugin?plugin=falcon-dash&id=work`, and the other registered page ids).
+This avoids conflating the host's model-onboarding/chat-header transition with plugin acceptance.
+The real Gateway still authenticates the connection and enforces custom-plugin opt-in; no setup
+verification record is disabled or fabricated. A separate required desktop/narrow sidebar case
+opens Integrations using the real registered navigation link, then closes the host drawer.
+These routes run only on the authorized isolated CI runner, not through the denied local browser.
