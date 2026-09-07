@@ -79,16 +79,16 @@ arguments. It does not activate native UI, send channel messages, or use real pr
 
 Remaining gates are the explicitly unsettled #363 domain decisions, current packaged skill
 authoring, real provider/application consent and dataset-specific identity/disposition review.
-Work read/history/Ask workflows, Vault management/private recovery and legacy conversion,
-connection explanations/audit/rebinding/Work attention, durable Documents trash, and release/
-offline-placement guards are now implemented. See the [acceptance map](docs/Technical/plugin-v4-scope.md)
+Work read/history/Ask workflows, Vault management and private recovery,
+connection explanations/audit/rebinding/Work attention, durable Documents trash, and release
+guards are now implemented. See the [acceptance map](docs/Technical/plugin-v4-scope.md)
 and [installed-artifact/recovery guide](docs/Technical/plugin-v4-installation.md). No full-product
 or production readiness is inferred from a bounded browser matrix.
 The current supported provider-request fixture is not proof for every OpenClaw harness/provider.
 
-[Conversion and rollback preparation](docs/Technical/plugin-v4.md#deferred-controlled-cutover-not-executed)
-is engineering recovery work, not an in-app migration product. No merge, publication, production
-restart, live data migration or standalone-service retirement is part of this preview.
+4.0 carries no awareness of any prior Falcon Dash version — no migration, conversion or legacy
+detection code. [Clean installation](docs/Technical/plugin-v4.md#clean-installation-no-cutover)
+describes what that means. No merge, publication or production restart is part of this preview.
 
 `docs/PURPOSE.md` is owner-protected and still contains the superseded standalone direction. It
 has not been changed; current issue bodies govern this conversion.

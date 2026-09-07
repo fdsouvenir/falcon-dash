@@ -139,30 +139,23 @@ isolated test directory and invoke the absolute pinned 2026.9.2 binary. Never in
 binary against the operator's normal state. Validate metadata, pack, then install that archive
 inside isolated state. Do not publish the package or restart the production Gateway.
 
-Provider-request prompt-injection proof, real interactive Control UI acceptance, source-data
-migration and backup/restore proof are still required. Passing registration spies is not proof
-of a real installation or provider-bound system prompt; report each separately.
+Provider-request prompt-injection proof and real interactive Control UI acceptance are still
+required. Passing registration spies is not proof of a real installation or provider-bound system
+prompt; report each separately.
 
-## Deferred controlled cutover (not executed)
+## Clean installation (no cutover)
 
-1. Independently review the remaining domain/security/UI acceptance; the native host UI boundary is already approved.
-2. Identify the old service, its actual database paths, schema versions, attachments and credential
-   ownership without reading credential values. Record the exact old binary/package and config.
-3. During an authorized maintenance window, quiesce old writers. Take consistent SQLite backups
-   through supported backup APIs, encrypted Vault/key backups with private permissions, plus
-   attachment/config snapshots. Hash and verify every artifact and test restoration in isolation.
-4. Implement explicit offline converters for obsolete Phase, Review, Change, Blocker, Project Plan,
-   assignment, waiting and result records. Preserve original source snapshots/history and mapping
-   reports. Quarantine ambiguous semantics for review; do not manufacture approval or new results.
-5. Prove restored/conversion counts, relationships, artifact pins, representative histories, and
-   credential resolution in isolated acceptance. No dual-write or permanent migration UI.
-6. Only after separate release authorization, install the reviewed artifact, switch data paths,
-   disable the old standalone service, and verify native plugin identity, UI, tools and health.
-7. On failure, stop replacement writers and restore the verified old snapshots and old runtime.
-   Do not try an in-place database downgrade. Retain rollback material until acceptance closes.
+4.0 has no cutover procedure because it has no predecessor to cut over from. The standalone
+service is already stopped and disabled, its Work database is exported and deleted out of band,
+and 4.0 installs onto a machine with no earlier Falcon Dash present. There is no converter, no
+dual-write window, no rollback-to-previous-version and no schema downgrade path.
 
-Synthetic offline SQLite and encrypted Vault/key restoration are tested in `plugin/tests/recovery.test.mjs`. These steps remain a preparation checklist, **not a verified production conversion/cutover runbook**. No live
-backup, migration, service disable, production configuration change or public release occurred.
+The KeePassXC vault at `~/.openclaw/passwords.kdbx` is the one file that carries over. It is not
+converted or adopted automatically; the Vault module opens it as an existing private database.
+
+Synthetic offline SQLite and encrypted Vault/key restoration are tested in
+`plugin/tests/recovery.test.mjs`. That covers 4.0's own snapshot/restore of its own data — it is
+not a migration path from any earlier version.
 
 ## Host validation caveats
 

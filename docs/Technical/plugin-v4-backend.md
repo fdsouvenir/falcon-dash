@@ -110,19 +110,12 @@ or TFA, and compromised/malfunctioning refresh tokens; normal access-token expir
 and refresh. It does **not** establish an indefinite renewable session or a universal seven-day
 policy. Do not invent either from third-party examples.
 
-## Offline conversion
+## No prior-version awareness
 
-`plugin/work/migration.mjs` is engineering-only: no tool, route, startup import or dual-write path.
-It creates a consistent read-only-source SQLite backup, checks integrity, reports missing Task
-semantics and identifies every source entity. Conversion requires the exact snapshot digest and
-an explicit disposition for every entity. Retired records remain in the original archive; retained
-records use the same typed semantic commands. Missing Definition fields, identity mappings and
-result evidence are never fabricated. A failed conversion removes only its newly created target.
-The snapshot and mapping/provenance report remain the recovery/reference source.
-
-Tests cover source preservation, missing semantics, stale/incomplete plans and explicit conversion.
-This is a reviewed-command conversion mechanism, not a claim that the real v2/v3 datasets have
-been mapped or migrated. Actual data-specific mapping and production restoration remain gated.
+Falcon Dash 4.0 carries no migration, conversion, legacy detection or compatibility code. The Work
+store initializes empty on a fresh installation. Any earlier Falcon Dash data is exported and
+removed out of band before 4.0 is installed, so the plugin never reads a pre-4.0 database, never
+infers an earlier schema and has no dual-write or downgrade path.
 
 ### Native resolver verification and managed-preset limitation
 
@@ -291,9 +284,9 @@ that provider consent must restart.
 Vault adds protected audit/grant controls, recoverable relocation/removal and empty-group removal.
 Exact flattened entry paths prevent KeePassXC title-search fallback from resurrecting old/recycled
 handles. Private snapshots and fresh-destination offline restore are tested with the real CLI.
-An engineering-only legacy converter verifies the reviewed database digest and each explicit
-source Uuid before copying selected attributes into new entries; all old entries/history remain
-in the original encrypted archive and no execution grants are inferred. See the installation guide.
+There is no legacy Vault converter: the existing KeePassXC database is opened as-is, and no
+execution grants are inferred for entries the operator has not explicitly granted. See the
+installation guide.
 
 Documents exposes bounded durable trash discovery with corruption/unavailable counts and
 no-clobber restore. Native UI restoration survives reload; the earlier in-memory Undo remains
