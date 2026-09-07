@@ -1,4 +1,7 @@
-> **Historical standalone guide.** The plugin conversion has no completed interactive Work UI yet. See [current backend status](../Technical/plugin-v4-backend.md); do not treat the old routes or retired objects below as the new product contract.
+> **Being rewritten for 4.0.** Work now lives in the plugin's native Control UI, and issue #363
+> retires Phase, Review, standalone Change Request and Blocker as objects. Sections below that
+> describe standalone routes or retired object types are stale. See
+> [current backend status](../Technical/plugin-v4-backend.md) for the implemented contract.
 
 # Work
 
@@ -119,8 +122,9 @@ freezes these controls until the Project is restored.
 
 ## Agent Contract
 
-Agents use `/api/v3`, the Work CLI, or generated context. Work objects are referenced by their
-type and ID, such as `Change Request c28` or `Project p4`.
+Agents use the plugin's registered Work tools, its typed feature operations, and the bounded
+session context injected by the `before_prompt_build` hook. There is no HTTP API or CLI of its
+own. Work objects are referenced by their type and ID, such as `Task t28` or `Project p4`.
 
 Falcon Dash maintains the authoritative structured state. Clients may format, group, filter, and
 link reader projections, but they must not infer lifecycle, health, actionability, Authorization

@@ -7,8 +7,8 @@
 **Status: incomplete, not release-ready.** Branch `feat/falcon-plugin-v4` implements an isolated
 engineering checkpoint for [#364](https://github.com/fdsouvenir/falcon-dash/issues/364), not the
 completed next major version. Current issue bodies #326, #329, #330, #345, #347, #360, #361, #363
-and #365 govern the target. Historical standalone docs do not override them. `PURPOSE.md` remains
-owner-protected and knowingly describes the superseded standalone direction.
+and #365 govern the target. `PURPOSE.md` remains owner-protected and knowingly describes the
+superseded standalone direction.
 
 ## Actual package and runtime
 
@@ -16,11 +16,11 @@ The package has exactly one OpenClaw entry, `plugin/index.mjs`, and one `falcon-
 It registers real SDK services, tools, scoped Gateway methods, four tab descriptors, authenticated
 HTTP routes, and one `before_prompt_build` hook returning `prependSystemContext`. No Channels,
 Shell, Labs, Apps, Jobs, Ops, Heartbeat, channel transport, standalone server, or mirrored
-OpenClaw runtime data is loaded by that entry. Historical Svelte source remains in Git for
-conversion/recovery reference, but is not shipped in the plugin package. It is not a second install.
+OpenClaw runtime data exists anywhere in this repo. Those modules and the standalone Svelte
+application were deleted; Git history retains them.
 
-`npm run build`, `npm run check`, and `npm test` now target the directly executable JavaScript plugin. Historical Svelte checks/tests/builds
-require the explicit `*:historical-standalone` scripts. There is no production cutover here.
+`npm run build`, `npm run check`, and `npm test` target the directly executable JavaScript plugin,
+which is the only runtime here. There is no production cutover.
 Development dependencies are not runtime plugin dependencies. OpenClaw is an exact optional peer
 at **2026.9.2**; Node **22.16+**, Linux `/proc/self/fd`, `flock`, and KeePassXC CLI are prerequisites.
 This Linux-only preview must not be advertised as portable or broadly version-compatible.

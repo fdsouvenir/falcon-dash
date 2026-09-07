@@ -1,9 +1,0 @@
-{
-	"entries": [
-		{
-			"kind": "requestfailed",
-			"pattern": "/api/gateway/events",
-			"note": "Expected when sweeping offline-safe routes without a live gateway event stream."
-		}
-	]
-}

@@ -4,12 +4,10 @@ pnpm-lock.yaml
 yarn.lock
 
 # Build output
-.svelte-kit
 build
 dist
 node_modules
 coverage
-.stitch
 
 # Isolated validation artifacts
 artifacts

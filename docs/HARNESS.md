@@ -7,7 +7,6 @@ execution model for agents and maintainers.
 
 - Keep instructions shallow in `AGENTS.md` and deep in `docs/`.
 - Prefer direct inspection of code, tests, screenshots, and logs over chat-only reasoning.
-- Encode durable workflows as skills only when they are reusable across tasks.
 - Leave behind a rerunnable path for the next person.
 
 ## Default Execution Loop
@@ -26,14 +25,12 @@ execution model for agents and maintainers.
 - `docs/ROADMAP.md` — approved future versions, clearly separated from current behavior
 - `docs/CONTRIBUTING-HARNESS.md` — how to satisfy harness checks and policies
 - `docs/HARNESS-LOOP.md` — local recursive work loop and artifact storage
-- `docs/CONSOLE-SWEEP.md` — route inventory, baselines, and browser console sweep behavior
-- `docs/Technical/*.md` — architecture, stores, components, gateway, deployment
-- `docs/FRONTEND.md` — frontend constraints and UI patterns
+- `docs/Technical/plugin-v4*.md` — plugin runtime, backend contracts, native UI and installation
+- `docs/Technical/deployment.md` — build, runtime and release
 - `docs/QUALITY.md` — validation policy
 - `docs/RELIABILITY.md` — realtime and failure-mode expectations
 - `docs/PLANS.md` — plan-writing guidance
 - `docs/OWNERSHIP.md` — mapping from code areas to primary docs
-- `skills/*` — reusable operating procedures with progressive disclosure
 
 ## Validation Ladder
 
@@ -95,8 +92,8 @@ When automation is not practical, record:
 
 That format should appear in PR notes, issue notes, or the relevant spec.
 
-## Plugin conversion checkpoint
+## Plugin runtime
 
-The isolated single-plugin runtime and its explicit validation/release gaps are documented in
-[Technical/plugin-v4.md](Technical/plugin-v4.md). Use `npm run build:plugin` and
-`npm run test:plugin` for its backend checks; historical Svelte checks do not prove plugin delivery.
+The single-plugin runtime and its explicit validation/release gaps are documented in
+[Technical/plugin-v4.md](Technical/plugin-v4.md). `npm run build`, `npm run check` and
+`npm run test` all target the plugin; nothing else in this repo is a runtime.

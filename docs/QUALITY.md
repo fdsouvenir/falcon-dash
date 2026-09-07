@@ -6,7 +6,6 @@ This document defines the minimum validation standard for Falcon Dash changes.
 
 - `npm run check:harness`
 - `npm run check:docs`
-- `npm run check:skills`
 - `npm run check`
 - `npm run lint`
 - `npm run test`
@@ -63,24 +62,19 @@ surfaces, stores, Work flows, Vault behavior, or gateway-facing integration with
 required owner group, the build should fail and force an explicit documentation decision. The
 harness separately rejects broken local links and orphaned files under `docs/`.
 
-## Plugin v4 checkpoint
+## Plugin validation
 
-Canonical `check`, `test`, `test:coverage`, and `build` now target the plugin. CI installs the
-exact 2026.9.2 SDK into a runner-temporary prefix and KeePassXC for synthetic credential tests,
-with explicit isolated OpenClaw state/config paths. Historical Svelte checks use the
-`*:historical-standalone` scripts and do not constitute plugin UI acceptance. See
-[checkpoint evidence](Technical/plugin-v4-evidence.md) for failed and unavailable gates.
-
-The backend continuation restores all retained historical suites to CI, in separate Node and
-happy-dom projects, alongside the plugin contract/security tests. Test mode excludes live dev
-Gateway and Sentry hooks; see [backend continuation](Technical/plugin-v4-backend.md).
+`check`, `test`, `test:coverage` and `build` all target the plugin; it is the only runtime in this
+repo. CI installs the exact 2026.9.2 SDK into a runner-temporary prefix and KeePassXC for synthetic
+credential tests, with explicit isolated OpenClaw state/config paths. See
+[checkpoint evidence](Technical/plugin-v4-evidence.md) for failed and unavailable gates, and
+[backend continuation](Technical/plugin-v4-backend.md) for contract coverage.
 
 Plugin source coverage excludes only the generated TypeBox bundle and test files from the
-coverage percentage. All plugin tests still execute, and all historical regressions remain
-separate CI gates.
+coverage percentage.
 
-`test:managed-runtime` is a separate isolated native-install gate, not a replacement for unit or
-historical tests. It covers the managed owner lifecycle and a real provider-bound request using
+`test:managed-runtime` is a separate isolated native-install gate, not a replacement for unit
+tests. It covers the managed owner lifecycle and a real provider-bound request using
 synthetic credentials; it does not claim live vendor authentication or native UI acceptance.
 
 Native DOM interaction tests run the actual browser bundle in Happy DOM, including real WorkStore commands and secret cleanup outside the view container. They do not count as rendered desktop/narrow or real-shell acceptance; that gate is currently blocked by browser navigation policy.

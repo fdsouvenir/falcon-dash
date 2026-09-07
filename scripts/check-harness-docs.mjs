@@ -13,21 +13,17 @@ const requiredPaths = [
 	'docs/ROADMAP.md',
 	'docs/HARNESS.md',
 	'docs/OWNERSHIP.md',
-	'docs/FRONTEND.md',
 	'docs/QUALITY.md',
 	'docs/RELIABILITY.md',
 	'docs/PLANS.md',
-	'docs/Technical/architecture.md',
-	'docs/Technical/components.md',
-	'docs/Technical/stores.md',
-	'docs/Technical/gateway-protocol.md',
-	'docs/Technical/gateway-plugin.md',
-	'docs/Technical/work-management.md',
+	'docs/Technical/plugin-v4.md',
+	'docs/Technical/plugin-v4-backend.md',
+	'docs/Technical/plugin-v4-native-ui.md',
+	'docs/Technical/plugin-v4-scope.md',
+	'docs/Technical/plugin-v4-installation.md',
+	'docs/Technical/plugin-native-e2e.md',
 	'docs/Technical/deployment.md',
-	'docs/secretrefs.md',
-	'skills/falcon-dash/SKILL.md',
-	'skills/falcon-dash-work/SKILL.md',
-	'skills/falcon-dash-vault/SKILL.md'
+	'docs/secretrefs.md'
 ];
 
 async function walk(dir) {

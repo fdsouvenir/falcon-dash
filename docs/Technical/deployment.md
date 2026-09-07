@@ -1,192 +1,91 @@
 # Deployment
 
-> **Plugin conversion checkpoint:** See [Single-plugin implementation preview](plugin-v4.md) for the current branch runtime, validation and blockers. The standalone description below is historical; it is not the target install path.
-
-## Current plugin preview
-
-The single plugin archive includes [the current scope checklist](plugin-v4-scope.md) alongside
-native UI, backend and E2E documentation. Install the archive through the supported OpenClaw
-plugin installer in isolated state for testing; do not use the historical standalone commands
-below for the plugin. The tested baseline is OpenClaw 2026.9.2 on Linux with Node 22.16+,
-KeePassXC and flock. Managed SecretRefs additionally require the appropriately user-owned Node
-runtime described in [the backend compatibility evidence](plugin-v4-backend.md).
-
-Native UI is approved; Custom plugin UI opt-in was enabled only in synthetic runtimes. Required
-CI includes actual desktop/narrow native pages and managed runtime proof. This is not complete
-v4 or registry/production acceptance: release/upgrade guards, full operator recovery, domain/UI
-and connection gaps remain in the packaged checklist. No tag, publication, service replacement,
-production config/restart or data migration was performed.
-
-The [current installation/recovery guide](plugin-v4-installation.md) defines the implemented
-tag/package/registry checks, archive/checksum flow, private recovery helpers and read-only offline
-retirement validator. Source directories and mutable build outputs are not production artifacts.
-The running legacy service is preserved until a separately authorized artifact-based replacement;
-no live stop, move, restart or data mutation is part of these development tests.
-
-## Historical standalone deployment (not the plugin install path)
-
-Falcon Dash is an adapter-node SvelteKit application packaged as
-`@fdsouvenir/falcon-dash`. It runs on the same host as OpenClaw. Docker images, remote gateways,
-fredbot-backend, and an external vault are not current product requirements.
+Falcon Dash 4.0 is one installable OpenClaw plugin. It has no server, port, reverse proxy, process
+manager or health endpoint of its own: it runs inside the OpenClaw Gateway process and renders
+inside Control UI. There is no standalone application to deploy and no cutover from one, because
+4.0 installs onto a machine with no earlier Falcon Dash present.
 
 ## Runtime requirements
 
-- Node.js 20 or newer;
-- an OpenClaw Gateway on the same machine;
-- `keepassxc-cli` plus Falcon Dash's KeePassXC database and key file;
-- a writable Falcon Dash data directory;
-- the Falcon Dash gateway extension when Falcon-specific prompt context or plugin capabilities are
-  required.
-
-The last two provisioning paths are not yet fully automated by the package installer. Treat that as
-an installation gap, not as permission to make them optional product components.
+- OpenClaw 2026.8.1 or later on the same machine; the tested baseline is 2026.9.2.
+- Node.js 22.16 or newer, owned by the user the Gateway runs as. Managed SecretRef presets use the
+  Gateway's actual `process.execPath`; a root-owned Node binary fails the ownership guard.
+- Linux with `keepassxc-cli` and `flock`.
+- The KeePassXC vault database and key file.
+- `gateway.controlUi.experimental.customPlugins` opt-in for the native UI.
 
 ## Development from source
 
 ```bash
-npm ci
-npm run dev
-```
-
-Vite serves the development UI, starts server hooks, and provides development proxy behavior. The
-default Vite URL is normally `http://127.0.0.1:5173`; use the URL printed by Vite as authoritative.
-
-For a production-like local build:
-
-```bash
+npm install
 npm run build
-node build/start.js
+npm run test
 ```
 
-`postbuild` copies `src/entry.js` into the adapter-node output as `build/start.js`. That wrapper
-attaches `/terminal-ws` and Gateway Control UI WebSocket upgrades to the same HTTP server.
+`npm run build` bundles TypeBox with its license, validates every executable plugin JavaScript
+file, and builds the native Control UI bundle into `dist/control-ui/falcon/`. Installation needs no
+runtime npm dependency execution. The OpenClaw SDK is an exact host peer, not a bundled dependency;
+local development links or installs it separately.
 
 ## Package installation
 
 Tagged releases publish `@fdsouvenir/falcon-dash` to GitHub Packages. Registry authentication and
-scope configuration are required before installation. The package exposes:
+scope configuration are required before installation. The package ships `plugin/`,
+`dist/control-ui/`, `openclaw.plugin.json`, the build script and the plugin technical docs — no
+source checkout, no CLI binaries and no runtime skills.
 
-- `falcon-dash start` — start the built server;
-- `falcon-dash path` — print the installed package root;
-- `falcon-dash version` — print the package version;
-- `falcon` — the Work agent/operator CLI.
-
-`postinstall` copies only the namespaced runtime skills `falcon-dash`, `falcon-dash-work`, and
-`falcon-dash-vault` into `~/.openclaw/skills/`. The allowlist is intentional: developer workflows
-and generic skill names must not be installed into an operator's OpenClaw environment.
-
-`falcon-dash start` defaults to port `3000` and host `0.0.0.0`. Override with `--port=`, `--host=`,
-`FALCON_DASH_PORT`, or `FALCON_DASH_HOST`.
-
-## Environment
-
-| Variable                                 | Purpose                                                                      |
-| ---------------------------------------- | ---------------------------------------------------------------------------- |
-| `GATEWAY_URL`                            | Explicit same-host WebSocket URL, including a private container service name |
-| `GATEWAY_TOKEN`                          | Explicit OpenClaw gateway token                                              |
-| `OPENCLAW_GATEWAY_TOKEN`                 | Secondary gateway-token environment name                                     |
-| `FALCON_DASH_PORT` / `FALCON_DASH_HOST`  | Package launcher listen address                                              |
-| `PORT` / `HOST`                          | Direct adapter-node listen address                                           |
-| `ORIGIN`                                 | Public production origin when deployed behind HTTPS                          |
-| `FALCON_DASH_DATA_DIR`                   | Root for Work databases and token files                                      |
-| `FALCON_DASH_WORK3_DATABASE_PATH`        | Canonical Work database override                                             |
-| `FALCON_DASH_WORK3_EVENTS_DATABASE_PATH` | Work event-log database override                                             |
-| `FALCON_DASH_URL`                        | Same-host base URL used by the gateway context hook                          |
-| `FALCON_DASH_TOKEN`                      | Explicit agent token used by the context hook                                |
-| `FALCON_AGENT_ID`                        | Selects a per-agent token file for context injection                         |
-
-When the gateway URL/token are not explicit, Falcon Dash reads the OpenClaw CLI configuration and
-then `~/.openclaw/openclaw.json`. Local configuration must provide a port and auth token. Do not
-configure another-host gateway as a deployment shortcut.
+Install the reviewed archive through the supported OpenClaw plugin installer. Do not replace
+installed files with links to a development checkout; installed code and writable data stay outside
+any Git checkout.
 
 ## Data and files
 
 Default paths are under the co-resident OpenClaw home:
 
-| Path                                           | Contents                                          |
-| ---------------------------------------------- | ------------------------------------------------- |
-| `~/.openclaw/data/falcon-dash/work3.db`        | canonical Work data and outbox                    |
-| `~/.openclaw/data/falcon-dash/work3-events.db` | append-only Work event history                    |
-| `~/.openclaw/data/falcon-dash/tokens/`         | agent token files used by local context injection |
-| `~/.openclaw/passwords.kdbx`                   | built-in vault database                           |
-| `~/.openclaw/vault.key`                        | built-in vault key file                           |
-| `~/.falcon-dash/server-identity.json`          | server gateway device identity and device token   |
+| Path                            | Contents                              |
+| ------------------------------- | ------------------------------------- |
+| `~/.openclaw/data/falcon-dash/` | Work database and integration storage |
+| `~/.openclaw/passwords.kdbx`    | built-in vault database               |
+| `~/.openclaw/vault.key`         | built-in vault key file               |
 
-Back up both Work databases together and the vault database with its key file. Protect token and key
-files with restrictive permissions. Do not commit any of them.
-
-## Reverse proxy
-
-A reverse proxy may terminate HTTPS and forward to the local Falcon Dash server. It must preserve:
-
-- ordinary HTTP requests;
-- SSE responses without buffering for `/api/gateway/events` and `/api/work3/events`;
-- WebSocket upgrades for `/terminal-ws` and `/api/gateway/proxy`;
-- the public `ORIGIN` used by SvelteKit.
-
-The OpenClaw Gateway itself should remain on loopback or a same-host private network. Expose Falcon
-Dash, not the raw gateway, as the application boundary.
-
-## Health and operations
-
-Use `/api/health` and `/api/ready` for service checks. A ready Falcon Dash process can still have a
-disconnected gateway; gateway-backed pages must show that condition explicitly while local Work
-and diagnostics remain truthful.
-
-Falcon Dash does not prescribe systemd, a container runtime, or another process manager. A chosen
-manager must run the package command, provide the environment above, preserve the local filesystem,
-and restart cleanly on failure.
+Back up the vault database together with its key file, and protect both with restrictive
+permissions. Do not commit any of them. Private recovery snapshots are described in
+[the installation guide](plugin-v4-installation.md).
 
 ## Release path
 
 `.github/workflows/publish.yml` publishes on `v*` tags after `npm ci`. `prepublishOnly` builds the
-application and CLI. Before a release, run the repo validation required by [../QUALITY.md](../QUALITY.md)
-and verify a clean installation on a machine that does not contain a developer checkout.
+plugin and runs its tests. Publication and release depend on the complete reusable CI workflow,
+including real-Gateway native browser acceptance and the managed SecretRef proof.
 
 Run release validation after `npm ci`, not against an existing `node_modules`. The lockfile is the
 authoritative toolchain for CI and publishing, including Prettier. Formatting committed for a
-release must be produced and checked with the exact formatter version recorded in `package-lock.json`.
-
-That clean-install test must include OpenClaw discovery, vault provisioning, SecretRef resolution,
-gateway extension installation, Work database creation, and agent context injection. At present,
-the vault and extension steps expose known packaging gaps.
-
-## Plugin preview packaging
-
-The active package has one OpenClaw entry and excludes historical standalone routes/server code.
-`npm run build` bundles TypeBox with its license and validates executable JavaScript; installation
-needs no runtime npm dependency execution. The OpenClaw SDK remains an exact host peer.
-
-Development and CI retain both the plugin tests and all historical regressions. Real-host tests
-use explicit pinned OpenClaw, isolated state/config/workspace, synthetic credentials and loopback
-fixtures. Managed SecretRef presets hit the documented current-user executable-ownership guard
-with a root-owned Node binary on this host. The manual exec resolver was tested without changing
-that guard, but is not equivalent to preset-owned automatic revocation.
-
-The [backend continuation](plugin-v4-backend.md) is the current source for compatibility, proof
-and gaps. No production rollout or cutover is authorized by these preparation notes.
-
-Protected worker cleanup owns a dedicated process group and verifies no runnable descendant
-remains before reporting timeout failure. Runtime shutdown should still be supervised by the
-host: abrupt death of a JavaScript supervisor cannot execute its cleanup handlers. No production
-service/process policy was changed during this review repair.
+release must be produced and checked with the exact formatter version recorded in
+`package-lock.json`. Before a release, run the validation required by
+[../QUALITY.md](../QUALITY.md) and verify a clean installation on a machine that does not contain a
+developer checkout.
 
 ## Verified managed-runtime compatibility
 
-`npm run test:managed-runtime` now creates an isolated install, copies the current Node binary
+`npm run test:managed-runtime` creates an isolated install, copies the current Node binary
 byte-for-byte into an owned test-runtime directory, verifies its owner/mode/hash, and uses that
 Node for the real managed preset and Gateway inference proof. It verifies disabled/removed plugin
-revocation and Vault-lock denial without a manual provider fallback, then confirms the system
-Node was unchanged. CI runs this gate and uploads its nonsecret summary and harness logs, not Vault files or provider request captures.
-
-The managed contract uses the Gateway's actual `process.execPath`; wrapping root-owned Node in
-a user-owned shell script does not change it. A production deployment must provide an
-appropriately user-owned Node runtime. No production installation or permission change was made.
+revocation and Vault-lock denial without a manual provider fallback, then confirms the system Node
+was unchanged. CI runs this gate and uploads its nonsecret summary and harness logs — not Vault
+files or provider request captures.
 
 The fresh runtime fixture tightens **only its newly created Node copy** to mode 0700, because CI
-toolcache binaries can carry broader source modes. It verifies ownership before doing so and
-checks the original runtime hash/uid/mode remain unchanged. No system Node chmod/chown is used.
+toolcache binaries can carry broader source modes. It verifies ownership before doing so and checks
+the original runtime hash, uid and mode remain unchanged. No system Node chmod or chown is used.
 
-Native Control UI is approved and bundled. The isolated managed-install proof now sets only its own `gateway.controlUi.experimental.customPlugins` opt-in. Production opt-in/restart remains out of scope. See [native UI prerequisites and current browser-policy blocker](plugin-v4-native-ui.md).
+Protected worker cleanup owns a dedicated process group and verifies no runnable descendant remains
+before reporting timeout failure. Runtime shutdown should still be supervised by the host: abrupt
+death of a JavaScript supervisor cannot execute its cleanup handlers.
 
-Release and package publication now depend on the complete reusable CI workflow, including real-Gateway native E2E. Publication uses the pinned SDK/Node and isolated state for package checks. No tag/release/publication has been triggered; see [CI/runtime boundaries](plugin-native-e2e.md).
+## Current gaps
+
+Native UI is approved and bundled, but Custom plugin UI opt-in has been enabled only in synthetic
+runtimes; production opt-in and restart remain out of scope here. No tag, publication, registry
+installation or production configuration change has been performed. See
+[the backend continuation](plugin-v4-backend.md) for compatibility evidence and remaining gaps, and
+[CI/runtime boundaries](plugin-native-e2e.md) for what the browser matrix does and does not prove.

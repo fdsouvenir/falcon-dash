@@ -15,6 +15,10 @@ in its own generated runtime config. Production config/restart is not performed.
 off, upstream gates native assets and the retained authenticated read-only fallback explains
 how to enable the native pages; backend operations remain available.
 
+The native surface is self-contained under `plugin/native/`. `style.css` loads its Geist faces from
+`plugin/native/fonts/`, and the build inlines them as data URLs, so the bundle has no dependency on
+a separate static asset directory.
+
 ## Implemented interactions
 
 - Work: attention buckets, Projects, Browse/search, canonical detail, associated Project/Milestone

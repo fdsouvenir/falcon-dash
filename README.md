@@ -56,15 +56,12 @@ npm run lint
 npm run format:check
 npm run check:harness
 npm run check:docs
-npm run check:skills
-npm run check:historical-standalone
-npm run test:historical-standalone -- --maxWorkers=1 --no-file-parallelism
 npm pack --ignore-scripts
 ```
 
-`check`, `test`, `test:coverage` and `build` target the plugin. The `*:historical-standalone`
-commands retain regression coverage for the previous implementation; they do not launch or prove
-the new UI. Historical Svelte routes and retired modules are not included in the plugin archive.
+`check`, `test`, `test:coverage` and `build` target the plugin; it is the only runtime in this
+repo. The published archive contains `plugin/`, `dist/control-ui/`, the manifest, the build script
+and the plugin technical docs.
 
 For installation smoke tests, invoke the **absolute pinned OpenClaw entry** with both
 `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` pointing at isolated synthetic state. Then install
