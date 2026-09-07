@@ -45,7 +45,6 @@ function resolveToken(): { token: string; source: string } {
 	if (env.OPENCLAW_GATEWAY_TOKEN) {
 		return { token: env.OPENCLAW_GATEWAY_TOKEN, source: 'env:OPENCLAW_GATEWAY_TOKEN' };
 	}
-
 	const gateway = readGatewayFromFile();
 	const isRemoteMode = gateway?.mode === 'remote';
 	const token = isRemoteMode

@@ -1,7 +1,40 @@
 import type { RequestHandler } from './$types.js';
 import { getGatewayClient } from '$lib/server/gateway-client.js';
+import { GATEWAY_DISABLED_MESSAGE, isGatewayClientEnabled } from '$lib/server/gateway-runtime.js';
 
 export const GET: RequestHandler = async ({ request }) => {
+	if (!isGatewayClientEnabled()) {
+		const encoder = new TextEncoder();
+		const stream = new ReadableStream({
+			start(controller) {
+				controller.enqueue(
+					encoder.encode(
+						`event: gateway-status\ndata: ${JSON.stringify({
+							state: 'disabled',
+							message: GATEWAY_DISABLED_MESSAGE
+						})}\n\n`
+					)
+				);
+				request.signal.addEventListener('abort', () => {
+					try {
+						controller.close();
+					} catch {
+						/* already closed */
+					}
+				});
+			}
+		});
+
+		return new Response(stream, {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+				Connection: 'keep-alive',
+				'X-Accel-Buffering': 'no'
+			}
+		});
+	}
+
 	const client = getGatewayClient();
 	let cleanup: (() => void) | null = null;
 

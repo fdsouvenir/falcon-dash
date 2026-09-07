@@ -4,6 +4,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { startContextScheduler } from '$lib/server/work/context-scheduler.js';
 import { startTerminalServer } from '$lib/server/terminal-server.js';
 import { startGatewayClient } from '$lib/server/gateway-client.js';
+import { isGatewayClientEnabled } from '$lib/server/gateway-runtime.js';
 
 Sentry.init({
 	dsn: __SENTRY_DSN__,
@@ -21,7 +22,11 @@ if (process.env.NODE_ENV !== 'production') {
 	startTerminalServer();
 }
 
-startGatewayClient();
+if (isGatewayClientEnabled()) {
+	startGatewayClient();
+} else {
+	console.log('[gateway-client] Disabled by FALCON_DASH_GATEWAY_ENABLED');
+}
 
 const securityHeaders: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);

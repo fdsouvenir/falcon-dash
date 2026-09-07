@@ -104,19 +104,20 @@ The server listens on port 3000 by default. Override with `PORT` and `HOST` envi
 
 ## Environment Variables
 
-| Variable             | Required  | Default                | Description                                                            |
-| -------------------- | --------- | ---------------------- | ---------------------------------------------------------------------- |
-| `GATEWAY_URL`        | No        | `ws://127.0.0.1:18789` | WebSocket URL of the OpenClaw gateway                                  |
-| `GATEWAY_TOKEN`      | No        | —                      | Gateway authentication token (auto-read from config if not set)        |
-| `ORIGIN`             | For HTTPS | —                      | Production URL (e.g., `https://falcon.example.com`). Enables WSS proxy |
-| `PORT`               | No        | `3000`                 | Server listen port                                                     |
-| `HOST`               | No        | `0.0.0.0`              | Server bind address                                                    |
-| `OPENCLAW_DATA_DIR`  | No        | `~/.openclaw/data`     | Override the data directory for PM database and context files          |
-| `SENTRY_DSN`         | No        | —                      | Sentry error tracking DSN                                              |
-| `SENTRY_ENVIRONMENT` | No        | `production`           | Sentry environment tag (e.g., `staging`, `production`)                 |
-| `SENTRY_AUTH_TOKEN`  | No        | —                      | Sentry auth token for source map upload (build-time only)              |
-| `SENTRY_ORG`         | No        | —                      | Sentry organization slug (required with `SENTRY_AUTH_TOKEN`)           |
-| `SENTRY_PROJECT`     | No        | —                      | Sentry project slug (required with `SENTRY_AUTH_TOKEN`)                |
+| Variable                      | Required  | Default                | Description                                                                                                                                                      |
+| ----------------------------- | --------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_URL`                 | No        | `ws://127.0.0.1:18789` | WebSocket URL of the OpenClaw gateway                                                                                                                            |
+| `GATEWAY_TOKEN`               | No        | —                      | Gateway authentication token (auto-read from config if not set)                                                                                                  |
+| `ORIGIN`                      | For HTTPS | —                      | Production URL (e.g., `https://falcon.example.com`). Enables WSS proxy                                                                                           |
+| `PORT`                        | No        | `3000`                 | Server listen port                                                                                                                                               |
+| `HOST`                        | No        | `0.0.0.0`              | Server bind address                                                                                                                                              |
+| `OPENCLAW_DATA_DIR`           | No        | `~/.openclaw/data`     | Override the data directory for PM database and context files                                                                                                    |
+| `FALCON_DASH_GATEWAY_ENABLED` | No        | `true`                 | Set to `false` to disable Falcon Dash's server-side Gateway WebSocket client and gateway RPC/SSE routes while leaving the dashboard and Control UI proxy running |
+| `SENTRY_DSN`                  | No        | —                      | Sentry error tracking DSN                                                                                                                                        |
+| `SENTRY_ENVIRONMENT`          | No        | `production`           | Sentry environment tag (e.g., `staging`, `production`)                                                                                                           |
+| `SENTRY_AUTH_TOKEN`           | No        | —                      | Sentry auth token for source map upload (build-time only)                                                                                                        |
+| `SENTRY_ORG`                  | No        | —                      | Sentry organization slug (required with `SENTRY_AUTH_TOKEN`)                                                                                                     |
+| `SENTRY_PROJECT`              | No        | —                      | Sentry project slug (required with `SENTRY_AUTH_TOKEN`)                                                                                                          |
 
 ### Auto-Configuration
 

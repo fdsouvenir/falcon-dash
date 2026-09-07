@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { getGatewayClient } from '$lib/server/gateway-client.js';
+import { GATEWAY_DISABLED_MESSAGE, isGatewayClientEnabled } from '$lib/server/gateway-runtime.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	let body: { method: string; params?: Record<string, unknown> };
@@ -17,6 +18,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json(
 			{ ok: false, error: { code: 'INVALID_REQUEST', message: 'Missing method' } },
 			{ status: 400 }
+		);
+	}
+
+	if (!isGatewayClientEnabled()) {
+		return json(
+			{ ok: false, error: { code: 'GATEWAY_DISABLED', message: GATEWAY_DISABLED_MESSAGE } },
+			{ status: 503 }
 		);
 	}
 
