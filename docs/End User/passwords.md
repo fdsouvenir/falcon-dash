@@ -1,34 +1,73 @@
 # Vault
 
-Falcon Dash includes a KeePassXC-backed credential vault at `/passwords`. It is a built-in product
-component and the source for Falcon Dash/OpenClaw SecretRefs, not an optional third-party vault.
+Falcon Dash includes a KeePassXC-backed credential vault. It is a built-in product component and
+the source for Falcon Dash and OpenClaw SecretRefs, not an optional third-party vault. It appears
+as the Vault page inside the OpenClaw Control UI.
 
-## Current behavior
+## Storage and access
 
-The Vault page can:
+- database: `~/.openclaw/passwords.kdbx`
+- key file: `~/.openclaw/vault.key`
+- authentication: `keepassxc-cli --no-password --key-file`
 
-- browse nested groups and entries;
-- create groups and entries;
-- inspect, copy, edit, move/rename, and delete an entry;
-- store username, password, URL, notes, and generated passwords.
+Access is key-file only and unattended: there is no master-password prompt. The unlock key is
+protected by filesystem ownership, not an external key-management system. The Vault starts locked,
+and a new database and key are provisioned only through an explicit owner operation — an existing
+vault is never silently adopted.
 
-The current implementation uses key-file-only, unattended access:
+`flock` serializes separate worker processes, so two operations cannot corrupt the database by
+racing each other. If the binary, database or key file is missing or unreadable, the page says the
+Vault is unavailable rather than showing an empty list.
 
-- `~/.openclaw/passwords.kdbx`
-- `~/.openclaw/vault.key`
-- `keepassxc-cli --no-password --key-file`
+## What you can do
 
-There is no Falcon Dash master-password prompt or unlock screen. If the binary, database, or key
-file is missing or unreadable, the page shows Vault not available.
+Browse nested groups and entries, create groups and entries, and store username, password, URL and
+notes. Entries can be edited, moved, renamed and removed.
 
-## SecretRefs
+**Group relocation works by moving entries into a newly created group, then removing the empty old
+one.** The supported CLI offers no proven-safe whole-group rename, so the product does not pretend
+to have one.
 
-OpenClaw can resolve values from the same vault through Falcon Dash's bundled exec provider. Use
-SecretRefs so gateway configuration identifies an entry path instead of storing plaintext. See
-[../secretrefs.md](../secretrefs.md) for the exact provider configuration and ID format.
+**Removal and relocation create a private recovery snapshot first**, preserve redacted audit
+linkage, and disable recycled old entries. An entry's identity is its exact flattened path — never a
+title search — so a renamed entry cannot be silently resurrected by matching its old name.
 
-## Security boundary
+Old handles and SecretRefs do not follow a relocated entry. Update their bindings explicitly.
 
-The browser receives a selected entry only when the human opens it. Agents should use approved
-tools or SecretRefs and should not receive raw vault contents in prompt context. Protect both the
-database and key file: together they are sufficient to read every entry.
+## Who can see a value
+
+Raw values never enter ordinary tool responses or logs. They travel only inside private process
+pipes.
+
+- **A human owner** can reveal and copy a value they own, through an explicit authorized action.
+- **A different authenticated person cannot** reveal an entry they do not own, even on the same
+  gateway. This is tested in the browser acceptance suite, not merely intended.
+- **Agents cannot reveal values at all.** An agent may create an entry and may be granted _executor_
+  rights to use one, but revealing is denied. No raw-value Gateway method exists to call.
+- Revealed values are cleared from the interface when the transport disconnects.
+
+Every access is recorded in a redacted audit history.
+
+## Recovery
+
+The owner-only **Recovery snapshots** surface takes a consistent snapshot under the Vault worker
+lock: the encrypted database, its private unlock key, policy, and a consistent audit snapshot, plus
+hashes. Snapshots live under the private Vault directory.
+
+**Restore is an offline operation, not a button.** Review identity mappings and configuration,
+verify the recovered data in isolation, then select it during an authorized maintenance window.
+
+Local revocation does not retroactively erase values already copied elsewhere, or tokens a provider
+has cached upstream. Rotate at the provider when a credential is genuinely exposed.
+
+## Carrying over from a previous version
+
+Falcon Dash 4.0 has no vault conversion. An existing `passwords.kdbx` is opened as-is; it is not
+converted, and no entry gains an executor grant automatically. Grant those explicitly after
+installing.
+
+## Related
+
+- [SecretRef integration](../secretrefs.md)
+- [Backend contracts](../Technical/plugin-v4-backend.md)
+- [Installed artifacts and recovery](../Technical/plugin-v4-installation.md)

@@ -1,15 +1,19 @@
 # KeePassXC SecretRef Integration
 
 Falcon Dash includes a KeePassXC-backed vault and an OpenClaw exec-secret provider. The vault is a
-product component, not an optional external service. The UI and resolver use the same database and
-key file:
+product component of the plugin, not an optional external service. The native Vault page and the
+resolver use the same database and key file:
 
 - database: `~/.openclaw/passwords.kdbx`
 - key file: `~/.openclaw/vault.key`
 - authentication: `keepassxc-cli --no-password --key-file`
 
-Raw values are resolved server-side. Agent and browser interfaces should receive scoped operations
-or redacted metadata rather than credentials.
+Raw values are resolved inside the Gateway process. Agent and browser interfaces receive scoped
+operations or redacted metadata, never credentials.
+
+The resolver ships as `bin/keepassxc-secret-resolver.cjs`. An installed OpenClaw config references
+it by absolute path, so moving or deleting that file breaks credential resolution across the
+gateway.
 
 ## Current installation requirement
 
