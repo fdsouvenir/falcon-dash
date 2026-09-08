@@ -453,6 +453,12 @@ test('Documents retained folder upload download and durable trash workflows surv
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(dialog).toHaveCount(0);
 	await app.locator('.record').filter({ hasText: folder }).click();
+	// Entering the folder re-renders the browser, replacing the file input. Wait for the new
+	// folder's settled empty state, or setInputFiles lands on a detached input and is silently lost.
+	await expect(
+		app.getByRole('button', { name: 'workspace / ' + folder, exact: true })
+	).toBeVisible();
+	await expect(app.getByText('This folder is empty.', { exact: true })).toBeVisible();
 	await app.getByLabel('Upload text file', { exact: true }).setInputFiles({
 		name: 'retained.md',
 		mimeType: 'text/markdown',
