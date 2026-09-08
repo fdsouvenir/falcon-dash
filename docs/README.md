@@ -32,6 +32,8 @@ These files describe the implementation that exists now.
 - [Technical/plugin-v4.md](Technical/plugin-v4.md) — plugin runtime, scope and open gaps
 - [Technical/plugin-v4-backend.md](Technical/plugin-v4-backend.md) — Work, Vault, Integrations and
   Documents backend contracts
+- [Technical/coordination-agent.md](Technical/coordination-agent.md) — the locked gateway agent that
+  escalates, follows up and mediates, and its sweep procedure
 - [Technical/plugin-v4-native-ui.md](Technical/plugin-v4-native-ui.md) — native Control UI boundary
 - [Technical/plugin-v4-scope.md](Technical/plugin-v4-scope.md) — acceptance map by issue
 - [Technical/plugin-v4-installation.md](Technical/plugin-v4-installation.md) — installed artifacts
