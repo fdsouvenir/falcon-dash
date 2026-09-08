@@ -7,8 +7,12 @@ on:
     branches: [main]
   workflow_call:
 
+# Release and Publish both call this reusable workflow on the same tag ref. A group keyed only by
+# ref put them in the same bucket, so one cancelled the other and publication silently never ran.
+# Keying by calling workflow keeps per-branch cancellation without letting the two tag workflows
+# cancel each other.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
