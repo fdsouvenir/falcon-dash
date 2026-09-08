@@ -65,6 +65,11 @@ fails when it drifts. Bump it with the other three.
 
 ## Release path
 
+A `v*` tag triggers two workflows, Release and Publish, and both call the reusable CI workflow.
+Their concurrency group is keyed by calling workflow as well as ref: keyed by ref alone they landed
+in the same group and cancelled each other, so publication silently never ran while the release
+still looked successful.
+
 `.github/workflows/publish.yml` publishes on `v*` tags after `npm ci`. `prepublishOnly` builds the
 plugin and runs its tests. Publication and release depend on the complete reusable CI workflow,
 including real-Gateway native browser acceptance and the managed SecretRef proof.
