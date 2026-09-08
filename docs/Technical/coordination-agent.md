@@ -125,6 +125,137 @@ Structural conditions — 1, 3, 5, 6, 12, 14, 17, 19 — have no window. They ar
 A window set to zero disables its condition. That must be visible in the settings surface, because
 a silently disabled check is worse than a noisy one.
 
+## The OpenClaw agent specification
+
+Everything below is what must exist for this agent to run, and to stay the way it was built.
+
+### Identity and config
+
+Agent id `falcon-coordinator`, in `agents.entries`. A fleet with more than one agent needs
+`agents.ownership: "explicit"`, and this agent takes no channel bindings — nothing routes to it
+from the outside.
+
+```json5
+{
+	agents: {
+		entries: {
+			'falcon-coordinator': {
+				name: 'Falcon Coordinator',
+				workspace: '~/.openclaw/workspace-falcon-coordinator',
+				agentDir: '~/.openclaw/agents/falcon-coordinator/agent',
+				model: { primary: '<cheap model>', fallbacks: [] },
+				thinkingDefault: 'low',
+				reasoningDefault: 'off',
+				skills: [],
+				sandbox: { mode: 'off' },
+				contextInjection: 'always',
+				subagents: { allowAgents: [] },
+				identity: { name: 'Falcon Coordinator', emoji: '🦅' },
+				tools: {
+					profile: 'minimal',
+					allow: ['falcon_work', 'sessions_send', 'message'],
+					deny: [
+						'group:runtime',
+						'group:fs',
+						'group:web',
+						'group:ui',
+						'group:nodes',
+						'group:automation',
+						'sessions_spawn',
+						'falcon_vault',
+						'falcon_integrations',
+						'falcon_documents'
+					],
+					elevated: { enabled: false }
+				}
+			}
+		}
+	}
+}
+```
+
+`model.fallbacks: []` is deliberate. A strict primary means a sweep either runs on the model you
+chose or fails loudly; silent promotion to an expensive model on every hourly sweep is a bill
+nobody notices until it arrives.
+
+`skills: []` and an empty `subagents.allowAgents` matter as much as the deny list. A locked agent
+that can load skills or spawn children is not locked — it is one prompt away from any capability
+those grant.
+
+### Tool policy is not sufficient on its own
+
+`falcon_work` is a **single tool** covering every Work command. Tool policy can allow it or not; it
+cannot express "may reassign, may not complete."
+
+So the coordination boundary is enforced **in the plugin, by actor**. Commands arriving from
+`agent:falcon-coordinator` are restricted to the coordination set — `assign`, `dismiss_ask`, `ask`,
+`resume` — and every other command is rejected with an explicit error. Tool policy is the outer
+fence; the actor check is the real one, and it is the thing tests must prove.
+
+### Workspace
+
+A dedicated workspace, not the shared one. Only three files, all owned by Falcon Dash:
+
+| File          | Contents                                                                      |
+| ------------- | ----------------------------------------------------------------------------- |
+| `AGENTS.md`   | The sweep, the ladder, the boundaries — this document, as its instructions    |
+| `SOUL.md`     | Locked persona: terse, factual, names the object and the condition, no filler |
+| `IDENTITY.md` | Name, emoji                                                                   |
+
+Set `agents.defaults.skipOptionalBootstrapFiles` for this workspace so `USER.md` is never created.
+No `MEMORY.md`, no `memory/`, no `skills/`, and delete `BOOTSTRAP.md` after provisioning — the
+first-run ritual invites an agent to invent a persona, which is the opposite of the point.
+
+The agent has no memory tools and no memory directory **by design**. Every fact it needs is in the
+findings list it is handed each sweep. State it must remember across sweeps lives on the objects,
+not in its head.
+
+### The sweep automation
+
+One recurring automation per install, owned by this agent:
+
+- Schedule `{ kind: "every", everyMs: <sweepInterval> }`, or a cron expression when a fixed
+  wall-clock cadence is wanted.
+- Payload `{ kind: "agentTurn", message: "<sweep instruction>", model: "<cheap model>" }`.
+- `sessionTarget: "isolated"` — each sweep starts clean. A long-lived session would accumulate
+  every previous sweep's findings in context and get more expensive and less accurate over time.
+- Delivery `mode: "none"`. The sweep speaks through `sessions_send` and `message`, not through a
+  completion announcement.
+
+Event triggers — an Ask raised, a handover requested — run the same procedure against a single
+object instead of the whole board.
+
+### Provisioning
+
+There is no plugin API for creating an agent; agents are configuration plus workspace files. So
+provisioning is an explicit, reviewable install step, not something the plugin does silently to a
+config it does not own:
+
+1. `openclaw agents add falcon-coordinator --workspace <path> --model <cheap> --non-interactive`
+2. Apply the `agents.entries` block above, including the tool policy.
+3. Write the three workspace files from templates shipped in the package.
+4. Register the sweep automation.
+5. Delete `BOOTSTRAP.md`.
+
+### Staying locked
+
+Provisioning it once is easy. Keeping it is the actual requirement, so the plugin **verifies on
+every startup** and reports drift as a finding on its own board rather than silently repairing it:
+
+- The three workspace files match their shipped templates by hash.
+- Tool `allow` and `deny` are exactly as specified; `elevated` is off.
+- `skills` and `subagents.allowAgents` are empty.
+- The model is the configured one and `fallbacks` is empty.
+- The sweep automation exists, is enabled, and its interval matches settings.
+
+Drift is reported, never auto-corrected. A plugin that silently rewrites an operator's agent config
+is a worse problem than the drift, and on a multiplayer gateway the change may have been
+deliberate and someone else's. The one exception is a missing workspace file, which is recreated
+from its template and recorded.
+
+**Editable settings are not drift.** The windows in the table above are meant to be changed. The
+persona, tool policy and boundaries are not.
+
 ## Why nothing blocks
 
 Earlier drafts of the domain wanted hard gates: refuse completion on a stale Plan, refuse to start
