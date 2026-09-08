@@ -43,175 +43,56 @@ function touches(paths, matchers) {
 	return paths.some((path) => matchers.some((matcher) => matches(path, matcher)));
 }
 
-const ignoredMatchers = ['docs/', 'skills/', 'e2e/', 'scripts/', 'package-lock.json'];
+const ignoredMatchers = ['docs/', 'scripts/', 'package-lock.json'];
 
 // Every required group must have at least one matching changed document. Keep rules narrow: touching
-// an unrelated end-user guide must never satisfy a Work, Vault, gateway, or deployment change.
+// an unrelated end-user guide must never satisfy a Work, Vault, Integrations, or deployment change.
 const rules = [
 	{
-		name: 'shared frontend and shell behavior',
-		matchers: [
-			'src/routes/+layout.svelte',
-			'src/lib/components/AppShell.svelte',
-			'src/lib/components/mobile/',
-			'src/lib/components/ui/',
-			'src/app.css'
-		],
-		requiredDocGroups: [['docs/FRONTEND.md', 'docs/DESIGN.md'], ['docs/Technical/components.md']]
-	},
-	{
-		name: 'browser stores and realtime reliability',
-		matchers: ['src/lib/stores/', 'src/lib/work3/live.ts', 'src/hooks.client.ts'],
-		requiredDocGroups: [['docs/Technical/stores.md'], ['docs/RELIABILITY.md']]
-	},
-	{
-		name: 'server gateway transport and proxy',
-		matchers: [
-			'src/lib/server/gateway-client.ts',
-			'src/lib/server/gateway-config.ts',
-			'src/lib/server/server-device-identity.ts',
-			'src/routes/api/gateway/',
-			'src/entry.js'
-		],
-		requiredDocGroups: [
-			['docs/Technical/gateway-protocol.md'],
-			['docs/Technical/architecture.md', 'docs/Technical/deployment.md']
-		]
-	},
-	{
-		name: 'gateway plugin and agent context',
-		matchers: ['gateway-plugin/', 'openclaw.plugin.json'],
-		requiredDocGroups: [
-			['docs/Technical/gateway-plugin.md'],
-			['docs/Technical/work-management.md', 'docs/ROADMAP.md']
-		]
-	},
-	{
 		name: 'Work domain and agent interface',
-		matchers: [
-			'src/lib/server/work3/',
-			'src/lib/work3/',
-			'src/lib/work3-shared/',
-			'src/routes/api/v3/',
-			'src/routes/api/work3/',
-			'bin/falcon.js'
-		],
-		requiredDocGroups: [['docs/Technical/work-management.md']]
+		matchers: ['plugin/work/'],
+		requiredDocGroups: [['docs/Technical/plugin-v4-backend.md'], ['docs/End User/work.md']]
 	},
 	{
-		name: 'Work user interface',
-		matchers: ['src/routes/work/', 'src/lib/components/work/'],
-		requiredDocGroups: [
-			['docs/End User/work.md'],
-			['docs/FRONTEND.md', 'docs/Technical/components.md']
-		]
+		name: 'Integrations lifecycle and provider adapters',
+		matchers: ['plugin/integrations/'],
+		requiredDocGroups: [['docs/Technical/plugin-v4-backend.md']]
 	},
 	{
 		name: 'built-in vault and SecretRefs',
-		matchers: [
-			'src/lib/server/vault/',
-			'src/routes/api/vault/',
-			'src/lib/components/vault/',
-			'src/lib/stores/vault.ts',
-			'bin/keepassxc-secret-resolver.cjs'
-		],
+		matchers: ['plugin/vault/', 'bin/keepassxc-secret-resolver.cjs'],
 		requiredDocGroups: [['docs/End User/passwords.md'], ['docs/secretrefs.md']]
 	},
 	{
-		name: 'channels',
-		matchers: ['src/routes/channels/', 'src/lib/channels/', 'src/lib/stores/channel-readiness.ts'],
-		requiredDocGroups: [['docs/End User/channels.md']]
-	},
-	{
-		name: 'agents',
-		matchers: ['src/routes/agents/', 'src/routes/api/agents/', 'src/lib/server/agents/'],
-		requiredDocGroups: [['docs/End User/agents.md']]
-	},
-	{
 		name: 'documents',
-		matchers: [
-			'src/routes/documents/',
-			'src/routes/api/files/',
-			'src/lib/stores/files.ts',
-			'src/lib/components/DocumentBrowser.svelte',
-			'src/lib/components/mobile/MobileDocumentBrowser.svelte'
-		],
+		matchers: ['plugin/documents/'],
 		requiredDocGroups: [['docs/End User/documents.md']]
 	},
 	{
-		name: 'jobs and OpenClaw cron',
+		name: 'native Control UI surface',
+		matchers: ['plugin/native/', 'plugin/ui.mjs'],
+		requiredDocGroups: [['docs/Technical/plugin-v4-native-ui.md']]
+	},
+	{
+		name: 'plugin registration, contracts and storage',
 		matchers: [
-			'src/routes/jobs/',
-			'src/lib/stores/cron.ts',
-			'src/lib/components/CronJobList.svelte',
-			'src/lib/components/CronJobForm.svelte',
-			'src/lib/components/mobile/MobileCronJobList.svelte'
+			'plugin/index.mjs',
+			'plugin/contract.mjs',
+			'plugin/compact-contract.mjs',
+			'plugin/authority.mjs',
+			'plugin/storage.mjs',
+			'openclaw.plugin.json'
 		],
-		requiredDocGroups: [['docs/End User/jobs.md']]
+		requiredDocGroups: [['docs/Technical/plugin-v4.md']]
 	},
 	{
-		name: 'heartbeat',
-		matchers: [
-			'src/routes/heartbeat/',
-			'src/lib/stores/heartbeat.ts',
-			'src/lib/components/HeartbeatPanel.svelte',
-			'src/lib/components/HeartbeatHistory.svelte'
-		],
-		requiredDocGroups: [['docs/End User/heartbeat.md']]
-	},
-	{
-		name: 'operations observer',
-		matchers: [
-			'src/routes/ops/',
-			'src/routes/api/ops/',
-			'src/lib/stores/ops.ts',
-			'src/lib/components/ops/'
-		],
-		requiredDocGroups: [['docs/End User/operations.md']]
-	},
-	{
-		name: 'canvas apps',
-		matchers: [
-			'src/routes/apps/',
-			'src/lib/canvas/',
-			'src/lib/stores/canvas.ts',
-			'src/lib/components/canvas/'
-		],
-		requiredDocGroups: [['docs/End User/apps.md'], ['docs/Technical/gateway-plugin.md']]
-	},
-	{
-		name: 'OpenClaw secret providers',
-		matchers: ['src/routes/secrets/', 'src/lib/stores/secrets.ts'],
-		requiredDocGroups: [['docs/End User/secrets.md'], ['docs/secretrefs.md']]
-	},
-	{
-		name: 'skills',
-		matchers: ['src/routes/skills/', 'src/lib/components/settings/SkillsTab.svelte'],
-		requiredDocGroups: [['docs/End User/skills.md']]
-	},
-	{
-		name: 'execution approvals',
-		matchers: [
-			'src/routes/approvals/',
-			'src/lib/stores/exec-approvals.ts',
-			'src/lib/components/settings/ExecApprovals.svelte'
-		],
-		requiredDocGroups: [['docs/End User/exec-approvals.md']]
-	},
-	{
-		name: 'settings and administrative surfaces',
-		matchers: [
-			'src/routes/settings/',
-			'src/lib/components/settings/',
-			'src/lib/components/mobile/MobileSettingsPage.svelte',
-			'src/lib/components/mobile/MobileSettingsHome.svelte',
-			'src/lib/components/mobile/settings/'
-		],
-		requiredDocGroups: [['docs/End User/settings.md']]
+		name: 'native browser acceptance',
+		matchers: ['e2e-native/', 'playwright.config.ts', 'playwright.native.config.ts'],
+		requiredDocGroups: [['docs/Technical/plugin-native-e2e.md']]
 	},
 	{
 		name: 'package and runtime deployment',
-		matchers: ['package.json', 'bin/falcon-dash.js', 'src/hooks.server.ts', '.github/workflows/'],
+		matchers: ['package.json', '.github/workflows/'],
 		requiredDocGroups: [['docs/Technical/deployment.md']]
 	}
 ];

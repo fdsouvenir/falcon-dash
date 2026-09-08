@@ -4,9 +4,17 @@ pnpm-lock.yaml
 yarn.lock
 
 # Build output
-.svelte-kit
 build
 dist
 node_modules
 coverage
-.stitch
+
+# Isolated validation artifacts
+artifacts
+
+# Generated dependency runtime
+plugin/schema.mjs
+plugin/typebox-license.txt
+
+# Agent temporary approval/inspection artifacts, not product sources
+.openclaw/tmp/

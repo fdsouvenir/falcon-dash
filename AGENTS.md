@@ -1,26 +1,31 @@
 # Falcon Dash Agent Guide
 
-Use this file as a router. Keep repo truths in `docs/`, reusable workflows in `skills/`, and
-verification in tests and scripts.
+Use this file as a router. Keep repo truths in `docs/` and verification in tests and scripts.
 
 `AGENTS.md` is the canonical agent guide. `CLAUDE.md` must remain a symlink to this file so every
 agent receives the same instructions.
 
 ## Start Here
 
-- Read [docs/PURPOSE.md](docs/PURPOSE.md) for product intent and audience.
-- Read [docs/ROADMAP.md](docs/ROADMAP.md) when a change affects version scope or future architecture.
+- Falcon Dash 4.0 is **one installable OpenClaw plugin** with internal Work, Integrations,
+  KeePassXC Vault and Documents modules. There is no standalone web application, no second runtime,
+  and no CLI.
+- 4.0 carries **no awareness of any prior version**: no migration, conversion, legacy detection or
+  compatibility code. Pre-4.0 data is handled out of band before installation.
+- Read [docs/Technical/plugin-v4-backend.md](docs/Technical/plugin-v4-backend.md) for the backend
+  contracts. Current issue bodies #326/#347/#363/#364/#365 govern scope.
+- Read [docs/PURPOSE.md](docs/PURPOSE.md) for product intent and audience. It is owner-protected and
+  still contains superseded standalone direction; issue bodies win.
+- Read [docs/ROADMAP.md](docs/ROADMAP.md) when a change affects release scope.
 - Read [docs/HARNESS.md](docs/HARNESS.md) for the repo-level execution and validation model.
 - Read the smallest technical doc that matches the task.
-- Load a skill only when the task matches that skill's scope.
 
 ## Product and Sources of Truth
 
-- Falcon Dash is a standalone, self-hostable operator dashboard that requires a co-resident
-  OpenClaw Gateway over loopback or a same-host container network. Remote gateways are outside the
-  supported product scope.
 - OpenClaw changes rapidly. For upstream behavior, consult the current official documentation at
   `docs.openclaw.ai`, its `llms-full.txt`, and the public `github.com/openclaw/openclaw` repository.
+- The Work domain contract is issue #363's **body**. Its comments are chronological history
+  including reversals; do not quote them as current.
 - Repository docs, code, and tests should agree. When they do not, investigate the discrepancy and
   reconcile them in the same change instead of silently treating either one as correct.
 
@@ -29,84 +34,79 @@ agent receives the same instructions.
 ### Product and UX intent
 
 - [docs/PURPOSE.md](docs/PURPOSE.md) — product purpose, audience, and design philosophy
-- [docs/ROADMAP.md](docs/ROADMAP.md) — current-versus-future version scope and post-v5 architecture
+- [docs/ROADMAP.md](docs/ROADMAP.md) — release scope and what OpenClaw now owns instead
 - [docs/End User/](docs/End%20User) — user-facing behavior by feature
 
 ### Architecture and implementation
 
-- [docs/Technical/architecture.md](docs/Technical/architecture.md) — system overview and request flow
-- [docs/Technical/components.md](docs/Technical/components.md) — Svelte 5 component conventions and shell layout
-- [docs/Technical/stores.md](docs/Technical/stores.md) — store architecture and event wiring
-- [docs/Technical/work-management.md](docs/Technical/work-management.md) — Work model, context generation, and API flow
-- [docs/Technical/gateway-protocol.md](docs/Technical/gateway-protocol.md) — gateway protocol integration
-- [docs/Technical/deployment.md](docs/Technical/deployment.md) — build, runtime, and deployment behavior
+- [docs/Technical/plugin-v4.md](docs/Technical/plugin-v4.md) — plugin runtime, scope and open gaps
+- [docs/Technical/plugin-v4-backend.md](docs/Technical/plugin-v4-backend.md) — Work, Vault,
+  Integrations and Documents backend contracts
+- [docs/Technical/plugin-v4-native-ui.md](docs/Technical/plugin-v4-native-ui.md) — native Control UI
+- [docs/Technical/plugin-v4-scope.md](docs/Technical/plugin-v4-scope.md) — acceptance map by issue
+- [docs/Technical/plugin-v4-installation.md](docs/Technical/plugin-v4-installation.md) — installed
+  artifacts and private Vault recovery
+- [docs/Technical/plugin-native-e2e.md](docs/Technical/plugin-native-e2e.md) — real-Gateway browser
+  acceptance
+- [docs/Technical/deployment.md](docs/Technical/deployment.md) — build, runtime, and release
+- [docs/secretrefs.md](docs/secretrefs.md) — KeePassXC vault as a SecretRef provider
 
 ### Repo operating rules
 
-- [docs/CONTRIBUTING-HARNESS.md](docs/CONTRIBUTING-HARNESS.md) — how to satisfy harness, docs, and skill checks
+- [docs/CONTRIBUTING-HARNESS.md](docs/CONTRIBUTING-HARNESS.md) — how to satisfy harness and doc checks
 - [docs/HARNESS-LOOP.md](docs/HARNESS-LOOP.md) — recursive local work loop and artifacts
-- [docs/CONSOLE-SWEEP.md](docs/CONSOLE-SWEEP.md) — route-based browser console sweep
-- [docs/FRONTEND.md](docs/FRONTEND.md) — Falcon Dash frontend constraints and design patterns
 - [docs/QUALITY.md](docs/QUALITY.md) — required validation levels and rerun paths
 - [docs/RELIABILITY.md](docs/RELIABILITY.md) — state, realtime, and failure-mode expectations
 - [docs/PLANS.md](docs/PLANS.md) — how to write and maintain execution plans in this repo
 - [docs/OWNERSHIP.md](docs/OWNERSHIP.md) — which docs should usually move with which code areas
 - [docs/LEARNINGS.md](docs/LEARNINGS.md) — durable lessons that span the product roadmap
 
-### Packaged runtime skills
-
-- [skills/falcon-dash/SKILL.md](skills/falcon-dash/SKILL.md) — always-on OpenClaw agent orientation
-- [skills/falcon-dash-work/SKILL.md](skills/falcon-dash-work/SKILL.md) — current v3 Work CLI and API workflow
-- [skills/falcon-dash-vault/SKILL.md](skills/falcon-dash-vault/SKILL.md) — built-in Vault and SecretRef workflow
-
-These skills ship to OpenClaw agents. Repo-development workflows belong in this guide and `docs/`,
-or in environment-provided skills such as Stitch; do not add developer-only skills to `skills/`.
-
 ## Project Structure
 
-- `src/routes/` — SvelteKit pages and API handlers
-- `src/lib/components/` — shared UI components
-- `src/lib/stores/` — client state and feature stores
-- `src/lib/server/` — server-only logic
-- `src/lib/channels/` — channel setup helpers
-- `src/lib/canvas/` — canvas-related code
-- `e2e/` — Playwright coverage
+- `plugin/index.mjs` — the single OpenClaw plugin entry
+- `plugin/work/` — Work domain store, projections, contracts and agent context
+- `plugin/integrations/` — provider adapters, OAuth and connection lifecycle
+- `plugin/vault/` — KeePassXC worker, service, SecretRef resolution and recovery
+- `plugin/documents/` — workspace file browser and durable trash
+- `plugin/native/` — native Control UI, its stylesheet and fonts
+- `plugin/tests/` — Node test-runner suites for all of the above
+- `bin/keepassxc-secret-resolver.cjs` — exec SecretRef provider; an installed OpenClaw config may
+  point at this path, so do not move or delete it without updating that config
+- `e2e-native/` — Playwright acceptance against a real isolated Gateway
+- `scripts/` — build, validation and isolated-proof harnesses
 - `docs/` — system-of-record docs
-- `skills/` — reusable agent workflows
 
 ## Commands
 
-Use Node 20+.
+Use Node 22.16+. `npm run build` runs automatically before `check`, `test` and the e2e harnesses.
 
-- `npm install` — install dependencies and repo skills
-- `npm run dev` — start the local Vite dev server
-- `npm run build` — create the production build in `build/`
-- `npm run preview` — serve the built app locally
-- `npm run check` — run Svelte and TypeScript checks
+- `npm install` — install dependencies
+- `npm run build` — bundle the schema dependency, validate plugin JavaScript, build the native UI
+- `npm run check` — check plugin JavaScript against the pinned SDK types
 - `npm run lint` — run ESLint
-- `npm run format` — apply Prettier
-- `npm run format:check` — verify Prettier formatting
-- `npm run test` — run Vitest unit tests
-- `npm run test:coverage` — run unit tests with coverage
-- `npm run test:e2e` — run Playwright tests
+- `npm run format` / `npm run format:check` — apply or verify Prettier
+- `npm run test` — run plugin and security tests
+- `npm run test:coverage` — run plugin tests with Node coverage
+- `npm run test:e2e` — real-Gateway native browser acceptance
+- `npm run test:managed-runtime` — isolated managed-install and SecretRef proof
 - `npm run check:harness` — verify the harness doc map
 - `npm run check:docs` — verify high-signal code changes touched matching docs
-- `npm run check:skills` — verify repo-local skills are structurally valid
 - `npm run agent:loop -- <mode>` — run recursive local checks and write artifacts
-- `npm run console:sweep` — scan offline-safe routes for browser console issues
+
+Local development needs the OpenClaw SDK resolvable as `node_modules/openclaw`. It is an optional
+peer dependency, so install or link the pinned version explicitly; CI does this in `ci.yml`.
 
 ## Coding Rules
 
-- Follow strict TypeScript, ESLint, and Prettier.
+- Plugin code is JavaScript ESM (`.mjs`) checked with `tsc --checkJs` against the pinned SDK types.
 - Use tabs, single quotes, no trailing commas, and `printWidth` 100.
-- Use `PascalCase` for Svelte components and `camelCase` for functions and stores.
-- Keep route handlers in `+server.ts` and route components in `+page.svelte`.
+- Use `camelCase` for functions and stores.
 - Prefer `rg` for file and text search.
 
 ## Testing Rules
 
-- Prefer unit tests for stores, utilities, and server logic.
-- Use Playwright for routing, auth, gateway, and cross-surface flows.
+- Prefer Node test-runner unit tests for the store, services, projections and contracts.
+- Use Playwright for native UI, gateway, and cross-surface flows.
 - When full automation is not practical, leave explicit manual rerun steps.
 - Do not say "tested manually" without route, setup, action, and expected result.
 

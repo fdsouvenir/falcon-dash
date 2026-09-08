@@ -5,6 +5,64 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-09-07
+
+Falcon Dash is now **one installable OpenClaw plugin**. There is no standalone web application, no
+second runtime, and no CLI.
+
+### Changed
+
+- **Everything ships inside OpenClaw.** Work, Integrations, KeePassXC Vault and Documents are
+  internal modules of a single plugin rendering in the Control UI through native feature-plugin
+  pages, not a separate site on its own port.
+- **The Work domain is reconciled to [#363](https://github.com/fdsouvenir/falcon-dash/issues/363).**
+  Task lifecycle is `open | ready | in_progress | waiting | completed | abandoned`; `cancelled`
+  becomes reversible `abandoned` and `in_review` is gone. A Task's definition splits into title,
+  description and `done_when`, stored as immutable revisions, with Plans and Results pinned to the
+  exact definition revision they were written against.
+- **Completion requires a Result that pins the current Definition**, so a Task cannot close against
+  a result written for a goal that has since changed.
+- **Blocked is derived, not declared** — computed from unresolved dependencies, pending Asks,
+  unanswered Questions and active waits. Dependencies warn rather than veto: Falcon Dash never
+  claims to control runtime permission, which stays with OpenClaw's approvals.
+
+### Removed
+
+- **All prior-version awareness.** No migration, conversion, legacy detection or compatibility
+  code. 4.0 installs onto a machine with no earlier Falcon Dash present; pre-4.0 data is handled
+  out of band.
+- **The standalone SvelteKit application** and its entire dependency tree — 381 source files, the
+  `falcon` and `falcon-dash` CLIs, and 42 development dependencies.
+- **Channels, Shell, Labs, Apps, Jobs, Ops and Heartbeat.** OpenClaw natively owns channel
+  onboarding, agents, approvals, skills, automations and canvas apps.
+- **Phase, Review, standalone Change Request and Blocker** as Work types. A review is an ordinary
+  Task pointing at the artifact revision it reviews; change control is a revisioned boundary
+  carried on a Task.
+- Project archive state, the Project Plan artifact, and the canonical current-next pointer.
+
+### Validation
+
+- 127 plugin unit tests
+- 30 real-Gateway Chromium acceptance cases at desktop and narrow widths
+- An isolated managed-install proof covering SecretRef resolution, disable/remove denial and
+  vault-lock denial, with no secret leakage
+- A published package containing only `plugin/`, `dist/control-ui/`, the manifest, the build script
+  and the plugin technical docs
+
+### Upgrade notes
+
+There is no upgrade path, by design. Export and delete any pre-4.0 Work database before installing;
+the KeePassXC vault carries over as an existing file and is opened as-is, never converted or
+adopted automatically. Requires OpenClaw 2026.8.1 or later, Node 22.16+, Linux, `keepassxc-cli` and
+`flock`.
+
+### Not included
+
+The coordination agent and the four Work contract changes that serve it are 4.1
+([#367](https://github.com/fdsouvenir/falcon-dash/issues/367)). Provider adapters are exercised
+against fixtures rather than live vendor consent, native UI opt-in has been enabled only in
+synthetic runtimes, and no packaged Vault skill ships.
+
 ## [3.0.0] - 2026-07-23
 
 ### Added
