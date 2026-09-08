@@ -1,14 +1,18 @@
-# Single-plugin implementation preview
+# The single plugin: runtime and scope
 
-**Current readiness:** [issue-by-issue implemented and missing scope](plugin-v4-scope.md). No full-v4 readiness is implied by the passing browser matrix.
+**Status: 4.0 is released.** Every gate passes at the release commit — unit tests, real-Gateway
+Chromium acceptance at desktop and narrow widths, the isolated managed-install and SecretRef proof,
+and a package containing only the plugin.
 
-**Backend continuation:** [current implementation and remaining audits](plugin-v4-backend.md) supersedes the initial checkpoint status below. Native UI is approved; [current native implementation and acceptance](plugin-v4-native-ui.md) supersedes the historical read-only preview below.
+**What is not in 4.0:** the coordination agent and the four Work contract changes that serve it are
+[4.1](../ROADMAP.md). Live provider consent, production native-UI opt-in and a packaged Vault skill
+remain outside this release; see [the acceptance map](plugin-v4-scope.md).
 
-**Status: incomplete, not release-ready.** Branch `feat/falcon-plugin-v4` implements an isolated
-engineering checkpoint for [#364](https://github.com/fdsouvenir/falcon-dash/issues/364), not the
-completed next major version. Current issue bodies #326, #329, #330, #345, #347, #360, #361, #363
-and #365 govern the target. `PURPOSE.md` remains owner-protected and knowingly describes the
-superseded standalone direction.
+**Scope authority:** [issue-by-issue map](plugin-v4-scope.md), with
+[backend contracts](plugin-v4-backend.md) and
+[native UI acceptance](plugin-v4-native-ui.md) as the current implementation record. Issue bodies
+#326, #329, #330, #345, #347, #360, #361, #363 and #365 govern. `PURPOSE.md` remains
+owner-protected and knowingly describes the superseded standalone direction.
 
 ## Actual package and runtime
 
@@ -23,7 +27,7 @@ application were deleted; Git history retains them.
 which is the only runtime here. There is no production cutover.
 Development dependencies are not runtime plugin dependencies. OpenClaw is an exact optional peer
 at **2026.9.2**; Node **22.16+**, Linux `/proc/self/fd`, `flock`, and KeePassXC CLI are prerequisites.
-This Linux-only preview must not be advertised as portable or broadly version-compatible.
+This Linux-only release must not be advertised as portable or broadly version-compatible.
 
 ## Historical iframe limitation (superseded by approved native UI)
 

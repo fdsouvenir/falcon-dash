@@ -4,12 +4,11 @@ Current authority: [#364](https://github.com/fdsouvenir/falcon-dash/issues/364),
 [#365](https://github.com/fdsouvenir/falcon-dash/issues/365),
 [#347](https://github.com/fdsouvenir/falcon-dash/issues/347) and
 [#363](https://github.com/fdsouvenir/falcon-dash/issues/363). Issue bodies, not superseded comments,
-remain specifications. Exact-head test/rendered evidence is tracked in
-[draft PR #366](https://github.com/fdsouvenir/falcon-dash/pull/366).
+remain specifications.
 
-Native UI approval is resolved. The single installable candidate is not a production cutover,
-publication or blanket security certification. Original source issues remain open for final
-review and the genuinely external decisions below.
+Native UI approval is resolved and 4.0 is released. Release is not a blanket security
+certification: the boundaries below are what the evidence actually covers. The coordination agent
+and its four Work contract changes are [4.1](../ROADMAP.md).
 
 ## Implemented acceptance
 

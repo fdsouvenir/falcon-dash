@@ -27,6 +27,26 @@ The domain contract is issue
 comments are chronological history including reversals. The implementation overview lives in
 [Technical/plugin-v4-backend.md](Technical/plugin-v4-backend.md).
 
+## Next: 4.1 — the coordination agent
+
+4.0 records Work faithfully. It cannot notice that nothing has happened. 4.1 adds a locked gateway
+agent whose entire job is to **escalate, follow up and mediate**, specified in
+[Technical/coordination-agent.md](Technical/coordination-agent.md) and tracked in
+[#367](https://github.com/fdsouvenir/falcon-dash/issues/367).
+
+Detection is deterministic plugin code producing a findings list; the agent runs on a cheap model
+and only writes the messages. It changes coordination state and never domain content.
+
+Four Work contract changes ship with it, because each exists to serve it:
+
+- **Accountable human** on Project, with an Area default and the gateway owner as fallback — 4.1
+  needs a named escalation target, since a multiplayer gateway has no single "operator".
+- **Required typed waiting references.** The `waiting_ref` type already exists in 4.0 but is
+  optional; the sweep cannot chase a wait that names nothing.
+- **Required evidence on Results.** A completion claim with no source becomes a sweep finding.
+- **Computed lifecycle explanation** — why an object is where it is, from typed causes. Same
+  projection machinery as the findings list.
+
 ## What OpenClaw owns instead
 
 The pre-4.0 roadmap sequenced Integrations, then contextual conversations, then a dedicated mobile

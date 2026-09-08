@@ -1,131 +1,96 @@
-> **Being rewritten for 4.0.** Work now lives in the plugin's native Control UI, and issue #363
-> retires Phase, Review, standalone Change Request and Blocker as objects. Sections below that
-> describe standalone routes or retired object types are stale. See
-> [current backend status](../Technical/plugin-v4-backend.md) for the implemented contract.
-
 # Work
 
-Work is Falcon Dash's shared dashboard and the agent-facing source of truth.
+Work is Falcon Dash's shared record of what is being done, by people and agents together. It lives
+inside the OpenClaw Control UI as one of the Falcon Dash pages — there is no separate application
+and no separate address to visit.
 
-Use `/work` to see what needs a human call, what is at risk, what the agent can act on, what is
-waiting, and which governance or automation states need attention. Falcon Dash opens to Work by
-default; `/` redirects to `/work`.
+Creation is agent-driven. Work has no generic "new item" form: agents create and update objects
+through typed semantic commands, and the UI is where you read, steer and answer.
 
-## Destinations
+## The objects
 
-The Work shell keeps five destinations available on every Work page:
+Seven types, and no others:
 
-- **Work** — the overview inbox: what needs your call, what is at risk, what is in motion, and recent activity.
-- **Projects** — the portfolio and each Project's outcome, milestones, current work, and history.
-- **Needs Resolution** — Questions, Decisions, Reviews, and Authorizations requiring a human.
-- **Automations** — live OpenClaw automation configuration, health, scheduling, and Run history.
-- **Browse** — search and filters across existing Work and knowledge objects.
+| Type          | What it is                                                              |
+| ------------- | ----------------------------------------------------------------------- |
+| **Project**   | An outcome. Its completion is derived from its Work, never set by hand. |
+| **Milestone** | A checkpoint inside a Project, with an explicit success condition.      |
+| **Task**      | A unit of work with a title, description and `done_when`.               |
+| **Question**  | Something that needs answering, with who can answer it.                 |
+| **Decision**  | A choice between recorded options, with deciders and a recommendation.  |
+| **Finding**   | Something learned, with a conclusion, confidence and sources.           |
+| **Area**      | A long-lived area of responsibility that Projects and Tasks belong to.  |
 
-Creation is agent-driven. Browse does not provide generic create forms. Adding an ordered
-Milestone from an existing Project is the limited exception. Work v3 does not include an
-in-product agent composer.
+Phase, Review, standalone Change Request and Blocker are **not** Work types. A review is an ordinary
+Task pointing at the exact artifact revision it reviews. Change control is a boundary carried _on_ a
+Task — scope, risk, rollback, acceptance — rather than an object with its own lifecycle. Blocked is
+not a status anyone sets; see below.
 
-## Work overview
+## Task lifecycle
 
-The signal strip answers four questions: what needs your call, what is at risk, what is due next,
-and what changed recently. Each total links to its detailed section and shows the mix of Work
-types.
+`open` → `ready` → `in_progress` → `completed`, with `waiting` alongside and `abandoned` as a
+reversible exit.
 
-Below it, "Due next" groups dated work into Today (including anything overdue, in red), This week,
-Next week, and Later. Two grouped panels follow: "Needs your call" (decisions, questions, review
-outputs, plan reviews, and change gates — Review stays separate from Authorization and
-Verification) and "At risk and waiting" (blocked work, unhealthy automations, reconciliation,
-external and agent waits, and what the agent is working on). Every empty group gives a definitive
-state, and bounded groups link onward for the remaining items.
+- **Starting requires accountable assignment.** An agent either has the Task assigned or explicitly
+  claims it. Nothing runs anonymously.
+- **Waiting records what it waits on** — a typed reference to an agent, a session, another Work
+  object or something external — plus a sentence explaining it and the condition to resume.
+- **Abandoned is reversible.** Resume it and carry on; the abandonment stays in the history.
+- **Completion needs a Result**, and that Result must pin the Task's current Definition. If the goal
+  changed after the result was written, completion is refused rather than silently accepted.
 
-The overview refreshes its queue after Work events while the page is open. If the live stream is
-temporarily unavailable, the current page remains usable and a normal navigation or reload gets the
-latest state.
+## Blocked is derived, not declared
 
-## Portfolio and Browse
+Nothing sets a Task to "blocked". Blocked is _computed_ from real causes: an unresolved dependency,
+a pending Ask, an unanswered Question, or an active wait. When the cause clears, so does the block.
 
-Projects opens directly on a compact control strip and dense portfolio list. A status selector
-sits beside counted focus filters for blocked, at-risk, overdue, needs-next, and stale outcomes.
-Needs-next applies only to active Projects. Attention-worthy Projects sort first, and each row uses
-reader-supplied health, next-work, progress, target, and summary facts. Selecting a focus writes the
-choice to `?focus=` so the view is linkable and reload-safe.
+Dependencies **warn rather than veto**. Falcon Dash records that Task B depends on Task A and says
+so loudly, but it does not pretend to control what an agent's tools can actually do. Real runtime
+permission stays with OpenClaw's approvals.
 
-Browse is an inspection surface, not a creation surface. Type tabs cover Tasks, Questions,
-Decisions, Changes, Projects, Findings, and Areas. Types with an operator focus taxonomy show
-counted focus chips: Task timing/actionability, Project health and motion, Change Authorization/
-Verification/failure, and Finding validity. Full-text matches highlight the indexed snippet.
-Terminal and archived rows remain available in a collapsed section, and unsupported search input is
-shown as an explicit error.
+## Definitions, Plans and Results
 
-Needs Resolution keeps Questions, Decisions, Reviews, and Authorizations in four separate sections.
-Rows expand in place to expose semantic actions without losing queue context. A Review records an
-evaluation of an exact submitted revision; an Authorization grants exact-scope permission and is
-never implied by Review. The page loads the complete set of Change Requests needing Authorization,
-with authority-ready Plans first, instead of applying the bounded overview-queue row limit.
+A Task's Definition — title, description, `done_when` — is stored as an immutable revision. Editing
+it creates a new revision; the Task points at the current one.
 
-## Object Pages
+Plans and Results are likewise immutable revisions owned by the Task, and each pins the exact
+Definition revision it was written against. That is what makes staleness visible: if someone revises
+the goal and leaves the plan behind, the mismatch is a fact in the record rather than something you
+have to notice.
 
-Each Work type has a distinct detail experience rather than a generic record card:
+## Asks
 
-- Tasks show their definition, completion condition, result, operating context, blockers, waiting
-  state, legal lifecycle commands, and command timeline.
-- Questions lead with the prompt and impact, section long context into a scannable brief, and keep
-  the authoritative answer, confidence, revisions, and sources together.
-- Decisions present stakes, consequence of delay, options, recommendation, deciders, and
-  supersession lineage before asking for one radio-card selection and rationale. A recommendation
-  is labeled but does not choose itself.
-- Change Requests show execution, verification, and Authorization in one compact state strip. Reviews are
-  evaluations; they are never presented as permission to execute. A guarded execution control
-  remains visible and explains which Authorization state prevents it.
-- Findings show conclusion, significance, confidence, validity, sources, and supersession. A
-  source that cannot be resolved stays visible with its unavailable reason.
-- Projects lead with the outcome, plain-language status, visible progress, and contextual actions.
-  A prominent **Next up** area shows the move the agent is advancing, or explains when one still
-  needs to be chosen. Open Questions and Decisions are pulled into **Needs your input** so the
-  person can unblock the Project without reading the whole work list. The main Work area presents
-  each ordered Milestone as a friendly progress group with its finish condition and date-ordered
-  Tasks, Questions, Decisions, and Changes. Work without a Milestone remains in the same Work area
-  and is never labeled "unassigned." The finish line and a plain-language Project summary stay
-  visible beside the Work. Recent activity is readable at a glance; older history, detailed scope,
-  internal references, and "How we know" sources remain available through disclosure.
-- Automations operate on the same OpenClaw-backed object and show runtime unavailability as a health
-  error, not as a fake lifecycle state. The inventory distinguishes lifecycle from health. Detail
-  pages read native Run history through from OpenClaw, keep Falcon lifecycle history separate, and
-  restore a deleted snapshot as a new paused runtime object.
+When an agent needs something from a person or another agent before it can proceed, it raises an
+**Ask** against the object. The Ask names what it needs and which command it intends to run. When
+answered, the agent resubmits that exact command with the resolved Ask, and the Ask closes.
 
-## Semantic Actions
+An open Ask makes its subject blocked, which is why nothing needs a separate "waiting on approval"
+state.
 
-Buttons issue semantic Work commands; they do not patch fields or write lifecycle state directly.
-The action form is generated from the shared command contract, so required fields and optional
-fields stay consistent with the CLI and API.
+## Reading Work in the UI
 
-Consequential actions require confirmation. When a command is present but unavailable, the page
-explains the unmet guard. If an object changes while a form is open, Falcon Dash preserves the
-entered values, reports the current version, and offers a refresh-and-reapply path.
+- **Work** — the queue: what needs a person, what is in motion, what is waiting.
+- **Projects** — the portfolio, and each Project's milestones, current work and history.
+- **Browse** — search and filters across every object type.
+- **Needs attention** — objects with an open Ask, an unresolved dependency, or a stale artifact.
+- **History** — the full event log for an object, paginated.
 
-On a small screen, semantic actions collapse into a sticky action bar above the Falcon navigation.
-Opening it presents one selected command form in a bottom sheet; other legal or guarded commands
-remain available as touch-sized choices without filling the object page with forms.
+Every object detail shows its canonical record, its artifacts and its history. Long content is
+truncated in lists and recoverable in full on the object itself. The view refreshes after Work
+events while it is open; if the live stream drops, the page stays usable and a reload catches up.
 
-The history timeline records the actor, event, version transition, and sources across the Project,
-its assigned Work, Plans, Reviews, Authorizations, structure, and proof links. Evidence is visible
-on every source-bearing event; authority-creating acts are called out with their claimed human
-authority source. When Work moves between Projects, each ledger keeps only the events from the
-periods when that Work belonged to it, including the incoming and outgoing assignment boundaries.
-Pending assignment boundaries take effect immediately even while Event Log transfer is catching
-up.
+Markdown in Work content is rendered but never trusted — embedded markup is contained rather than
+executed.
 
-Project pages are the only Work pages with a creation control. It adds an ordered Milestone within
-the current Project; it does not create generic Work. Milestone lifecycle controls stay attached
-to the checkpoint they govern, and achievement requests source references. Archiving a Project
-freezes these controls until the Project is restored.
+## What Work does not do
 
-## Agent Contract
+- It does not schedule anything. OpenClaw owns automations; an automation that needs to produce Work
+  creates an ordinary Task when it fires.
+- It does not enforce runtime permissions. It records intent and authorization; OpenClaw's exec
+  approvals are the actual gate.
+- It has no tags. Areas and Projects are the classification.
 
-Agents use the plugin's registered Work tools, its typed feature operations, and the bounded
-session context injected by the `before_prompt_build` hook. There is no HTTP API or CLI of its
-own. Work objects are referenced by their type and ID, such as `Task t28` or `Project p4`.
+## Related
 
-Falcon Dash maintains the authoritative structured state. Clients may format, group, filter, and
-link reader projections, but they must not infer lifecycle, health, actionability, Authorization
-effectiveness, or reconciliation state that the server has not supplied.
+- [Work backend contracts](../Technical/plugin-v4-backend.md)
+- [Native Control UI](../Technical/plugin-v4-native-ui.md)

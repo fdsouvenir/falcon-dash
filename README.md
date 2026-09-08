@@ -2,10 +2,9 @@
 
 **One OpenClaw plugin with Work, Integrations, KeePassXC Vault and Documents.**
 
-> This branch is an **incomplete engineering preview**, not a production release. Do not replace a
-> live installation or supply real credentials based on these test results. Implementation is
-> tracked in [#364](https://github.com/fdsouvenir/falcon-dash/issues/364) and
-> [draft PR #366](https://github.com/fdsouvenir/falcon-dash/pull/366).
+> **4.0 carries no awareness of any prior Falcon Dash version** — no migration, conversion or
+> legacy detection. It installs onto a machine with no earlier Falcon Dash present; pre-4.0 data is
+> handled out of band. See [Clean installation](docs/Technical/plugin-v4.md#clean-installation-no-cutover).
 
 OpenClaw owns the shell, chat, agents, sessions, runtime approvals and Automations. Falcon Dash
 adds its Work domain and credential/integration/document capabilities inside that host. It does
@@ -72,23 +71,28 @@ Never let an experimental binary open an operator's normal OpenClaw state.
 fixture. It requires the pinned OpenClaw entry and prepared isolated root as explicit positional
 arguments. It does not activate native UI, send channel messages, or use real provider credentials.
 
-## Not a release or cutover
+## What 4.0 does not include
 
-Remaining gates are the explicitly unsettled #363 domain decisions, current packaged skill
-authoring, real provider/application consent and dataset-specific identity/disposition review.
-Work read/history/Ask workflows, Vault management and private recovery,
-connection explanations/audit/rebinding/Work attention, durable Documents trash, and release
-guards are now implemented. See the [acceptance map](docs/Technical/plugin-v4-scope.md)
-and [installed-artifact/recovery guide](docs/Technical/plugin-v4-installation.md). No full-product
-or production readiness is inferred from a bounded browser matrix.
-The current supported provider-request fixture is not proof for every OpenClaw harness/provider.
+Work read/history/Ask workflows, Vault management and private recovery, connection
+explanations/audit/rebinding/Work attention, durable Documents trash, and the release guards are
+implemented and verified. What is not in 4.0:
 
-4.0 carries no awareness of any prior Falcon Dash version — no migration, conversion or legacy
-detection code. [Clean installation](docs/Technical/plugin-v4.md#clean-installation-no-cutover)
-describes what that means. No merge, publication or production restart is part of this preview.
+- **The coordination agent is 4.1** — [#367](https://github.com/fdsouvenir/falcon-dash/issues/367).
+  4.0 records Work faithfully but cannot notice that nothing has happened. Four Work contract
+  changes ship with it; see [the roadmap](docs/ROADMAP.md).
+- **No live provider proof.** Adapters are exercised against fixtures. Real application credentials
+  and vendor consent are separately authorized, and mocked tests are never reported as live
+  authentication.
+- **Native UI opt-in has only been enabled in synthetic runtimes.** Production
+  `gateway.controlUi.experimental.customPlugins` and its restart remain an operator step.
+- **No packaged Vault skill.** The pre-4.0 one targeted retired paths and was removed.
 
-`docs/PURPOSE.md` is owner-protected and still contains the superseded standalone direction. It
-has not been changed; current issue bodies govern this conversion.
+The browser matrix is Chromium desktop and narrow. It is not every browser, arbitrary zoom, or a
+pixel recreation of the old standalone shell. See the
+[acceptance map](docs/Technical/plugin-v4-scope.md).
+
+`docs/PURPOSE.md` is owner-protected and still contains the superseded standalone direction. It has
+not been changed; current issue bodies govern.
 
 ## Contributing and security
 
