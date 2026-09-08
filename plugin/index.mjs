@@ -15,6 +15,11 @@ import { tools, buildContract } from './contract.mjs';
 import { render } from './ui.mjs';
 import { protectedVault } from './vault/native.mjs';
 
+// Shared across every registration of this plugin in one process, including registrations the
+// host creates with activation disabled. Registered by symbol so a re-evaluated module still
+// resolves the same running service.
+const RUNTIME = Symbol.for('falcon-dash.runtime');
+
 export default definePluginEntry({
 	id: 'falcon-dash',
 	name: 'Falcon Dash',
@@ -33,7 +38,16 @@ export default definePluginEntry({
 			integrations,
 			oauth,
 			started = false;
-		const ready = () => requireValue(started, 'unavailable', 'Falcon Dash service is not running');
+		// The host loads a plugin more than once. Tool registries load with activation disabled, so
+		// that registration never runs a service and its own closure state stays empty. Publish the
+		// started modules on a process-global so every registration in this process serves the one
+		// live instance instead of a dead copy. Absent global means no service here: still fail closed.
+		const modules = () =>
+			started
+				? { work, documents, vault, integrations }
+				: /** @type {any} */ (globalThis[RUNTIME] ?? null);
+		const ready = () =>
+			requireValue(!!modules(), 'unavailable', 'Falcon Dash service is not running');
 		async function invoke(name, p, actor, guard = internalAuthority) {
 			const original = guard;
 			guard = {
@@ -45,6 +59,7 @@ export default definePluginEntry({
 			};
 			guard.assert();
 			ready();
+			const live = modules();
 			exact(p, Object.keys(tools[name].parameters.properties));
 			if (name === 'falcon_work') {
 				if (p.action === 'list') {
@@ -58,40 +73,40 @@ export default definePluginEntry({
 							'fields',
 							'include_terminal'
 						]);
-					return work.list(p.query);
+					return live.work.list(p.query);
 				}
-				if (p.action === 'get') return work.detail(p.id, p.full === true);
-				if (p.action === 'queue' || p.action === 'brief') return work.queue(p.query);
-				if (p.action === 'history') return work.history(p.id, p.query);
-				if (p.action === 'related') return work.related(p.id, p.collection, p.query);
+				if (p.action === 'get') return live.work.detail(p.id, p.full === true);
+				if (p.action === 'queue' || p.action === 'brief') return live.work.queue(p.query);
+				if (p.action === 'history') return live.work.history(p.id, p.query);
+				if (p.action === 'related') return live.work.related(p.id, p.collection, p.query);
 				if (p.action === 'command') {
 					requireValue(actor, 'identity_required', 'A verified actor is required');
-					return work.execute(p.request, actor);
+					return live.work.execute(p.request, actor);
 				}
 			}
 			if (name === 'falcon_integrations') {
 				requireValue(actor, 'identity_required', 'A verified actor is required');
-				if (p.action === 'history') return integrations.history(p.id, actor, p.query);
+				if (p.action === 'history') return live.integrations.history(p.id, actor, p.query);
 				return p.action === 'list'
-					? { connections: integrations.list(actor) }
-					: integrations.run(p.id, p.action, actor, guard);
+					? { connections: live.integrations.list(actor) }
+					: live.integrations.run(p.id, p.action, actor, guard);
 			}
 			if (name === 'falcon_vault') {
 				if (p.action === 'status')
 					return {
-						locked: vault.locked,
+						locked: live.vault.locked,
 						protected_ui: 'native',
-						epoch: vault.generation,
-						can_manage: vault.owners.has(actor)
+						epoch: live.vault.generation,
+						can_manage: live.vault.owners.has(actor)
 					};
-				if (p.action === 'metadata') return vault.metadata(p.id, actor, guard);
+				if (p.action === 'metadata') return live.vault.metadata(p.id, actor, guard);
 				requireValue(p.action === 'inventory', 'invalid_command', 'Unsupported Vault operation');
-				return vault.inventory(actor, '', guard);
+				return live.vault.inventory(actor, '', guard);
 			}
 			if (name === 'falcon_documents') {
 				requireValue(actor, 'identity_required', 'A verified workspace actor is required');
-				if (p.action === 'roots') return documents.rootsFor(actor);
-				if (p.action === 'copy_path') return documents.copyPath(p, actor);
+				if (p.action === 'roots') return live.documents.rootsFor(actor);
+				if (p.action === 'copy_path') return live.documents.copyPath(p, actor);
 				requireValue(
 					[
 						'list',
@@ -109,7 +124,7 @@ export default definePluginEntry({
 					'Unsupported Documents operation'
 				);
 				guard.assert();
-				return documents[p.action](p, actor, guard);
+				return live.documents[p.action](p, actor, guard);
 			}
 			throw new DomainError('invalid_command', 'Unsupported operation');
 		}
@@ -161,7 +176,9 @@ export default definePluginEntry({
 						oauth = new HighLevelOAuth(integrations, { redirectUris: config.oauthRedirectUris });
 					if (integrations) integrations.start('service:falcon-integrations');
 					started = true;
+					/** @type {any} */ (globalThis)[RUNTIME] = { work, documents, vault, integrations };
 				} catch (error) {
+					delete (/** @type {any} */ (globalThis)[RUNTIME]);
 					documents?.close();
 					await integrations?.close();
 					work?.close();
@@ -172,6 +189,7 @@ export default definePluginEntry({
 			},
 			async stop() {
 				started = false;
+				delete (/** @type {any} */ (globalThis)[RUNTIME]);
 				documents?.close();
 				await vault?.lock();
 				await integrations?.close();

@@ -130,3 +130,57 @@ test('Gateway keeps original authority through awaited document preparation', as
 	assert.equal(response[0], false);
 	assert.equal(fs.existsSync(workspace + '/note.md'), false);
 });
+
+test('Tools registered by a load with no service still serve the running one', async (t) => {
+	const fs = await import('node:fs'),
+		{ tmpdir } = await import('node:os');
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-tool-load-');
+	const settings = { dataDir: directory + '/data', modules: { vault: false, integrations: false } };
+	const activated = register(settings);
+	await activated.services[0].start({ stateDir: directory + '/state' });
+	t.after(async () => {
+		await activated.services[0].stop();
+		fs.rmSync(directory, { recursive: true });
+	});
+	// The host builds tool registries with activation disabled, so this registration never runs a
+	// service. Its tools must still reach the one live instance rather than a dead closure.
+	const toolOnly = register(settings);
+	assert.equal(toolOnly.services.length, 2);
+	const workTool = toolOnly.tools.find(([f]) => f({}).name === 'falcon_work')[0]({
+		agentId: 'coordinator'
+	});
+	const read = await workTool.execute('read', { action: 'queue' });
+	assert.ok(!read.isError, JSON.stringify(read.details));
+	assert.ok(read.details.buckets);
+	const written = await workTool.execute('write', {
+		action: 'command',
+		request: {
+			command: 'create',
+			idempotency_key: 'tool-load-1',
+			input: {
+				type: 'task',
+				title: 'Reached the running service',
+				description: 'Created through a tool registered by a load that never started a service.',
+				done_when: 'The event log attributes this creation to the calling agent.'
+			}
+		}
+	});
+	assert.ok(!written.isError, JSON.stringify(written.details));
+	// The agent identity must survive the hand-off; a shared runtime must not relabel the actor.
+	const history = await workTool.execute('history', {
+		action: 'history',
+		id: written.details.target
+	});
+	assert.ok(
+		history.details.items.some((entry) => entry.actor === 'agent:coordinator'),
+		JSON.stringify(history.details.items)
+	);
+});
+
+test('Tool loads fail closed once no service is running in this process', async () => {
+	const c = register({ modules: { vault: false, integrations: false } });
+	const workTool = c.tools.find(([f]) => f({}).name === 'falcon_work')[0]({ agentId: 'orphan' });
+	const result = await workTool.execute('read', { action: 'queue' });
+	assert.ok(result.isError);
+	assert.equal(result.details.code, 'unavailable');
+});
