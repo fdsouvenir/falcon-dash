@@ -23,6 +23,10 @@ Shell, Labs, Apps, Jobs, Ops, Heartbeat, channel transport, standalone server, o
 OpenClaw runtime data exists anywhere in this repo. Those modules and the standalone Svelte
 application were deleted; Git history retains them.
 
+The generated domain contract carries the release version so an agent can tell which contract it is
+holding. That version is a literal in `plugin/contract.mjs`, not read from `package.json`; see
+[versioning](deployment.md#versioning) for the four files that move together.
+
 `npm run build`, `npm run check`, and `npm test` target the directly executable JavaScript plugin,
 which is the only runtime here. There is no production cutover.
 Development dependencies are not runtime plugin dependencies. OpenClaw is an exact optional peer

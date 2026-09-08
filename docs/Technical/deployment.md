@@ -52,6 +52,17 @@ Back up the vault database together with its key file, and protect both with res
 permissions. Do not commit any of them. Private recovery snapshots are described in
 [the installation guide](plugin-v4-installation.md).
 
+## Versioning
+
+`4.0.0` is the first plugin release. Three files must carry the same version — `package.json`,
+`openclaw.plugin.json` and `package-lock.json` — and the release tag must be exactly
+`v<package version>`. `scripts/verify-release-metadata.mjs` enforces all four in CI before a tag
+publishes anything.
+
+A fourth copy lives in `plugin/contract.mjs`, because the generated domain contract carries its own
+version to agents. It is a literal and does not read `package.json`; `plugin/tests/release.test.mjs`
+fails when it drifts. Bump it with the other three.
+
 ## Release path
 
 `.github/workflows/publish.yml` publishes on `v*` tags after `npm ci`. `prepublishOnly` builds the
