@@ -42,7 +42,10 @@ function writePrivate(file, bytes) {
 	}
 }
 // Caller holds the existing Vault flock; this function never returns credential/key bytes.
-export function snapshotVault(directory, auditDb, authorizePublish) {
+// The credential database and its key may live outside the private directory — an operator's own
+// KeePassXC vault is opened where it already is. A snapshot still stores them under their canonical
+// names so a restored destination remains self-contained.
+export function snapshotVault(directory, auditDb, authorizePublish, sources = {}) {
 	privateDirectory(directory);
 	const root = path.join(directory, 'recovery');
 	if (!fs.existsSync(root)) fs.mkdirSync(root, { mode: 0o700 });
@@ -56,7 +59,17 @@ export function snapshotVault(directory, auditDb, authorizePublish) {
 			if (name === 'audit.db') {
 				auditDb.prepare('VACUUM INTO ?').run(path.join(temp, name));
 				fs.chmodSync(path.join(temp, name), 0o600);
-			} else writePrivate(path.join(temp, name), boundedFile(path.join(directory, name)));
+			} else
+				writePrivate(
+					path.join(temp, name),
+					boundedFile(
+						name === 'credentials.kdbx'
+							? (sources.database ?? path.join(directory, name))
+							: name === 'unlock.key'
+								? (sources.key ?? path.join(directory, name))
+								: path.join(directory, name)
+					)
+				);
 		}
 		const manifest = {
 			format: 1,

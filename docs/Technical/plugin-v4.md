@@ -114,9 +114,11 @@ rendering, browser editing and full accessibility acceptance remain incomplete.
 
 ### Vault
 
-The backend provisions a new KeePassXC database and private local unlock key at plugin startup and
-opens it there; `Vault.ready()` is idempotent and also reconciles configured owners and executors
-into the stored policy. The unlock key is protected by filesystem ownership, not an external
+The backend opens the operator's own KeePassXC database — `<stateDir>/passwords.kdbx` by default,
+overridable with `vaultDatabase`/`vaultKeyFile` — adopting one that already exists and creating one
+only when genuinely absent. `Vault.ready()` is idempotent and also reconciles configured owners and
+executors into the stored policy. Plain operator entries and versioned agent envelopes coexist and
+are never converted into each other. The unlock key is protected by filesystem ownership, not an external
 key-management system. Existing Vaults are not adopted. Gateway authentication is the human
 credential: a `human:` actor is an owner, while agents stay gated on `vaultExecutors` plus
 per-entry grants. `flock` serializes

@@ -130,6 +130,12 @@ attention, and keyboard dialog interaction plus 320px reduced-motion reflow acro
 The missing-material fixture fails before provider I/O; it is not a live Cloudflare test. Private
 Vault/recovery directories are excluded from evidence uploads. No success-skip closes these cases.
 
+Vault cases drive the page as a person would: the add form fills Title and Password, the entry's
+own Reveal/Copy read its password, and an agent credential is read through **Details**, which lists
+the field names that entry actually carries. The fixture configures `vaultDatabase`/`vaultKeyFile`
+explicitly, exercising the same override an operator uses to point the Vault somewhere other than
+the default `<stateDir>/passwords.kdbx`.
+
 Vault cases assert readiness rather than performing it. The plugin provisions and unlocks at
 startup, so `vaultReady()` waits for credential management to be present and clicks nothing. It
 replaced an earlier `unlock()` helper that clicked `Unlock` only when visible — a conditional step

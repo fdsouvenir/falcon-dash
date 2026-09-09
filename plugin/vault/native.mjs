@@ -25,6 +25,33 @@ export const protectedInputs = {
 	grant_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	revoke_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	inventory: O({ group: Type.String({ maxLength: 512 }) }),
+	// The four fields a KeePassXC entry has. A person managing their own vault writes these, not the
+	// arbitrary material map an agent credential carries.
+	add_entry: O({
+		id: S,
+		fields: Type.Object(
+			{
+				password: Type.Optional(Type.String({ maxLength: 65536 })),
+				username: Type.Optional(Type.String({ maxLength: 4096 })),
+				url: Type.Optional(Type.String({ maxLength: 4096 })),
+				notes: Type.Optional(Type.String({ maxLength: 65536 }))
+			},
+			{ additionalProperties: false }
+		)
+	}),
+	edit_entry: O({
+		id: S,
+		expected_version: Type.Integer({ minimum: 1 }),
+		fields: Type.Object(
+			{
+				password: Type.Optional(Type.String({ maxLength: 65536 })),
+				username: Type.Optional(Type.String({ maxLength: 4096 })),
+				url: Type.Optional(Type.String({ maxLength: 4096 })),
+				notes: Type.Optional(Type.String({ maxLength: 65536 }))
+			},
+			{ additionalProperties: false }
+		)
+	}),
 	create: O({
 		id: S,
 		material: Type.Record(
@@ -85,7 +112,7 @@ export async function protectedVault(vault, params, client, ready) {
 	const p = params.input;
 	if (
 		vault.beforeHumanChange &&
-		['rotate', 'relocate', 'remove_entry', 'revoke', 'grant'].includes(params.action)
+		['rotate', 'edit_entry', 'relocate', 'remove_entry', 'revoke', 'grant'].includes(params.action)
 	) {
 		const metadata = await vault.metadata(p.id, actor, authority);
 		authority.assert();
@@ -119,6 +146,12 @@ export async function protectedVault(vault, params, client, ready) {
 			break;
 		case 'inventory':
 			result = await vault.inventory(actor, p.group, authority);
+			break;
+		case 'add_entry':
+			result = await vault.createEntry(p.id, p.fields, actor, authority);
+			break;
+		case 'edit_entry':
+			result = await vault.updateEntry(p.id, p.fields, p.expected_version, actor, authority);
 			break;
 		case 'create':
 			result = await vault.create(p.id, p.material, actor, authority);

@@ -17,15 +17,22 @@ gateway.
 
 ## Provisioning
 
-`keepassxc-cli` must exist on the host. The plugin Vault keeps its own database and key inside its
-private data directory — `<dataDir>/vault/credentials.kdbx` and `unlock.key` — and creates both on
-its first start through `Vault.ready()`. An existing KeePassXC database is never adopted
-automatically, including one the bundled resolver above already reads.
+`keepassxc-cli` must exist on the host. The Vault opens the operator's own KeePassXC database,
+defaulting to `<stateDir>/passwords.kdbx` with `<stateDir>/vault.key` — the same database the
+bundled resolver above reads — and `vaultDatabase`/`vaultKeyFile` override both. Policy, audit and
+recovery snapshots stay in the plugin's private `<dataDir>/vault` directory.
 
-`ready()` is the whole lifecycle and it is idempotent: it provisions when the database is absent,
-reconciles `vaultOwners`/`vaultExecutors` into the stored policy, then unlocks. Reconciliation
+`ready()` is the whole lifecycle and it is idempotent. It **adopts** a database that already exists,
+writing policy beside it without touching a credential; it creates one only when genuinely absent;
+it reconciles `vaultOwners`/`vaultExecutors` into the stored policy, then unlocks. Reconciliation
 matters because the policy is otherwise written once, at provisioning — without it a later
 `vaultExecutors` edit would not reach an agent without a recovery.
+
+Two entry shapes coexist. An entry a person created holds a plain secret with the ordinary
+UserName/URL/Notes fields, which is what the exec resolver reads. A credential the plugin creates
+for an agent holds a JSON envelope carrying its version, executor grants and revocation. Neither is
+ever rewritten into the other's shape: converting a person's entries would break every SecretRef
+that resolves them.
 
 Provisioning is never an operator action, so `initialize`, `unlock` and `lock` are absent from the
 protected RPC surface. A Vault that reports `initialized: false` at runtime means startup failed;

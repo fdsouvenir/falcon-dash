@@ -26,7 +26,7 @@ export default definePluginEntry({
 	description: 'Work, Integrations, KeePassXC Vault and Documents implementation preview',
 	register(api) {
 		const config =
-			/** @type {{dataDir?: string, modules?: Record<string, boolean>, oauthRedirectUris?:string[], vaultOwners?: string[], vaultExecutors?: string[], documentRoots?: Array<{id:string,path:string,actors:string[],writable?:boolean}>}} */ (
+			/** @type {{dataDir?: string, modules?: Record<string, boolean>, oauthRedirectUris?:string[], vaultOwners?: string[], vaultExecutors?: string[], vaultDatabase?: string, vaultKeyFile?: string, documentRoots?: Array<{id:string,path:string,actors:string[],writable?:boolean}>}} */ (
 				api.pluginConfig ?? {}
 			);
 		const enabled = ['work', 'integrations', 'vault', 'documents'].filter(
@@ -149,9 +149,14 @@ export default definePluginEntry({
 						work.changeTimer.unref();
 					}
 					if (enabled.includes('vault') || enabled.includes('integrations')) {
+						// The credential database defaults to the operator's own KeePassXC vault beside the
+						// rest of their state, which is where releases through 3.1.1 kept it. Policy,
+						// audit and recovery stay in the plugin's private directory either way.
 						vault = new Vault(path.join(directory, 'vault'), {
 							owners: config.vaultOwners ?? [],
-							executors: config.vaultExecutors ?? []
+							executors: config.vaultExecutors ?? [],
+							database: config.vaultDatabase ?? path.join(ctx.stateDir, 'passwords.kdbx'),
+							key: config.vaultKeyFile ?? path.join(ctx.stateDir, 'vault.key')
 						});
 						// A missing Vault is provisioned and opened here so no operator ever sees a setup
 						// step. A host without KeePassXC, or one needing recovery, must not take the other

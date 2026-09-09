@@ -56,8 +56,12 @@ user profile store and configure:
 hook and no domain contract reaches an agent. The native Control UI pages additionally need the
 `gateway.controlUi.experimental.customPlugins` opt-in.
 
-The Vault module starts as an empty private store under `<dataDir>/vault`. It does not adopt an
-existing KeePassXC database from anywhere on the host, and 4.0 ships no importer.
+The Vault module manages the operator's own KeePassXC database. It defaults to
+`<stateDir>/passwords.kdbx` with `<stateDir>/vault.key`, the paths every release through 3.1.1 used,
+and `vaultDatabase`/`vaultKeyFile` override both. A database already at that path is **adopted**:
+policy is recorded beside it under `<dataDir>/vault` and not one credential is rewritten. Only a
+genuinely absent database is created. There is still no importer, because none is needed — the
+existing database is opened as-is.
 
 ## Private Vault recovery
 

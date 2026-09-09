@@ -5,6 +5,50 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The Vault stopped managing the operator's own KeePassXC database.** Every release through 3.1.1
+  opened `~/.openclaw/passwords.kdbx` with `~/.openclaw/vault.key`; the 4.0 plugin rewrite pointed
+  the Vault at a new private database instead, so an operator with an existing vault saw an empty
+  page and none of their passwords. `plugin-v4-scope.md` and `plugin-v4-backend.md` both specify
+  that "the existing KeePassXC database is opened as-is" — the rewrite implemented the opposite,
+  and `plugin-v4-installation.md` and `secretrefs.md` had been written to match the implementation
+  rather than the scope. Those documents are now reconciled.
+- The Vault opens `<stateDir>/passwords.kdbx` with `<stateDir>/vault.key` by default, overridable
+  with the new `vaultDatabase` and `vaultKeyFile` settings. A database already at that path is
+  **adopted** — policy is recorded beside it and not one credential is rewritten — and one is
+  created only when genuinely absent.
+- **Entries whose names contain spaces were invisible.** Inventory filtered names through
+  `[a-zA-Z0-9_-]`, so an ordinary vault of 88 entries listed 9. Handles now accept the text
+  KeePassXC actually stores, still rejecting path separators, control characters and traversal.
+- **A person's entries could not be read at all.** The Vault assumed every entry's Password field
+  held its own JSON envelope and threw on anything else. Plain entries are now read and written as
+  ordinary KeePassXC entries with their UserName/URL/Notes fields, which is exactly what
+  `bin/keepassxc-secret-resolver.cjs` reads. The two shapes coexist and are never converted into
+  each other: converting an operator's entries would break every SecretRef that resolves them.
+- Agent credentials keep their versioned envelope, executor grants and revocation unchanged.
+- **Relocating an entry rewrote it as a JSON envelope**, which would have silently stopped every
+  SecretRef that resolved it. A moved entry now keeps its own shape.
+- **Recovery snapshots read the database from the private directory**, so rename and remove failed
+  outright once the database lived anywhere else. Snapshots now read the configured database and key
+  and still store them under their canonical names, so a restored destination stays self-contained.
+- **An emptied group looked occupied.** `keepassxc-cli ls` prints an `[empty]` placeholder for a
+  childless group; the old restrictive name filter hid it by accident, so relaxing that filter
+  exposed it as an entry and the group's removal control never appeared.
+
+### Changed
+
+- **The Vault page is a password manager again.** Entries list under their real titles with
+  Reveal/Hide/Copy on the entry itself; **Details** loads the Username, URL and Notes an entry
+  carries, plus Edit. Adding an entry asks for Title, Password, Username, URL and Notes instead of
+  a credential field name to type. Executor grants appear only for agent credentials, which are the
+  only entries that have them.
+- Vault tests now start from a pre-existing database holding plain entries with spaces in their
+  names. Every previous Vault test built a fresh empty database, which is why this regression
+  reached a release.
+
 ## [4.1.0] - 2026-09-09
 
 ### Changed

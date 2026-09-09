@@ -571,3 +571,74 @@ test('A Vault that failed to start reports it and offers no lifecycle controls',
 	assert.ok(!actions.includes('initialize'));
 	assert.ok(!actions.includes('unlock'));
 });
+
+// The Vault page is a password manager for a person, not a form for typing credential field names.
+test('Vault entries expose Reveal and Copy directly, with no field-name input to guess', async (t) => {
+	const f = await fixture(t, 'vault', async (_method, p) => {
+		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
+		if (p.action === 'inventory')
+			return {
+				entries: [
+					{ id: 'Work', kind: 'group' },
+					{ id: 'Anthem Blue Cross', kind: 'entry' }
+				]
+			};
+		if (p.action === 'reveal') return { value: 'SYNTHETIC-ANTHEM' };
+		return {};
+	});
+	// A name with spaces must survive to the page; the 4.0 filter dropped it entirely.
+	assert.match(f.text(), /Anthem Blue Cross/);
+	assert.match(f.text(), /Work/);
+	assert.equal(f.window.document.querySelector('input[value="api_key"]'), null);
+	f.button('Reveal');
+	await settle();
+	assert.match(f.text(), /SYNTHETIC-ANTHEM/);
+	f.button('Hide');
+	assert.ok(!f.text().includes('SYNTHETIC-ANTHEM'));
+});
+
+test('Vault details show only the fields an entry carries', async (t) => {
+	const f = await fixture(t, 'vault', async (_method, p) => {
+		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
+		if (p.action === 'inventory') return { entries: [{ id: 'KenPom Password', kind: 'entry' }] };
+		if (p.action === 'metadata')
+			return {
+				id: 'KenPom Password',
+				fields: ['password', 'username', 'url'],
+				plain: true,
+				version: 1,
+				allowed_executors: [],
+				execution_disabled: false
+			};
+		if (p.action === 'reveal') return { value: 'fred@example.invalid' };
+		return {};
+	});
+	f.button('Details');
+	await settle();
+	assert.match(f.text(), /Username/);
+	assert.match(f.text(), /URL/);
+	// Notes is absent from this entry, so offering Reveal for it would only produce a failure.
+	assert.ok(!f.text().includes('Notes'));
+	// Executor grants belong to agent credentials; a person's plain entry has no envelope for them.
+	assert.ok(!f.text().includes('Access policy'));
+	assert.match(f.text(), /Edit entry/);
+});
+
+test('Adding an entry offers the real KeePassXC fields', async (t) => {
+	const sent = [];
+	const f = await fixture(t, 'vault', async (_method, p) => {
+		sent.push(p);
+		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
+		if (p.action === 'inventory') return { entries: [] };
+		return {};
+	});
+	f.button('Add credential');
+	await settle();
+	const dialog = f.window.document.querySelector('[role=dialog]');
+	const labels = [...dialog.querySelectorAll('label')].map((n) => n.textContent);
+	for (const expected of ['Title', 'Password', 'Username', 'URL', 'Notes'])
+		assert.ok(
+			labels.some((l) => l.includes(expected)),
+			`Missing ${expected} field`
+		);
+});

@@ -5,10 +5,84 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { snapshotVault, listSnapshots } from './recovery.mjs';
+// The database and key are addressed separately from the plugin's private directory so the Vault can
+// open the operator's existing KeePassXC database, which is what `plugin-v4-scope.md` requires and
+// what every release through 3.1.1 did. Policy, audit and recovery stay private regardless.
 const directory = process.argv[2];
-const database = path.join(directory, 'credentials.kdbx'),
-	key = path.join(directory, 'unlock.key');
+const database = process.argv[3] || path.join(directory, 'credentials.kdbx'),
+	key = process.argv[4] || path.join(directory, 'unlock.key');
 const policyPath = path.join(directory, 'policy.json');
+
+// KeePassXC titles are human text: "Anthem Blue Cross" and "GitHub Verlbot CLI" are ordinary entries.
+// Only the path separator, backslashes, control characters and the relative segments are excluded.
+// eslint-disable-next-line no-control-regex -- control characters are exactly what must be excluded
+const SEGMENT = /^(?!\.{1,2}$)[^/\\\x00-\x1f]{1,120}$/;
+function validHandle(value, { depth = 5 } = {}) {
+	if (typeof value !== 'string' || !value.length) return false;
+	const segments = value.split('/');
+	if (segments.length > depth) return false;
+	return segments.every((s) => SEGMENT.test(s) && s.trim() === s);
+}
+
+// A plugin-written credential stores a JSON envelope in Password. An entry a person created in
+// KeePassXC stores a plain secret with the ordinary UserName/URL/Notes fields. Both are readable;
+// neither is rewritten into the other's shape, because the exec SecretRef resolver reads plain
+// fields and converting them would break every existing reference.
+const PLAIN_FIELDS = { username: 'UserName', url: 'URL', notes: 'Notes' };
+function attribute(args, db, id, name) {
+	try {
+		return cli(['show', ...args, '-s', '-a', name, db, id]).replace(/\n$/, '');
+	} catch {
+		return '';
+	}
+}
+function readRecord(args, db, id) {
+	const raw = cli(['show', ...args, '-s', '-a', 'Password', db, id]).replace(/\n$/, '');
+	let envelope = null;
+	try {
+		const parsed = JSON.parse(raw);
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.material)
+			envelope = parsed;
+	} catch {
+		envelope = null;
+	}
+	if (envelope) return { ...envelope, plain: false };
+	const material = { password: raw };
+	for (const [field, name] of Object.entries(PLAIN_FIELDS)) {
+		const value = attribute(args, db, id, name);
+		if (value) material[field] = value;
+	}
+	return {
+		version: 1,
+		material,
+		created_by: null,
+		allowed_executors: [],
+		revoked: false,
+		plain: true
+	};
+}
+// Writing an ordinary KeePassXC entry: the secret through stdin, the other fields as flags, then a
+// readback of what actually landed in the encrypted snapshot.
+function writePlain(command, args, db, id, material) {
+	const field = (flag, value) => (typeof value === 'string' ? [flag, value] : []);
+	cli(
+		[
+			command,
+			...args,
+			'-p',
+			...field('-u', material.username),
+			...field('--url', material.url),
+			...field('--notes', material.notes),
+			db,
+			id
+		],
+		(material.password ?? '') + '\n'
+	);
+	const written = readRecord(args, db, id);
+	for (const [name, value] of Object.entries(material))
+		if (typeof value === 'string' && written.material[name] !== value)
+			throw new Error('verification_failed');
+}
 function policyWrite(policy) {
 	const temp = path.join(directory, `policy-${randomUUID()}.tmp`);
 	fs.writeFileSync(temp, JSON.stringify(policy), { mode: 0o600, flag: 'wx' });
@@ -109,6 +183,7 @@ try {
 	);
 	const known = new Set([
 		'initialize',
+		'adopt',
 		'reconcile',
 		'lock',
 		'unlock',
@@ -141,7 +216,7 @@ try {
 					? request.action
 					: 'unknown',
 		entry:
-			typeof request.id === 'string' && /^[a-zA-Z0-9_/-]{1,400}$/.test(request.id)
+			typeof request.id === 'string' && request.id.length <= 400 && validHandle(request.id)
 				? request.id
 				: null,
 		actor:
@@ -159,6 +234,23 @@ try {
 		audit('attempt');
 	}
 
+	// Adoption records policy beside a database that already exists, without touching a single
+	// credential in it. This is the path an operator's existing KeePassXC vault takes on first start.
+	if (request.action === 'adopt') {
+		if (request.actor !== 'system:vault') throw new Error('access_denied');
+		if (!fs.existsSync(database)) throw new Error('not_initialized');
+		if (!fs.existsSync(key)) throw new Error('recovery_required');
+		if (fs.existsSync(policyPath)) throw new Error('already_initialized');
+		policyWrite({
+			owners: request.owners,
+			executors: request.executors,
+			locked: true,
+			generation: 1,
+			secretref_ids: []
+		});
+		reply({ adopted: true });
+		process.exit(0);
+	}
 	if (request.action === 'initialize') {
 		if (fs.existsSync(database)) throw new Error('already_initialized');
 		if (fs.existsSync(key)) throw new Error('recovery_required');
@@ -180,7 +272,7 @@ try {
 			authorize(policy, request.actor, true);
 			reply(
 				request.action === 'backup'
-					? snapshotVault(directory, auditDb, authorizeCommit)
+					? snapshotVault(directory, auditDb, authorizeCommit, { database, key })
 					: listSnapshots(directory)
 			);
 			process.exit(0);
@@ -236,7 +328,7 @@ try {
 				!request.ids.every(
 					(id) =>
 						typeof id === 'string' &&
-						/^entries\/((?:[a-z][a-z0-9-]{0,79}\/){0,4}[a-z][a-z0-9-]{0,79})\/(password|api-key|access-token|refresh-token|client-secret)$/.test(
+						/^entries\/(.+)\/(password|username|url|notes|api-key|access-token|refresh-token|client-secret)$/.test(
 							id
 						)
 				)
@@ -269,24 +361,12 @@ try {
 					if (typeof id !== 'string' || !policy.secretref_ids.includes(id))
 						throw new Error('access_denied');
 					const match =
-						/^entries\/((?:[a-z][a-z0-9-]{0,79}\/){0,4}[a-z][a-z0-9-]{0,79})\/(password|api-key|access-token|refresh-token|client-secret)$/.exec(
+						/^entries\/(.+)\/(password|username|url|notes|api-key|access-token|refresh-token|client-secret)$/.exec(
 							id
 						);
-					if (!match || !exactPaths.has(match[1])) throw new Error('invalid_handle');
-					const record = JSON.parse(
-						cli([
-							'show',
-							'-q',
-							'--no-password',
-							'--key-file',
-							key,
-							'-s',
-							'-a',
-							'Password',
-							database,
-							match[1]
-						])
-					);
+					if (!match || !validHandle(match[1]) || !exactPaths.has(match[1]))
+						throw new Error('invalid_handle');
+					const record = readRecord(['-q', '--no-password', '--key-file', key], database, match[1]);
 					if (record.revoked) throw new Error('access_denied');
 					const value = record.material[match[2].replaceAll('-', '_')];
 					if (typeof value !== 'string' || !value.length) throw new Error('not_found');
@@ -304,8 +384,7 @@ try {
 			process.exit(0);
 		}
 		const id = request.id;
-		if (id && !/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(id))
-			throw new Error('invalid_handle');
+		if (id && !validHandle(id)) throw new Error('invalid_handle');
 		const args = ['-q', '--no-password', '--key-file', key];
 		// `show` may fall back to a title search (including recycled entries). Never use that
 		// behavior as handle resolution: require an exact flattened path in current inventory.
@@ -343,7 +422,7 @@ try {
 				!['', '[empty]'].includes(cli(['ls', ...args, database, id]).trim())
 			)
 				throw Error('group_not_empty_or_unconfirmed');
-			const recovery = snapshotVault(directory, auditDb, authorizeCommit);
+			const recovery = snapshotVault(directory, auditDb, authorizeCommit, { database, key });
 			mutateDatabase((temp) => {
 				cli(['rmdir', ...args, temp, id]);
 			});
@@ -352,13 +431,14 @@ try {
 		}
 		if (request.action === 'inventory') {
 			const group = request.group ?? '';
-			if (group && !/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(group))
-				throw new Error('invalid_handle');
+			if (group && !validHandle(group)) throw new Error('invalid_handle');
 			if (group && !paths.has(group + '/')) throw Error('not_found');
 			const names = cli(['ls', ...args, database, ...(group ? [group] : [])])
 				.trim()
 				.split('\n')
-				.filter((x) => /^[a-zA-Z0-9_-]{1,80}\/?$/.test(x));
+				// `keepassxc-cli ls` prints this placeholder for a group with no children. It is output,
+				// not an entry, and the stricter 4.0 name filter hid it only by accident.
+				.filter((x) => x !== '[empty]' && validHandle(x.replace(/\/$/, ''), { depth: 1 }));
 			reply({
 				entries: names.map((name) => ({
 					id: (group ? group + '/' : '') + name.replace(/\/$/, ''),
@@ -367,8 +447,7 @@ try {
 			});
 		} else {
 			let current = null;
-			if (request.action !== 'create')
-				current = JSON.parse(cli(['show', ...args, '-s', '-a', 'Password', database, id]));
+			if (request.action !== 'create') current = readRecord(args, database, id);
 
 			if (['relocate', 'remove_entry'].includes(request.action)) {
 				authorize(policy, request.actor, true);
@@ -376,11 +455,7 @@ try {
 				if (!request.confirmed) throw Error('confirmation_required');
 				const destination = request.destination;
 				if (request.action === 'relocate') {
-					if (
-						typeof destination !== 'string' ||
-						!/^[a-zA-Z0-9_-]{1,80}(?:\/[a-zA-Z0-9_-]{1,80}){0,4}$/.test(destination) ||
-						destination === id
-					)
+					if (typeof destination !== 'string' || !validHandle(destination) || destination === id)
 						throw Error('invalid_handle');
 					const group = destination.split('/').slice(0, -1).join('/'),
 						name = destination.split('/').at(-1);
@@ -389,15 +464,21 @@ try {
 						.split('\n');
 					if (names.includes(name) || names.includes(name + '/')) throw Error('already_exists');
 				}
-				const recovery = snapshotVault(directory, auditDb, authorizeCommit);
+				const recovery = snapshotVault(directory, auditDb, authorizeCommit, { database, key });
 				mutateDatabase((temp) => {
 					if (request.action === 'relocate') {
-						const next = { ...current, version: current.version + 1 };
-						cli(['add', ...args, '-p', temp, destination], JSON.stringify(next) + '\n');
-						const check = JSON.parse(
-							cli(['show', ...args, '-s', '-a', 'Password', temp, destination])
-						);
-						if (JSON.stringify(check) !== JSON.stringify(next)) throw Error('verification_failed');
+						// A moved entry keeps its own shape. Rewriting a person's entry as an envelope here
+						// would silently stop every SecretRef that resolves it.
+						if (current.plain) writePlain('add', args, temp, destination, current.material);
+						else {
+							const next = { ...current, version: current.version + 1 };
+							cli(['add', ...args, '-p', temp, destination], JSON.stringify(next) + '\n');
+							const check = JSON.parse(
+								cli(['show', ...args, '-s', '-a', 'Password', temp, destination])
+							);
+							if (JSON.stringify(check) !== JSON.stringify(next))
+								throw Error('verification_failed');
+						}
 					}
 					cli(
 						['edit', ...args, '-p', temp, id],
@@ -417,6 +498,10 @@ try {
 			if (request.action === 'metadata') {
 				reply({
 					id,
+					// Field names, never values: the UI needs to know which of Password/UserName/URL/Notes
+					// an entry actually carries so it offers Reveal only for fields that exist.
+					fields: Object.keys(current.material ?? {}),
+					plain: current.plain === true,
 					version: current.version,
 					execution_disabled: !!current.revoked,
 					created_by: current.created_by ?? null,
@@ -473,14 +558,19 @@ try {
 				try {
 					fs.copyFileSync(database, temp, fs.constants.COPYFILE_EXCL);
 					fs.chmodSync(temp, 0o600);
-					cli(
-						[request.action === 'create' ? 'add' : 'edit', ...args, '-p', temp, id],
-						JSON.stringify(next) + '\n'
-					);
-					// Validate both values from the written encrypted snapshot before publishing it.
-					const check = JSON.parse(cli(['show', ...args, '-s', '-a', 'Password', temp, id]));
-					if (JSON.stringify(check) !== JSON.stringify(next))
-						throw new Error('verification_failed');
+					const command = request.action === 'create' ? 'add' : 'edit';
+					// An entry a person owns keeps its ordinary KeePassXC shape. Rewriting it into the
+					// envelope would make the exec SecretRef resolver, which reads plain fields, stop
+					// resolving it, so the existing record's shape always wins over any request flag.
+					const plainWrite = current ? current.plain === true : request.plain === true;
+					if (plainWrite) writePlain(command, args, temp, id, material);
+					else {
+						cli([command, ...args, '-p', temp, id], JSON.stringify(next) + '\n');
+						// Validate both values from the written encrypted snapshot before publishing it.
+						const check = JSON.parse(cli(['show', ...args, '-s', '-a', 'Password', temp, id]));
+						if (JSON.stringify(check) !== JSON.stringify(next))
+							throw new Error('verification_failed');
+					}
 					const fd = fs.openSync(temp, 'r');
 					fs.fsyncSync(fd);
 					fs.closeSync(fd);
