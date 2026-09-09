@@ -34,6 +34,17 @@ floor of **>=2026.9.3**; Node **`>=24.16.0 <25 || >=26.1.0`**, Linux `/proc/self
 KeePassXC CLI are prerequisites.
 This Linux-only release must not be advertised as portable or broadly version-compatible.
 
+## Registered identity
+
+The plugin id is `falcon-dash` and its registered description is user-facing: it appears in
+`openclaw plugins list` and on the ClawHub listing. It states what the plugin does rather than its
+development status. The description in `plugin/index.mjs`, `openclaw.plugin.json` and
+`package.json` are kept consistent by hand; only the version is machine-checked.
+
+Nothing shipped describes the build as a preview. The preview channel is a separate package,
+`@fdsouvenir/falcon-dash-preview`, published from its own repository with its own plugin id, so a
+preview build is identified by which package was installed rather than by a caveat in a string.
+
 ## One process, several registrations
 
 The host registers this plugin more than once in the same process. A tool registry loads it with

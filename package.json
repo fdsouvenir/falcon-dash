@@ -1,7 +1,7 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
 	"version": "4.3.0",
-	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
+	"description": "Operator console for OpenClaw: shared Work tracking for people and agents, a KeePassXC credential vault that resolves SecretRefs, service integrations, and authorized document workspaces.",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/fdsouvenir/falcon-dash.git"
@@ -24,18 +24,15 @@
 	"type": "module",
 	"files": [
 		"plugin/",
+		"!plugin/tests/",
 		"openclaw.plugin.json",
 		"scripts/build-plugin.mjs",
-		"docs/Technical/plugin-v4.md",
-		"docs/Technical/plugin-v4-evidence.md",
-		"docs/Technical/plugin-v4-backend.md",
 		"plugin/schema.mjs",
 		"plugin/typebox-license.txt",
 		"dist/control-ui/",
-		"docs/Technical/plugin-v4-native-ui.md",
-		"docs/Technical/plugin-native-e2e.md",
-		"docs/Technical/plugin-v4-scope.md",
-		"docs/Technical/plugin-v4-installation.md"
+		"docs/End User/work.md",
+		"docs/End User/passwords.md",
+		"docs/End User/documents.md"
 	],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"

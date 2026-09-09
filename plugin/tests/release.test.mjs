@@ -36,8 +36,12 @@ test('Packed registry metadata contains native plugin/recovery assets and no sta
 		'openclaw.plugin.json',
 		'dist/control-ui/falcon/index.js',
 		'dist/control-ui/falcon/index.css',
-		'docs/Technical/plugin-v4-scope.md',
-		'docs/Technical/plugin-v4-installation.md'
+		// Documentation written for the person installing this, not the engineering record.
+		'docs/End User/work.md',
+		'docs/End User/passwords.md',
+		'docs/End User/documents.md',
+		'README.md',
+		'LICENSE'
 	])
 		assert.ok(names.includes(file), file);
 	assert.equal(
@@ -45,5 +49,17 @@ test('Packed registry metadata contains native plugin/recovery assets and no sta
 			/^(src|build|gateway-plugin|artifacts|\.openclaw|node_modules)\//.test(name)
 		),
 		false
+	);
+	// Internal engineering documentation is not part of the product. It names issues, CI runners
+	// and open gaps that mean nothing to someone installing the plugin.
+	assert.deepEqual(
+		names.filter((name) => name.startsWith('docs/Technical/')),
+		[]
+	);
+	// The suite is not part of the product either. `files` ships `plugin/` wholesale, so the test
+	// directory rides along unless it is excluded explicitly.
+	assert.deepEqual(
+		names.filter((name) => name.startsWith('plugin/tests/')),
+		[]
 	);
 });

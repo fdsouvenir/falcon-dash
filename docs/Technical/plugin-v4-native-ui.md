@@ -170,3 +170,9 @@ waiting references are optional and never replace the required waiting/resume ex
 The expanded browser matrix also checks long Work text/history, keyboard dialog interaction,
 320px reflow and reduced-motion presentation. These are not claims of every browser, actual
 browser zoom, or live provider consent. Exact-head results and inspected captures remain required.
+
+## Fallback header
+
+The read-only fallback in `plugin/ui.mjs` renders the module name and the product name only. It
+previously appended a development-status caveat to every page; that string reached operators who
+had simply not enabled custom plugin UI, and said nothing useful to them.

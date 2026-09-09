@@ -23,7 +23,7 @@ const RUNTIME = Symbol.for('falcon-dash.runtime');
 export default definePluginEntry({
 	id: 'falcon-dash',
 	name: 'Falcon Dash',
-	description: 'Work, Integrations, KeePassXC Vault and Documents implementation preview',
+	description: 'Operator console for OpenClaw: Work, KeePassXC Vault, Integrations and Documents',
 	register(api) {
 		const config =
 			/** @type {{dataDir?: string, modules?: Record<string, boolean>, oauthRedirectUris?:string[], vaultOwners?: string[], vaultExecutors?: string[], vaultDatabase?: string, vaultKeyFile?: string, documentRoots?: Array<{id:string,path:string,actors:string[],writable?:boolean}>}} */ (

@@ -1,104 +1,112 @@
 # Falcon Dash
 
-**One OpenClaw plugin with Work, Integrations, KeePassXC Vault and Documents.**
+**An operator console for OpenClaw: shared work tracking, a real credential vault, service
+integrations and document workspaces — as one plugin inside the Control UI you already use.**
 
-> **4.0 carries no awareness of any prior Falcon Dash version** — no migration, conversion or
-> legacy detection. It installs onto a machine with no earlier Falcon Dash present; pre-4.0 data is
-> handled out of band. See [Clean installation](docs/Technical/plugin-v4.md#clean-installation-no-cutover).
+[![CI](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml/badge.svg)](https://github.com/fdsouvenir/falcon-dash/actions/workflows/ci.yml)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](LICENSE)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-%E2%89%A5%202026.9.3-8a63d2.svg)](https://docs.openclaw.ai)
+[![Node](https://img.shields.io/badge/Node-24.16%2B%20%7C%2026.1%2B-339933.svg)](https://nodejs.org)
+[![Platform](https://img.shields.io/badge/Platform-Linux-lightgrey.svg)](#requirements)
 
-OpenClaw owns the shell, chat, agents, sessions, runtime approvals and Automations. Falcon Dash
-adds its Work domain and credential/integration/document capabilities inside that host. It does
-not require Fredbot Backend or a separate Falcon web server.
+Falcon Dash adds four pages to the OpenClaw Control UI. There is no second application, no separate
+web server and no other address to visit. OpenClaw keeps owning the shell, chat, agents, sessions,
+approvals and Automations; Falcon Dash adds the things it does not have.
 
-## Implemented backend
+## What you get
 
-- **Work:** immutable Task revisions, explicit assignment/waiting/results, Task-scoped change
-  control, review targets, typed dependencies and Asks, derived Project/Milestone behavior,
-  Questions, Decisions, Findings, Areas, bounded projections and versioned semantic operations.
-- **Integrations:** shared lifecycle/health/audit services, fenced credential rotation and
-  HighLevel OAuth backend fixtures. Provider authentication is not claimed from mocked tests.
-- **Vault:** real KeePassXC storage, groups, scoped executor grants, human-owner field access,
-  redacted access history, lock fencing and a native exec SecretRef resolver.
-- **Documents:** authorized text workspaces, safe traversal, stale-edit protection, create/edit,
-  transfer, no-clobber rename and recoverable deletion.
+**Work** — a shared record of what is being done, by people and agents together. Seven object types
+(Project, Milestone, Task, Question, Decision, Finding, Area) with immutable revisions, explicit
+assignment and waiting states, typed dependencies, and Asks an agent raises when it needs an answer
+from you. Agents create and update Work through typed commands; the pages are where you read it,
+steer it and answer.
 
-The package registers real tools, Gateway methods, typed feature operations, services and four
-native Control UI pages, including protected human credential entry/reveal/copy. Native UI is
-approved; [native implementation and evidence](docs/Technical/plugin-v4-native-ui.md) distinguish
-offline tests from actual rendered acceptance. The baseline at `215111f` passed 20 real-Gateway
-desktop/narrow cases on the authorized isolated CI runner. The separate local browser restriction
-remains unchanged. Passing those cases is not [full v4 readiness](docs/Technical/plugin-v4-scope.md).
+**Vault** — your own KeePassXC database, opened where it already lives, never rewritten. Search
+across every entry, browse groups, and reveal or copy a field on purpose. It is also the source for
+OpenClaw SecretRefs, so an agent can resolve a credential you stored without the value passing
+through a chat message. Values stay masked until revealed and hide themselves again shortly after.
 
-See [current backend coverage and remaining audits](docs/Technical/plugin-v4-backend.md).
-The [first checkpoint evidence](docs/Technical/plugin-v4-evidence.md) is explicitly historical;
-current PR comments carry later validation results.
+**Integrations** — connection lifecycle, health and audit for the services an agent works through,
+with credential rotation, explicit rebinding, and paused reconnection that never reports a sign-in
+as a successful validation.
 
-## Engineering prerequisites
+**Documents** — authorized text workspaces with safe path traversal, stale-edit protection,
+no-clobber rename and recoverable deletion.
 
-This preview requires **OpenClaw 2026.9.3 or later**, **Node `>=24.16.0 <25 || >=26.1.0`**, and
-**Linux**. KeePassXC CLI,
-`flock`, and descriptor-anchored `/proc/self/fd` access are required. TypeBox is bundled with its
-license; OpenClaw's SDK remains supplied by the host.
-
-The managed SecretRef preset requires the Gateway's actual Node executable to be owned by the
-Gateway user and not group/world writable. A user-owned Node runtime is verified with the real
-managed preset, including plugin disable/removal denial; root-owned system Node is incompatible
-with this pinned ownership contract. No check was relaxed. See the
-[exact compatibility evidence](docs/Technical/plugin-v4-backend.md#native-resolver-verification-and-managed-preset-limitation).
-
-## Build and validate
+## Install
 
 ```sh
-npm ci --include=dev
-npm run check
-npm test
-npm run lint
-npm run format:check
-npm run check:harness
-npm run check:docs
-npm pack --ignore-scripts
+openclaw plugins install clawhub:@fdsouvenir/falcon-dash
 ```
 
-`check`, `test`, `test:coverage` and `build` target the plugin; it is the only runtime in this
-repo. The published archive contains `plugin/`, `dist/control-ui/`, the manifest, the build script
-and the plugin technical docs.
+Then enable native plugin UI, which is an operator decision OpenClaw deliberately keeps out of a
+plugin's hands:
 
-For installation smoke tests, invoke the **absolute pinned OpenClaw entry** with both
-`OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` pointing at isolated synthetic state. Then install
-the local archive using `plugins install` and inspect it with `plugins inspect --runtime`.
-Never let an experimental binary open an operator's normal OpenClaw state.
+```sh
+openclaw config set gateway.controlUi.experimental.customPlugins true
+```
 
-`scripts/verify-plugin-prompt.mjs` exercises an isolated real Gateway against a local provider
-fixture. It requires the pinned OpenClaw entry and prepared isolated root as explicit positional
-arguments. It does not activate native UI, send channel messages, or use real provider credentials.
+Restart the Gateway and reload any open Control UI page afterwards. Custom plugin UI runs with the
+signed-in operator's Gateway permissions, so enable it only for plugins you trust.
 
-## What 4.0 does not include
+You can also install a release archive directly from
+[GitHub Releases](https://github.com/fdsouvenir/falcon-dash/releases); each release ships the
+package tarball with a `SHA256SUMS` file to verify it against.
 
-Work read/history/Ask workflows, Vault management and private recovery, connection
-explanations/audit/rebinding/Work attention, durable Documents trash, and the release guards are
-implemented and verified. What is not in 4.0:
+## Requirements
 
-- **The coordination agent is 4.1** — [#367](https://github.com/fdsouvenir/falcon-dash/issues/367).
-  4.0 records Work faithfully but cannot notice that nothing has happened. Four Work contract
-  changes ship with it; see [the roadmap](docs/ROADMAP.md).
-- **No live provider proof.** Adapters are exercised against fixtures. Real application credentials
-  and vendor consent are separately authorized, and mocked tests are never reported as live
-  authentication.
-- **Native UI opt-in has only been enabled in synthetic runtimes.** Production
-  `gateway.controlUi.experimental.customPlugins` and its restart remain an operator step.
-- **No packaged Vault skill.** The pre-4.0 one targeted retired paths and was removed.
+- **OpenClaw 2026.9.3 or later**
+- **Node 24.16+ or 26.1+**, matching the OpenClaw runtime
+- **Linux.** The Vault depends on `keepassxc-cli`, `flock` and descriptor-anchored `/proc/self/fd`
+  access, so macOS and Windows are not supported.
+- **KeePassXC** installed and on `PATH`
 
-The browser matrix is Chromium desktop and narrow. It is not every browser, arbitrary zoom, or a
-pixel recreation of the old standalone shell. See the
-[acceptance map](docs/Technical/plugin-v4-scope.md).
+## Configuration
 
-`docs/PURPOSE.md` is owner-protected and still contains the superseded standalone direction. It has
-not been changed; current issue bodies govern.
+Every setting is optional; the plugin runs with none of them. The Control UI shows the full schema,
+and the most useful ones are:
 
-## Contributing and security
+| Setting                          | What it does                                                                                             |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `vaultOwners`                    | Profile IDs allowed to reveal and manage credentials. Without one, nobody can read a value.              |
+| `vaultDatabase` / `vaultKeyFile` | Point the Vault at an existing KeePassXC database instead of the default in the Gateway state directory. |
+| `dataDir`                        | Where Falcon Dash keeps its own Work, integration and audit databases.                                   |
+| `documentRoots`                  | Directories the Documents page may read and write, and who may reach them.                               |
+| `modules`                        | Turn individual pages off.                                                                               |
 
-Read [AGENTS.md](AGENTS.md), [the harness](docs/HARNESS.md), and
-[quality requirements](docs/QUALITY.md). Report vulnerabilities according to [SECURITY.md](SECURITY.md),
-not by posting credentials or private account data in issues.
+## Security
 
-License: [CC BY-NC 4.0](LICENSE); bundled dependency licenses remain with their respective code.
+- Credentials live in KeePassXC. Falcon Dash records its policy and access history beside your
+  database and **never rewrites your entries** — the entries you created stay ordinary KeePassXC
+  entries, so anything already resolving them keeps working.
+- Reading a value requires a verified human Gateway connection and an explicit, per-field action.
+  It is not available to agents as a general tool.
+- Revealed values clear on disconnect, on losing authority and on navigating away.
+- Removal and relocation take a private recovery snapshot first, and access history is recorded
+  with values redacted.
+- `flock` serializes vault operations, so concurrent work cannot corrupt the database.
+
+Report vulnerabilities through [SECURITY.md](SECURITY.md) rather than a public issue, and never
+post credentials or private account data in one.
+
+## Current limitations
+
+- **Linux only**, for the reasons under [Requirements](#requirements).
+- **Native UI is an operator opt-in.** Until `customPlugins` is enabled and the Gateway restarted,
+  the pages are not rendered.
+- **Provider adapters are exercised against fixtures**, not live vendor credentials. A passing test
+  is never reported here as proven live authentication.
+- **Work is recorded, not chased.** Falcon Dash faithfully records what is happening; noticing that
+  nothing has happened is not part of this release.
+
+## Documentation
+
+- [Work](docs/End%20User/work.md) — the objects, states and how agents drive them
+- [Vault](docs/End%20User/passwords.md) — storage, access, recovery and who can see a value
+- [Documents](docs/End%20User/documents.md) — workspaces, editing and trash
+
+## License
+
+[CC BY-NC 4.0](LICENSE) — attribution required, non-commercial use only, adaptations permitted.
+Bundled dependency licenses remain with their respective code; TypeBox ships with its own license
+file.

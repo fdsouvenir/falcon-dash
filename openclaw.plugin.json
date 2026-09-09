@@ -2,7 +2,7 @@
 	"id": "falcon-dash",
 	"name": "Falcon Dash",
 	"version": "4.3.0",
-	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
+	"description": "Operator console for OpenClaw: shared Work tracking for people and agents, a KeePassXC credential vault that resolves SecretRefs, service integrations, and authorized document workspaces.",
 	"activation": {
 		"onStartup": true
 	},

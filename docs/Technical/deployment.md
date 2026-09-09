@@ -33,8 +33,18 @@ local development links or installs it separately.
 
 Tagged releases publish `@fdsouvenir/falcon-dash` to GitHub Packages. Registry authentication and
 scope configuration are required before installation. The package ships `plugin/`,
-`dist/control-ui/`, `openclaw.plugin.json`, the build script and the plugin technical docs — no
+`dist/control-ui/`, `openclaw.plugin.json`, the build script and the three End User documents — no
 source checkout, no CLI binaries and no runtime skills.
+
+The `docs/Technical/plugin-v4*.md` set is deliberately **not** shipped. Those documents are the
+engineering record: they name internal issues, CI runners, open gaps and historical checkpoints,
+none of which mean anything to somebody installing the plugin. `plugin/tests/release.test.mjs`
+asserts both directions — that the End User documents, README and LICENSE are packed, and that no
+`docs/Technical/` path is.
+
+The package is licensed CC BY-NC 4.0: attribution required, non-commercial use only, adaptations
+permitted. The earlier CC-BY-NC-ND-4.0 forbade redistributing a modified version, which is
+incompatible with publishing to a public registry where forks and patches are ordinary.
 
 Install the reviewed archive through the supported OpenClaw plugin installer. Do not replace
 installed files with links to a development checkout; installed code and writable data stay outside
