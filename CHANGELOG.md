@@ -5,6 +5,54 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-09-09
+
+### Added
+
+- **Search the whole Vault from one box.** The page now loads every group and entry in a single
+  protected call, `inventory_all`, so a search matches entries filed anywhere without walking the
+  tree group by group. Matching a group's name finds everything under it. The action returns
+  handles and kinds only, never a field value, and reuses the recursive listing the worker already
+  reads to validate handles, so it costs no extra `keepassxc-cli` invocation.
+
+### Changed
+
+- **The Vault page is laid out as a password manager rather than a stack of cards.** A group rail
+  with entry counts, a dense entry list, and an inspector for the selected entry replace one card
+  per entry with four peer buttons. Past a couple of dozen entries the old page could only be
+  scrolled; retrieval is now the page's primary job.
+- **Reveal is one toggle instead of a Reveal button beside a standing Hide.** Whichever of the old
+  pair was not the useful control did nothing when pressed.
+- **Inspector fields share a single label / value / actions baseline.** Field rows previously
+  rendered with the label and its controls on different baselines. A field the record does not
+  carry now reads "not set" and offers no control, rather than a button that could only fail.
+- **Removing an entry asks for its name** and keeps the control disabled until it matches exactly.
+  Destructive actions no longer look identical to Copy: the palette gains `--danger`, `--ok` and
+  `--warn` roles, having previously had no role for risk at all.
+- Adding an entry is a single form over the four fields KeePassXC actually has, with a group
+  picker. There is no create-time choice of record shape: the plain/envelope distinction is
+  internal to storage and never surfaced.
+- Controls keep a 44px minimum touch target, compacting to 32px only under `@media (pointer: fine)`.
+- The entry list deliberately shows only title and group. KeePassXC records no modification
+  timestamp for an entry, and reading any single field costs one `keepassxc-cli` subprocess per
+  entry — roughly 3.4s across 75 entries — so neither a "Modified" nor a "Username" column is
+  buildable at list scale. The username is shown in the inspector, which loads on selection.
+
+### Fixed
+
+- **The search field was constructed and wired but never added to the command bar**, so the control
+  the flat listing exists to serve was absent from the rendered page. Adding coverage for
+  cross-group search caught it.
+
+### Validation
+
+- 145 unit tests, up from 143. New coverage for the flat listing agreeing with a group-by-group
+  walk, for cross-group search including group-path matches and the no-match state, and for only
+  the fields a record carries offering a reveal control.
+- Secret handling is unchanged: the 15-second reveal hold, clearing on disconnect, authority loss
+  and navigation all still hold. The in-flight retirement tests now exercise navigating away,
+  because a read in flight holds the page busy and blocks a second control press.
+
 ## [4.2.0] - 2026-09-09
 
 ### Fixed
