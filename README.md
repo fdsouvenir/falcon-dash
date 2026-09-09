@@ -66,21 +66,25 @@ package tarball with a `SHA256SUMS` file to verify it against.
 Every setting is optional; the plugin runs with none of them. The Control UI shows the full schema,
 and the most useful ones are:
 
-| Setting                          | What it does                                                                                             |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `vaultOwners`                    | Profile IDs allowed to reveal and manage credentials. Without one, nobody can read a value.              |
-| `vaultDatabase` / `vaultKeyFile` | Point the Vault at an existing KeePassXC database instead of the default in the Gateway state directory. |
-| `dataDir`                        | Where Falcon Dash keeps its own Work, integration and audit databases.                                   |
-| `documentRoots`                  | Directories the Documents page may read and write, and who may reach them.                               |
-| `modules`                        | Turn individual pages off.                                                                               |
+| Setting                          | What it does                                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `vaultOwners`                    | Profile IDs recorded in the vault policy for the audit trail. **Not** an access allowlist — see Security. |
+| `vaultDatabase` / `vaultKeyFile` | Point the Vault at an existing KeePassXC database instead of the default in the Gateway state directory.  |
+| `dataDir`                        | Where Falcon Dash keeps its own Work, integration and audit databases.                                    |
+| `documentRoots`                  | Directories the Documents page may read and write, and who may reach them.                                |
+| `modules`                        | Turn individual pages off.                                                                                |
 
 ## Security
 
 - Credentials live in KeePassXC. Falcon Dash records its policy and access history beside your
   database and **never rewrites your entries** — the entries you created stay ordinary KeePassXC
   entries, so anything already resolving them keeps working.
-- Reading a value requires a verified human Gateway connection and an explicit, per-field action.
-  It is not available to agents as a general tool.
+- **Reaching an authenticated Gateway connection is the credential.** Any operator who can sign in
+  to your Control UI can reveal any entry; there is no per-person allowlist inside the plugin.
+  Restrict Gateway sign-in accordingly.
+- Reading a value requires a verified human connection and an explicit, per-field action. **Agents
+  cannot reveal values at all** — no raw-value Gateway method exists for them to call. An agent may
+  create an entry, and may be granted executor rights to use one, but revealing is denied.
 - Revealed values clear on disconnect, on losing authority and on navigating away.
 - Removal and relocation take a private recovery snapshot first, and access history is recorded
   with values redacted.

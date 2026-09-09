@@ -34,6 +34,18 @@ floor of **>=2026.9.3**; Node **`>=24.16.0 <25 || >=26.1.0`**, Linux `/proc/self
 KeePassXC CLI are prerequisites.
 This Linux-only release must not be advertised as portable or broadly version-compatible.
 
+## Configuration schema
+
+Every field in `configSchema` carries a `description`. ClawHub renders the schema as the listing's
+Configuration tab, so an undescribed field is a blank row on a public page; six of the eight were
+undescribed before publication.
+
+`vaultOwners` is described as what it is rather than what its name suggests. `owns()` returns true
+for any `human:` actor, so the Gateway's own authentication is the access boundary and
+`policy.owners` is recorded for the audit trail only. Describing it as an allowlist would tell an
+operator their credentials are restricted when any account that can sign in to the Control UI can
+read every entry.
+
 ## Registered identity
 
 The plugin id is `falcon-dash` and its registered description is user-facing: it appears in
