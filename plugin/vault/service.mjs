@@ -5,8 +5,28 @@ import { protectedProcess } from './process.mjs';
 import { internalAuthority } from '../authority.mjs';
 import { DomainError, requireValue } from '../errors.mjs';
 
+// The four fields a KeePassXC entry actually has. Blank strings are kept so clearing a field in the
+// UI clears it in the database; absent keys are left untouched.
+const PLAIN_FIELDS = ['password', 'username', 'url', 'notes'];
+function plainMaterial(fields) {
+	requireValue(
+		fields && typeof fields === 'object' && !Array.isArray(fields),
+		'invalid_input',
+		'Expected credential fields'
+	);
+	const material = {};
+	for (const name of PLAIN_FIELDS)
+		if (typeof fields[name] === 'string') material[name] = fields[name];
+	requireValue(Object.keys(material).length > 0, 'invalid_input', 'Expected credential fields');
+	return material;
+}
+
 export class Vault {
-	constructor(directory, { owners = [], executors = [] } = {}) {
+	/**
+	 * @param {string} directory
+	 * @param {{owners?: string[], executors?: string[], database?: string, key?: string}} [options]
+	 */
+	constructor(directory, { owners = [], executors = [], database, key } = {}) {
 		requireValue(
 			path.isAbsolute(directory),
 			'invalid_config',
@@ -20,6 +40,10 @@ export class Vault {
 		);
 		fs.chmodSync(directory, 0o700);
 		this.directory = directory;
+		// The credential database may live outside this private directory: an operator's existing
+		// KeePassXC vault is opened where it already is. Policy, audit and recovery stay private.
+		this.database = database ?? path.join(directory, 'credentials.kdbx');
+		this.key = key ?? path.join(directory, 'unlock.key');
 		this.owners = new Set(owners);
 		this.executors = new Set(executors);
 		this.locked = true;
@@ -56,9 +80,16 @@ export class Vault {
 	}
 	async worker(request, authority = internalAuthority) {
 		if (
-			!['initialize', 'reconcile', 'unlock', 'lock', 'audit', 'backup', 'recovery_list'].includes(
-				request.action
-			)
+			![
+				'initialize',
+				'adopt',
+				'reconcile',
+				'unlock',
+				'lock',
+				'audit',
+				'backup',
+				'recovery_list'
+			].includes(request.action)
 		) {
 			const original = authority,
 				signal = original.signal
@@ -82,7 +113,9 @@ export class Vault {
 				path.join(this.directory, 'transaction.lock'),
 				process.execPath,
 				fileURLToPath(new URL('./worker.mjs', import.meta.url)),
-				this.directory
+				this.directory,
+				this.database,
+				this.key
 			],
 			request,
 			{ authority }
@@ -102,7 +135,19 @@ export class Vault {
 	// Configured actors are reconciled on every start because the policy was written once, at
 	// provisioning: without this a later `vaultExecutors` edit would need a recovery to take effect.
 	async ready(authority = internalAuthority) {
-		if (!this.initialized) await this.initialize('system:vault', authority);
+		if (!this.initialized)
+			// A database already at the configured path is the operator's own vault. It is adopted —
+			// policy is recorded beside it — never recreated, so provisioning cannot clobber real
+			// credentials. Only a genuinely absent database is created.
+			await this.worker(
+				{
+					action: fs.existsSync(this.database) ? 'adopt' : 'initialize',
+					actor: 'system:vault',
+					owners: [...this.owners],
+					executors: [...this.executors]
+				},
+				authority
+			);
 		else
 			await this.worker(
 				{
@@ -210,6 +255,38 @@ export class Vault {
 		this.authorize(actor, true);
 		return this.worker(
 			{ action: 'group_create', id, actor, generation: this.policyGeneration },
+			authority
+		);
+	}
+	// A person managing their own vault gets an ordinary KeePassXC entry: a plain secret with the
+	// UserName/URL/Notes fields, exactly what every release through 3.1.1 wrote and what the exec
+	// SecretRef resolver reads. Agent credentials keep the versioned envelope through `create`.
+	async createEntry(id, fields, actor, authority = internalAuthority) {
+		this.authorize(actor, true);
+		return this.worker(
+			{
+				action: 'create',
+				id,
+				material: plainMaterial(fields),
+				plain: true,
+				actor,
+				generation: this.policyGeneration
+			},
+			authority
+		);
+	}
+	async updateEntry(id, fields, expected_version, actor, authority = internalAuthority) {
+		this.authorize(actor, true);
+		return this.worker(
+			{
+				action: 'rotate',
+				id,
+				material: plainMaterial(fields),
+				expected_version,
+				plain: true,
+				actor,
+				generation: this.policyGeneration
+			},
 			authority
 		);
 	}

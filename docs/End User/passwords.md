@@ -6,31 +6,37 @@ as the Vault page inside the OpenClaw Control UI.
 
 ## Storage and access
 
-The Vault keeps its own database inside the plugin's private data directory — by default
-`<OpenClaw state>/falcon-dash/vault`, or under `dataDir` when that is configured:
+The Vault opens your KeePassXC database where it already lives — by default
+`<OpenClaw state>/passwords.kdbx` with `<OpenClaw state>/vault.key`, overridable with
+`vaultDatabase` and `vaultKeyFile`:
 
-- database: `credentials.kdbx`
-- key file: `unlock.key`
+- database: `passwords.kdbx`
+- key file: `vault.key`
 - authentication: `keepassxc-cli --no-password --key-file`
 
-This is the plugin's own store. It is not any other KeePassXC database you already keep, including
-one an OpenClaw SecretRef provider resolves directly.
+Policy, access history and recovery snapshots are kept separately, in the plugin's private data
+directory (`<OpenClaw state>/falcon-dash/vault` by default).
+
+This is your own KeePassXC database — the same one the SecretRef resolver reads — opened where it
+already lives. Falcon Dash records its policy and access history alongside it and never rewrites
+your entries.
 
 Access is key-file only and unattended: there is no master-password prompt. The unlock key is
 protected by filesystem ownership, not an external key-management system.
 
 ## Setting it up
 
-There is nothing to set up. The plugin creates the encrypted database and its private key the first
-time it starts, and opens it on every start after that. The Vault page is a credential list from the
-first visit: no setup step, no unlock prompt, and no lock button.
+There is nothing to set up. If you already have a database at that path it is adopted on the first
+start — opened as-is, with policy recorded beside it and not one entry rewritten. If there is none,
+the plugin creates one. Either way it is opened on every start after that, and the Vault page is a
+credential list from the first visit: no setup step, no unlock prompt, and no lock button.
 
 Reaching the Gateway is what authorizes you. Anyone who can sign in to the operator UI can add,
 reveal and organize credentials; `vaultOwners` no longer gates the page. Agents are separate — they
 hold no session, so they reach a credential only when `vaultExecutors` names them and a human grants
 that entry.
 
-An existing vault is never silently adopted, and provisioning refuses to run twice.
+Provisioning refuses to run twice, and it never overwrites a database that already exists.
 
 If the page reads **Vault unavailable**, startup failed rather than waiting for you — usually a
 missing `keepassxc-cli`, or a key file present without its database, which needs recovery. The
@@ -42,8 +48,11 @@ Vault is unavailable rather than showing an empty list.
 
 ## What you can do
 
-Browse nested groups and entries, create groups and entries, and store username, password, URL and
-notes. Entries can be edited, moved, renamed and removed.
+Browse nested groups and entries under their real KeePassXC titles — spaces and punctuation
+included. Reveal, hide and copy an entry's password directly from the list; **Details** shows the
+Username, URL and Notes it carries. Create groups and entries, and edit, move, rename or remove
+them. Entries you create are ordinary KeePassXC entries, so the SecretRef resolver reads them
+without any conversion.
 
 **Group relocation works by moving entries into a newly created group, then removing the empty old
 one.** The supported CLI offers no proven-safe whole-group rename, so the product does not pretend
@@ -60,9 +69,9 @@ Old handles and SecretRefs do not follow a relocated entry. Update their binding
 Raw values never enter ordinary tool responses or logs. They travel only inside private process
 pipes.
 
-- **A human owner** can reveal and copy a value they own, through an explicit authorized action.
-- **A different authenticated person cannot** reveal an entry they do not own, even on the same
-  gateway. This is tested in the browser acceptance suite, not merely intended.
+- **Any authenticated operator** can reveal and copy values, through an explicit action. Reaching
+  the Gateway is the credential; there is no per-person allowlist. Anyone who can sign in to your
+  Control UI can read every entry.
 - **Agents cannot reveal values at all.** An agent may create an entry and may be granted _executor_
   rights to use one, but revealing is denied. No raw-value Gateway method exists to call.
 - Revealed values are cleared from the interface when the transport disconnects.

@@ -1,7 +1,7 @@
 {
 	"id": "falcon-dash",
 	"name": "Falcon Dash",
-	"version": "4.1.0",
+	"version": "4.2.0",
 	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
 	"activation": {
 		"onStartup": true
@@ -78,6 +78,14 @@
 					"type": "string"
 				},
 				"maxItems": 10
+			},
+			"vaultDatabase": {
+				"type": "string",
+				"description": "Absolute path to the KeePassXC database the Vault manages. Defaults to passwords.kdbx in the gateway state directory, which is the operator's existing vault."
+			},
+			"vaultKeyFile": {
+				"type": "string",
+				"description": "Absolute path to the key file that opens vaultDatabase. Defaults to vault.key in the gateway state directory."
 			}
 		}
 	},

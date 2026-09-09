@@ -29,7 +29,11 @@ a separate static asset directory.
   plugin provisions and unlocks at startup. There is no Set up, Unlock or Lock control — those are
   host lifecycle, not operator choices, and the actions are absent from the protected RPC. A page
   reporting `Vault unavailable` means startup failed and points at service health rather than
-  offering a step the operator cannot complete. Otherwise: protected entry, groups, field-specific
+  offering a step the operator cannot complete. The page is a password manager: entries list under
+  their real KeePassXC titles, Reveal/Hide/Copy act on the entry directly, and Details loads the
+  Username/URL/Notes an entry actually carries plus Edit. Executor grants appear only for agent
+  credentials, which are the only entries that have them. Otherwise: protected entry, groups,
+  field-specific
   Reveal/Hide/Copy for human- and agent-created entries, versioned field rotation and executor policy.
   The protected RPC is not a general agent tool or background feature query. It requires an actual
   connection-bound human owner and original authority through async worker activity and return.

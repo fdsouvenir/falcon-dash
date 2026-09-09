@@ -84,6 +84,10 @@ const config = {
 					dataDir: path.join(root, 'data'),
 					vaultExecutors: ['agent:fixture'],
 					vaultOwners: [],
+					// Exercise the explicit database/key configuration; the default is the operator's
+					// own KeePassXC vault beside the rest of their gateway state.
+					vaultDatabase: path.join(root, 'data/vault/credentials.kdbx'),
+					vaultKeyFile: path.join(root, 'data/vault/unlock.key'),
 					documentRoots: []
 				}
 			}

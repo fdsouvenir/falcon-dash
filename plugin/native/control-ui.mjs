@@ -835,6 +835,7 @@ function mount(container, context, module) {
 		}
 		status.textContent = 'Up to date';
 	}
+	const FIELD_LABELS = { password: 'Password', username: 'Username', url: 'URL', notes: 'Notes' };
 	async function vault() {
 		const valid = life.ticket();
 		clearSecrets();
@@ -912,20 +913,27 @@ function mount(container, context, module) {
 				})
 			)
 		);
-		paragraph(
-			body,
-			'Protected values stay in KeePassXC. Only configured human owners can manage this Vault.'
-		);
+		paragraph(body, 'Protected values stay in KeePassXC. Values are masked until you reveal them.');
 		actions.append(
 			button('Add credential', () =>
 				form(
-					'Add protected credential',
+					'New entry',
 					{
-						id: { label: 'Entry path' },
-						field: { value: 'api_key', label: 'Credential field' },
-						value: { type: 'password', label: 'Protected value' }
+						id: { label: 'Title', placeholder: 'e.g. GitHub API Key' },
+						password: { type: 'password', label: 'Password', placeholder: 'Enter password' },
+						username: { label: 'Username', placeholder: 'user@example.com' },
+						url: { label: 'URL', placeholder: 'https://example.com' },
+						notes: { label: 'Notes', placeholder: 'Optional notes' }
 					},
-					(v) => rpc('create', { id: v.id, material: { [v.field]: v.value } }),
+					(v) =>
+						rpc('add_entry', {
+							id: vaultGroup ? `${vaultGroup}/${v.id}` : v.id,
+							fields: Object.fromEntries(
+								Object.entries(v).filter(
+									([name, x]) => name !== 'id' && typeof x === 'string' && x.length
+								)
+							)
+						}),
 					{ protectedEntry: true }
 				)
 			),
@@ -993,148 +1001,190 @@ function mount(container, context, module) {
 				continue;
 			}
 			const section = el('section', null, { class: 'list-zone' });
-			section.append(el('h2', entry.id ?? entry.title));
-			paragraph(
-				section,
-				entry.execution_disabled
-					? 'Agent execution disabled'
-					: 'Values masked by default. Credential changes pause dependent Falcon connections until you resume and test them.'
-			);
+			const title = entry.id.includes('/') ? entry.id.split('/').pop() : entry.id;
+			section.append(el('h2', title));
 			const controls = el('div', null, { class: 'toolbar' }),
-				f = field('Field', { value: 'api_key' }),
 				value = el('output', '', {
 					'data-secret': 'revealed',
-					'aria-label': 'Revealed credential'
+					'aria-label': `Revealed value for ${title}`
 				});
 			secretNodes.add(value);
+			// A person reads a password far more often than anything else, so it is one click from the
+			// list. Everything that needs the entry's shape loads on demand behind Details.
+			const show = (field, purpose) =>
+				protect(async () => {
+					clearSecrets();
+					const ticket = secretTicket();
+					let result;
+					try {
+						result = await rpc(purpose === 'copy' ? 'copy' : 'reveal', { id: entry.id, field });
+					} catch (error) {
+						// An agent credential holds arbitrary field names, so it may genuinely have no
+						// password. Point at the control that lists what this entry does carry; every
+						// other failure still surfaces normally.
+						const code = error?.details?.code ?? error?.error?.details?.code;
+						if (code !== 'not_found') throw error;
+						if (ticket())
+							status.textContent = `${title} has no ${FIELD_LABELS[field] ?? field} field. Open Details for the fields it carries.`;
+						return;
+					}
+					if (!ticket() || !host.connection.connected) return;
+					if (purpose === 'copy') {
+						await navigator.clipboard.writeText(result.value);
+						status.textContent = 'Copied. Clipboard content remains until you replace it.';
+						return;
+					}
+					value.textContent = result.value;
+					setTimeout(() => {
+						value.textContent = '';
+					}, 15000);
+				});
 			controls.append(
-				f.wrap,
-				button('Reveal', () =>
-					protect(async () => {
-						clearSecrets();
-						const ticket = secretTicket();
-						const result = await rpc('reveal', { id: entry.id, field: f.input.value });
-						if (ticket() && host.connection.connected) {
-							value.textContent = result.value;
-							setTimeout(() => {
-								value.textContent = '';
-							}, 15000);
-						}
-					})
-				),
+				button('Reveal', () => show('password', 'reveal')),
 				button('Hide', () => {
 					clearSecrets();
 				}),
-				button('Copy', () =>
-					protect(async () => {
-						const ticket = secretTicket();
-						const result = await rpc('copy', { id: entry.id, field: f.input.value });
-						if (ticket() && host.connection.connected) {
-							await navigator.clipboard.writeText(result.value);
-							status.textContent = 'Copied. Clipboard content remains until you replace it.';
-						}
-					})
-				)
+				button('Copy', () => show('password', 'copy'))
 			);
-
+			const detail = el('div');
 			controls.append(
-				button('Rotate or add field', () =>
+				button('Details', () =>
 					protect(async () => {
 						const metadata = await request('vault', 'metadata', { id: entry.id });
-						if (life.dead) return;
-						form(
-							'Rotate protected credential field',
-							{
-								field: { value: f.input.value, label: 'Field to replace or add' },
-								value: { type: 'password', label: 'New protected value' }
-							},
-							(v) =>
-								rpc('rotate', {
-									id: entry.id,
-									expected_version: metadata.version,
-									material: { [v.field]: v.value }
-								}),
-							{ protectedEntry: true }
-						);
-					})
-				)
-			);
-			controls.append(
-				button('Access policy', () =>
-					protect(async () => {
-						const metadata = await request('vault', 'metadata', { id: entry.id });
-						if (life.dead) return;
-						form(
-							'Manage credential access',
-							{
-								executors: {
-									label: 'Allowed executor IDs (comma-separated)',
-									value: metadata.allowed_executors.join(', ')
-								},
-								state: {
-									label: 'Agent execution',
-									options: [
-										['enabled', 'Enabled'],
-										['disabled', 'Disabled']
-									],
-									value: metadata.execution_disabled ? 'disabled' : 'enabled'
-								}
-							},
-							async (v) => {
-								const grant = await rpc('grant', {
-									id: entry.id,
-									expected_version: metadata.version,
-									executors: v.executors
-										.split(',')
-										.map((s) => s.trim())
-										.filter(Boolean)
+						if (!section.isConnected || life.dead) return;
+						detail.replaceChildren();
+						if (metadata.execution_disabled) paragraph(detail, 'Agent execution disabled');
+						// Only the fields this entry carries. Offering Reveal for an absent field would
+						// hand the operator a control that can only fail.
+						for (const field of metadata.fields ?? []) {
+							if (field === 'password') continue;
+							const row = el('div', null, { class: 'toolbar' }),
+								revealed = el('output', '', {
+									'data-secret': 'revealed',
+									'aria-label': `Revealed ${field} for ${title}`
 								});
-								if ((v.state === 'disabled') !== metadata.execution_disabled)
-									await rpc(v.state === 'disabled' ? 'revoke' : 'restore', {
-										id: entry.id,
-										expected_version: grant.version
-									});
-							}
+							secretNodes.add(revealed);
+							row.append(
+								el('span', FIELD_LABELS[field] ?? field),
+								button('Reveal', () =>
+									protect(async () => {
+										const ticket = secretTicket();
+										const result = await rpc('reveal', { id: entry.id, field });
+										if (ticket() && host.connection.connected) revealed.textContent = result.value;
+									})
+								),
+								button('Copy', () =>
+									protect(async () => {
+										const ticket = secretTicket();
+										const result = await rpc('copy', { id: entry.id, field });
+										if (ticket() && host.connection.connected) {
+											await navigator.clipboard.writeText(result.value);
+											status.textContent =
+												'Copied. Clipboard content remains until you replace it.';
+										}
+									})
+								),
+								revealed
+							);
+							detail.append(row);
+						}
+						const more = el('div', null, { class: 'toolbar' });
+						more.append(
+							button('Edit entry', () =>
+								form(
+									`Edit ${title}`,
+									{
+										password: {
+											type: 'password',
+											label: 'Password',
+											placeholder: 'Leave blank to keep the existing secret'
+										},
+										username: { label: 'Username', placeholder: 'user@example.com' },
+										url: { label: 'URL', placeholder: 'https://example.com' },
+										notes: { label: 'Notes', placeholder: 'Optional notes' }
+									},
+									(v) =>
+										rpc('edit_entry', {
+											id: entry.id,
+											expected_version: metadata.version,
+											fields: Object.fromEntries(
+												Object.entries(v).filter(([, x]) => typeof x === 'string' && x.length)
+											)
+										}),
+									{ protectedEntry: true }
+								)
+							),
+							button('Rename or move entry', () =>
+								form(
+									'Rename or move credential — old handles and SecretRefs stop resolving',
+									{ destination: { label: 'Destination entry path', value: entry.id } },
+									(values) =>
+										rpc('relocate', {
+											id: entry.id,
+											destination: values.destination,
+											expected_version: metadata.version,
+											confirmed: true
+										})
+								)
+							),
+							button('Remove credential', () =>
+								confirm(
+									'Remove ' +
+										entry.id +
+										' and invalidate its handle; keep a private recovery snapshot',
+									() =>
+										rpc('remove_entry', {
+											id: entry.id,
+											expected_version: metadata.version,
+											confirmed: true
+										})
+								)
+							)
 						);
+						// Executor grants only mean something for a credential the plugin manages for an
+						// agent; a person's own KeePassXC entry has no envelope to hold them.
+						if (!metadata.plain)
+							more.append(
+								button('Access policy', () =>
+									form(
+										'Manage credential access',
+										{
+											executors: {
+												label: 'Allowed executor IDs (comma-separated)',
+												value: metadata.allowed_executors.join(', ')
+											},
+											state: {
+												label: 'Agent execution',
+												options: [
+													['enabled', 'Enabled'],
+													['disabled', 'Disabled']
+												],
+												value: metadata.execution_disabled ? 'disabled' : 'enabled'
+											}
+										},
+										async (v) => {
+											const grant = await rpc('grant', {
+												id: entry.id,
+												expected_version: metadata.version,
+												executors: v.executors
+													.split(',')
+													.map((x) => x.trim())
+													.filter(Boolean)
+											});
+											if ((v.state === 'disabled') !== metadata.execution_disabled)
+												await rpc(v.state === 'disabled' ? 'revoke' : 'restore', {
+													id: entry.id,
+													expected_version: grant.version
+												});
+										}
+									)
+								)
+							);
+						detail.append(more);
 					})
 				)
 			);
-
-			controls.append(
-				button('Rename or move entry', () =>
-					protect(async () => {
-						const metadata = await request('vault', 'metadata', { id: entry.id });
-						if (!section.isConnected || life.dead) return;
-						form(
-							'Rename or move credential — old handles and SecretRefs stop resolving',
-							{ destination: { label: 'Destination entry path', value: entry.id } },
-							(values) =>
-								rpc('relocate', {
-									id: entry.id,
-									destination: values.destination,
-									expected_version: metadata.version,
-									confirmed: true
-								})
-						);
-					})
-				),
-				button('Remove credential', () =>
-					protect(async () => {
-						const metadata = await request('vault', 'metadata', { id: entry.id });
-						if (!section.isConnected || life.dead) return;
-						confirm(
-							'Remove ' + entry.id + ' and invalidate its handle; keep a private recovery snapshot',
-							() =>
-								rpc('remove_entry', {
-									id: entry.id,
-									expected_version: metadata.version,
-									confirmed: true
-								})
-						);
-					})
-				)
-			);
-			section.append(controls, value);
+			section.append(controls, value, detail);
 			body.append(section);
 		}
 		if (!entries.length) paragraph(body, 'No credentials in this group.');

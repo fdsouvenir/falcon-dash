@@ -117,8 +117,8 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await vaultReady(page);
 	await page.getByRole('button', { name: 'Add credential', exact: true }).click();
 	const dialog = page.locator('openclaw-modal-dialog');
-	await dialog.getByLabel('Entry path', { exact: true }).fill(`owner-${info.project.name}`);
-	await dialog.getByLabel('Protected value', { exact: true }).fill('SYNTHETIC-HUMAN-UI-CANARY');
+	await dialog.getByLabel('Title', { exact: true }).fill(`owner-${info.project.name}`);
+	await dialog.getByLabel('Password', { exact: true }).fill('SYNTHETIC-HUMAN-UI-CANARY');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
 	await openModule(page, 'Vault');
@@ -135,21 +135,21 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 		.toBe('SYNTHETIC-HUMAN-UI-CANARY');
 	await human.getByRole('button', { name: 'Hide', exact: true }).click();
 	await expect(human.locator('output')).toHaveText('');
+	// An agent credential carries its own field names rather than a password, so it is read through
+	// Details, which lists the fields the entry actually has.
 	const agent = page
 		.locator('.list-zone')
 		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
-	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
-	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
+	await agent.getByRole('button', { name: 'Details', exact: true }).click();
+	const apiKey = agent.locator('.toolbar').filter({ hasText: 'api_key' });
+	await apiKey.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(apiKey.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	await page.evaluate(() => navigator.clipboard.writeText('SYNTHETIC-BEFORE-COPY'));
-	await agent.getByRole('button', { name: 'Copy', exact: true }).click();
+	await apiKey.getByRole('button', { name: 'Copy', exact: true }).click();
 	await expect
 		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
 		.toBe('SYNTHETIC-AGENT-UI-CANARY');
-	await agent.getByRole('button', { name: 'Hide', exact: true }).click();
-	await expect(agent.locator('output')).toHaveText('');
 	await capture(page, 'vault-masked', info.project.name);
-	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
-	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	// Nothing locks the Vault while the plugin runs — only shutdown does — so there is no operator
 	// lock to drive here. Revealed values clearing when the connection drops is covered separately,
 	// and `plugin/tests/native-ui.test.mjs` covers the at-rest status observation.
@@ -285,8 +285,10 @@ test('real transport disconnect clears revealed values and reconnect recovers na
 	const agent = page
 		.locator('.list-zone')
 		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
-	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
-	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
+	await agent.getByRole('button', { name: 'Details', exact: true }).click();
+	const apiKey = agent.locator('.toolbar').filter({ hasText: 'api_key' });
+	await apiKey.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(apiKey.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	await request.post('/__fixture/disconnect');
 	await expect(page.locator('body')).not.toContainText('SYNTHETIC-AGENT-UI-CANARY');
 	await request.post('/__fixture/reconnect');
@@ -508,8 +510,8 @@ test('Vault management preserves readback and exposes private recovery after rem
 		group = 'managed-group-' + info.project.name;
 	await app.getByRole('button', { name: 'Add credential', exact: true }).click();
 	let dialog = page.locator('openclaw-modal-dialog');
-	await dialog.getByLabel('Entry path', { exact: true }).fill(id);
-	await dialog.getByLabel('Protected value', { exact: true }).fill('SYNTHETIC-MANAGED-UI');
+	await dialog.getByLabel('Title', { exact: true }).fill(id);
+	await dialog.getByLabel('Password', { exact: true }).fill('SYNTHETIC-MANAGED-UI');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(dialog).toHaveCount(0);
 	await app.getByRole('button', { name: 'New group', exact: true }).click();
@@ -520,6 +522,7 @@ test('Vault management preserves readback and exposes private recovery after rem
 	const entry = app
 		.locator('.list-zone')
 		.filter({ has: page.getByRole('heading', { name: id, exact: true }) });
+	await entry.getByRole('button', { name: 'Details', exact: true }).click();
 	await entry.getByRole('button', { name: 'Rename or move entry', exact: true }).click();
 	dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Destination entry path', { exact: true }).fill(group + '/moved');
@@ -528,10 +531,11 @@ test('Vault management preserves readback and exposes private recovery after rem
 	await app.getByRole('button', { name: group, exact: true }).click();
 	const moved = app
 		.locator('.list-zone')
-		.filter({ has: page.getByRole('heading', { name: group + '/moved', exact: true }) });
+		.filter({ has: page.getByRole('heading', { name: 'moved', exact: true }) });
 	await moved.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(moved.locator('output')).toHaveText('SYNTHETIC-MANAGED-UI');
 	await moved.getByRole('button', { name: 'Hide', exact: true }).click();
+	await moved.getByRole('button', { name: 'Details', exact: true }).click();
 	await moved.getByRole('button', { name: 'Remove credential', exact: true }).click();
 	await page
 		.locator('openclaw-modal-dialog')
