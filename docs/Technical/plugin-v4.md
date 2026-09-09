@@ -34,6 +34,18 @@ floor of **>=2026.9.3**; Node **`>=24.16.0 <25 || >=26.1.0`**, Linux `/proc/self
 KeePassXC CLI are prerequisites.
 This Linux-only release must not be advertised as portable or broadly version-compatible.
 
+## Catalog metadata
+
+The manifest declares `categories: ["agent-orchestration"]` and an `icon` URL. ClawHub requires
+exactly one category per release, declared in the manifest — the CLI's `--categories` flag is
+deprecated and ignored for plugins. Omitting the field hands classification to a model, which falls
+back to `other`.
+
+The icon is `assets/falcon-dash-icon.png`, served raw from the default branch. It is the existing
+Falcon Dash mark recovered from the pre-4.0 application, resampled to 256px with an adaptive
+palette: 457 KB to 57 KB, since a catalog icon renders small. The asset is not packed into the
+release archive because the manifest references it by URL.
+
 ## Configuration schema
 
 Every field in `configSchema` carries a `description`. ClawHub renders the schema as the listing's
