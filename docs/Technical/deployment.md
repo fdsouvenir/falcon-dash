@@ -54,7 +54,7 @@ permissions. Do not commit any of them. Private recovery snapshots are described
 
 ## Versioning
 
-`4.0.0` is the first plugin release. Three files must carry the same version — `package.json`,
+`4.0.0` was the first plugin release; `4.0.1` is current. Three files must carry the same version — `package.json`,
 `openclaw.plugin.json` and `package-lock.json` — and the release tag must be exactly
 `v<package version>`. `scripts/verify-release-metadata.mjs` enforces all four in CI before a tag
 publishes anything.

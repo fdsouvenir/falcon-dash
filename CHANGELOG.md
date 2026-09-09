@@ -5,6 +5,18 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2026-09-08
+
+### Fixed
+
+- **Agent tools reached a dead service copy.** The host registers the plugin more than once per
+  process, and a tool-discovery registration never starts a service, so every `falcon_work`,
+  `falcon_vault`, `falcon_integrations` and `falcon_documents` call failed with
+  `unavailable` while the Control UI worked from the activated registration in the same process.
+  The started modules are now published on a process-global resolved at invocation, so all
+  registrations serve the one live instance. A stopped service still fails closed.
+  ([#370](https://github.com/fdsouvenir/falcon-dash/issues/370))
+
 ## [4.0.0] - 2026-09-07
 
 Falcon Dash is now **one installable OpenClaw plugin**. There is no standalone web application, no

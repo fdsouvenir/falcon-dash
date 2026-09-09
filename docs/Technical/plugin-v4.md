@@ -33,6 +33,25 @@ Development dependencies are not runtime plugin dependencies. OpenClaw is an exa
 at **2026.9.2**; Node **22.16+**, Linux `/proc/self/fd`, `flock`, and KeePassXC CLI are prerequisites.
 This Linux-only release must not be advertised as portable or broadly version-compatible.
 
+## One process, several registrations
+
+The host registers this plugin more than once in the same process. A tool registry loads it with
+activation disabled and tool discovery on, so `services.register` and `start()` are substituted and
+never run. That registration still exposes the tools an agent calls. Registration-local state is
+therefore not a safe place to hold the service: the discovery load's own copy stays empty forever,
+and tools served from it fail with `unavailable` while the activated load answers Gateway methods
+from a live store in the same process at the same moment.
+
+`start()` publishes the started modules on `globalThis[Symbol.for('falcon-dash.runtime')]`, and
+`invoke()` resolves that value rather than its closure copies, so every registration serves the one
+live instance. `stop()` and a failed `start()` both delete it. An absent global still means no
+service in this process, so a genuinely stopped service continues to fail closed.
+
+Registration-shape assertions cannot see this: both loads register identical tools. Coverage
+belongs in a test that performs two registrations, starts only the first, and then invokes through
+the second — asserting it reaches the running store and still records `agent:<agentId>` as the
+actor.
+
 ## Historical iframe limitation (superseded by approved native UI)
 
 The inspected installed host is OpenClaw 2026.9.2, build `3928bad`.
