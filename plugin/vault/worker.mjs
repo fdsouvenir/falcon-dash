@@ -453,9 +453,14 @@ try {
 			// reading one attribute per entry costs a subprocess each and would dominate the call.
 			const all = [];
 			for (const path of paths) {
-				if (!path || path === '[empty]') continue;
+				if (!path) continue;
 				const isGroup = path.endsWith('/'),
 					entryId = isGroup ? path.slice(0, -1) : path;
+				// `keepassxc-cli ls` prints an `[empty]` placeholder for a childless group. The flat
+				// listing prints it under its group as `Group/[empty]`, so matching the bare string is
+				// not enough: a phantom entry there makes an emptied group look occupied, which hides
+				// its removal control and offers a row whose metadata call can only fail.
+				if (entryId.split('/').at(-1) === '[empty]') continue;
 				if (!validHandle(entryId)) continue;
 				all.push({ id: entryId, kind: isGroup ? 'group' : 'entry' });
 			}

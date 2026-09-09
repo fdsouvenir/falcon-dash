@@ -243,3 +243,39 @@ test('The whole tree is listed in one call so the UI can search without walking 
 	assert.deepEqual(entries, walked);
 	await vault.lock();
 });
+
+test('An emptied group is not reported as holding a placeholder entry', async (t) => {
+	const { directory, database, key } = existingDatabase(t);
+	const vault = new Vault(path.join(directory, 'private'), {
+		owners: [],
+		executors: [],
+		database,
+		key
+	});
+	await vault.ready();
+	const before = await vault.metadata('Work/GitHub Verlbot CLI', 'human:owner');
+	await vault.worker({
+		action: 'remove_entry',
+		id: 'Work/GitHub Verlbot CLI',
+		expected_version: before.version,
+		actor: 'human:owner',
+		confirmed: true,
+		generation: vault.policyGeneration
+	});
+	// The recursive listing prints the childless-group placeholder as `Work/[empty]`, not as a bare
+	// `[empty]`. Reporting it as an entry makes an emptied group look occupied, so its removal
+	// control never appears and the list offers a row whose metadata call can only fail.
+	const all = await vault.inventoryAll('human:owner');
+	const remaining = all.entries.filter((e) => e.kind === 'entry').map((e) => e.id);
+	assert.ok(
+		!remaining.some((id) => id.endsWith('[empty]')),
+		`placeholder leaked into the listing: ${remaining.join(', ')}`
+	);
+	assert.deepEqual(
+		remaining.filter((id) => id.startsWith('Work/')),
+		[]
+	);
+	// The group itself is still listed, so it can be selected and removed.
+	assert.ok(all.entries.some((e) => e.kind === 'group' && e.id === 'Work'));
+	await vault.lock();
+});

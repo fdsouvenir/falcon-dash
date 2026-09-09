@@ -37,8 +37,28 @@ async function vaultReady(page: Page) {
 	// The plugin provisions and opens the Vault at startup, so credential management is the first
 	// thing an operator sees. There is no unlock step to perform here.
 	await expect(
-		page.locator('.falcon-native').getByRole('button', { name: 'Add credential', exact: true })
+		page.locator('.falcon-native').getByRole('button', { name: 'New entry', exact: true })
 	).toBeVisible();
+}
+// One row per entry in the list; every field control lives in the inspector that a row opens.
+function vaultRow(page: Page, title: string) {
+	return page.locator('.vault-row').filter({ has: page.getByText(title, { exact: true }) });
+}
+async function openVaultEntry(page: Page, title: string) {
+	await vaultRow(page, title).getByRole('button', { name: title }).click();
+	await expect(page.locator('.vault-inspector-title')).toHaveText(title);
+}
+// A field row is label / value / actions on one baseline, so the label identifies the row.
+function vaultField(page: Page, label: string) {
+	return page
+		.locator('.vault-field')
+		.filter({ has: page.locator('.vault-field-label').getByText(label, { exact: true }) });
+}
+async function selectVaultGroup(page: Page, name: string) {
+	await page
+		.locator('.vault-rail-item')
+		.filter({ has: page.getByText(name, { exact: true }) })
+		.click();
 }
 test.afterEach(async ({ page, request }, info) => {
 	if (info.status !== info.expectedStatus) {
@@ -115,33 +135,30 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 }, info) => {
 	await openModule(page, 'Vault');
 	await vaultReady(page);
-	await page.getByRole('button', { name: 'Add credential', exact: true }).click();
+	await page.getByRole('button', { name: 'New entry', exact: true }).click();
 	const dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Title', { exact: true }).fill(`owner-${info.project.name}`);
 	await dialog.getByLabel('Password', { exact: true }).fill('SYNTHETIC-HUMAN-UI-CANARY');
-	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await dialog.getByRole('button', { name: 'Create entry', exact: true }).click();
 	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
 	await openModule(page, 'Vault');
 	await vaultReady(page);
-	const human = page.locator('.list-zone').filter({
-		has: page.getByRole('heading', { name: `owner-${info.project.name}`, exact: true })
-	});
-	await human.getByRole('button', { name: 'Reveal', exact: true }).click();
-	await expect(human.locator('output')).toHaveText('SYNTHETIC-HUMAN-UI-CANARY');
+	await openVaultEntry(page, `owner-${info.project.name}`);
+	const password = vaultField(page, 'Password');
+	await password.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(password.locator('output')).toHaveText('SYNTHETIC-HUMAN-UI-CANARY');
 	await page.evaluate(() => navigator.clipboard.writeText('SYNTHETIC-BEFORE-COPY'));
-	await human.getByRole('button', { name: 'Copy', exact: true }).click();
+	await password.getByRole('button', { name: 'Copy', exact: true }).click();
 	await expect
 		.poll(() => page.evaluate(() => navigator.clipboard.readText()))
 		.toBe('SYNTHETIC-HUMAN-UI-CANARY');
-	await human.getByRole('button', { name: 'Hide', exact: true }).click();
-	await expect(human.locator('output')).toHaveText('');
-	// An agent credential carries its own field names rather than a password, so it is read through
-	// Details, which lists the fields the entry actually has.
-	const agent = page
-		.locator('.list-zone')
-		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
-	await agent.getByRole('button', { name: 'Details', exact: true }).click();
-	const apiKey = agent.locator('.toolbar').filter({ hasText: 'api_key' });
+	// The same control hides it again; there is no Hide button standing idle beside Reveal.
+	await password.getByRole('button', { name: 'Hide', exact: true }).click();
+	await expect(password.locator('output')).toHaveText('');
+	// An agent credential carries its own field names rather than a password. The inspector lists
+	// whatever the record holds, so those names appear after the four KeePassXC fields.
+	await openVaultEntry(page, 'agent-created');
+	const apiKey = vaultField(page, 'api_key');
 	await apiKey.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(apiKey.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	await page.evaluate(() => navigator.clipboard.writeText('SYNTHETIC-BEFORE-COPY'));
@@ -282,18 +299,15 @@ test('real transport disconnect clears revealed values and reconnect recovers na
 }, info) => {
 	await openModule(page, 'Vault');
 	await vaultReady(page);
-	const agent = page
-		.locator('.list-zone')
-		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
-	await agent.getByRole('button', { name: 'Details', exact: true }).click();
-	const apiKey = agent.locator('.toolbar').filter({ hasText: 'api_key' });
+	await openVaultEntry(page, 'agent-created');
+	const apiKey = vaultField(page, 'api_key');
 	await apiKey.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(apiKey.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
 	await request.post('/__fixture/disconnect');
 	await expect(page.locator('body')).not.toContainText('SYNTHETIC-AGENT-UI-CANARY');
 	await request.post('/__fixture/reconnect');
 	await expect(
-		page.locator('.falcon-native').getByRole('button', { name: 'Add credential', exact: true })
+		page.locator('.falcon-native').getByRole('button', { name: 'New entry', exact: true })
 	).toBeVisible({ timeout: 60000 });
 	await capture(page, 'reconnected-vault', info.project.name);
 });
@@ -508,39 +522,37 @@ test('Vault management preserves readback and exposes private recovery after rem
 	const app = page.locator('.falcon-native'),
 		id = 'managed-' + info.project.name,
 		group = 'managed-group-' + info.project.name;
-	await app.getByRole('button', { name: 'Add credential', exact: true }).click();
+	await app.getByRole('button', { name: 'New entry', exact: true }).click();
 	let dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Title', { exact: true }).fill(id);
 	await dialog.getByLabel('Password', { exact: true }).fill('SYNTHETIC-MANAGED-UI');
-	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+	await dialog.getByRole('button', { name: 'Create entry', exact: true }).click();
 	await expect(dialog).toHaveCount(0);
 	await app.getByRole('button', { name: 'New group', exact: true }).click();
 	dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Group path', { exact: true }).fill(group);
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(dialog).toHaveCount(0);
-	const entry = app
-		.locator('.list-zone')
-		.filter({ has: page.getByRole('heading', { name: id, exact: true }) });
-	await entry.getByRole('button', { name: 'Details', exact: true }).click();
-	await entry.getByRole('button', { name: 'Rename or move entry', exact: true }).click();
+	await openVaultEntry(page, id);
+	await app.getByRole('button', { name: 'Move or rename', exact: true }).click();
 	dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Destination entry path', { exact: true }).fill(group + '/moved');
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(dialog).toHaveCount(0);
-	await app.getByRole('button', { name: group, exact: true }).click();
-	const moved = app
-		.locator('.list-zone')
-		.filter({ has: page.getByRole('heading', { name: 'moved', exact: true }) });
-	await moved.getByRole('button', { name: 'Reveal', exact: true }).click();
-	await expect(moved.locator('output')).toHaveText('SYNTHETIC-MANAGED-UI');
-	await moved.getByRole('button', { name: 'Hide', exact: true }).click();
-	await moved.getByRole('button', { name: 'Details', exact: true }).click();
-	await moved.getByRole('button', { name: 'Remove credential', exact: true }).click();
-	await page
-		.locator('openclaw-modal-dialog')
-		.getByRole('button', { name: 'Confirm', exact: true })
-		.click();
+	await selectVaultGroup(page, group);
+	await openVaultEntry(page, 'moved');
+	const movedPassword = vaultField(page, 'Password');
+	await movedPassword.getByRole('button', { name: 'Reveal', exact: true }).click();
+	await expect(movedPassword.locator('output')).toHaveText('SYNTHETIC-MANAGED-UI');
+	await movedPassword.getByRole('button', { name: 'Hide', exact: true }).click();
+	// Removal asks for the entry's name and keeps the control disabled until it matches exactly.
+	await app.getByRole('button', { name: 'Remove', exact: true }).click();
+	dialog = page.locator('openclaw-modal-dialog');
+	const removeButton = dialog.getByRole('button', { name: 'Remove entry', exact: true });
+	await expect(removeButton).toBeDisabled();
+	await dialog.getByLabel('Type moved to confirm', { exact: true }).fill('moved');
+	await expect(removeButton).toBeEnabled();
+	await removeButton.click();
 	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
 	await app.getByRole('button', { name: 'Remove empty group', exact: true }).click();
 	await page

@@ -46,6 +46,11 @@ a field value — and reuses the recursive listing the worker already reads to v
 it costs no extra `keepassxc-cli` invocation. Reading a field still requires an explicit `reveal`
 or `copy` for one named field on one entry.
 
+`keepassxc-cli ls` prints an `[empty]` placeholder for a childless group, and the recursive listing
+prints it under its group as `<group>/[empty]`. `inventory_all` drops any path whose last segment is
+that placeholder: reporting it as an entry would make an emptied group look occupied, hiding its
+removal control and offering a row whose `metadata` call could only fail.
+
 ## Configure OpenClaw
 
 Register the bundled resolver in `~/.openclaw/openclaw.json`. `providers` is an object keyed by

@@ -38,7 +38,9 @@ a separate static asset directory.
   the username belongs to the inspector, which loads `metadata` on selection. The inspector shows
   Password/Username/URL/Notes on a single label-value-actions baseline, masked until revealed, and
   offers a control only for the fields the record reports carrying. Reveal is one toggle rather
-  than a Reveal button beside a standing Hide. Removal asks the operator to type the entry name and
+  than a Reveal button beside a standing Hide. The four KeePassXC fields always appear so an empty
+  one reads as "not set"; an agent credential carries arbitrary field names of its own, and those
+  are listed after the four rather than being dropped. Removal asks the operator to type the entry name and
   keeps the control disabled until it matches exactly, because `message` deliberately discards
   error text and a thrown mismatch would surface as a generic failure. Otherwise: protected entry,
   groups, versioned field rotation and executor policy.
@@ -147,6 +149,9 @@ waiting references are optional and never replace the required waiting/resume ex
 - Work collections/attention pages have totals and continuation controls; participants derive from
   event and linked-session provenance. Reference fields offer host-owned identity suggestions and
   bounded title search rather than requiring CLI syntax. Missing identities remain visible.
+- The Vault's narrow-viewport rules are declared after its base rules on purpose. A media query
+  adds no specificity, so overrides placed earlier in the stylesheet lose to later base rules and
+  the three-pane grid would keep its desktop track sizes at 320px, overflowing the shell.
 - Vault supports protected SecretRef grants, redacted access history, private recovery snapshots,
   guarded entry relocation/removal and removal of empty groups. Grants stay reachable from the
   command bar because they are the only way to authorize a SecretRef, but they are not a browsing

@@ -1058,11 +1058,17 @@ function mount(container, context, module) {
 			if (metadata.execution_disabled)
 				inspector.append(el('p', 'Agent execution disabled', { class: 'vault-flag' }));
 			const carried = new Set(metadata.fields ?? []);
+			// The four KeePassXC fields always appear, so an empty one reads as "not set" rather than
+			// vanishing. An agent credential carries arbitrary names of its own, so anything else the
+			// record holds is listed after them; hard-coding only the four would make such an entry
+			// look empty.
+			const extra = [...carried].filter((name) => !FIELD_ORDER.includes(name)).sort();
 			// Only the fields this entry actually carries get a control. Offering Reveal for an absent
 			// field hands the operator something that can only fail.
-			for (const name of FIELD_ORDER) {
+			for (const name of [...FIELD_ORDER, ...extra]) {
 				const fieldRow = el('div', null, { class: 'vault-field' });
-				fieldRow.append(el('span', FIELD_LABELS[name], { class: 'vault-field-label' }));
+				const label = FIELD_LABELS[name] ?? name;
+				fieldRow.append(el('span', label, { class: 'vault-field-label' }));
 				if (!carried.has(name)) {
 					fieldRow.append(
 						el('span', '—', { class: 'vault-field-value empty' }),
@@ -1074,7 +1080,7 @@ function mount(container, context, module) {
 				const shown = el('output', '', {
 					class: 'vault-field-value',
 					'data-secret': 'revealed',
-					'aria-label': `Revealed ${FIELD_LABELS[name]} for ${title}`
+					'aria-label': `Revealed ${label} for ${title}`
 				});
 				secretNodes.add(shown);
 				const masked = el('span', '••••••••••', { class: 'vault-field-value masked' }),

@@ -245,26 +245,6 @@
 	.falcon-native .toolbar > .falcon-field {
 		flex-basis: 100%;
 	}
-	/* Columns are dropped rather than squeezed: the rail becomes a scrolling strip and the
-	   inspector stacks under the list instead of compressing it below readable width. */
-	.falcon-native .vault-workspace {
-		grid-template-columns: minmax(0, 1fr);
-	}
-	.falcon-native .vault-rail {
-		flex-direction: row;
-		overflow-x: auto;
-		max-height: none;
-	}
-	.falcon-native .vault-rail-item {
-		flex: 0 0 auto;
-	}
-	.falcon-native .vault-row-group {
-		display: none;
-	}
-	.falcon-native .vault-field {
-		grid-template-columns: minmax(0, 1fr);
-		row-gap: 4px;
-	}
 }
 @media (prefers-reduced-motion: reduce) {
 	.falcon-native * {
@@ -549,5 +529,30 @@ form.falcon-native {
 	.falcon-native .vault-rail-item {
 		min-height: 32px;
 		padding: 5px 10px;
+	}
+}
+@media (max-width: 767px) {
+	/* Declared after the base vault rules on purpose: a media query adds no specificity, so these
+	   overrides only win by coming later in source order. */
+	.falcon-native .vault-workspace {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.falcon-native .vault-rail {
+		flex-direction: row;
+		overflow-x: auto;
+		max-height: none;
+	}
+	.falcon-native .vault-rail-item {
+		flex: 0 0 auto;
+	}
+	.falcon-native .vault-row-group {
+		display: none;
+	}
+	.falcon-native .vault-field {
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: 4px;
+	}
+	.falcon-native .vault-field-actions {
+		justify-content: start;
 	}
 }

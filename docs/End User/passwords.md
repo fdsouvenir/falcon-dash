@@ -70,6 +70,10 @@ Every entry is the same kind of thing. The Vault does not distinguish between a 
 and one an agent reads — the difference is internal to storage, and nothing in the page asks you to
 choose between them.
 
+Once a group holds nothing, the list offers to remove it. An empty group reports itself as empty
+rather than appearing to still hold something: KeePassXC's own listing prints a placeholder row for
+a childless group, and the Vault filters that out so the group's removal control actually appears.
+
 **Group relocation works by moving entries into a newly created group, then removing the empty old
 one.** The supported CLI offers no proven-safe whole-group rename, so the product does not pretend
 to have one.

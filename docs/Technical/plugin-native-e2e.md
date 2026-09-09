@@ -29,7 +29,15 @@ Chromium loads the **real Control UI served by that Gateway**, not a hand-built 
 mock `host.request`. Desktop and narrow projects run serially. Tests cover native navigation,
 Work creation through typed operations, owner credential entry/reveal/copy and lock cleanup,
 Documents editing/concurrency/Markdown, persisted integration controls, disconnect/reconnect,
-nonowner denial and useful native-opt-in-off guidance. Screenshots mask protected fields. Trace
+nonowner denial and useful native-opt-in-off guidance.
+
+The Vault cases drive the rebuilt page: a row in the entry list opens the inspector, and every
+field control is read from a `.vault-field` row identified by its label. Two defects reached this
+suite and nothing else, which is why it gates the release. A recursive listing reports a childless
+group's `[empty]` placeholder under its group path, so an emptied group looked occupied and its
+removal control never appeared. And the narrow-viewport rules were declared before the base Vault
+rules, so at 320px the desktop three-pane grid survived and overflowed the shell — neither the
+type checker nor the DOM unit tests can see either failure. Screenshots mask protected fields. Trace
 and video capture are disabled so credential interactions cannot enter those artifacts.
 
 ## Commands and evidence
