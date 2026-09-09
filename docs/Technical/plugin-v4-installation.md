@@ -22,6 +22,40 @@ there is no cutover, rollback-to-previous-version or legacy retirement path in t
   and runtime registration. The pinned host, Linux/KeePassXC prerequisites, private data paths,
   native Custom plugin UI opt-in and user-owned Node requirement for the managed preset still apply.
 
+## Post-install configuration
+
+Plugin settings live under `plugins.entries.falcon-dash.config`, the location the host validates
+against the manifest `configSchema`. Placing a plugin setting directly on
+`plugins.entries.falcon-dash` fails whole-config validation with `Unrecognized key`, and the
+gateway then skips every subsequent config reload until the key is moved or removed.
+
+A fresh install leaves `vaultOwners` empty, so `falcon.vault.read` reports `can_manage: false`
+and no human can unlock or manage the Vault. Each owner is a full actor string, not a bare
+profile id: `plugin/vault/service.mjs` requires `owners.has(actor) && actor.startsWith('human:')`.
+Resolve the operator's profile id from the host's own user profile store and configure:
+
+```json
+{
+	"plugins": {
+		"entries": {
+			"falcon-dash": {
+				"enabled": true,
+				"hooks": { "allowConversationAccess": true },
+				"config": { "vaultOwners": ["human:<profile-id>"] }
+			}
+		}
+	}
+}
+```
+
+`hooks.allowConversationAccess` is the owner grant described under
+[Host validation caveats](plugin-v4.md); without it the host blocks the `before_prompt_build`
+hook and no domain contract reaches an agent. The native Control UI pages additionally need the
+`gateway.controlUi.experimental.customPlugins` opt-in.
+
+The Vault module starts as an empty private store under `<dataDir>/vault`. It does not adopt an
+existing KeePassXC database from anywhere on the host, and 4.0 ships no importer.
+
 ## Private Vault recovery
 
 The owner-only native **Recovery snapshots** surface creates a consistent snapshot under the

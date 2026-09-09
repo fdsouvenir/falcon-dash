@@ -1,6 +1,6 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
-	"version": "4.0.0",
+	"version": "4.0.1",
 	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
 	"repository": {
 		"type": "git",
