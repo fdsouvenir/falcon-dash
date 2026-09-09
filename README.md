@@ -101,4 +101,4 @@ Read [AGENTS.md](AGENTS.md), [the harness](docs/HARNESS.md), and
 [quality requirements](docs/QUALITY.md). Report vulnerabilities according to [SECURITY.md](SECURITY.md),
 not by posting credentials or private account data in issues.
 
-License: [CC-BY-NC-ND-4.0](LICENSE); bundled dependency licenses remain with their respective code.
+License: [CC BY-NC 4.0](LICENSE); bundled dependency licenses remain with their respective code.

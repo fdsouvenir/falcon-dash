@@ -29,3 +29,6 @@ plugin/typebox-license.txt
 
 # Agent temporary approval/inspection artifacts
 .openclaw/tmp/
+
+# ClawHub plugin inspector output
+reports
