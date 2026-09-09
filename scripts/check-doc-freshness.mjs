@@ -45,6 +45,25 @@ function touches(paths, matchers) {
 
 const ignoredMatchers = ['docs/', 'scripts/', 'package-lock.json'];
 
+// A release bump rewrites the version string in the package, the plugin manifest and the generated
+// contract. Those are high-signal files, but a version field carries no behaviour to document, so
+// requiring a doc edit here would only produce a meaningless one. The exemption is deliberately
+// narrow: a file qualifies only when every changed line in it is a version field.
+const versionLine = /^[+-]\s*(?:"version":\s*"[^"]*",?|version:\s*'[^']*',?)\s*$/;
+function isVersionOnlyChange(base, head, path) {
+	const range = base && head && !/^0+$/.test(base) ? [base, head] : ['HEAD'];
+	let diff;
+	try {
+		diff = runGit(['diff', '--unified=0', ...range, '--', path]);
+	} catch {
+		return false;
+	}
+	const changes = diff
+		.split('\n')
+		.filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
+	return changes.length > 0 && changes.every((line) => versionLine.test(line));
+}
+
 // Every required group must have at least one matching changed document. Keep rules narrow: touching
 // an unrelated end-user guide must never satisfy a Work, Vault, Integrations, or deployment change.
 const rules = [
@@ -105,7 +124,10 @@ if (changedPaths.length === 0) {
 }
 
 const highSignalPaths = changedPaths.filter(
-	(path) => !ignoredMatchers.some((matcher) => matches(path, matcher)) && path !== 'AGENTS.md'
+	(path) =>
+		!ignoredMatchers.some((matcher) => matches(path, matcher)) &&
+		path !== 'AGENTS.md' &&
+		!isVersionOnlyChange(base, head, path)
 );
 if (highSignalPaths.length === 0) {
 	console.log('Doc freshness check skipped: no high-signal implementation paths changed.');
