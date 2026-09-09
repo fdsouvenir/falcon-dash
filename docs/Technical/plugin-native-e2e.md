@@ -7,7 +7,7 @@ tests, and the managed-SecretRef/provider-bound proof. Its required `native-e2e`
 `e2e.yml`. There is no `if: false`, success skip, standalone app dev server, or Node 20 host in
 that acceptance path. A failing real-Gateway browser test fails the CI workflow.
 
-The native job installs OpenClaw **2026.9.2**, Node from `.nvmrc`, KeePassXC and Chromium into its
+The native job installs OpenClaw **2026.9.3**, Node from `.nvmrc`, KeePassXC and Chromium into its
 disposable GitHub runner. `npm run test:native-e2e` builds and packs the plugin, installs that
 archive, and starts the actual pinned Gateway with explicit isolated state/config/workspace paths.
 It uses a byte-identical user-owned Node copy; no system Node permissions or ownership change.
@@ -129,3 +129,8 @@ removal/private recovery listing, safe missing-material connection diagnostics a
 attention, and keyboard dialog interaction plus 320px reduced-motion reflow across all modules.
 The missing-material fixture fails before provider I/O; it is not a live Cloudflare test. Private
 Vault/recovery directories are excluded from evidence uploads. No success-skip closes these cases.
+
+Vault cases assert readiness rather than performing it. The plugin provisions and unlocks at
+startup, so `vaultReady()` waits for credential management to be present and clicks nothing. It
+replaced an earlier `unlock()` helper that clicked `Unlock` only when visible — a conditional step
+passes whether or not the control exists, which is exactly the regression these cases must catch.

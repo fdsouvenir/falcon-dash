@@ -300,6 +300,7 @@ function mount(container, context, module) {
 	let consentUrl,
 		dialog,
 		vaultEpoch,
+		vaultAtRest = false,
 		vaultGroup =
 			module === 'vault' && context.props?.entry_id
 				? context.props.entry_id.split('/').slice(0, -1).join('/')
@@ -841,9 +842,21 @@ function mount(container, context, module) {
 		if (!valid()) return;
 		body.replaceChildren();
 		vaultEpoch = state.epoch;
-		status.textContent = state.locked ? 'Vault locked' : 'Vault unlocked';
+		// The plugin provisions and opens its one Vault as it starts, so there is nothing here for an
+		// operator to create or unlock. At rest means that startup failed, and the page says so instead
+		// of offering a step that is not theirs to run.
+		vaultAtRest = state.locked || state.initialized === false;
+		status.textContent = vaultAtRest ? 'Vault unavailable' : 'Vault ready';
 		const actions = el('div', null, { class: 'toolbar' });
 		body.append(actions);
+
+		if (vaultAtRest) {
+			paragraph(
+				body,
+				'Protected storage did not start with the plugin. Check the gateway service health for the Vault failure; credentials stay unreadable until it starts cleanly.'
+			);
+			return;
+		}
 
 		actions.append(
 			button('Recovery snapshots', () =>
@@ -899,30 +912,11 @@ function mount(container, context, module) {
 				})
 			)
 		);
-		if (state.locked) {
-			actions.append(
-				button('Unlock', () =>
-					protect(async () => {
-						await rpc('unlock');
-						await refresh();
-					})
-				),
-				button('Set up Vault', () => confirm('Create encrypted Vault', () => rpc('initialize')))
-			);
-			paragraph(
-				body,
-				'Protected values stay in KeePassXC. Only configured human owners can manage this Vault.'
-			);
-			return;
-		}
+		paragraph(
+			body,
+			'Protected values stay in KeePassXC. Only configured human owners can manage this Vault.'
+		);
 		actions.append(
-			button('Lock Vault', () =>
-				protect(async () => {
-					clearSecrets();
-					await rpc('lock');
-					await refresh();
-				})
-			),
 			button('Add credential', () =>
 				form(
 					'Add protected credential',
@@ -1910,7 +1904,7 @@ function mount(container, context, module) {
 				) {
 					life.clear();
 					clearSecrets();
-					if (status.textContent !== 'Vault locked') protect(refresh);
+					if (!vaultAtRest) protect(refresh);
 				}
 			} catch {
 				clearSecrets();

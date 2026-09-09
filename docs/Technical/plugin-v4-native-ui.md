@@ -25,7 +25,11 @@ a separate static asset directory.
   work, relationships and open Asks with native conversation links. Create and contextual actions
   use schema-derived labeled forms, source/option arrays, nullable values and typed dispositions.
   History loads on demand. Definition/result/change/authorization remain separate sections.
-- Vault: encrypted initialization, lock/unlock, protected entry, groups, deliberate field-specific
+- Vault: the page reports `Vault ready` and opens straight into credential management, because the
+  plugin provisions and unlocks at startup. There is no Set up, Unlock or Lock control — those are
+  host lifecycle, not operator choices, and the actions are absent from the protected RPC. A page
+  reporting `Vault unavailable` means startup failed and points at service health rather than
+  offering a step the operator cannot complete. Otherwise: protected entry, groups, field-specific
   Reveal/Hide/Copy for human- and agent-created entries, versioned field rotation and executor policy.
   The protected RPC is not a general agent tool or background feature query. It requires an actual
   connection-bound human owner and original authority through async worker activity and return.

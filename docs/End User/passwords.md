@@ -6,14 +6,35 @@ as the Vault page inside the OpenClaw Control UI.
 
 ## Storage and access
 
-- database: `~/.openclaw/passwords.kdbx`
-- key file: `~/.openclaw/vault.key`
+The Vault keeps its own database inside the plugin's private data directory — by default
+`<OpenClaw state>/falcon-dash/vault`, or under `dataDir` when that is configured:
+
+- database: `credentials.kdbx`
+- key file: `unlock.key`
 - authentication: `keepassxc-cli --no-password --key-file`
 
+This is the plugin's own store. It is not any other KeePassXC database you already keep, including
+one an OpenClaw SecretRef provider resolves directly.
+
 Access is key-file only and unattended: there is no master-password prompt. The unlock key is
-protected by filesystem ownership, not an external key-management system. The Vault starts locked,
-and a new database and key are provisioned only through an explicit owner operation — an existing
-vault is never silently adopted.
+protected by filesystem ownership, not an external key-management system.
+
+## Setting it up
+
+There is nothing to set up. The plugin creates the encrypted database and its private key the first
+time it starts, and opens it on every start after that. The Vault page is a credential list from the
+first visit: no setup step, no unlock prompt, and no lock button.
+
+Reaching the Gateway is what authorizes you. Anyone who can sign in to the operator UI can add,
+reveal and organize credentials; `vaultOwners` no longer gates the page. Agents are separate — they
+hold no session, so they reach a credential only when `vaultExecutors` names them and a human grants
+that entry.
+
+An existing vault is never silently adopted, and provisioning refuses to run twice.
+
+If the page reads **Vault unavailable**, startup failed rather than waiting for you — usually a
+missing `keepassxc-cli`, or a key file present without its database, which needs recovery. The
+Gateway service health carries the reason; the other Falcon Dash modules keep working meanwhile.
 
 `flock` serializes separate worker processes, so two operations cannot corrupt the database by
 racing each other. If the binary, database or key file is missing or unreadable, the page says the

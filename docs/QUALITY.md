@@ -65,7 +65,7 @@ harness separately rejects broken local links and orphaned files under `docs/`.
 ## Plugin validation
 
 `check`, `test`, `test:coverage` and `build` all target the plugin; it is the only runtime in this
-repo. CI installs the exact 2026.9.2 SDK into a runner-temporary prefix and KeePassXC for synthetic
+repo. CI installs the exact 2026.9.3 SDK into a runner-temporary prefix and KeePassXC for synthetic
 credential tests, with explicit isolated OpenClaw state/config paths. See
 [checkpoint evidence](Technical/plugin-v4-evidence.md) for failed and unavailable gates, and
 [backend continuation](Technical/plugin-v4-backend.md) for contract coverage.

@@ -10,20 +10,35 @@ const client = () => ({
 	connect: { scopes: ['operator.read', 'operator.write'] },
 	internal: { operatorRoleActor: { kind: 'operator', profileId: 'owner' } }
 });
-test('Protected native path denies profileless, synthetic and nonowner callers before worker activity', async () => {
+test('Protected native path denies profileless and synthetic callers before worker activity', async () => {
 	let calls = 0;
 	const vault = {
 		owners: new Set(['human:owner']),
-		initialize() {
+		inventory() {
 			calls++;
 		}
 	};
-	for (const c of [
-		{},
-		{ ...client(), internal: { ...client().internal, syntheticClient: true } },
-		{ ...client(), internal: { operatorRoleActor: { kind: 'operator', profileId: 'intruder' } } }
-	])
-		await assert.rejects(protectedVault(vault, { action: 'initialize', input: {} }, c, () => {}));
+	for (const c of [{}, { ...client(), internal: { ...client().internal, syntheticClient: true } }])
+		await assert.rejects(protectedVault(vault, { action: 'inventory', input: {} }, c, () => {}));
+	assert.equal(calls, 0);
+});
+// Provisioning and unlocking belong to plugin startup. Reaching them from a client surface would
+// hand an operator a step they cannot meaningfully perform, so the actions do not exist here.
+test('Protected native path exposes no Vault lifecycle actions', async () => {
+	let calls = 0;
+	const vault = {
+		owners: new Set(['human:owner']),
+		initialize: () => calls++,
+		unlock: () => calls++,
+		lock: () => calls++
+	};
+	for (const action of ['initialize', 'unlock', 'lock'])
+		await assert.rejects(
+			protectedVault(vault, { action, input: {} }, client(), () => {}),
+			{
+				code: 'invalid_input'
+			}
+		);
 	assert.equal(calls, 0);
 });
 test('Protected entry and owner reveal/copy cover human and agent-created entries without inventory disclosure', async (t) => {
@@ -35,8 +50,7 @@ test('Protected entry and owner reveal/copy cover human and agent-created entrie
 	});
 	const c = client(),
 		run = (action, input = {}) => protectedVault(vault, { action, input }, c, () => {});
-	await run('initialize');
-	await run('unlock');
+	await vault.ready();
 	await run('create', { id: 'human', material: { api_key: 'SYNTHETIC-HUMAN-CANARY' } });
 	await vault.create('agent', { api_key: 'SYNTHETIC-AGENT-CANARY' }, 'agent:worker');
 	for (const id of ['human', 'agent']) {
@@ -60,7 +74,7 @@ test('Protected entry and owner reveal/copy cover human and agent-created entrie
 		(await run('reveal', { id: 'human', field: 'password' })).value,
 		'SYNTHETIC-SECOND-FIELD'
 	);
-	await run('lock');
+	await vault.lock();
 	await assert.rejects(run('reveal', { id: 'agent', field: 'api_key' }), { code: 'vault_locked' });
 });
 test('Original native owner authority survives asynchronous management preparation', async () => {
@@ -116,8 +130,7 @@ test('Owner credential relocation and removal fence old handles and retain priva
 	});
 	const c = client(),
 		run = (action, input = {}) => protectedVault(vault, { action, input }, c, () => {});
-	await run('initialize');
-	await run('unlock');
+	await vault.ready();
 	await run('group', { id: 'team' });
 	await run('create', { id: 'first', material: { api_key: 'SYNTHETIC-MOVABLE' } });
 	await run('create', { id: 'occupied', material: { api_key: 'SYNTHETIC-OTHER' } });

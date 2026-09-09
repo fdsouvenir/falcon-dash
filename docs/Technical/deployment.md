@@ -7,8 +7,10 @@ inside Control UI. There is no standalone application to deploy and no cutover f
 
 ## Runtime requirements
 
-- OpenClaw 2026.8.1 or later on the same machine; the tested baseline is 2026.9.2.
-- Node.js 22.16 or newer, owned by the user the Gateway runs as. Managed SecretRef presets use the
+- OpenClaw 2026.9.3 or later on the same machine; the tested baseline is 2026.9.3.
+- Node.js in the range OpenClaw 2026.9.3 requires — `>=24.16.0 <25 || >=26.1.0` — owned by the user the
+  Gateway runs as. Upgrade Node before OpenClaw; upstream warns of SQLite text truncation in the
+  other order, and Work, Vault audit and Integrations state are all `node:sqlite`. Managed SecretRef presets use the
   Gateway's actual `process.execPath`; a root-owned Node binary fails the ownership guard.
 - Linux with `keepassxc-cli` and `flock`.
 - The KeePassXC vault database and key file.
@@ -54,7 +56,7 @@ permissions. Do not commit any of them. Private recovery snapshots are described
 
 ## Versioning
 
-`4.0.0` was the first plugin release; `4.0.1` is current. Three files must carry the same version — `package.json`,
+`4.0.0` was the first plugin release; `4.0.2` is current. Three files must carry the same version — `package.json`,
 `openclaw.plugin.json` and `package-lock.json` — and the release tag must be exactly
 `v<package version>`. `scripts/verify-release-metadata.mjs` enforces all four in CI before a tag
 publishes anything.

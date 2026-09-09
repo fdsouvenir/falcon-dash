@@ -35,7 +35,8 @@ current PR comments carry later validation results.
 
 ## Engineering prerequisites
 
-This preview is pinned to **OpenClaw 2026.9.2**, **Node 22.16+**, and **Linux**. KeePassXC CLI,
+This preview requires **OpenClaw 2026.9.3 or later**, **Node `>=24.16.0 <25 || >=26.1.0`**, and
+**Linux**. KeePassXC CLI,
 `flock`, and descriptor-anchored `/proc/self/fd` access are required. TypeBox is bundled with its
 license; OpenClaw's SDK remains supplied by the host.
 

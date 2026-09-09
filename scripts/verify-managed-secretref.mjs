@@ -14,7 +14,7 @@ if (
 )
 	throw Error('Use a canonical isolated artifacts root');
 if (
-	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.2'
+	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.3'
 )
 	throw Error('Pinned OpenClaw required');
 const executable = fs.lstatSync(process.execPath);
@@ -30,9 +30,7 @@ if (!fs.existsSync(path.join(installed, 'openclaw.plugin.json')) || fs.existsSyn
 const directory = path.join(root, 'managed-vault'),
 	vault = new Vault(directory, { owners: ['human:fixture'] });
 const sentinel = 'SYNTHETIC-MANAGED-PRESET-ONLY';
-if (!fs.existsSync(path.join(directory, 'credentials.kdbx')))
-	await vault.initialize('human:fixture');
-await vault.unlock('human:fixture');
+await vault.ready();
 if (!(await vault.inventory('human:fixture')).entries.some((x) => x.id === 'fixture'))
 	await vault.create('fixture', { password: sentinel }, 'human:fixture');
 await vault.grantSecretRefs(['entries/fixture/password'], 'human:fixture');
@@ -109,7 +107,7 @@ try {
 	await vault.lock();
 	if (!denied(await audit('locked'))) throw Error('Vault lock did not deny managed resolution');
 	const proof = {
-		openclaw: '2026.9.2',
+		openclaw: '2026.9.3',
 		node: process.execPath,
 		nodeUid: executable.uid,
 		processUid: process.getuid(),

@@ -33,11 +33,9 @@ async function capture(page: Page, name: string, project: string) {
 		}));
 	expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
 }
-async function unlock(page: Page) {
-	const unlock = page
-		.locator('.falcon-native')
-		.getByRole('button', { name: 'Unlock', exact: true });
-	if (await unlock.isVisible()) await unlock.click();
+async function vaultReady(page: Page) {
+	// The plugin provisions and opens the Vault at startup, so credential management is the first
+	// thing an operator sees. There is no unlock step to perform here.
 	await expect(
 		page.locator('.falcon-native').getByRole('button', { name: 'Add credential', exact: true })
 	).toBeVisible();
@@ -113,11 +111,10 @@ test('real Gateway native Work renders and commits schema-backed edits', async (
 	);
 });
 test('real native Vault supports protected owner entry and agent-created reveal copy cleanup', async ({
-	page,
-	request
+	page
 }, info) => {
 	await openModule(page, 'Vault');
-	await unlock(page);
+	await vaultReady(page);
 	await page.getByRole('button', { name: 'Add credential', exact: true }).click();
 	const dialog = page.locator('openclaw-modal-dialog');
 	await dialog.getByLabel('Entry path', { exact: true }).fill(`owner-${info.project.name}`);
@@ -125,7 +122,7 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await dialog.getByRole('button', { name: 'Save', exact: true }).click();
 	await expect(page.locator('openclaw-modal-dialog')).toHaveCount(0);
 	await openModule(page, 'Vault');
-	await unlock(page);
+	await vaultReady(page);
 	const human = page.locator('.list-zone').filter({
 		has: page.getByRole('heading', { name: `owner-${info.project.name}`, exact: true })
 	});
@@ -153,9 +150,10 @@ test('real native Vault supports protected owner entry and agent-created reveal 
 	await capture(page, 'vault-masked', info.project.name);
 	await agent.getByRole('button', { name: 'Reveal', exact: true }).click();
 	await expect(agent.locator('output')).toHaveText('SYNTHETIC-AGENT-UI-CANARY');
-	await request.post('/__fixture/lock');
-	await expect(page.locator('.falcon-native')).not.toContainText('SYNTHETIC-AGENT-UI-CANARY');
-	await expect(page.getByRole('button', { name: 'Unlock', exact: true })).toBeVisible();
+	// Nothing locks the Vault while the plugin runs — only shutdown does — so there is no operator
+	// lock to drive here. Revealed values clearing when the connection drops is covered separately,
+	// and `plugin/tests/native-ui.test.mjs` covers the at-rest status observation.
+	await expect(page.getByRole('button', { name: 'Lock Vault', exact: true })).toHaveCount(0);
 });
 test('native Documents saves through the Gateway and preserves stale edits', async ({
 	page,
@@ -283,7 +281,7 @@ test('real transport disconnect clears revealed values and reconnect recovers na
 	request
 }, info) => {
 	await openModule(page, 'Vault');
-	await unlock(page);
+	await vaultReady(page);
 	const agent = page
 		.locator('.list-zone')
 		.filter({ has: page.getByRole('heading', { name: 'agent-created', exact: true }) });
@@ -297,15 +295,18 @@ test('real transport disconnect clears revealed values and reconnect recovers na
 	).toBeVisible({ timeout: 60000 });
 	await capture(page, 'reconnected-vault', info.project.name);
 });
-test('a different authenticated person cannot reveal the owner Vault', async ({
+// Reaching an authenticated Gateway connection is the human credential for this Vault, and this
+// fixture's `vaultOwners` is empty — the fresh-install case. A second operator must therefore get
+// credential management, not the dead page that an owner allowlist used to produce.
+test('another authenticated person reaches Vault management on a fresh install', async ({
 	page,
 	request
 }, info) => {
-	await request.post('/__fixture/identity', { data: { email: 'intruder@fixture.invalid' } });
+	await request.post('/__fixture/identity', { data: { email: 'second@fixture.invalid' } });
 	await openModule(page, 'Vault');
-	await expect(page.locator('.falcon-native')).not.toContainText('SYNTHETIC');
-	await expect(page.locator('.falcon-native [role=alert]')).toBeVisible();
-	await capture(page, 'vault-denied', info.project.name);
+	await vaultReady(page);
+	await expect(page.locator('.falcon-native [role=alert]')).toHaveCount(0);
+	await capture(page, 'vault-second-operator', info.project.name);
 });
 test('Custom plugin UI off provides guidance instead of enabling native code', async ({
 	page,
@@ -501,7 +502,7 @@ test('Vault management preserves readback and exposes private recovery after rem
 	page
 }, info) => {
 	await openModule(page, 'Vault');
-	await unlock(page);
+	await vaultReady(page);
 	const app = page.locator('.falcon-native'),
 		id = 'managed-' + info.project.name,
 		group = 'managed-group-' + info.project.name;
@@ -553,7 +554,7 @@ test('Missing provider material produces real explanations and a native Work rev
 	page
 }, info) => {
 	await openModule(page, 'Vault');
-	await unlock(page);
+	await vaultReady(page);
 	await openModule(page, 'Integrations');
 	const app = page.locator('.falcon-native'),
 		purpose = 'Attention fixture ' + info.project.name;

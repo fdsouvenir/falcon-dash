@@ -29,10 +29,13 @@ against the manifest `configSchema`. Placing a plugin setting directly on
 `plugins.entries.falcon-dash` fails whole-config validation with `Unrecognized key`, and the
 gateway then skips every subsequent config reload until the key is moved or removed.
 
-A fresh install leaves `vaultOwners` empty, so `falcon.vault.read` reports `can_manage: false`
-and no human can unlock or manage the Vault. Each owner is a full actor string, not a bare
-profile id: `plugin/vault/service.mjs` requires `owners.has(actor) && actor.startsWith('human:')`.
-Resolve the operator's profile id from the host's own user profile store and configure:
+A fresh install needs no Vault configuration. The plugin provisions and opens its database on the
+first start, and any authenticated Gateway operator can manage credentials: `falcon.vault.read`
+reports `can_manage` for every `human:` actor. `vaultOwners` is now recorded in the stored policy
+for the audit trail rather than consulted as a gate, and `vaultExecutors` — the list that does still
+gate agent access — is reconciled from config on every start. Each entry is a full actor string, not
+a bare profile id. To record owners explicitly, resolve the operator's profile id from the host's own
+user profile store and configure:
 
 ```json
 {

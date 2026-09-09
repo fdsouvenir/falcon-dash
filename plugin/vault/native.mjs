@@ -25,9 +25,6 @@ export const protectedInputs = {
 	grant_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	revoke_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	inventory: O({ group: Type.String({ maxLength: 512 }) }),
-	initialize: O({}),
-	unlock: O({}),
-	lock: O({}),
 	create: O({
 		id: S,
 		material: Type.Record(
@@ -74,7 +71,6 @@ export async function protectedVault(vault, params, client, ready) {
 			assert() {
 				ready();
 				original.assert();
-				requireValue(vault.owners.has(actor), 'access_denied', 'Vault owner access required');
 			}
 		};
 	authority.assert();
@@ -123,15 +119,6 @@ export async function protectedVault(vault, params, client, ready) {
 			break;
 		case 'inventory':
 			result = await vault.inventory(actor, p.group, authority);
-			break;
-		case 'initialize':
-			result = await vault.initialize(actor, authority);
-			break;
-		case 'unlock':
-			result = await vault.unlock(actor, authority);
-			break;
-		case 'lock':
-			result = await vault.lock(actor, authority);
 			break;
 		case 'create':
 			result = await vault.create(p.id, p.material, actor, authority);

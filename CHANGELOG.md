@@ -5,6 +5,39 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.2] - 2026-09-08
+
+### Changed
+
+- **OpenClaw 2026.9.3 is now the minimum host, and Node moves to `>=24.16.0 <25 || >=26.1.0`.**
+  `openclaw.compat.pluginApi` was the exact value `2026.9.2`, but the host evaluates that field as a
+  semver range, so a 2026.9.3 gateway refused to install this plugin with `INCOMPATIBLE_PLUGIN_API`
+  even though the code typechecked and passed its suites against that SDK. It is now the floor
+  `>=2026.9.3`. Upgrade Node before OpenClaw: upstream warns of SQLite text truncation in the other
+  order, and Work, Vault audit and Integrations state are all `node:sqlite`.
+- A scheduled `SDK compatibility` workflow now typechecks against the newest published SDK and runs
+  `scripts/check-sdk-compat.mjs`, which fails on an exact pin where a floor belongs, on a declared
+  floor that excludes the resolved SDK, and on a Node range that disagrees with it. It is a monitor
+  rather than a merge gate, so an upstream release cannot block unrelated pull requests.
+
+### Fixed
+
+- **The Vault asked operators to perform its setup, then denied them anyway.** A new installation
+  showed `Unlock` against a `policy.json` that did not exist yet, so it failed with
+  `vault_unavailable` — an error that reads as broken storage. Provisioning and unlocking are host
+  lifecycle, not operator ceremony: the plugin now runs `Vault.ready()` at startup, which creates
+  the encrypted database when absent, reconciles configured owners and executors into the stored
+  policy, and unlocks. `initialize`, `unlock` and `lock` are gone from the protected RPC and the
+  Control UI, which opens straight into credential management.
+- **A fresh install left the Vault page unusable even for the operator who installed it.** Human
+  access was gated on `vaultOwners`, which is empty by default and was written into `policy.json`
+  once, at provisioning, so configuring it afterwards had no effect without a recovery. Reaching an
+  authenticated Gateway connection is now the human credential; `vaultOwners` is recorded for the
+  audit trail rather than consulted as a gate. Agents are unchanged — they hold no session, so they
+  still need `vaultExecutors` plus a per-entry grant, and that list is reconciled on every start.
+- A Vault that cannot start now reports through service health and leaves Work, Integrations and
+  Documents running, instead of taking the plugin down with it.
+
 ## [4.0.1] - 2026-09-08
 
 ### Fixed

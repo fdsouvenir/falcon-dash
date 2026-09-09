@@ -35,7 +35,7 @@ if (
 const version = JSON.parse(
 	fs.readFileSync(path.join(path.dirname(entry), 'package.json'), 'utf8')
 ).version;
-if (version !== '2026.9.2') throw new Error('This harness pins OpenClaw 2026.9.2');
+if (version !== '2026.9.3') throw new Error('This harness pins OpenClaw 2026.9.3');
 const configFile = path.join(root, 'config.json'),
 	original = fs.readFileSync(configFile),
 	config = JSON.parse(original.toString());
@@ -46,9 +46,7 @@ const secret = 'SYNTHETIC-PROVIDER-BOUND-CANARY',
 	live = 'FALCON-LIVE-RECORD-MUST-NOT-BE-IN-STATIC-CONTEXT';
 const vaultDir = path.join(root, 'prompt-vault'),
 	vault = new Vault(vaultDir, { owners: ['human:fixture'] });
-if (!fs.existsSync(path.join(vaultDir, 'credentials.kdbx')))
-	await vault.initialize('human:fixture');
-await vault.unlock('human:fixture');
+await vault.ready();
 if (!(await vault.inventory('human:fixture')).entries.some((x) => x.id === 'fixture'))
 	await vault.create('fixture', { password: secret }, 'human:fixture');
 await vault.grantSecretRefs(['entries/fixture/password'], 'human:fixture');

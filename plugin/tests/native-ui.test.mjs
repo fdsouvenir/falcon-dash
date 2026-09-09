@@ -134,7 +134,8 @@ test('Native work ignores late asynchronous results after disposal', async (t) =
 });
 test('Protected native input is not persisted and clears outside the mount container on disconnect', async (t) => {
 	const f = await fixture(t, 'vault', async (method, p) => {
-		if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+		if (p.action === 'status')
+			return { locked: false, initialized: true, epoch: 1, can_manage: true };
 		if (p.action === 'inventory') return { entries: [] };
 		throw Error('unexpected');
 	});
@@ -150,7 +151,8 @@ test('Protected native input is not persisted and clears outside the mount conta
 });
 test('Reveal is deliberate and Hide and navigation cleanup remove the selected value', async (t) => {
 	const f = await fixture(t, 'vault', async (method, p) => {
-		if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+		if (p.action === 'status')
+			return { locked: false, initialized: true, epoch: 1, can_manage: true };
 		if (p.action === 'inventory') return { entries: [{ id: 'agent-created', kind: 'entry' }] };
 		if (p.action === 'reveal') return { value: 'SYNTHETIC-REVEALED' };
 		throw Error('unexpected');
@@ -169,7 +171,8 @@ test('Reveal is deliberate and Hide and navigation cleanup remove the selected v
 test('A pending reveal cannot repopulate after authority loss', async (t) => {
 	let release;
 	const f = await fixture(t, 'vault', async (method, p) => {
-		if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+		if (p.action === 'status')
+			return { locked: false, initialized: true, epoch: 1, can_manage: true };
 		if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
 		if (p.action === 'reveal') return new Promise((r) => (release = r));
 	});
@@ -266,7 +269,8 @@ test('Copy is explicit and a revoked in-flight copy cannot write the clipboard',
 	let release,
 		writes = 0;
 	const f = await fixture(t, 'vault', async (_method, p) => {
-		if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+		if (p.action === 'status')
+			return { locked: false, initialized: true, epoch: 1, can_manage: true };
 		if (p.action === 'inventory') return { entries: [{ id: 'agent-created', kind: 'entry' }] };
 		if (p.action === 'copy') return new Promise((r) => (release = r));
 	});
@@ -289,7 +293,8 @@ test('Copy is explicit and a revoked in-flight copy cannot write the clipboard',
 test('An external Vault lock clears the native selected value on the next status observation', async (t) => {
 	let locked = false;
 	const f = await fixture(t, 'vault', async (_method, p) => {
-		if (p.action === 'status') return { locked, epoch: locked ? 2 : 1, can_manage: true };
+		if (p.action === 'status')
+			return { locked, initialized: true, epoch: locked ? 2 : 1, can_manage: true };
 		if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
 		if (p.action === 'reveal') return { value: 'SYNTHETIC-LIVE-LOCK' };
 	});
@@ -299,7 +304,7 @@ test('An external Vault lock clears the native selected value on the next status
 	locked = true;
 	await new Promise((r) => setTimeout(r, 1100));
 	assert.ok(!f.text().includes('SYNTHETIC-LIVE-LOCK'));
-	assert.match(f.text(), /Vault locked/);
+	assert.match(f.text(), /Vault unavailable/);
 });
 test('Reconnect schedules a fresh query after an earlier in-flight query retires', async (t) => {
 	let calls = 0,
@@ -389,7 +394,8 @@ for (const action of ['reveal', 'copy'])
 	test(`Hide retires a pending ${action} response`, async (t) => {
 		let release;
 		const f = await fixture(t, 'vault', async (method, p) => {
-			if (p.action === 'status') return { locked: false, epoch: 1, can_manage: true };
+			if (p.action === 'status')
+				return { locked: false, initialized: true, epoch: 1, can_manage: true };
 			if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
 			if (p.action === action) return new Promise((r) => (release = r));
 		});
@@ -545,4 +551,23 @@ test('Native Work recovers truncated saved content and traverses history pages',
 	await settle();
 	assert.match(f.text(), /LAST HISTORY PAGE/);
 	assert.equal(f.calls.filter((x) => x.p?.action === 'history')[1].p.query.offset, 25);
+});
+
+// The plugin provisions and opens its one Vault as it starts, so a Vault the operator cannot use
+// means startup failed. The page reports that instead of offering a step that is not theirs to run.
+test('A Vault that failed to start reports it and offers no lifecycle controls', async (t) => {
+	const actions = [];
+	const f = await fixture(t, 'vault', async (_method, p) => {
+		actions.push(p.action);
+		if (p.action === 'status') return { locked: true, initialized: false, epoch: 1 };
+		if (p.action === 'inventory') return { entries: [] };
+		return {};
+	});
+	assert.match(f.text(), /Vault unavailable/);
+	for (const label of ['Set up Vault', 'Unlock', 'Lock Vault'])
+		assert.ok(!f.text().includes(label));
+	// Recovery and access history read the policy that provisioning creates.
+	assert.ok(!f.text().includes('Recovery snapshots'));
+	assert.ok(!actions.includes('initialize'));
+	assert.ok(!actions.includes('unlock'));
 });
