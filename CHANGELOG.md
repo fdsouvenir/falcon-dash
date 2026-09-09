@@ -43,12 +43,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The search field was constructed and wired but never added to the command bar**, so the control
   the flat listing exists to serve was absent from the rendered page. Adding coverage for
   cross-group search caught it.
+- **An emptied group looked occupied.** `keepassxc-cli ls` prints a placeholder for a childless
+  group, and the recursive listing prints it under its own group as `<group>/[empty]` rather than
+  as a bare `[empty]`. The flat listing reported it as an entry, so the group's removal control
+  never appeared and the list offered a row whose `metadata` call could only fail.
+- **Agent credentials rendered with nothing readable.** The inspector hard-coded the four KeePassXC
+  fields, so a credential carrying its own field names showed none of them. The four still always
+  appear, and any other field the record holds is listed after them.
+- **The Vault overflowed a 320px shell.** Its narrow-viewport rules were declared before the base
+  rules they override, and a media query adds no specificity, so the desktop three-pane grid kept
+  its track sizes. They are now declared after those rules.
 
 ### Validation
 
-- 145 unit tests, up from 143. New coverage for the flat listing agreeing with a group-by-group
-  walk, for cross-group search including group-path matches and the no-match state, and for only
-  the fields a record carries offering a reveal control.
+- 146 unit tests, up from 143, and 30 real-Gateway Playwright cases across desktop and narrow
+  shells. New coverage for the flat listing agreeing with a group-by-group walk, for the emptied
+  group placeholder, for cross-group search including group-path matches and the no-match state,
+  and for only the fields a record carries offering a reveal control.
+- Three of the defects above were invisible to the type checker, the linter and the DOM unit
+  tests, and were caught only by the browser acceptance run.
 - Secret handling is unchanged: the 15-second reveal hold, clearing on disconnect, authority loss
   and navigation all still hold. The in-flight retirement tests now exercise navigating away,
   because a read in flight holds the page busy and blocks a second control press.
