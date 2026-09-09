@@ -38,6 +38,14 @@ Provisioning is never an operator action, so `initialize`, `unlock` and `lock` a
 protected RPC surface. A Vault that reports `initialized: false` at runtime means startup failed;
 the plugin reports that through service health and leaves Work, Integrations and Documents running.
 
+## Listing entries for the Vault page
+
+The Vault page loads the whole tree in one protected call, `inventory_all`, so its search box can
+match any entry without walking group by group. That action returns handles and kinds only — never
+a field value — and reuses the recursive listing the worker already reads to validate handles, so
+it costs no extra `keepassxc-cli` invocation. Reading a field still requires an explicit `reveal`
+or `copy` for one named field on one entry.
+
 ## Configure OpenClaw
 
 Register the bundled resolver in `~/.openclaw/openclaw.json`. `providers` is an object keyed by

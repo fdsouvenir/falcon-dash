@@ -202,6 +202,14 @@ export class Vault {
 			authority
 		);
 	}
+	/** Every group and entry in one call, so the UI can search without walking the tree. */
+	async inventoryAll(actor, authority = internalAuthority) {
+		this.authorize(actor);
+		return this.worker(
+			{ action: 'inventory_all', actor, generation: this.policyGeneration },
+			authority
+		);
+	}
 	async metadata(id, actor, authority = internalAuthority) {
 		this.authorize(actor);
 		return this.worker(

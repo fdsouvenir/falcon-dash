@@ -198,3 +198,48 @@ test('Relocating a plain entry keeps it plain so its SecretRefs keep resolving',
 	assert.equal((await vault.metadata('Archive/KenPom Password', 'human:owner')).plain, true);
 	await vault.lock();
 });
+
+test('The whole tree is listed in one call so the UI can search without walking groups', async (t) => {
+	const { directory, database, key, run } = existingDatabase(t);
+	// A second level, so the flat listing has to carry a nested path rather than a bare name.
+	run('mkdir', [database, 'Work/APIs']);
+	run('add', ['-p', database, 'Work/APIs/Stitch MCP'], 'SYNTHETIC-STITCH\n');
+	const vault = new Vault(path.join(directory, 'private'), {
+		owners: [],
+		executors: [],
+		database,
+		key
+	});
+	await vault.ready();
+
+	const all = await vault.inventoryAll('human:owner');
+	const entries = all.entries
+		.filter((e) => e.kind === 'entry')
+		.map((e) => e.id)
+		.sort();
+	// Every entry at every depth, addressed by its full handle — not just the current group.
+	assert.deepEqual(entries, [
+		'Anthem Blue Cross',
+		'KenPom Password',
+		'Work/APIs/Stitch MCP',
+		'Work/GitHub Verlbot CLI'
+	]);
+	const groups = all.entries
+		.filter((e) => e.kind === 'group')
+		.map((e) => e.id)
+		.sort();
+	// Groups come back without the trailing slash keepassxc-cli prints, so a group id is a handle.
+	assert.deepEqual(groups, ['Work', 'Work/APIs']);
+
+	// One flat call must agree with walking the tree group by group.
+	const walked = [
+		...(await vault.inventory('human:owner')).entries,
+		...(await vault.inventory('human:owner', 'Work')).entries,
+		...(await vault.inventory('human:owner', 'Work/APIs')).entries
+	]
+		.filter((e) => e.kind === 'entry')
+		.map((e) => e.id)
+		.sort();
+	assert.deepEqual(entries, walked);
+	await vault.lock();
+});

@@ -188,6 +188,7 @@ try {
 		'lock',
 		'unlock',
 		'inventory',
+		'inventory_all',
 		'create',
 		'rotate',
 		'resolve',
@@ -445,6 +446,20 @@ try {
 					kind: name.endsWith('/') ? 'group' : 'entry'
 				}))
 			});
+		} else if (request.action === 'inventory_all') {
+			// The whole tree in one call, so the UI can search every entry without walking group by
+			// group. `paths` is the recursive flattened listing already read above for handle
+			// validation, so this costs nothing extra. Names only: no field is read here, because
+			// reading one attribute per entry costs a subprocess each and would dominate the call.
+			const all = [];
+			for (const path of paths) {
+				if (!path || path === '[empty]') continue;
+				const isGroup = path.endsWith('/'),
+					entryId = isGroup ? path.slice(0, -1) : path;
+				if (!validHandle(entryId)) continue;
+				all.push({ id: entryId, kind: isGroup ? 'group' : 'entry' });
+			}
+			reply({ entries: all });
 		} else {
 			let current = null;
 			if (request.action !== 'create') current = readRecord(args, database, id);

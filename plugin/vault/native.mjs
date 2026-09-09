@@ -25,6 +25,7 @@ export const protectedInputs = {
 	grant_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	revoke_refs: O({ ids: Type.Array(S, { minItems: 1, maxItems: 100 }) }),
 	inventory: O({ group: Type.String({ maxLength: 512 }) }),
+	inventory_all: O({}),
 	// The four fields a KeePassXC entry has. A person managing their own vault writes these, not the
 	// arbitrary material map an agent credential carries.
 	add_entry: O({
@@ -146,6 +147,9 @@ export async function protectedVault(vault, params, client, ready) {
 			break;
 		case 'inventory':
 			result = await vault.inventory(actor, p.group, authority);
+			break;
+		case 'inventory_all':
+			result = await vault.inventoryAll(actor, authority);
 			break;
 		case 'add_entry':
 			result = await vault.createEntry(p.id, p.fields, actor, authority);
