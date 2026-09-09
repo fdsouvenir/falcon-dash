@@ -56,6 +56,8 @@ agent receives the same instructions.
 - [docs/CONTRIBUTING-HARNESS.md](docs/CONTRIBUTING-HARNESS.md) — how to satisfy harness and doc checks
 - [docs/HARNESS-LOOP.md](docs/HARNESS-LOOP.md) — recursive local work loop and artifacts
 - [docs/QUALITY.md](docs/QUALITY.md) — required validation levels and rerun paths
+- [docs/RELEASE.md](docs/RELEASE.md) — preview and production release paths; production is generated
+  from a preview tag, never hand-edited
 - [docs/RELIABILITY.md](docs/RELIABILITY.md) — state, realtime, and failure-mode expectations
 - [docs/PLANS.md](docs/PLANS.md) — how to write and maintain execution plans in this repo
 - [docs/OWNERSHIP.md](docs/OWNERSHIP.md) — which docs should usually move with which code areas

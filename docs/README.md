@@ -15,6 +15,7 @@ detection or compatibility code, and no standalone web application.
 - [HARNESS.md](HARNESS.md) — repo execution and validation model
 - [OWNERSHIP.md](OWNERSHIP.md) — code-to-document ownership and update requirements
 - [QUALITY.md](QUALITY.md) — validation levels and rerun expectations
+- [RELEASE.md](RELEASE.md) — the preview and production release paths, and the channel identity delta
 - [LEARNINGS.md](LEARNINGS.md) — only lessons durable across the full roadmap
 
 ## Current product documentation
