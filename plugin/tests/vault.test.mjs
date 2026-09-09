@@ -144,3 +144,44 @@ test('An unprovisioned Vault reports that it is not set up instead of failing as
 	await assert.rejects(() => vault.initialize('human:owner'), { code: 'already_initialized' });
 	await vault.lock();
 });
+
+test('Startup brings a fresh Vault up ready to use and repeats without effect', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-ready-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, { owners: [], executors: [] });
+	assert.equal(vault.initialized, false);
+	assert.deepEqual(await vault.ready(), { initialized: true, locked: false });
+	await vault.create('startup', { password: 'SYNTHETIC-READY-CANARY' }, 'human:anyone');
+	// A restart re-enters ready() against an existing database; it must not fail as already_initialized.
+	assert.deepEqual(await vault.ready(), { initialized: true, locked: false });
+	assert.equal(
+		await vault.revealField('startup', 'password', 'human:anyone'),
+		'SYNTHETIC-READY-CANARY'
+	);
+	await vault.lock();
+});
+
+test('Reaching the Gateway is the human credential and configured executors reconcile on start', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-actors-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	// A fresh install leaves vaultOwners empty; the operator must not meet a dead Vault page.
+	const vault = new Vault(directory, { owners: [], executors: [] });
+	await vault.ready();
+	await vault.create('shared', { api_key: 'SYNTHETIC-GATEWAY-CANARY' }, 'human:unlisted');
+	assert.equal(
+		await vault.revealField('shared', 'api_key', 'human:unlisted'),
+		'SYNTHETIC-GATEWAY-CANARY'
+	);
+	// Agents hold no session, so they stay gated on configuration.
+	await assert.rejects(() => vault.inventory('agent:worker'), { code: 'access_denied' });
+	await vault.lock();
+
+	// Adding the executor to config must take effect on the next start, not require a recovery.
+	const reconfigured = new Vault(directory, { owners: [], executors: ['agent:worker'] });
+	await reconfigured.ready();
+	assert.ok(!JSON.stringify(await reconfigured.inventory('agent:worker')).includes('SYNTHETIC'));
+	assert.deepEqual(JSON.parse(fs.readFileSync(directory + '/policy.json', 'utf8')).executors, [
+		'agent:worker'
+	]);
+	await reconfigured.lock();
+});

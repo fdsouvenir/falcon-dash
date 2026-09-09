@@ -18,15 +18,18 @@ gateway.
 ## Provisioning
 
 `keepassxc-cli` must exist on the host. The plugin Vault keeps its own database and key inside its
-private data directory — `<dataDir>/vault/credentials.kdbx` and `unlock.key` — and creates both only
-through an explicit owner setup action in the Control UI. Installation does not create them, and an
-existing KeePassXC database is never adopted automatically, including one the bundled resolver above
-already reads.
+private data directory — `<dataDir>/vault/credentials.kdbx` and `unlock.key` — and creates both on
+its first start through `Vault.ready()`. An existing KeePassXC database is never adopted
+automatically, including one the bundled resolver above already reads.
 
-Until an owner runs setup the Vault reports `initialized: false`, its page offers only **Set up
-Vault**, and any operation that needs the stored policy fails with `not_initialized`. That is a
-provisioning state, not a fault: an unprovisioned Vault must not be reported as unavailable storage,
-because the two call for opposite responses.
+`ready()` is the whole lifecycle and it is idempotent: it provisions when the database is absent,
+reconciles `vaultOwners`/`vaultExecutors` into the stored policy, then unlocks. Reconciliation
+matters because the policy is otherwise written once, at provisioning — without it a later
+`vaultExecutors` edit would not reach an agent without a recovery.
+
+Provisioning is never an operator action, so `initialize`, `unlock` and `lock` are absent from the
+protected RPC surface. A Vault that reports `initialized: false` at runtime means startup failed;
+the plugin reports that through service health and leaves Work, Integrations and Documents running.
 
 ## Configure OpenClaw
 

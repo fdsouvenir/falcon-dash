@@ -30,9 +30,7 @@ if (!fs.existsSync(path.join(installed, 'openclaw.plugin.json')) || fs.existsSyn
 const directory = path.join(root, 'managed-vault'),
 	vault = new Vault(directory, { owners: ['human:fixture'] });
 const sentinel = 'SYNTHETIC-MANAGED-PRESET-ONLY';
-if (!fs.existsSync(path.join(directory, 'credentials.kdbx')))
-	await vault.initialize('human:fixture');
-await vault.unlock('human:fixture');
+await vault.ready();
 if (!(await vault.inventory('human:fixture')).entries.some((x) => x.id === 'fixture'))
 	await vault.create('fixture', { password: sentinel }, 'human:fixture');
 await vault.grantSecretRefs(['entries/fixture/password'], 'human:fixture');

@@ -98,7 +98,7 @@ export default definePluginEntry({
 						initialized: live.vault.initialized,
 						protected_ui: 'native',
 						epoch: live.vault.generation,
-						can_manage: live.vault.owners.has(actor)
+						can_manage: String(actor).startsWith('human:')
 					};
 				if (p.action === 'metadata') return live.vault.metadata(p.id, actor, guard);
 				requireValue(p.action === 'inventory', 'invalid_command', 'Unsupported Vault operation');
@@ -148,11 +148,24 @@ export default definePluginEntry({
 						}, 1000);
 						work.changeTimer.unref();
 					}
-					if (enabled.includes('vault') || enabled.includes('integrations'))
+					if (enabled.includes('vault') || enabled.includes('integrations')) {
 						vault = new Vault(path.join(directory, 'vault'), {
 							owners: config.vaultOwners ?? [],
 							executors: config.vaultExecutors ?? []
 						});
+						// A missing Vault is provisioned and opened here so no operator ever sees a setup
+						// step. A host without KeePassXC, or one needing recovery, must not take the other
+						// modules down: it stays unprovisioned and every operation fails with its typed error.
+						try {
+							await vault.ready();
+						} catch (error) {
+							ctx.serviceHealth?.reportFailure(
+								new Error(
+									`Vault is unavailable: ${error instanceof Error ? error.message : String(error)}`
+								)
+							);
+						}
+					}
 					if (enabled.includes('documents'))
 						documents = new Documents(config.documentRoots ?? [], {
 							forbiddenRoots: [ctx.stateDir],

@@ -21,12 +21,20 @@ protected by filesystem ownership, not an external key-management system.
 
 ## Setting it up
 
-A new installation has no database yet. Until an owner creates one the Vault page reads **Vault not
-set up** and offers a single **Set up Vault** action, because nothing can be unlocked, listed or
-snapshotted before the database exists. Choosing it creates the encrypted database and its private
-key, after which the Vault behaves normally: it starts locked, and an owner unlocks it.
+There is nothing to set up. The plugin creates the encrypted database and its private key the first
+time it starts, and opens it on every start after that. The Vault page is a credential list from the
+first visit: no setup step, no unlock prompt, and no lock button.
 
-An existing vault is never silently adopted, and setup refuses to run twice.
+Reaching the Gateway is what authorizes you. Anyone who can sign in to the operator UI can add,
+reveal and organize credentials; `vaultOwners` no longer gates the page. Agents are separate — they
+hold no session, so they reach a credential only when `vaultExecutors` names them and a human grants
+that entry.
+
+An existing vault is never silently adopted, and provisioning refuses to run twice.
+
+If the page reads **Vault unavailable**, startup failed rather than waiting for you — usually a
+missing `keepassxc-cli`, or a key file present without its database, which needs recovery. The
+Gateway service health carries the reason; the other Falcon Dash modules keep working meanwhile.
 
 `flock` serializes separate worker processes, so two operations cannot corrupt the database by
 racing each other. If the binary, database or key file is missing or unreadable, the page says the

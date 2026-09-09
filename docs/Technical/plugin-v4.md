@@ -114,9 +114,12 @@ rendering, browser editing and full accessibility acceptance remain incomplete.
 
 ### Vault
 
-The backend provisions a new KeePassXC database and private local unlock key only through an
-explicit owner operation; it starts locked. The unlock key is protected by filesystem ownership,
-not an external key-management system. Existing Vaults are not adopted. `flock` serializes
+The backend provisions a new KeePassXC database and private local unlock key at plugin startup and
+opens it there; `Vault.ready()` is idempotent and also reconciles configured owners and executors
+into the stored policy. The unlock key is protected by filesystem ownership, not an external
+key-management system. Existing Vaults are not adopted. Gateway authentication is the human
+credential: a `human:` actor is an owner, while agents stay gated on `vaultExecutors` plus
+per-entry grants. `flock` serializes
 separate worker processes. OAuth access/refresh material is one encrypted JSON Password value;
 rotation copies the encrypted database, changes the value through stdin, verifies it, fsyncs,
 then atomically publishes. Optimistic versions reject a concurrent loser. An omitted unchanged

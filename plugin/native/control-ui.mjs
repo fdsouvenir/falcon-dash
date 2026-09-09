@@ -842,23 +842,18 @@ function mount(container, context, module) {
 		if (!valid()) return;
 		body.replaceChildren();
 		vaultEpoch = state.epoch;
-		vaultAtRest = state.locked || !state.initialized;
-		status.textContent = !state.initialized
-			? 'Vault not set up'
-			: state.locked
-				? 'Vault locked'
-				: 'Vault unlocked';
+		// The plugin provisions and opens its one Vault as it starts, so there is nothing here for an
+		// operator to create or unlock. At rest means that startup failed, and the page says so instead
+		// of offering a step that is not theirs to run.
+		vaultAtRest = state.locked || state.initialized === false;
+		status.textContent = vaultAtRest ? 'Vault unavailable' : 'Vault ready';
 		const actions = el('div', null, { class: 'toolbar' });
 		body.append(actions);
 
-		// Nothing can be unlocked, listed or recovered before the database exists.
-		if (!state.initialized) {
-			actions.append(
-				button('Set up Vault', () => confirm('Create encrypted Vault', () => rpc('initialize')))
-			);
+		if (vaultAtRest) {
 			paragraph(
 				body,
-				'This Vault has not been created yet. Setting it up creates an encrypted KeePassXC database and its private unlock key in protected host storage. Credentials, access history and recovery snapshots become available afterwards.'
+				'Protected storage did not start with the plugin. Check the gateway service health for the Vault failure; credentials stay unreadable until it starts cleanly.'
 			);
 			return;
 		}
@@ -917,29 +912,11 @@ function mount(container, context, module) {
 				})
 			)
 		);
-		if (state.locked) {
-			actions.append(
-				button('Unlock', () =>
-					protect(async () => {
-						await rpc('unlock');
-						await refresh();
-					})
-				)
-			);
-			paragraph(
-				body,
-				'Protected values stay in KeePassXC. Only configured human owners can manage this Vault.'
-			);
-			return;
-		}
+		paragraph(
+			body,
+			'Protected values stay in KeePassXC. Only configured human owners can manage this Vault.'
+		);
 		actions.append(
-			button('Lock Vault', () =>
-				protect(async () => {
-					clearSecrets();
-					await rpc('lock');
-					await refresh();
-				})
-			),
 			button('Add credential', () =>
 				form(
 					'Add protected credential',

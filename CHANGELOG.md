@@ -22,12 +22,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **A Vault that was never provisioned offered Unlock, which could not succeed.** The locked view
-  showed both `Unlock` and `Set up Vault`, and unlock read a `policy.json` that provisioning creates,
-  so it failed with `vault_unavailable` — an error that reads as broken storage rather than "not set
-  up yet". Vault status now reports `initialized`; before provisioning the page reads `Vault not set
-up` and offers only `Set up Vault`, and any operation needing the policy fails with the typed
-  `not_initialized` instead of an unhandled read.
+- **The Vault asked operators to perform its setup, then denied them anyway.** A new installation
+  showed `Unlock` against a `policy.json` that did not exist yet, so it failed with
+  `vault_unavailable` — an error that reads as broken storage. Provisioning and unlocking are host
+  lifecycle, not operator ceremony: the plugin now runs `Vault.ready()` at startup, which creates
+  the encrypted database when absent, reconciles configured owners and executors into the stored
+  policy, and unlocks. `initialize`, `unlock` and `lock` are gone from the protected RPC and the
+  Control UI, which opens straight into credential management.
+- **A fresh install left the Vault page unusable even for the operator who installed it.** Human
+  access was gated on `vaultOwners`, which is empty by default and was written into `policy.json`
+  once, at provisioning, so configuring it afterwards had no effect without a recovery. Reaching an
+  authenticated Gateway connection is now the human credential; `vaultOwners` is recorded for the
+  audit trail rather than consulted as a gate. Agents are unchanged — they hold no session, so they
+  still need `vaultExecutors` plus a per-entry grant, and that list is reconciled on every start.
+- A Vault that cannot start now reports through service health and leaves Work, Integrations and
+  Documents running, instead of taking the plugin down with it.
 
 ## [4.0.1] - 2026-09-08
 

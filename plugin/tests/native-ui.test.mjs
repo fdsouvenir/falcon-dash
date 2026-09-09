@@ -304,7 +304,7 @@ test('An external Vault lock clears the native selected value on the next status
 	locked = true;
 	await new Promise((r) => setTimeout(r, 1100));
 	assert.ok(!f.text().includes('SYNTHETIC-LIVE-LOCK'));
-	assert.match(f.text(), /Vault locked/);
+	assert.match(f.text(), /Vault unavailable/);
 });
 test('Reconnect schedules a fresh query after an earlier in-flight query retires', async (t) => {
 	let calls = 0,
@@ -553,28 +553,21 @@ test('Native Work recovers truncated saved content and traverses history pages',
 	assert.equal(f.calls.filter((x) => x.p?.action === 'history')[1].p.query.offset, 25);
 });
 
-test('A never-provisioned Vault offers setup instead of an Unlock that cannot succeed', async (t) => {
-	let initialized = false;
+// The plugin provisions and opens its one Vault as it starts, so a Vault the operator cannot use
+// means startup failed. The page reports that instead of offering a step that is not theirs to run.
+test('A Vault that failed to start reports it and offers no lifecycle controls', async (t) => {
 	const actions = [];
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		actions.push(p.action);
-		if (p.action === 'status') return { locked: true, initialized, epoch: 1, can_manage: true };
-		if (p.action === 'initialize') {
-			initialized = true;
-			return { initialized: true };
-		}
+		if (p.action === 'status') return { locked: true, initialized: false, epoch: 1 };
 		if (p.action === 'inventory') return { entries: [] };
 		return {};
 	});
-	assert.match(f.text(), /Vault not set up/);
-	assert.ok(!f.text().includes('Unlock'));
+	assert.match(f.text(), /Vault unavailable/);
+	for (const label of ['Set up Vault', 'Unlock', 'Lock Vault'])
+		assert.ok(!f.text().includes(label));
 	// Recovery and access history read the policy that provisioning creates.
 	assert.ok(!f.text().includes('Recovery snapshots'));
-	f.button('Set up Vault');
-	await settle();
-	f.button('Confirm');
-	await settle();
-	assert.ok(actions.includes('initialize'));
-	assert.match(f.text(), /Vault locked/);
-	assert.ok(f.text().includes('Unlock'));
+	assert.ok(!actions.includes('initialize'));
+	assert.ok(!actions.includes('unlock'));
 });

@@ -129,3 +129,8 @@ removal/private recovery listing, safe missing-material connection diagnostics a
 attention, and keyboard dialog interaction plus 320px reduced-motion reflow across all modules.
 The missing-material fixture fails before provider I/O; it is not a live Cloudflare test. Private
 Vault/recovery directories are excluded from evidence uploads. No success-skip closes these cases.
+
+Vault cases assert readiness rather than performing it. The plugin provisions and unlocks at
+startup, so `vaultReady()` waits for credential management to be present and clicks nothing. It
+replaced an earlier `unlock()` helper that clicked `Unlock` only when visible — a conditional step
+passes whether or not the control exists, which is exactly the regression these cases must catch.

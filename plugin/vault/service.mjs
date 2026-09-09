@@ -33,7 +33,7 @@ export class Vault {
 	lock(actor = 'system:vault', authority = internalAuthority) {
 		authority.assert();
 		requireValue(
-			actor === 'system:vault' || (this.owners.has(actor) && actor.startsWith('human:')),
+			actor === 'system:vault' || actor.startsWith('human:'),
 			'access_denied',
 			'Only an owner can lock Vault'
 		);
@@ -43,19 +43,22 @@ export class Vault {
 		if (!this.initialized) return Promise.resolve({ locked: true });
 		return this.worker({ action: 'lock', actor }, authority);
 	}
+	// Reaching an authenticated Gateway connection is the human credential for this Vault: a person
+	// who can open the operator UI can manage secrets. Agents are separate — they hold no session and
+	// must be named in `vaultExecutors` plus the per-entry grants a human hands out.
 	authorize(actor, human = false) {
-		requireValue(!this.locked, 'vault_locked', 'Unlock Vault before use');
+		requireValue(!this.locked, 'vault_locked', 'Protected storage is unavailable');
 		requireValue(
-			human
-				? this.owners.has(actor) && actor.startsWith('human:')
-				: this.executors.has(actor) || this.owners.has(actor),
+			actor.startsWith('human:') || (!human && this.executors.has(actor)),
 			'access_denied',
 			'Credential access is not authorized'
 		);
 	}
 	async worker(request, authority = internalAuthority) {
 		if (
-			!['initialize', 'unlock', 'lock', 'audit', 'backup', 'recovery_list'].includes(request.action)
+			!['initialize', 'reconcile', 'unlock', 'lock', 'audit', 'backup', 'recovery_list'].includes(
+				request.action
+			)
 		) {
 			const original = authority,
 				signal = original.signal
@@ -94,9 +97,28 @@ export class Vault {
 		return result;
 	}
 
-	async initialize(actor, authority = internalAuthority) {
+	// The plugin owns exactly one Vault and brings it up ready to use. Provisioning and unlocking are
+	// host lifecycle, never operator ceremony, so neither is reachable from a client surface.
+	// Configured actors are reconciled on every start because the policy was written once, at
+	// provisioning: without this a later `vaultExecutors` edit would need a recovery to take effect.
+	async ready(authority = internalAuthority) {
+		if (!this.initialized) await this.initialize('system:vault', authority);
+		else
+			await this.worker(
+				{
+					action: 'reconcile',
+					actor: 'system:vault',
+					owners: [...this.owners],
+					executors: [...this.executors]
+				},
+				authority
+			);
+		if (this.locked) await this.unlock('system:vault', authority);
+		return { initialized: true, locked: false };
+	}
+	async initialize(actor = 'system:vault', authority = internalAuthority) {
 		requireValue(
-			this.owners.has(actor) && actor.startsWith('human:'),
+			actor === 'system:vault' || actor.startsWith('human:'),
 			'access_denied',
 			'Only an authorized human can provision Vault'
 		);
@@ -110,9 +132,9 @@ export class Vault {
 			authority
 		);
 	}
-	async unlock(actor, authority = internalAuthority) {
+	async unlock(actor = 'system:vault', authority = internalAuthority) {
 		requireValue(
-			this.owners.has(actor) && actor.startsWith('human:'),
+			actor === 'system:vault' || actor.startsWith('human:'),
 			'access_denied',
 			'Only an authorized human can unlock Vault'
 		);

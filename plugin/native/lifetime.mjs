@@ -31,6 +31,6 @@ export function message(error) {
 		/version_conflict|version changed|Work changed/i.test(error?.message ?? '')
 		? 'This record changed. Your input is preserved; refresh the record and review before reapplying.'
 		: code === 'vault_locked'
-			? 'Vault is locked. Unlock it to continue.'
+			? 'Protected storage did not start. Check the Gateway service health for the Vault failure.'
 			: 'This operation is unavailable or not authorized. Your input is preserved. Retry after checking connection and access.';
 }

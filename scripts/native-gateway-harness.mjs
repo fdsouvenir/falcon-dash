@@ -39,7 +39,7 @@ const state = path.join(root, 'state'),
 	baseURL = `http://127.0.0.1:${proxyPort}`;
 fs.mkdirSync(workspace, { recursive: true });
 const ownerEmail = 'owner@fixture.invalid',
-	intruderEmail = 'intruder@fixture.invalid';
+	secondOperatorEmail = 'second@fixture.invalid';
 let identity = ownerEmail,
 	offline = false,
 	gateway,
@@ -57,7 +57,7 @@ const config = {
 			mode: 'trusted-proxy',
 			trustedProxy: {
 				userHeader: 'x-fixture-user',
-				allowUsers: [ownerEmail, intruderEmail],
+				allowUsers: [ownerEmail, secondOperatorEmail],
 				allowLoopback: true,
 				requiredHeaders: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto'],
 				deviceAutoApprove: {
@@ -183,13 +183,10 @@ const proxy = http.createServer(async (req, res) => {
 					offline = false;
 					break;
 				case '/__fixture/identity':
-					if (![ownerEmail, intruderEmail].includes(input.email))
+					if (![ownerEmail, secondOperatorEmail].includes(input.email))
 						throw Error('Unknown fixture identity');
 					identity = input.email;
 					for (const socket of sockets) socket.destroy();
-					break;
-				case '/__fixture/lock':
-					await client.request('falcon.vault.protected', { action: 'lock', input: {} });
 					break;
 				case '/__fixture/work': {
 					const task = await client.request('falcon.work.read', { action: 'get', id: input.id });
@@ -408,8 +405,9 @@ try {
 		owners: [actor],
 		executors: ['agent:fixture']
 	});
-	await vault.initialize(actor);
-	await vault.unlock(actor);
+	// An earlier Gateway start may already have provisioned this directory, so seed through the same
+	// idempotent startup path the plugin uses. The next start unlocks it again.
+	await vault.ready();
 	await vault.create('agent-created', { api_key: 'SYNTHETIC-AGENT-UI-CANARY' }, 'agent:fixture');
 	await vault.lock(actor);
 	const work = new WorkStore(path.join(root, 'data/work.db'));

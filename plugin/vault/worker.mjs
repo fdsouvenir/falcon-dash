@@ -52,9 +52,15 @@ function mutateDatabase(change) {
 		fs.rmSync(temp, { force: true });
 	}
 }
+// The Gateway authenticates humans before any request reaches this worker, so a `human:` actor is
+// already an owner here; `policy.owners` stays recorded for the audit trail. Agents authenticate
+// nothing, so they keep the configured-executor check as defence against a stale service instance.
+function owns(actor) {
+	return actor === 'system:vault' || actor.startsWith('human:');
+}
 function authorize(policy, actor, owner = false) {
-	if (!policy.owners.includes(actor) && (owner || !policy.executors.includes(actor)))
-		throw new Error('access_denied');
+	if (owns(actor)) return;
+	if (owner || !policy.executors.includes(actor)) throw new Error('access_denied');
 }
 function cli(args, input = '') {
 	const result = spawnSync('keepassxc-cli', args, {
@@ -103,6 +109,7 @@ try {
 	);
 	const known = new Set([
 		'initialize',
+		'reconcile',
 		'lock',
 		'unlock',
 		'inventory',
@@ -191,8 +198,16 @@ try {
 			process.exit(0);
 		}
 
+		if (request.action === 'reconcile') {
+			if (request.actor !== 'system:vault') throw new Error('access_denied');
+			policy.owners = request.owners;
+			policy.executors = request.executors;
+			policyWrite(policy);
+			reply({ owners: policy.owners.length, executors: policy.executors.length });
+			process.exit(0);
+		}
 		if (request.action === 'lock') {
-			if (request.actor !== 'system:vault') authorize(policy, request.actor, true);
+			authorize(policy, request.actor, true);
 			policy.locked = true;
 			policy.generation++;
 			policyWrite(policy);
@@ -410,7 +425,7 @@ try {
 				});
 				process.exit(0);
 			}
-			if (current && !policy.owners.includes(request.actor)) {
+			if (current && !owns(request.actor)) {
 				const allowed =
 					current.allowed_executors ?? (current.created_by ? [current.created_by] : []);
 				if (current.revoked || !allowed.includes(request.actor)) throw new Error('access_denied');
