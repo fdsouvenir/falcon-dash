@@ -1,7 +1,7 @@
 {
 	"id": "falcon-dash",
 	"name": "Falcon Dash",
-	"version": "4.1.0",
+	"version": "4.2.0",
 	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
 	"activation": {
 		"onStartup": true
