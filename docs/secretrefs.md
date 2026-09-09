@@ -15,11 +15,18 @@ The resolver ships as `bin/keepassxc-secret-resolver.cjs`. An installed OpenClaw
 it by absolute path, so moving or deleting that file breaks credential resolution across the
 gateway.
 
-## Current installation requirement
+## Provisioning
 
-The current v3 code expects `keepassxc-cli`, the database, and the key file to exist. Automatic
-provisioning is still an installation gap; it must be closed before the standalone installer can
-claim a fully provisioned built-in vault.
+`keepassxc-cli` must exist on the host. The plugin Vault keeps its own database and key inside its
+private data directory — `<dataDir>/vault/credentials.kdbx` and `unlock.key` — and creates both only
+through an explicit owner setup action in the Control UI. Installation does not create them, and an
+existing KeePassXC database is never adopted automatically, including one the bundled resolver above
+already reads.
+
+Until an owner runs setup the Vault reports `initialized: false`, its page offers only **Set up
+Vault**, and any operation that needs the stored policy fails with `not_initialized`. That is a
+provisioning state, not a fault: an unprovisioned Vault must not be reported as unavailable storage,
+because the two call for opposite responses.
 
 ## Configure OpenClaw
 

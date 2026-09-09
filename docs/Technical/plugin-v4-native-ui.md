@@ -25,7 +25,10 @@ a separate static asset directory.
   work, relationships and open Asks with native conversation links. Create and contextual actions
   use schema-derived labeled forms, source/option arrays, nullable values and typed dispositions.
   History loads on demand. Definition/result/change/authorization remain separate sections.
-- Vault: encrypted initialization, lock/unlock, protected entry, groups, deliberate field-specific
+- Vault: before provisioning the page reports `Vault not set up` and offers setup alone — Unlock,
+  recovery snapshots and access history all read a policy that does not exist yet, so offering them
+  produces failures rather than choices. Once provisioned: encrypted initialization, lock/unlock,
+  protected entry, groups, deliberate field-specific
   Reveal/Hide/Copy for human- and agent-created entries, versioned field rotation and executor policy.
   The protected RPC is not a general agent tool or background feature query. It requires an actual
   connection-bound human owner and original authority through async worker activity and return.
