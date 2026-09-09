@@ -9,7 +9,7 @@ const root = path.join(repo, 'artifacts/plugin-v4', `managed-install-${process.p
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 const entry = fs.realpathSync(path.join(repo, 'node_modules/openclaw/openclaw.mjs'));
 if (
-	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.2'
+	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.3'
 )
 	throw Error('Pinned SDK required');
 const runtime = path.join(root, 'runtime');
@@ -134,7 +134,7 @@ if (
 	throw Error('System runtime changed');
 const proof = {
 	root,
-	openclaw: '2026.9.2',
+	openclaw: '2026.9.3',
 	node: process.version,
 	nodeSha256: digest,
 	systemRuntimeUnchanged: true,

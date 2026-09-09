@@ -127,3 +127,20 @@ test('Global Vault eligibility does not grant another agent access to a credenti
 	assert.equal(await vault.revealField('sample', 'password', 'human:owner'), 'SYNTHETIC-SCOPED');
 	await vault.lock();
 });
+
+test('An unprovisioned Vault reports that it is not set up instead of failing as unavailable storage', async (t) => {
+	const directory = fs.mkdtempSync(tmpdir() + '/falcon-unprovisioned-');
+	t.after(() => fs.rmSync(directory, { recursive: true }));
+	const vault = new Vault(directory, { owners: ['human:owner'], executors: [] });
+	assert.equal(vault.initialized, false);
+	// The operator-visible failure was an opaque vault_unavailable, which reads as broken storage.
+	await assert.rejects(() => vault.unlock('human:owner'), { code: 'not_initialized' });
+	await assert.rejects(() => vault.audit('human:owner'), { code: 'not_initialized' });
+	assert.deepEqual(await vault.lock(), { locked: true });
+	await vault.initialize('human:owner');
+	assert.equal(vault.initialized, true);
+	await vault.unlock('human:owner');
+	assert.equal(vault.locked, false);
+	await assert.rejects(() => vault.initialize('human:owner'), { code: 'already_initialized' });
+	await vault.lock();
+});

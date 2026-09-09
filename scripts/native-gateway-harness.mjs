@@ -17,9 +17,9 @@ if (
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 const entry = fs.realpathSync(path.join(repo, 'node_modules/openclaw/openclaw.mjs'));
 if (
-	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.2'
+	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.3'
 )
-	throw Error('Pinned OpenClaw 2026.9.2 required');
+	throw Error('Pinned OpenClaw 2026.9.3 required');
 const binary = path.join(root, 'runtime/node');
 fs.mkdirSync(path.dirname(binary), { mode: 0o700 });
 fs.copyFileSync(process.execPath, binary, fs.constants.COPYFILE_EXCL);
@@ -343,7 +343,7 @@ async function connectOwner() {
 			env,
 			clientName: 'openclaw-control-ui',
 			clientDisplayName: 'Isolated acceptance fixture',
-			clientVersion: '2026.9.2',
+			clientVersion: '2026.9.3',
 			mode: 'webchat',
 			role: 'operator',
 			scopes: [
@@ -584,7 +584,7 @@ try {
 		root,
 		baseURL,
 		profileId,
-		openclaw: '2026.9.2',
+		openclaw: '2026.9.3',
 		realGateway: true,
 		documentSwapResponsiveness: { fifo: true, symlink: true, deadlineMs: 3000 },
 		identity: 'trusted-proxy fixture',

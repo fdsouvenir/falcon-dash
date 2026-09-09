@@ -1,6 +1,6 @@
 {
 	"name": "@fdsouvenir/falcon-dash",
-	"version": "4.0.1",
+	"version": "4.0.2",
 	"description": "Falcon Dash OpenClaw plugin: Work, Integrations, KeePassXC Vault and Documents (implementation preview)",
 	"repository": {
 		"type": "git",
@@ -41,7 +41,7 @@
 		"registry": "https://npm.pkg.github.com"
 	},
 	"engines": {
-		"node": ">=22.16"
+		"node": ">=24.16.0 <25 || >=26.1.0"
 	},
 	"scripts": {
 		"build": "node scripts/build-plugin.mjs",
@@ -107,16 +107,16 @@
 			"./plugin/index.mjs"
 		],
 		"compat": {
-			"pluginApi": "2026.9.2",
-			"minGatewayVersion": "2026.9.2"
+			"pluginApi": ">=2026.9.3",
+			"minGatewayVersion": "2026.9.3"
 		},
 		"build": {
-			"openclawVersion": "2026.9.2",
-			"pluginSdkVersion": "2026.9.2"
+			"openclawVersion": "2026.9.3",
+			"pluginSdkVersion": "2026.9.3"
 		}
 	},
 	"peerDependencies": {
-		"openclaw": "2026.9.2"
+		"openclaw": ">=2026.9.3"
 	},
 	"peerDependenciesMeta": {
 		"openclaw": {

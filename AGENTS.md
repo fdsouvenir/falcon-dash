@@ -78,7 +78,7 @@ agent receives the same instructions.
 
 ## Commands
 
-Use Node 22.16+. `npm run build` runs automatically before `check`, `test` and the e2e harnesses.
+Use Node 24.16+ (or 26.1+), matching OpenClaw 2026.9.3. `npm run build` runs automatically before `check`, `test` and the e2e harnesses.
 
 - `npm install` — install dependencies
 - `npm run build` — bundle the schema dependency, validate plugin JavaScript, build the native UI

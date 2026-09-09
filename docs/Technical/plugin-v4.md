@@ -29,8 +29,9 @@ holding. That version is a literal in `plugin/contract.mjs`, not read from `pack
 
 `npm run build`, `npm run check`, and `npm test` target the directly executable JavaScript plugin,
 which is the only runtime here. There is no production cutover.
-Development dependencies are not runtime plugin dependencies. OpenClaw is an exact optional peer
-at **2026.9.2**; Node **22.16+**, Linux `/proc/self/fd`, `flock`, and KeePassXC CLI are prerequisites.
+Development dependencies are not runtime plugin dependencies. OpenClaw is an optional peer with a
+floor of **>=2026.9.3**; Node **`>=24.16.0 <25 || >=26.1.0`**, Linux `/proc/self/fd`, `flock`, and
+KeePassXC CLI are prerequisites.
 This Linux-only release must not be advertised as portable or broadly version-compatible.
 
 ## One process, several registrations
@@ -162,7 +163,7 @@ Recommend keeping Workboard disabled when using Falcon Work; the plugin never ch
 Run `npm run build:plugin`, `npm run test:plugin`, and formatting/lint checks. Tests create and remove
 only their own synthetic temporary directories. Preserve all real state and credentials.
 For any OpenClaw CLI call, set **both** `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` to the
-isolated test directory and invoke the absolute pinned 2026.9.2 binary. Never invoke an unpinned
+isolated test directory and invoke the absolute pinned 2026.9.3 binary. Never invoke an unpinned
 binary against the operator's normal state. Validate metadata, pack, then install that archive
 inside isolated state. Do not publish the package or restart the production Gateway.
 

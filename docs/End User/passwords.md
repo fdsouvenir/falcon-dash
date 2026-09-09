@@ -6,14 +6,27 @@ as the Vault page inside the OpenClaw Control UI.
 
 ## Storage and access
 
-- database: `~/.openclaw/passwords.kdbx`
-- key file: `~/.openclaw/vault.key`
+The Vault keeps its own database inside the plugin's private data directory — by default
+`<OpenClaw state>/falcon-dash/vault`, or under `dataDir` when that is configured:
+
+- database: `credentials.kdbx`
+- key file: `unlock.key`
 - authentication: `keepassxc-cli --no-password --key-file`
 
+This is the plugin's own store. It is not any other KeePassXC database you already keep, including
+one an OpenClaw SecretRef provider resolves directly.
+
 Access is key-file only and unattended: there is no master-password prompt. The unlock key is
-protected by filesystem ownership, not an external key-management system. The Vault starts locked,
-and a new database and key are provisioned only through an explicit owner operation — an existing
-vault is never silently adopted.
+protected by filesystem ownership, not an external key-management system.
+
+## Setting it up
+
+A new installation has no database yet. Until an owner creates one the Vault page reads **Vault not
+set up** and offers a single **Set up Vault** action, because nothing can be unlocked, listed or
+snapshotted before the database exists. Choosing it creates the encrypted database and its private
+key, after which the Vault behaves normally: it starts locked, and an owner unlocks it.
+
+An existing vault is never silently adopted, and setup refuses to run twice.
 
 `flock` serializes separate worker processes, so two operations cannot corrupt the database by
 racing each other. If the binary, database or key file is missing or unreadable, the page says the

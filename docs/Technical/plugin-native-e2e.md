@@ -7,7 +7,7 @@ tests, and the managed-SecretRef/provider-bound proof. Its required `native-e2e`
 `e2e.yml`. There is no `if: false`, success skip, standalone app dev server, or Node 20 host in
 that acceptance path. A failing real-Gateway browser test fails the CI workflow.
 
-The native job installs OpenClaw **2026.9.2**, Node from `.nvmrc`, KeePassXC and Chromium into its
+The native job installs OpenClaw **2026.9.3**, Node from `.nvmrc`, KeePassXC and Chromium into its
 disposable GitHub runner. `npm run test:native-e2e` builds and packs the plugin, installs that
 archive, and starts the actual pinned Gateway with explicit isolated state/config/workspace paths.
 It uses a byte-identical user-owned Node copy; no system Node permissions or ownership change.

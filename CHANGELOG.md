@@ -5,6 +5,30 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.2] - 2026-09-08
+
+### Changed
+
+- **OpenClaw 2026.9.3 is now the minimum host, and Node moves to `>=24.16.0 <25 || >=26.1.0`.**
+  `openclaw.compat.pluginApi` was the exact value `2026.9.2`, but the host evaluates that field as a
+  semver range, so a 2026.9.3 gateway refused to install this plugin with `INCOMPATIBLE_PLUGIN_API`
+  even though the code typechecked and passed its suites against that SDK. It is now the floor
+  `>=2026.9.3`. Upgrade Node before OpenClaw: upstream warns of SQLite text truncation in the other
+  order, and Work, Vault audit and Integrations state are all `node:sqlite`.
+- A scheduled `SDK compatibility` workflow now typechecks against the newest published SDK and runs
+  `scripts/check-sdk-compat.mjs`, which fails on an exact pin where a floor belongs, on a declared
+  floor that excludes the resolved SDK, and on a Node range that disagrees with it. It is a monitor
+  rather than a merge gate, so an upstream release cannot block unrelated pull requests.
+
+### Fixed
+
+- **A Vault that was never provisioned offered Unlock, which could not succeed.** The locked view
+  showed both `Unlock` and `Set up Vault`, and unlock read a `policy.json` that provisioning creates,
+  so it failed with `vault_unavailable` — an error that reads as broken storage rather than "not set
+  up yet". Vault status now reports `initialized`; before provisioning the page reads `Vault not set
+up` and offers only `Set up Vault`, and any operation needing the policy fails with the typed
+  `not_initialized` instead of an unhandled read.
+
 ## [4.0.1] - 2026-09-08
 
 ### Fixed

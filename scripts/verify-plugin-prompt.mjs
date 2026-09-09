@@ -35,7 +35,7 @@ if (
 const version = JSON.parse(
 	fs.readFileSync(path.join(path.dirname(entry), 'package.json'), 'utf8')
 ).version;
-if (version !== '2026.9.2') throw new Error('This harness pins OpenClaw 2026.9.2');
+if (version !== '2026.9.3') throw new Error('This harness pins OpenClaw 2026.9.3');
 const configFile = path.join(root, 'config.json'),
 	original = fs.readFileSync(configFile),
 	config = JSON.parse(original.toString());

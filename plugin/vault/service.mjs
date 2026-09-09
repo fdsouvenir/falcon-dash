@@ -26,6 +26,10 @@ export class Vault {
 		this.generation = 0;
 		this.operationController = new AbortController();
 	}
+	// Provisioning state, not authorization: an unprovisioned Vault has no policy to authorize against.
+	get initialized() {
+		return fs.existsSync(path.join(this.directory, 'policy.json'));
+	}
 	lock(actor = 'system:vault', authority = internalAuthority) {
 		authority.assert();
 		requireValue(
@@ -36,8 +40,7 @@ export class Vault {
 		this.locked = true;
 		this.generation++;
 		this.operationController.abort();
-		if (!fs.existsSync(path.join(this.directory, 'policy.json')))
-			return Promise.resolve({ locked: true });
+		if (!this.initialized) return Promise.resolve({ locked: true });
 		return this.worker({ action: 'lock', actor }, authority);
 	}
 	authorize(actor, human = false) {

@@ -14,7 +14,7 @@ if (
 )
 	throw Error('Use a canonical isolated artifacts root');
 if (
-	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.2'
+	JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'))).version !== '2026.9.3'
 )
 	throw Error('Pinned OpenClaw required');
 const executable = fs.lstatSync(process.execPath);
@@ -109,7 +109,7 @@ try {
 	await vault.lock();
 	if (!denied(await audit('locked'))) throw Error('Vault lock did not deny managed resolution');
 	const proof = {
-		openclaw: '2026.9.2',
+		openclaw: '2026.9.3',
 		node: process.execPath,
 		nodeUid: executable.uid,
 		processUid: process.getuid(),

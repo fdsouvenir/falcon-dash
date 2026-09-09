@@ -95,6 +95,7 @@ export default definePluginEntry({
 				if (p.action === 'status')
 					return {
 						locked: live.vault.locked,
+						initialized: live.vault.initialized,
 						protected_ui: 'native',
 						epoch: live.vault.generation,
 						can_manage: live.vault.owners.has(actor)

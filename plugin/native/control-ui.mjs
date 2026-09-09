@@ -300,6 +300,7 @@ function mount(container, context, module) {
 	let consentUrl,
 		dialog,
 		vaultEpoch,
+		vaultAtRest = false,
 		vaultGroup =
 			module === 'vault' && context.props?.entry_id
 				? context.props.entry_id.split('/').slice(0, -1).join('/')
@@ -841,9 +842,26 @@ function mount(container, context, module) {
 		if (!valid()) return;
 		body.replaceChildren();
 		vaultEpoch = state.epoch;
-		status.textContent = state.locked ? 'Vault locked' : 'Vault unlocked';
+		vaultAtRest = state.locked || !state.initialized;
+		status.textContent = !state.initialized
+			? 'Vault not set up'
+			: state.locked
+				? 'Vault locked'
+				: 'Vault unlocked';
 		const actions = el('div', null, { class: 'toolbar' });
 		body.append(actions);
+
+		// Nothing can be unlocked, listed or recovered before the database exists.
+		if (!state.initialized) {
+			actions.append(
+				button('Set up Vault', () => confirm('Create encrypted Vault', () => rpc('initialize')))
+			);
+			paragraph(
+				body,
+				'This Vault has not been created yet. Setting it up creates an encrypted KeePassXC database and its private unlock key in protected host storage. Credentials, access history and recovery snapshots become available afterwards.'
+			);
+			return;
+		}
 
 		actions.append(
 			button('Recovery snapshots', () =>
@@ -906,8 +924,7 @@ function mount(container, context, module) {
 						await rpc('unlock');
 						await refresh();
 					})
-				),
-				button('Set up Vault', () => confirm('Create encrypted Vault', () => rpc('initialize')))
+				)
 			);
 			paragraph(
 				body,
@@ -1910,7 +1927,7 @@ function mount(container, context, module) {
 				) {
 					life.clear();
 					clearSecrets();
-					if (status.textContent !== 'Vault locked') protect(refresh);
+					if (!vaultAtRest) protect(refresh);
 				}
 			} catch {
 				clearSecrets();

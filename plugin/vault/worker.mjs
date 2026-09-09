@@ -167,6 +167,7 @@ try {
 		});
 		reply({ initialized: true });
 	} else {
+		if (!fs.existsSync(policyPath)) throw new Error('not_initialized');
 		const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
 		if (['backup', 'recovery_list'].includes(request.action)) {
 			authorize(policy, request.actor, true);
@@ -519,6 +520,7 @@ try {
 	const safe = [
 		'version_conflict',
 		'already_initialized',
+		'not_initialized',
 		'recovery_required',
 		'invalid_handle',
 		'invalid_action',
