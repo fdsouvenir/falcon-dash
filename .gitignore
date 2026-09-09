@@ -32,3 +32,14 @@ plugin/typebox-license.txt
 
 # ClawHub plugin inspector output
 reports
+
+# OpenClaw agent workspace. These belong to the operator running the agent, not to the product:
+# SOUL/USER/IDENTITY are persona and profile, memory/ holds dated personal notes, and the image
+# directory holds screenshots pasted into chat. This repository is public — never commit them.
+SOUL.md
+USER.md
+IDENTITY.md
+AGENT.md
+memory/
+.openclaw-cli-images/
+.openclaw/
