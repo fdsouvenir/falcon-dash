@@ -5,6 +5,61 @@ All notable changes to Falcon Dash will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] - 2026-09-09
+
+Preparation for publishing on ClawHub. No runtime behaviour changed; what changed is the licence,
+what the package contains, and what it says about itself.
+
+### Changed
+
+- **Licence is now CC BY-NC 4.0**, replacing CC-BY-NC-ND-4.0. NoDerivatives forbade redistributing
+  a modified version, which rules out forks and community patches — not the intent for a plugin
+  published to a public registry. Attribution and the non-commercial bar are unchanged; adapted
+  material is now permitted. The file is the canonical Creative Commons text rather than the
+  previous one with its ND clauses edited out.
+- **The README is written for the person installing the plugin**, not the person building it. It
+  previously cited a commit SHA, the CI runner, "current PR comments" and a warning that passing
+  tests was "not full v4 readiness". It now covers what the four pages do, how to install, what is
+  required, how credentials are handled, and what this release does not do.
+- **Nothing shipped calls itself an implementation preview.** That string appeared in four files,
+  two of them user-visible: the description shown by `openclaw plugins list`, and a caveat printed
+  in the fallback UI header on every page. A preview build is now identified by which package was
+  installed — `@fdsouvenir/falcon-dash-preview` is a separate package from its own repository.
+- **The vault access model is described accurately.** `vaultOwners` reads like an allowlist, but
+  `owns()` returns true for any `human:` actor and `policy.owners` is recorded for the audit trail
+  only. Reaching an authenticated Gateway connection is the credential, and any operator who can
+  sign in to the Control UI can reveal every entry. The README and the setting's own description
+  now say so.
+
+### Added
+
+- **Catalog metadata for ClawHub.** The manifest declares `categories: ["agent-orchestration"]` and
+  an `icon`, so the listing is classified deliberately rather than by a model defaulting to
+  `other`, and shows the Falcon Dash mark. The icon is the existing logo recovered from the pre-4.0
+  application, resampled to 256px: 457 KB to 57 KB.
+- **Every `configSchema` field carries a description.** ClawHub renders the schema as the listing's
+  Configuration tab, so six of the eight would have been blank rows on a public page.
+- **A defined release workflow** in `docs/RELEASE.md`, covering the preview and production channels,
+  the shared version line, and the identity delta between them. `scripts/apply-channel-identity.mjs`
+  performs the rewrite so production is generated from a preview tag rather than hand-maintained.
+
+### Fixed
+
+- **The published archive no longer carries internal material.** Seven engineering documents naming
+  internal issues and historical checkpoints shipped to every installer, as did the entire test
+  suite — 22 files and 145 KB, because `files` lists `plugin/` wholesale. The archive went from 69
+  files to 47, and `plugin/tests/release.test.mjs` asserts both exclusions.
+- The OpenClaw agent workspace — `SOUL.md`, `USER.md`, `memory/` and pasted screenshots — is
+  gitignored. It had never been committed, but a `git add -A` would have put it in a public
+  repository.
+
+### Validation
+
+- 150 unit tests, up from 146, including round-trip, idempotency and drift coverage for the channel
+  identity rewrite. That idempotency test caught a real defect: the production strings are prefixes
+  of the preview ones, so applying the preview rewrite twice produced an install command reading
+  `clawhub:@fdsouvenir/falcon-dash-preview-preview`.
+
 ## [4.3.0] - 2026-09-09
 
 ### Added

@@ -1,7 +1,7 @@
 {
 	"id": "falcon-dash",
 	"name": "Falcon Dash",
-	"version": "4.3.0",
+	"version": "4.4.0",
 	"description": "Operator console for OpenClaw: shared Work tracking for people and agents, a KeePassXC credential vault that resolves SecretRefs, service integrations, and authorized document workspaces.",
 	"categories": ["agent-orchestration"],
 	"icon": "https://raw.githubusercontent.com/fdsouvenir/falcon-dash/main/assets/falcon-dash-icon.png",
