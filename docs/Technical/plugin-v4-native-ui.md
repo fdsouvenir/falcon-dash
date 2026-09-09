@@ -29,12 +29,19 @@ a separate static asset directory.
   plugin provisions and unlocks at startup. There is no Set up, Unlock or Lock control — those are
   host lifecycle, not operator choices, and the actions are absent from the protected RPC. A page
   reporting `Vault unavailable` means startup failed and points at service health rather than
-  offering a step the operator cannot complete. The page is a password manager: entries list under
-  their real KeePassXC titles, Reveal/Hide/Copy act on the entry directly, and Details loads the
-  Username/URL/Notes an entry actually carries plus Edit. Executor grants appear only for agent
-  credentials, which are the only entries that have them. Otherwise: protected entry, groups,
-  field-specific
-  Reveal/Hide/Copy for human- and agent-created entries, versioned field rotation and executor policy.
+  offering a step the operator cannot complete. The page is a password manager, laid out as a group
+  rail, a dense entry list and an inspector for the selected entry. A search box over the whole
+  vault is the primary retrieval path: `inventory_all` returns every group and entry in one call,
+  so searching never walks group by group. The list carries the entry title and its group only.
+  KeePassXC exposes no modification timestamp, and reading any field costs one `keepassxc-cli`
+  subprocess per entry, so neither a Modified nor a Username column is buildable at list scale;
+  the username belongs to the inspector, which loads `metadata` on selection. The inspector shows
+  Password/Username/URL/Notes on a single label-value-actions baseline, masked until revealed, and
+  offers a control only for the fields the record reports carrying. Reveal is one toggle rather
+  than a Reveal button beside a standing Hide. Removal asks the operator to type the entry name and
+  keeps the control disabled until it matches exactly, because `message` deliberately discards
+  error text and a thrown mismatch would surface as a generic failure. Otherwise: protected entry,
+  groups, versioned field rotation and executor policy.
   The protected RPC is not a general agent tool or background feature query. It requires an actual
   connection-bound human owner and original authority through async worker activity and return.
   No plaintext browser persistence or secret-bearing URLs are used. Revealed values clear on
@@ -141,7 +148,10 @@ waiting references are optional and never replace the required waiting/resume ex
   event and linked-session provenance. Reference fields offer host-owned identity suggestions and
   bounded title search rather than requiring CLI syntax. Missing identities remain visible.
 - Vault supports protected SecretRef grants, redacted access history, private recovery snapshots,
-  guarded entry relocation/removal and removal of empty groups. Recovery material is not a browser
+  guarded entry relocation/removal and removal of empty groups. Grants stay reachable from the
+  command bar because they are the only way to authorize a SecretRef, but they are not a browsing
+  surface: every entry is one kind of record, and the page never badges or filters by whether an
+  agent can read it. Recovery material is not a browser
   download. Moving an entry invalidates old handles; changing a credential pauses dependent Falcon
   connections until explicit review/resume/test.
 - Integrations includes collapsible account/usage/expiry/failure/audit detail, provider portal

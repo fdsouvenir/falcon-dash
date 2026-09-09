@@ -304,7 +304,10 @@ function mount(container, context, module) {
 		vaultGroup =
 			module === 'vault' && context.props?.entry_id
 				? context.props.entry_id.split('/').slice(0, -1).join('/')
-				: '';
+				: '',
+		vaultTree = [],
+		vaultQuery = '',
+		vaultSelected = module === 'vault' ? (context.props?.entry_id ?? '') : '';
 	function closeDialog() {
 		clearSecrets();
 		dialog?.dispose();
@@ -356,6 +359,52 @@ function mount(container, context, module) {
 	}
 	function confirm(label, run) {
 		form(label, {}, run, { submitLabel: 'Confirm' });
+	}
+	// Removal is the one irreversible thing here, so it asks for the entry's name rather than a
+	// second button. `message` deliberately discards error text, so the match is enforced by keeping
+	// the control disabled instead of by throwing.
+	function confirmByName(label, name, run, { submitLabel = 'Remove entry', note = '' } = {}) {
+		closeDialog();
+		const content = el('form', null, { class: 'falcon-native' });
+		if (note) paragraph(content, note);
+		const typed = field(`Type ${name} to confirm`, {});
+		typed.input.setAttribute('autocomplete', 'off');
+		const error = el('p', '', { role: 'alert' }),
+			save = el('button', submitLabel, { type: 'submit', class: 'danger' });
+		save.disabled = true;
+		typed.input.addEventListener('input', () => {
+			save.disabled = typed.input.value !== name;
+		});
+		content.append(
+			typed.wrap,
+			el('p', 'Names must match exactly.', { class: 'hint' }),
+			error,
+			save,
+			button('Cancel', closeDialog)
+		);
+		content.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			if (save.disabled) return;
+			save.disabled = true;
+			try {
+				await run();
+				if (!life.dead) {
+					closeDialog();
+					await refresh();
+				}
+			} catch (e) {
+				error.textContent = message(e);
+				save.disabled = typed.input.value !== name;
+			}
+		});
+		dialog = host.components.mountDialog(root, {
+			label,
+			content,
+			onCancel: () => {
+				if (save.disabled && typed.input.value === name) return false;
+				closeDialog();
+			}
+		});
 	}
 	function row(record, open) {
 		const b = button('', () => protect(open), 'record');
@@ -836,6 +885,12 @@ function mount(container, context, module) {
 		status.textContent = 'Up to date';
 	}
 	const FIELD_LABELS = { password: 'Password', username: 'Username', url: 'URL', notes: 'Notes' };
+	// The order a person reads them in, not the order the record happens to carry.
+	const FIELD_ORDER = ['password', 'username', 'url', 'notes'];
+	// A revealed value is held only briefly; this is the shipped duration and stays unchanged.
+	const SECRET_HOLD_MS = 15000;
+	const leafName = (id) => (id.includes('/') ? id.split('/').pop() : id);
+	const parentOf = (id) => id.split('/').slice(0, -1).join('/');
 	async function vault() {
 		const valid = life.ticket();
 		clearSecrets();
@@ -848,9 +903,6 @@ function mount(container, context, module) {
 		// of offering a step that is not theirs to run.
 		vaultAtRest = state.locked || state.initialized === false;
 		status.textContent = vaultAtRest ? 'Vault unavailable' : 'Vault ready';
-		const actions = el('div', null, { class: 'toolbar' });
-		body.append(actions);
-
 		if (vaultAtRest) {
 			paragraph(
 				body,
@@ -858,11 +910,313 @@ function mount(container, context, module) {
 			);
 			return;
 		}
+		// The whole tree in one call. Retrieval is this page's job: past a couple of dozen entries a
+		// person searches far more often than they browse, and searching cannot walk group by group.
+		const listing = await rpc('inventory_all');
+		if (!valid()) return;
+		vaultTree = listing.entries ?? [];
+		const allEntries = vaultTree.filter((e) => e.kind === 'entry').map((e) => e.id),
+			allGroups = vaultTree.filter((e) => e.kind === 'group').map((e) => e.id);
+		allEntries.sort((a, b) => leafName(a).localeCompare(leafName(b)));
+		allGroups.sort();
+		if (vaultSelected && !allEntries.includes(vaultSelected)) vaultSelected = '';
+		if (vaultGroup && !allGroups.includes(vaultGroup)) vaultGroup = '';
 
-		actions.append(
+		const bar = el('div', null, { class: 'vault-bar' }),
+			search = field('Search the vault', { value: vaultQuery });
+		search.wrap.classList.add('vault-search');
+		search.input.type = 'search';
+		search.input.setAttribute('placeholder', `Search ${allEntries.length} entries`);
+		const workspace = el('div', null, { class: 'vault-workspace' }),
+			rail = el('nav', null, { class: 'vault-rail', 'aria-label': 'Vault groups' }),
+			list = el('div', null, { class: 'vault-list', role: 'list' }),
+			inspector = el('aside', null, { class: 'vault-inspector' });
+		workspace.append(rail, list, inspector);
+
+		const countIn = (group) => allEntries.filter((id) => id.startsWith(group + '/')).length;
+		function renderRail() {
+			rail.replaceChildren();
+			const select = (group) => {
+				vaultGroup = group;
+				vaultQuery = '';
+				search.input.value = '';
+				renderRail();
+				renderList();
+			};
+			const root = button(
+				`All entries ${allEntries.length}`,
+				() => select(''),
+				vaultGroup === '' ? 'vault-rail-item selected' : 'vault-rail-item'
+			);
+			root.setAttribute('aria-current', vaultGroup === '' ? 'true' : 'false');
+			rail.append(root);
+			for (const group of allGroups) {
+				const depth = group.split('/').length - 1,
+					item = button(
+						'',
+						() => select(group),
+						vaultGroup === group ? 'vault-rail-item selected' : 'vault-rail-item'
+					);
+				item.style.paddingLeft = `${8 + depth * 12}px`;
+				item.append(
+					el('span', leafName(group), { class: 'vault-rail-name' }),
+					el('span', String(countIn(group)), { class: 'vault-rail-count' })
+				);
+				item.setAttribute('aria-current', vaultGroup === group ? 'true' : 'false');
+				rail.append(item);
+			}
+		}
+		function visibleEntries() {
+			const query = vaultQuery.trim().toLowerCase();
+			// Searching is global on purpose: a person looking for a name should not have to know
+			// which group it is filed under.
+			if (query) return allEntries.filter((id) => id.toLowerCase().includes(query));
+			return allEntries.filter((id) => parentOf(id) === vaultGroup);
+		}
+		function renderList() {
+			list.replaceChildren();
+			const shown = visibleEntries();
+			if (!shown.length) {
+				paragraph(
+					list,
+					vaultQuery.trim()
+						? `No entry matches ${vaultQuery.trim()}.`
+						: vaultGroup
+							? 'This group has no entries.'
+							: 'No credentials yet.'
+				);
+				if (vaultGroup && !vaultQuery.trim() && !countIn(vaultGroup))
+					list.append(
+						button('Remove empty group', () =>
+							confirm('Remove empty group ' + vaultGroup, async () => {
+								await rpc('group_remove', { id: vaultGroup, confirmed: true });
+								vaultGroup = '';
+							})
+						)
+					);
+				return;
+			}
+			for (const id of shown) {
+				const rowEl = el('div', null, { class: 'vault-row', role: 'listitem' }),
+					open = button('', () => protect(() => selectEntry(id)), 'vault-row-open');
+				open.append(el('span', leafName(id), { class: 'vault-row-title' }));
+				const group = parentOf(id);
+				open.append(el('span', group || '—', { class: 'vault-row-group' }));
+				if (id === vaultSelected) rowEl.classList.add('selected');
+				rowEl.append(
+					open,
+					button('Copy', () => protect(() => carry(id, 'password', 'copy')), 'vault-row-copy')
+				);
+				list.append(rowEl);
+			}
+		}
+		// One path for reading a field, so the reveal hold and the clipboard notice cannot drift apart.
+		async function carry(id, fieldName, purpose, into) {
+			const ticket = secretTicket();
+			let result;
+			try {
+				result = await rpc(purpose === 'copy' ? 'copy' : 'reveal', { id, field: fieldName });
+			} catch (error) {
+				const code = error?.details?.code ?? error?.error?.details?.code;
+				if (code !== 'not_found') throw error;
+				if (ticket())
+					status.textContent = `${leafName(id)} has no ${FIELD_LABELS[fieldName] ?? fieldName} field.`;
+				return;
+			}
+			if (!ticket() || !host.connection.connected) return;
+			if (purpose === 'copy') {
+				await navigator.clipboard.writeText(result.value);
+				status.textContent = 'Copied. Clipboard content remains until you replace it.';
+				return;
+			}
+			if (into) {
+				into.textContent = result.value;
+				setTimeout(() => {
+					into.textContent = '';
+				}, SECRET_HOLD_MS);
+			}
+		}
+		async function selectEntry(id) {
+			vaultSelected = id;
+			clearSecrets();
+			renderList();
+			await renderInspector();
+		}
+		async function renderInspector() {
+			inspector.replaceChildren();
+			if (!vaultSelected) {
+				paragraph(inspector, 'Select an entry to see what it holds.', 'vault-inspector-empty');
+				return;
+			}
+			const id = vaultSelected,
+				title = leafName(id),
+				metadata = await request('vault', 'metadata', { id });
+			if (!inspector.isConnected || life.dead || vaultSelected !== id) return;
+			inspector.append(el('h2', title, { class: 'vault-inspector-title' }));
+			inspector.append(el('p', id, { class: 'vault-inspector-handle' }));
+			if (metadata.execution_disabled)
+				inspector.append(el('p', 'Agent execution disabled', { class: 'vault-flag' }));
+			const carried = new Set(metadata.fields ?? []);
+			// Only the fields this entry actually carries get a control. Offering Reveal for an absent
+			// field hands the operator something that can only fail.
+			for (const name of FIELD_ORDER) {
+				const fieldRow = el('div', null, { class: 'vault-field' });
+				fieldRow.append(el('span', FIELD_LABELS[name], { class: 'vault-field-label' }));
+				if (!carried.has(name)) {
+					fieldRow.append(
+						el('span', '—', { class: 'vault-field-value empty' }),
+						el('span', 'not set', { class: 'vault-field-actions empty' })
+					);
+					inspector.append(fieldRow);
+					continue;
+				}
+				const shown = el('output', '', {
+					class: 'vault-field-value',
+					'data-secret': 'revealed',
+					'aria-label': `Revealed ${FIELD_LABELS[name]} for ${title}`
+				});
+				secretNodes.add(shown);
+				const masked = el('span', '••••••••••', { class: 'vault-field-value masked' }),
+					actions = el('div', null, { class: 'vault-field-actions' });
+				// One toggle, not a Reveal button beside a Hide button: when a value is hidden, Hide
+				// does nothing, and when it is shown, Reveal does nothing.
+				const toggle = button('Reveal', () =>
+					protect(async () => {
+						if (shown.textContent) {
+							clearSecrets();
+							toggle.textContent = 'Reveal';
+							masked.hidden = false;
+							shown.hidden = true;
+							return;
+						}
+						await carry(id, name, 'reveal', shown);
+						if (!shown.textContent) return;
+						toggle.textContent = 'Hide';
+						masked.hidden = true;
+						shown.hidden = false;
+						setTimeout(() => {
+							if (!shown.textContent) {
+								toggle.textContent = 'Reveal';
+								masked.hidden = false;
+								shown.hidden = true;
+							}
+						}, SECRET_HOLD_MS + 100);
+					})
+				);
+				shown.hidden = true;
+				actions.append(
+					toggle,
+					button('Copy', () => protect(() => carry(id, name, 'copy')))
+				);
+				fieldRow.append(masked, shown, actions);
+				inspector.append(fieldRow);
+			}
+			inspector.append(el('p', `Version ${metadata.version}`, { class: 'vault-inspector-meta' }));
+			const footer = el('div', null, { class: 'vault-inspector-actions' });
+			footer.append(
+				button('Edit', () =>
+					form(
+						`Edit ${title}`,
+						{
+							password: {
+								type: 'password',
+								label: 'Password',
+								placeholder: 'Leave blank to keep the existing secret'
+							},
+							username: { label: 'Username', placeholder: 'user@example.com' },
+							url: { label: 'URL', placeholder: 'https://example.com' },
+							notes: { label: 'Notes', placeholder: 'Optional notes' }
+						},
+						(v) =>
+							rpc('edit_entry', {
+								id,
+								expected_version: metadata.version,
+								fields: Object.fromEntries(
+									Object.entries(v).filter(([, x]) => typeof x === 'string' && x.length)
+								)
+							}),
+						{ protectedEntry: true }
+					)
+				),
+				button('Move or rename', () =>
+					form(
+						'Rename or move credential — old handles and SecretRefs stop resolving',
+						{ destination: { label: 'Destination entry path', value: id } },
+						(values) =>
+							rpc('relocate', {
+								id,
+								destination: values.destination,
+								expected_version: metadata.version,
+								confirmed: true
+							})
+					)
+				),
+				button(
+					'Remove',
+					() =>
+						confirmByName(
+							`Remove ${title}`,
+							title,
+							async () => {
+								await rpc('remove_entry', {
+									id,
+									expected_version: metadata.version,
+									confirmed: true
+								});
+								vaultSelected = '';
+							},
+							{
+								note: 'This entry and its stored password are removed, and its handle stops resolving. A private recovery snapshot is taken automatically first.'
+							}
+						),
+					'danger'
+				)
+			);
+			inspector.append(footer);
+		}
+
+		search.input.addEventListener('input', () => {
+			vaultQuery = search.input.value;
+			renderList();
+		});
+		bar.append(
+			button(
+				'New entry',
+				() =>
+					form(
+						'New entry',
+						{
+							id: { label: 'Title', placeholder: 'e.g. GitHub API Key' },
+							group: {
+								label: 'Group',
+								options: [['', 'No group (vault root)'], ...allGroups.map((g) => [g, g])],
+								value: vaultGroup
+							},
+							password: { type: 'password', label: 'Password', placeholder: 'Enter password' },
+							username: { label: 'Username', placeholder: 'user@example.com' },
+							url: { label: 'URL', placeholder: 'https://example.com' },
+							notes: { label: 'Notes', placeholder: 'Optional notes' }
+						},
+						(v) =>
+							rpc('add_entry', {
+								id: v.group ? `${v.group}/${v.id}` : v.id,
+								fields: Object.fromEntries(
+									Object.entries(v).filter(
+										([name, x]) =>
+											!['id', 'group'].includes(name) && typeof x === 'string' && x.length
+									)
+								)
+							}),
+						{ protectedEntry: true, submitLabel: 'Create entry' }
+					),
+				'primary'
+			),
+			button('New group', () =>
+				form('New group', { id: { label: 'Group path' } }, (v) => rpc('group', v))
+			),
 			button('Recovery snapshots', () =>
 				protect(async () => {
-					const listing = await rpc('recovery_list');
+					const snapshots = await rpc('recovery_list');
 					if (!valid()) return;
 					const section = el('section', null, { class: 'list-zone' });
 					section.append(el('h2', 'Private recovery snapshots'));
@@ -873,7 +1227,7 @@ function mount(container, context, module) {
 					detailText(
 						section,
 						'Available snapshots',
-						listing.snapshots.map((item) => ({
+						snapshots.snapshots.map((item) => ({
 							...item,
 							created_at: formatOperatorTime(
 								item.created_at ? Date.parse(item.created_at) : undefined
@@ -888,13 +1242,13 @@ function mount(container, context, module) {
 							)
 						)
 					);
-					body.append(section);
+					inspector.replaceChildren(section);
 				})
 			),
-			button('Vault access history', () =>
+			button('Access history', () =>
 				protect(async () => {
 					const section = el('section');
-					body.append(section);
+					inspector.replaceChildren(section);
 					let before;
 					const more = button('Load more access history', () => protect(load));
 					section.append(more);
@@ -911,39 +1265,10 @@ function mount(container, context, module) {
 					}
 					await load();
 				})
-			)
-		);
-		paragraph(body, 'Protected values stay in KeePassXC. Values are masked until you reveal them.');
-		actions.append(
-			button('Add credential', () =>
-				form(
-					'New entry',
-					{
-						id: { label: 'Title', placeholder: 'e.g. GitHub API Key' },
-						password: { type: 'password', label: 'Password', placeholder: 'Enter password' },
-						username: { label: 'Username', placeholder: 'user@example.com' },
-						url: { label: 'URL', placeholder: 'https://example.com' },
-						notes: { label: 'Notes', placeholder: 'Optional notes' }
-					},
-					(v) =>
-						rpc('add_entry', {
-							id: vaultGroup ? `${vaultGroup}/${v.id}` : v.id,
-							fields: Object.fromEntries(
-								Object.entries(v).filter(
-									([name, x]) => name !== 'id' && typeof x === 'string' && x.length
-								)
-							)
-						}),
-					{ protectedEntry: true }
-				)
 			),
-			button('New group', () =>
-				form('New group', { id: { label: 'Group path' } }, (v) => rpc('group', v))
-			)
-		);
-
-		actions.append(
-			button('Manage SecretRef grants', () =>
+			// Hand-typed grant IDs are not a browsing surface, but they are the only way to authorize
+			// a SecretRef, so the control stays available rather than being dropped.
+			button('SecretRef grants', () =>
 				form(
 					'Exact managed SecretRef grants',
 					{
@@ -965,229 +1290,11 @@ function mount(container, context, module) {
 				)
 			)
 		);
-		const data = vaultGroup
-			? await rpc('inventory', { group: vaultGroup })
-			: await request('vault', 'inventory');
-		if (!valid()) return;
-		const entries = data.entries ?? [];
-		if (vaultGroup)
-			body.append(
-				button('Parent group', () =>
-					protect(async () => {
-						vaultGroup = vaultGroup.split('/').slice(0, -1).join('/');
-						await refresh();
-					})
-				)
-			);
-		if (vaultGroup && !entries.length)
-			body.append(
-				button('Remove empty group', () =>
-					confirm('Remove empty group ' + vaultGroup, async () => {
-						await rpc('group_remove', { id: vaultGroup, confirmed: true });
-						vaultGroup = '';
-					})
-				)
-			);
-		for (const entry of entries) {
-			if (entry.kind === 'group') {
-				body.append(
-					button(entry.id, () =>
-						protect(async () => {
-							vaultGroup = entry.id;
-							await refresh();
-						})
-					)
-				);
-				continue;
-			}
-			const section = el('section', null, { class: 'list-zone' });
-			const title = entry.id.includes('/') ? entry.id.split('/').pop() : entry.id;
-			section.append(el('h2', title));
-			const controls = el('div', null, { class: 'toolbar' }),
-				value = el('output', '', {
-					'data-secret': 'revealed',
-					'aria-label': `Revealed value for ${title}`
-				});
-			secretNodes.add(value);
-			// A person reads a password far more often than anything else, so it is one click from the
-			// list. Everything that needs the entry's shape loads on demand behind Details.
-			const show = (field, purpose) =>
-				protect(async () => {
-					clearSecrets();
-					const ticket = secretTicket();
-					let result;
-					try {
-						result = await rpc(purpose === 'copy' ? 'copy' : 'reveal', { id: entry.id, field });
-					} catch (error) {
-						// An agent credential holds arbitrary field names, so it may genuinely have no
-						// password. Point at the control that lists what this entry does carry; every
-						// other failure still surfaces normally.
-						const code = error?.details?.code ?? error?.error?.details?.code;
-						if (code !== 'not_found') throw error;
-						if (ticket())
-							status.textContent = `${title} has no ${FIELD_LABELS[field] ?? field} field. Open Details for the fields it carries.`;
-						return;
-					}
-					if (!ticket() || !host.connection.connected) return;
-					if (purpose === 'copy') {
-						await navigator.clipboard.writeText(result.value);
-						status.textContent = 'Copied. Clipboard content remains until you replace it.';
-						return;
-					}
-					value.textContent = result.value;
-					setTimeout(() => {
-						value.textContent = '';
-					}, 15000);
-				});
-			controls.append(
-				button('Reveal', () => show('password', 'reveal')),
-				button('Hide', () => {
-					clearSecrets();
-				}),
-				button('Copy', () => show('password', 'copy'))
-			);
-			const detail = el('div');
-			controls.append(
-				button('Details', () =>
-					protect(async () => {
-						const metadata = await request('vault', 'metadata', { id: entry.id });
-						if (!section.isConnected || life.dead) return;
-						detail.replaceChildren();
-						if (metadata.execution_disabled) paragraph(detail, 'Agent execution disabled');
-						// Only the fields this entry carries. Offering Reveal for an absent field would
-						// hand the operator a control that can only fail.
-						for (const field of metadata.fields ?? []) {
-							if (field === 'password') continue;
-							const row = el('div', null, { class: 'toolbar' }),
-								revealed = el('output', '', {
-									'data-secret': 'revealed',
-									'aria-label': `Revealed ${field} for ${title}`
-								});
-							secretNodes.add(revealed);
-							row.append(
-								el('span', FIELD_LABELS[field] ?? field),
-								button('Reveal', () =>
-									protect(async () => {
-										const ticket = secretTicket();
-										const result = await rpc('reveal', { id: entry.id, field });
-										if (ticket() && host.connection.connected) revealed.textContent = result.value;
-									})
-								),
-								button('Copy', () =>
-									protect(async () => {
-										const ticket = secretTicket();
-										const result = await rpc('copy', { id: entry.id, field });
-										if (ticket() && host.connection.connected) {
-											await navigator.clipboard.writeText(result.value);
-											status.textContent =
-												'Copied. Clipboard content remains until you replace it.';
-										}
-									})
-								),
-								revealed
-							);
-							detail.append(row);
-						}
-						const more = el('div', null, { class: 'toolbar' });
-						more.append(
-							button('Edit entry', () =>
-								form(
-									`Edit ${title}`,
-									{
-										password: {
-											type: 'password',
-											label: 'Password',
-											placeholder: 'Leave blank to keep the existing secret'
-										},
-										username: { label: 'Username', placeholder: 'user@example.com' },
-										url: { label: 'URL', placeholder: 'https://example.com' },
-										notes: { label: 'Notes', placeholder: 'Optional notes' }
-									},
-									(v) =>
-										rpc('edit_entry', {
-											id: entry.id,
-											expected_version: metadata.version,
-											fields: Object.fromEntries(
-												Object.entries(v).filter(([, x]) => typeof x === 'string' && x.length)
-											)
-										}),
-									{ protectedEntry: true }
-								)
-							),
-							button('Rename or move entry', () =>
-								form(
-									'Rename or move credential — old handles and SecretRefs stop resolving',
-									{ destination: { label: 'Destination entry path', value: entry.id } },
-									(values) =>
-										rpc('relocate', {
-											id: entry.id,
-											destination: values.destination,
-											expected_version: metadata.version,
-											confirmed: true
-										})
-								)
-							),
-							button('Remove credential', () =>
-								confirm(
-									'Remove ' +
-										entry.id +
-										' and invalidate its handle; keep a private recovery snapshot',
-									() =>
-										rpc('remove_entry', {
-											id: entry.id,
-											expected_version: metadata.version,
-											confirmed: true
-										})
-								)
-							)
-						);
-						// Executor grants only mean something for a credential the plugin manages for an
-						// agent; a person's own KeePassXC entry has no envelope to hold them.
-						if (!metadata.plain)
-							more.append(
-								button('Access policy', () =>
-									form(
-										'Manage credential access',
-										{
-											executors: {
-												label: 'Allowed executor IDs (comma-separated)',
-												value: metadata.allowed_executors.join(', ')
-											},
-											state: {
-												label: 'Agent execution',
-												options: [
-													['enabled', 'Enabled'],
-													['disabled', 'Disabled']
-												],
-												value: metadata.execution_disabled ? 'disabled' : 'enabled'
-											}
-										},
-										async (v) => {
-											const grant = await rpc('grant', {
-												id: entry.id,
-												expected_version: metadata.version,
-												executors: v.executors
-													.split(',')
-													.map((x) => x.trim())
-													.filter(Boolean)
-											});
-											if ((v.state === 'disabled') !== metadata.execution_disabled)
-												await rpc(v.state === 'disabled' ? 'revoke' : 'restore', {
-													id: entry.id,
-													expected_version: grant.version
-												});
-										}
-									)
-								)
-							);
-						detail.append(more);
-					})
-				)
-			);
-			section.append(controls, value, detail);
-			body.append(section);
-		}
-		if (!entries.length) paragraph(body, 'No credentials in this group.');
+		body.append(bar, workspace);
+		paragraph(body, 'Protected values stay in KeePassXC. Values are masked until you reveal them.');
+		renderRail();
+		renderList();
+		await renderInspector();
 	}
 	async function integrations() {
 		const valid = life.ticket(),

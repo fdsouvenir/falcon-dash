@@ -95,6 +95,23 @@ async function fixture(t, module, handler) {
 		}
 	};
 }
+// Field controls live in the inspector, which opens from a row in the entry list.
+async function openEntry(f, title) {
+	const row = [...f.window.document.querySelectorAll('.vault-row-open')].find(
+		(n) => n.querySelector('.vault-row-title')?.textContent === title
+	);
+	assert.ok(row, `Missing entry ${title}`);
+	row.click();
+	await settle();
+	return row;
+}
+const PLAIN_METADATA = {
+	fields: ['password'],
+	plain: true,
+	version: 1,
+	allowed_executors: [],
+	execution_disabled: false
+};
 test('Native plugin registers four pages and uses the typed feature query transport', async (t) => {
 	const f = await fixture(t, 'work', async (method, p) => {
 		assert.equal(method, 'plugins.sessionAction');
@@ -136,10 +153,10 @@ test('Protected native input is not persisted and clears outside the mount conta
 	const f = await fixture(t, 'vault', async (method, p) => {
 		if (p.action === 'status')
 			return { locked: false, initialized: true, epoch: 1, can_manage: true };
-		if (p.action === 'inventory') return { entries: [] };
+		if (p.action === 'inventory' || p.action === 'inventory_all') return { entries: [] };
 		throw Error('unexpected');
 	});
-	f.button('Add credential');
+	f.button('New entry');
 	const input = f.window.document.querySelector('input[type=password]');
 	assert.ok(input);
 	input.value = 'SYNTHETIC-SECRET';
@@ -153,11 +170,14 @@ test('Reveal is deliberate and Hide and navigation cleanup remove the selected v
 	const f = await fixture(t, 'vault', async (method, p) => {
 		if (p.action === 'status')
 			return { locked: false, initialized: true, epoch: 1, can_manage: true };
-		if (p.action === 'inventory') return { entries: [{ id: 'agent-created', kind: 'entry' }] };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return { entries: [{ id: 'agent-created', kind: 'entry' }] };
 		if (p.action === 'reveal') return { value: 'SYNTHETIC-REVEALED' };
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 		throw Error('unexpected');
 	});
 	assert.ok(!f.text().includes('SYNTHETIC-REVEALED'));
+	await openEntry(f, 'agent-created');
 	f.button('Reveal');
 	await settle();
 	assert.match(f.text(), /SYNTHETIC-REVEALED/);
@@ -173,9 +193,12 @@ test('A pending reveal cannot repopulate after authority loss', async (t) => {
 	const f = await fixture(t, 'vault', async (method, p) => {
 		if (p.action === 'status')
 			return { locked: false, initialized: true, epoch: 1, can_manage: true };
-		if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return { entries: [{ id: 'one', kind: 'entry' }] };
 		if (p.action === 'reveal') return new Promise((r) => (release = r));
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 	});
+	await openEntry(f, 'one');
 	f.button('Reveal');
 	await settle();
 	f.host.connection.canWrite = false;
@@ -271,8 +294,10 @@ test('Copy is explicit and a revoked in-flight copy cannot write the clipboard',
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		if (p.action === 'status')
 			return { locked: false, initialized: true, epoch: 1, can_manage: true };
-		if (p.action === 'inventory') return { entries: [{ id: 'agent-created', kind: 'entry' }] };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return { entries: [{ id: 'agent-created', kind: 'entry' }] };
 		if (p.action === 'copy') return new Promise((r) => (release = r));
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 	});
 	Object.defineProperty(f.window.navigator, 'clipboard', {
 		value: {
@@ -295,9 +320,12 @@ test('An external Vault lock clears the native selected value on the next status
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		if (p.action === 'status')
 			return { locked, initialized: true, epoch: locked ? 2 : 1, can_manage: true };
-		if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return { entries: [{ id: 'one', kind: 'entry' }] };
 		if (p.action === 'reveal') return { value: 'SYNTHETIC-LIVE-LOCK' };
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 	});
+	await openEntry(f, 'one');
 	f.button('Reveal');
 	await settle();
 	assert.match(f.text(), /SYNTHETIC-LIVE-LOCK/);
@@ -391,17 +419,22 @@ test('Retrying a native create after a lost reply reuses its actor-bound receipt
 	assert.equal(f.window.document.querySelectorAll('[role=dialog]').length, 0);
 });
 for (const action of ['reveal', 'copy'])
-	test(`Hide retires a pending ${action} response`, async (t) => {
+	test(`Navigating away retires a pending ${action} response`, async (t) => {
 		let release;
 		const f = await fixture(t, 'vault', async (method, p) => {
 			if (p.action === 'status')
 				return { locked: false, initialized: true, epoch: 1, can_manage: true };
-			if (p.action === 'inventory') return { entries: [{ id: 'one', kind: 'entry' }] };
+			if (p.action === 'inventory' || p.action === 'inventory_all')
+				return { entries: [{ id: 'one', kind: 'entry' }] };
+			if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 			if (p.action === action) return new Promise((r) => (release = r));
 		});
+		await openEntry(f, 'one');
 		f.button(action === 'reveal' ? 'Reveal' : 'Copy');
 		await settle();
-		f.button('Hide');
+		// A read in flight holds the page busy, so the explicit retirement path is leaving the view
+		// rather than pressing a second control.
+		f.view.update({ presented: false });
 		release({ value: 'SYNTHETIC-LATE-HIDDEN' });
 		await settle();
 		assert.ok(!f.text().includes('SYNTHETIC-LATE-HIDDEN'));
@@ -560,7 +593,7 @@ test('A Vault that failed to start reports it and offers no lifecycle controls',
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		actions.push(p.action);
 		if (p.action === 'status') return { locked: true, initialized: false, epoch: 1 };
-		if (p.action === 'inventory') return { entries: [] };
+		if (p.action === 'inventory' || p.action === 'inventory_all') return { entries: [] };
 		return {};
 	});
 	assert.match(f.text(), /Vault unavailable/);
@@ -573,16 +606,17 @@ test('A Vault that failed to start reports it and offers no lifecycle controls',
 });
 
 // The Vault page is a password manager for a person, not a form for typing credential field names.
-test('Vault entries expose Reveal and Copy directly, with no field-name input to guess', async (t) => {
+test('Vault entries expose Reveal and Copy without a field-name input to guess', async (t) => {
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
-		if (p.action === 'inventory')
+		if (p.action === 'inventory' || p.action === 'inventory_all')
 			return {
 				entries: [
 					{ id: 'Work', kind: 'group' },
 					{ id: 'Anthem Blue Cross', kind: 'entry' }
 				]
 			};
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
 		if (p.action === 'reveal') return { value: 'SYNTHETIC-ANTHEM' };
 		return {};
 	});
@@ -590,17 +624,20 @@ test('Vault entries expose Reveal and Copy directly, with no field-name input to
 	assert.match(f.text(), /Anthem Blue Cross/);
 	assert.match(f.text(), /Work/);
 	assert.equal(f.window.document.querySelector('input[value="api_key"]'), null);
+	await openEntry(f, 'Anthem Blue Cross');
 	f.button('Reveal');
 	await settle();
 	assert.match(f.text(), /SYNTHETIC-ANTHEM/);
+	// The same control hides it again, so there is never a Hide button that does nothing.
 	f.button('Hide');
 	assert.ok(!f.text().includes('SYNTHETIC-ANTHEM'));
 });
 
-test('Vault details show only the fields an entry carries', async (t) => {
+test('Only the fields an entry carries get a reveal control', async (t) => {
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
-		if (p.action === 'inventory') return { entries: [{ id: 'KenPom Password', kind: 'entry' }] };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return { entries: [{ id: 'KenPom Password', kind: 'entry' }] };
 		if (p.action === 'metadata')
 			return {
 				id: 'KenPom Password',
@@ -613,15 +650,22 @@ test('Vault details show only the fields an entry carries', async (t) => {
 		if (p.action === 'reveal') return { value: 'fred@example.invalid' };
 		return {};
 	});
-	f.button('Details');
-	await settle();
-	assert.match(f.text(), /Username/);
-	assert.match(f.text(), /URL/);
-	// Notes is absent from this entry, so offering Reveal for it would only produce a failure.
-	assert.ok(!f.text().includes('Notes'));
+	await openEntry(f, 'KenPom Password');
+	const rows = [...f.window.document.querySelectorAll('.vault-field')];
+	const labelled = (name) =>
+		rows.find((r) => r.querySelector('.vault-field-label')?.textContent === name);
+	// Carried fields are readable.
+	for (const name of ['Password', 'Username', 'URL'])
+		assert.ok(labelled(name)?.querySelector('button'), `${name} should offer a control`);
+	// Notes is absent from this record. The row still says so, but offering Reveal for it would
+	// hand the operator a control that can only fail.
+	const notes = labelled('Notes');
+	assert.ok(notes, 'Notes should be listed as not set');
+	assert.equal(notes.querySelector('button'), null);
+	assert.match(notes.textContent, /not set/);
 	// Executor grants belong to agent credentials; a person's plain entry has no envelope for them.
 	assert.ok(!f.text().includes('Access policy'));
-	assert.match(f.text(), /Edit entry/);
+	assert.match(f.text(), /Edit/);
 });
 
 test('Adding an entry offers the real KeePassXC fields', async (t) => {
@@ -629,10 +673,10 @@ test('Adding an entry offers the real KeePassXC fields', async (t) => {
 	const f = await fixture(t, 'vault', async (_method, p) => {
 		sent.push(p);
 		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
-		if (p.action === 'inventory') return { entries: [] };
+		if (p.action === 'inventory' || p.action === 'inventory_all') return { entries: [] };
 		return {};
 	});
-	f.button('Add credential');
+	f.button('New entry');
 	await settle();
 	const dialog = f.window.document.querySelector('[role=dialog]');
 	const labels = [...dialog.querySelectorAll('label')].map((n) => n.textContent);

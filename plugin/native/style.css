@@ -22,6 +22,10 @@
 	--text: #e5e1e4;
 	--muted: #aaa9a3;
 	--amber: #f7bf59;
+	--danger: #e2564a;
+	--danger-dim: #3a1f1c;
+	--ok: #6fbf87;
+	--warn: #d8973c;
 	color: var(--text);
 	background: var(--canvas);
 	font:
@@ -241,6 +245,26 @@
 	.falcon-native .toolbar > .falcon-field {
 		flex-basis: 100%;
 	}
+	/* Columns are dropped rather than squeezed: the rail becomes a scrolling strip and the
+	   inspector stacks under the list instead of compressing it below readable width. */
+	.falcon-native .vault-workspace {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.falcon-native .vault-rail {
+		flex-direction: row;
+		overflow-x: auto;
+		max-height: none;
+	}
+	.falcon-native .vault-rail-item {
+		flex: 0 0 auto;
+	}
+	.falcon-native .vault-row-group {
+		display: none;
+	}
+	.falcon-native .vault-field {
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: 4px;
+	}
 }
 @media (prefers-reduced-motion: reduce) {
 	.falcon-native * {
@@ -334,4 +358,196 @@ form.falcon-native {
 }
 .falcon-native [hidden] {
 	display: none !important;
+}
+
+/* Vault workspace: a group rail, a dense entry list, and an inspector for the selected entry.
+   Retrieval is the page's job, so search and the list get the space. */
+.falcon-native .vault-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+.falcon-native .vault-search {
+	flex: 1 1 260px;
+}
+.falcon-native .vault-workspace {
+	display: grid;
+	grid-template-columns: 220px minmax(0, 1fr) 340px;
+	gap: 12px;
+	align-items: start;
+}
+.falcon-native .vault-rail {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	padding: 6px;
+	max-height: 60dvh;
+	overflow-y: auto;
+}
+.falcon-native .vault-rail-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	border: 0;
+	background: transparent;
+	border-radius: 6px;
+	text-align: left;
+}
+.falcon-native .vault-rail-item.selected {
+	background: #2a2a2c;
+	box-shadow: inset 2px 0 0 var(--amber);
+}
+.falcon-native .vault-rail-count {
+	color: var(--muted);
+	font:
+		12px/1 FalconMono,
+		monospace;
+}
+.falcon-native .vault-list {
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	min-height: 120px;
+	overflow: hidden;
+}
+/* Rows are separated by a hairline, not by card gaps: the old card-per-entry pile was the reason
+   nine entries filled a screen. */
+.falcon-native .vault-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 8px;
+	padding: 0 8px;
+	border-bottom: 1px solid var(--border);
+}
+.falcon-native .vault-row:last-child {
+	border-bottom: 0;
+}
+.falcon-native .vault-row:hover {
+	background: #212124;
+}
+.falcon-native .vault-row.selected {
+	background: #212124;
+	box-shadow: inset 2px 0 0 var(--amber);
+}
+.falcon-native .vault-row-open {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+	min-width: 0;
+	border: 0;
+	background: transparent;
+	text-align: left;
+}
+.falcon-native .vault-row-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.falcon-native .vault-row-group {
+	color: var(--muted);
+	font:
+		12px/1.4 FalconMono,
+		monospace;
+	white-space: nowrap;
+}
+.falcon-native .vault-inspector {
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	padding: 12px;
+}
+.falcon-native .vault-inspector-title {
+	margin: 0;
+	font-size: 15px;
+}
+.falcon-native .vault-inspector-handle,
+.falcon-native .vault-inspector-meta {
+	margin: 2px 0 10px;
+	color: var(--muted);
+	font:
+		12px/1.5 FalconMono,
+		monospace;
+	overflow-wrap: anywhere;
+}
+.falcon-native .vault-inspector-empty {
+	color: var(--muted);
+}
+/* Label, value and actions share one baseline grid. Misaligned field rows were the specific
+   defect this layout exists to remove. */
+.falcon-native .vault-field {
+	display: grid;
+	grid-template-columns: 84px minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: 8px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--border);
+}
+.falcon-native .vault-field-label {
+	color: var(--muted);
+	font-size: 11px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.falcon-native .vault-field-value {
+	font:
+		13px/1.5 FalconMono,
+		monospace;
+	overflow-wrap: anywhere;
+}
+.falcon-native .vault-field-value.masked,
+.falcon-native .vault-field-value.empty,
+.falcon-native .vault-field-actions.empty {
+	color: var(--muted);
+}
+.falcon-native .vault-field-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: end;
+}
+.falcon-native .vault-field-actions.empty {
+	font-size: 12px;
+}
+.falcon-native .vault-inspector-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 12px;
+}
+.falcon-native .vault-flag {
+	color: var(--warn);
+	margin: 0 0 8px;
+}
+/* The one irreversible control must not look like Copy. */
+.falcon-native button.danger {
+	border-color: transparent;
+	background: transparent;
+	color: var(--danger);
+}
+.falcon-native button.danger:hover {
+	background: var(--danger-dim);
+	border-color: var(--danger);
+}
+.falcon-native .hint {
+	color: var(--muted);
+	font-size: 12px;
+	margin: 4px 0 0;
+}
+/* Compact the inline controls only where a pointer is precise; touch keeps the 44px target. */
+@media (pointer: fine) {
+	.falcon-native .vault-row button,
+	.falcon-native .vault-field button,
+	.falcon-native .vault-rail-item {
+		min-height: 32px;
+		padding: 5px 10px;
+	}
 }

@@ -48,11 +48,27 @@ Vault is unavailable rather than showing an empty list.
 
 ## What you can do
 
-Browse nested groups and entries under their real KeePassXC titles — spaces and punctuation
-included. Reveal, hide and copy an entry's password directly from the list; **Details** shows the
-Username, URL and Notes it carries. Create groups and entries, and edit, move, rename or remove
-them. Entries you create are ordinary KeePassXC entries, so the SecretRef resolver reads them
-without any conversion.
+**Search is the fastest way in.** The box above the list matches every entry in the vault at once,
+whatever group it is filed under, so you never have to remember where something lives. Clearing it
+returns you to browsing the group you selected in the rail on the left.
+
+Groups and entries appear under their real KeePassXC titles — spaces and punctuation included. The
+list shows each entry's title and its group. It deliberately shows nothing else: KeePassXC records
+no "last modified" time for an entry, and reading any single field costs one `keepassxc-cli` call
+per entry, which would add seconds to a list of dozens.
+
+Selecting an entry opens it beside the list, showing the Password, Username, URL and Notes it
+carries. Values are masked until you reveal them; **Reveal** is one control that becomes **Hide**,
+and a revealed value hides itself again after fifteen seconds. A field the entry does not carry is
+shown as _not set_, without a control, so you are never offered a button that can only fail.
+
+Create groups and entries, and edit, move, rename or remove them. **Removing an entry asks you to
+type its name**, and the button stays disabled until it matches exactly. Entries you create are
+ordinary KeePassXC entries, so the SecretRef resolver reads them without any conversion.
+
+Every entry is the same kind of thing. The Vault does not distinguish between a password you use
+and one an agent reads — the difference is internal to storage, and nothing in the page asks you to
+choose between them.
 
 **Group relocation works by moving entries into a newly created group, then removing the empty old
 one.** The supported CLI offers no proven-safe whole-group rename, so the product does not pretend
