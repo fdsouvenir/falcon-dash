@@ -686,3 +686,50 @@ test('Adding an entry offers the real KeePassXC fields', async (t) => {
 			`Missing ${expected} field`
 		);
 });
+
+test('Vault search matches across every group, not just the selected one', async (t) => {
+	const f = await fixture(t, 'vault', async (_method, p) => {
+		if (p.action === 'status') return { locked: false, initialized: true, epoch: 1 };
+		if (p.action === 'inventory' || p.action === 'inventory_all')
+			return {
+				entries: [
+					{ id: 'Providers', kind: 'group' },
+					{ id: 'Services', kind: 'group' },
+					{ id: 'Services/APIs', kind: 'group' },
+					{ id: 'Cloudflare', kind: 'entry' },
+					{ id: 'Providers/Linode', kind: 'entry' },
+					{ id: 'Services/APIs/Stitch MCP', kind: 'entry' }
+				]
+			};
+		if (p.action === 'metadata') return { ...PLAIN_METADATA, id: p.id };
+		return {};
+	});
+	const titles = () =>
+		[...f.window.document.querySelectorAll('.vault-row-title')].map((n) => n.textContent);
+	// At rest the list shows the selected group, which starts at the vault root.
+	assert.deepEqual(titles(), ['Cloudflare']);
+	// A nested group's count is every entry beneath it, so the rail is honest about depth.
+	const rail = [...f.window.document.querySelectorAll('.vault-rail-item')].map(
+		(n) => n.textContent
+	);
+	assert.ok(
+		rail.some((r) => r.includes('Services') && r.includes('1')),
+		'Services should count its nested entry'
+	);
+	// Searching reaches entries filed anywhere, which is the whole point of loading the flat tree.
+	const search = f.window.document.querySelector('.vault-search input');
+	search.value = 'stitch';
+	search.dispatchEvent(new f.window.Event('input'));
+	await settle();
+	assert.deepEqual(titles(), ['Stitch MCP']);
+	// Matching the group path finds everything filed under it.
+	search.value = 'providers';
+	search.dispatchEvent(new f.window.Event('input'));
+	await settle();
+	assert.deepEqual(titles(), ['Linode']);
+	// No match says so rather than showing an empty panel.
+	search.value = 'nothing-matches-this';
+	search.dispatchEvent(new f.window.Event('input'));
+	await settle();
+	assert.match(f.text(), /No entry matches/);
+});

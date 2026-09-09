@@ -927,6 +927,7 @@ function mount(container, context, module) {
 		search.wrap.classList.add('vault-search');
 		search.input.type = 'search';
 		search.input.setAttribute('placeholder', `Search ${allEntries.length} entries`);
+		bar.append(search.wrap);
 		const workspace = el('div', null, { class: 'vault-workspace' }),
 			rail = el('nav', null, { class: 'vault-rail', 'aria-label': 'Vault groups' }),
 			list = el('div', null, { class: 'vault-list', role: 'list' }),
