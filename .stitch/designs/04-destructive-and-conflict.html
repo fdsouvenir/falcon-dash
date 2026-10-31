@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash Vault — Operator Console</title>
+<!-- Typography: Space Grotesk & Space Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-fixed": "#c6e7ff",
+            "on-primary-fixed": "#271900",
+            "inverse-surface": "#e5e1e4",
+            "agent": "#7aa2d6",
+            "tertiary-fixed-dim": "#84cffd",
+            "on-secondary-container": "#90b8ed",
+            "tertiary": "#cae9ff",
+            "surface-container-lowest": "#0e0e10",
+            "surface": "#131315",
+            "ok": "#6fbf87",
+            "error-container": "#93000a",
+            "tertiary-container": "#86d1ff",
+            "inverse-on-surface": "#303032",
+            "surface-dim": "#131315",
+            "danger-dim": "#3a1f1c",
+            "surface-container-low": "#1b1b1d",
+            "on-error-container": "#ffdad6",
+            "canvas": "#131315",
+            "on-surface-variant": "#d3c4b1",
+            "warn": "#d8973c",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "inverse-primary": "#7d5700",
+            "on-primary-fixed-variant": "#5f4100",
+            "text": "#e5e1e4",
+            "row-hover": "#212124",
+            "outline": "#9c8f7d",
+            "surface-tint": "#f5bd58",
+            "surface-bright": "#39393b",
+            "on-secondary": "#00325b",
+            "primary": "#ffe0b0",
+            "panel": "#1b1b1d",
+            "surface-container-high": "#2a2a2c",
+            "primary-fixed-dim": "#f5bd58",
+            "outline-variant": "#4f4536",
+            "on-tertiary-fixed": "#001e2d",
+            "on-primary": "#422c00",
+            "on-error": "#690005",
+            "surface-variant": "#353437",
+            "on-background": "#e5e1e4",
+            "on-tertiary-container": "#005a7d",
+            "muted": "#aaa9a3",
+            "secondary-fixed": "#d3e4ff",
+            "on-primary-container": "#6f4d00",
+            "border": "#353437",
+            "error": "#ffb4ab",
+            "on-secondary-fixed": "#001c38",
+            "surface-container-highest": "#353437",
+            "on-tertiary": "#00344b",
+            "secondary-fixed-dim": "#a1c9ff",
+            "primary-container": "#f7bf59",
+            "secondary-container": "#1a4877",
+            "on-surface": "#e5e1e4",
+            "primary-fixed": "#ffdeaa",
+            "surface-container": "#1f1f21",
+            "amber": "#f7bf59",
+            "background": "#131315",
+            "danger": "#e2564a",
+            "on-secondary-fixed-variant": "#1a4877",
+            "secondary": "#a1c9ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "button-height": "28px",
+            "unit": "4px",
+            "row-height-group": "24px",
+            "gutter-left": "16px",
+            "input-height": "32px",
+            "gap-max": "24px",
+            "row-height-entry": "40px",
+            "inspector-width": "360px",
+            "gap-section": "16px",
+            "rail-width": "240px"
+          },
+          "fontFamily": {
+            "metadata": ["Space Grotesk"],
+            "field-label": ["Space Mono"],
+            "entry-title": ["Space Grotesk"],
+            "data-value": ["Space Mono"]
+          },
+          "fontSize": {
+            "metadata": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "field-label": ["11px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "400" }],
+            "entry-title": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "data-value": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    ::selection {
+      background-color: #f7bf59;
+      color: #131315;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text font-metadata antialiased overflow-hidden w-screen h-screen flex flex-col select-none">
+<!-- TOP APP BAR (Shared Component Anchor) -->
+<header class="w-full h-8 px-gutter-left flex items-center justify-between bg-canvas dark:bg-canvas border-b border-border dark:border-border z-20 shrink-0"><div class="flex items-center space-x-2"><span class="material-symbols-outlined text-amber" style="font-size: 15px;">security</span><span class="font-metadata text-metadata text-text font-medium">Falcon Dash — Vault</span></div><div class="flex items-center space-x-1.5 font-field-label text-[11px] text-muted px-2 py-0.5 rounded border border-border bg-panel"><span class="inline-block w-1.5 h-1.5 rounded-full bg-ok"></span><span>Unlocked</span></div></header>
+<!-- MAIN OPERATOR VIEWPORT CONTAINER -->
+<div class="relative flex-1 flex overflow-hidden">
+<!-- UNDERLYING OPERATOR WORKSPACE (Simulated KeePassXC background - Dimmed & Low Contrast) -->
+<div class="w-full h-full flex opacity-25 select-none pointer-events-none filter grayscale-[40%]">
+<!-- Side Rail / Tree (240px) -->
+<aside class="w-rail-width h-full bg-panel border-r border-border flex flex-col shrink-0">
+<div class="p-3 border-b border-border flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-amber" style="font-size: 15px;">lock_open</span>
+<div>
+<div class="font-entry-title text-xs font-bold text-text">passwords.kdbx</div>
+<div class="font-field-label text-[10px] text-muted">Operational</div>
+</div>
+</div>
+</div>
+<div class="py-2 space-y-0.5">
+<div class="h-row-height-group px-3 flex items-center justify-between text-muted text-[11px] font-field-label">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[13px]">folder</span>
+<span>Root</span>
+</div>
+<span>94</span>
+</div>
+<div class="h-row-height-group px-3 flex items-center justify-between bg-row-hover border-l-2 border-amber text-text text-[11px] font-field-label font-medium">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[13px] text-amber">key</span>
+<span>Credentials</span>
+</div>
+<span>68</span>
+</div>
+<div class="h-row-height-group px-3 flex items-center justify-between text-muted text-[11px] font-field-label">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[13px]">code</span>
+<span>Tokens</span>
+</div>
+<span>19</span>
+</div>
+<div class="h-row-height-group px-3 flex items-center justify-between text-muted text-[11px] font-field-label">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[13px] text-agent">smart_toy</span>
+<span>Agent Policies</span>
+</div>
+<span>7</span>
+</div>
+<div class="h-row-height-group px-3 flex items-center justify-between text-muted text-[11px] font-field-label">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[13px]">delete</span>
+<span>Trash</span>
+</div>
+<span>0</span>
+</div>
+</div>
+</aside>
+<!-- Center Data Table (Faint Rows) -->
+<main class="flex-1 bg-canvas flex flex-col border-r border-border">
+<div class="h-7 border-b border-border bg-panel/40 grid grid-cols-12 items-center px-4 text-[10px] uppercase font-field-label text-muted tracking-wider">
+<div class="col-span-4">Title</div>
+<div class="col-span-3">Username</div>
+<div class="col-span-3">Password</div>
+<div class="col-span-2 text-right">Modified</div>
+</div>
+<div class="divide-y divide-border">
+<div class="h-row-height-entry px-4 grid grid-cols-12 items-center text-xs font-field-label text-text bg-panel/20">
+<div class="col-span-4 flex items-center space-x-2">
+<span class="material-symbols-outlined text-[14px] text-muted">vpn_key</span>
+<span class="font-entry-title text-text">Anthem Blue Cross</span>
+</div>
+<div class="col-span-3 text-muted">anth_op_339</div>
+<div class="col-span-3 font-mono text-muted">••••••••••••••</div>
+<div class="col-span-2 text-right text-muted">4h ago</div>
+</div>
+<div class="h-row-height-entry px-4 grid grid-cols-12 items-center text-xs font-field-label text-text bg-row-hover border-l-2 border-amber">
+<div class="col-span-4 flex items-center space-x-2">
+<span class="material-symbols-outlined text-[14px] text-agent">smart_toy</span>
+<span class="font-entry-title text-text font-medium">Cloudflare API Primary</span>
+<span class="bg-panel text-agent text-[9px] px-1 py-0.5 rounded border border-border">agent</span>
+</div>
+<div class="col-span-3 text-muted">fred@fdsconsulting.com</div>
+<div class="col-span-3 font-mono text-muted">••••••••••••••••</div>
+<div class="col-span-2 text-right text-muted">40s ago</div>
+</div>
+<div class="h-row-height-entry px-4 grid grid-cols-12 items-center text-xs font-field-label text-text">
+<div class="col-span-4 flex items-center space-x-2">
+<span class="material-symbols-outlined text-[14px] text-muted">dns</span>
+<span class="font-entry-title text-text">AWS GovCloud Admin</span>
+</div>
+<div class="col-span-3 text-muted">sysadmin-root</div>
+<div class="col-span-3 font-mono text-muted">••••••••••••••••••••</div>
+<div class="col-span-2 text-right text-muted">2d ago</div>
+</div>
+<div class="h-row-height-entry px-4 grid grid-cols-12 items-center text-xs font-field-label text-text">
+<div class="col-span-4 flex items-center space-x-2">
+<span class="material-symbols-outlined text-[14px] text-muted">dns</span>
+<span class="font-entry-title text-text">GitHub Enterprise Bot</span>
+</div>
+<div class="col-span-3 text-muted">agent-deploy-04</div>
+<div class="col-span-3 font-mono text-muted">••••••••••••••••</div>
+<div class="col-span-2 text-right text-muted">5d ago</div>
+</div>
+<div class="h-row-height-entry px-4 grid grid-cols-12 items-center text-xs font-field-label text-text">
+<div class="col-span-4 flex items-center space-x-2">
+<span class="material-symbols-outlined text-[14px] text-muted">key</span>
+<span class="font-entry-title text-text">Postgres Production Master</span>
+</div>
+<div class="col-span-3 text-muted">pg_operator</div>
+<div class="col-span-3 font-mono text-muted">••••••••••••••••••••••</div>
+<div class="col-span-2 text-right text-muted">1w ago</div>
+</div>
+</div>
+</main>
+<!-- Right Inspector Panel (360px) -->
+<aside class="w-inspector-width h-full bg-panel p-4 border-l border-border flex flex-col space-y-4 shrink-0">
+<div class="flex items-center justify-between pb-2 border-b border-border">
+<span class="font-field-label text-field-label uppercase text-muted">Active Inspector</span>
+<span class="font-mono text-xs text-muted">v7</span>
+</div>
+<div class="space-y-3 font-field-label text-xs">
+<div class="flex">
+<span class="w-24 text-muted uppercase text-[10px]">UUID</span>
+<span class="font-mono text-text text-[11px] truncate">b48f93ca-7531-41ee-96da</span>
+</div>
+<div class="flex">
+<span class="w-24 text-muted uppercase text-[10px]">Title</span>
+<span class="font-entry-title text-text">Cloudflare</span>
+</div>
+</div>
+</aside>
+</div>
+<!-- DARKENED / BLURRED MODAL BACKDROP OVERLAY -->
+<div class="absolute inset-0 bg-canvas/80 backdrop-blur-[2px] flex items-center justify-center p-6 z-30">
+<!-- SIDE-BY-SIDE PRESENTATION CONTAINER (480px Dialogs) -->
+<div class="w-full max-w-[1020px] grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+<!-- ==========================================
+             LEFT DIALOG: REMOVE RECORD (DESTRUCTIVE)
+             ========================================== -->
+<section aria-labelledby="dialog-left-title" class="w-full max-w-[480px] bg-panel border border-border rounded-lg shadow-none flex flex-col justify-between overflow-hidden">
+<!-- Modal Header -->
+<div class="px-4 py-3 border-b border-border flex items-center justify-between bg-panel">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-muted text-sm" style="font-size: 15px;">shield</span>
+<h2 class="font-entry-title text-entry-title text-text font-medium" id="dialog-left-title">Remove Anthem Blue Cross</h2>
+</div>
+<!-- Path badge -->
+<div class="font-data-value text-[10px] text-muted bg-canvas px-2 py-0.5 rounded border border-border flex items-center space-x-1">
+<span class="material-symbols-outlined text-[11px] text-muted">folder</span>
+<span>Social/Anthem Blue Cross</span>
+</div>
+</div>
+<!-- Modal Body Content -->
+<div class="p-4 space-y-4">
+<!-- Warning/Consequence prose -->
+<p class="font-metadata text-metadata text-muted leading-relaxed">
+              This entry and its stored password will be removed from the vault. A recovery snapshot is taken automatically before removal.
+            </p>
+<!-- Verification Field Group -->
+<div class="space-y-1.5">
+<label class="block font-field-label text-field-label text-muted uppercase tracking-wider" for="confirm-input">
+                Type the entry name to confirm
+              </label>
+<div class="relative">
+<input autocomplete="off" class="w-full h-input-height bg-canvas border border-border rounded-lg px-3 font-data-value text-data-value text-text focus:border-amber focus:ring-0 focus:outline-none transition-none placeholder-muted/40" id="confirm-input" spellcheck="false" type="text" value="Anthem Blue"/>
+<!-- Typing caret simulation indicator -->
+<span class="absolute right-3 top-2 w-1.5 h-4 bg-amber/80 animate-pulse pointer-events-none"></span>
+</div>
+<!-- Inline helper text -->
+<div class="flex items-center justify-between pt-0.5">
+<span class="font-field-label text-[11px] text-muted">names must match exactly</span>
+<span class="font-field-label text-[10px] text-warn tracking-tight">Anthem Blue Cross required</span>
+</div>
+</div>
+<!-- Recovery Snapshot Notice Box -->
+<div class="p-2.5 bg-canvas rounded border border-border flex items-start space-x-2">
+<span class="material-symbols-outlined text-muted text-xs mt-0.5" style="font-size: 13px;">cloud_upload</span>
+<div class="font-field-label text-[11px] text-muted leading-snug">
+                Recovery snapshots are kept for 30 days. You can restore this item from the Root Trash or Snapshot inspector.
+              </div>
+</div>
+</div>
+<!-- Modal Footer Actions -->
+<div class="px-4 py-2.5 bg-panel border-t border-border flex items-center justify-between">
+<span class="font-field-label text-[10px] text-muted">ESC to cancel</span>
+<div class="flex items-center space-x-2">
+<button class="h-button-height px-3 bg-panel hover:bg-row-hover border border-border text-text font-metadata text-xs rounded transition-none cursor-pointer flex items-center justify-center" type="button">
+                Cancel
+              </button>
+<!-- Destructive Action (Restrained: transparent borderless/disabled red outline, never filled red) -->
+<button class="h-button-height px-3 bg-transparent border border-border/60 text-danger opacity-40 cursor-not-allowed font-metadata text-xs rounded transition-none flex items-center space-x-1.5" disabled="" title="Type full matching title to activate" type="button">
+<span class="material-symbols-outlined text-xs" style="font-size: 13px;">delete</span>
+<span>Remove entry</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ==========================================
+             RIGHT DIALOG: CONFLICT RESOLUTION
+             ========================================== -->
+<section aria-labelledby="dialog-right-title" class="w-full max-w-[480px] bg-panel border border-border rounded-lg shadow-none flex flex-col justify-between overflow-hidden">
+<!-- Modal Header -->
+<div class="px-4 py-3 border-b border-border flex items-center justify-between bg-panel">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-warn text-sm" style="font-size: 15px;">sync_problem</span>
+<h2 class="font-entry-title text-entry-title text-text font-medium" id="dialog-right-title">This entry changed while you were editing</h2>
+</div>
+<span class="font-field-label text-[10px] text-warn bg-warn/10 px-1.5 py-0.5 rounded border border-warn/30 uppercase tracking-wider">conflict</span>
+</div>
+<!-- Modal Body Content -->
+<div class="p-4 space-y-3.5">
+<!-- Conflict contextual banner -->
+<p class="font-metadata text-metadata text-muted leading-relaxed">
+<span class="text-text font-medium">Cloudflare</span> was modified by 
+              <span class="inline-flex items-center space-x-1 bg-canvas text-agent px-1.5 py-0.5 rounded text-xs font-field-label border border-border align-baseline">
+<span class="material-symbols-outlined text-[11px] text-agent">smart_toy</span>
+<span>agent:main</span>
+</span> 
+              40 seconds ago. Your copy is <span class="font-data-value text-text font-mono">version 7</span>; the vault now holds <span class="font-data-value text-amber font-mono font-medium">version 8</span>.
+            </p>
+<!-- Two-Column Diff Comparison Table -->
+<div class="border border-border bg-canvas rounded overflow-hidden">
+<!-- Column Titles -->
+<div class="grid grid-cols-2 bg-panel/70 border-b border-border text-[10px] font-field-label uppercase tracking-wider text-muted">
+<div class="py-1.5 px-3 border-r border-border flex items-center justify-between">
+<span>Your Changes</span>
+<span class="font-mono text-muted text-[9px]">v7</span>
+</div>
+<div class="py-1.5 px-3 flex items-center justify-between">
+<span>Vault Now</span>
+<span class="font-mono text-amber text-[9px] font-bold">v8 (head)</span>
+</div>
+</div>
+<!-- Row 1: username (Unchanged across both) -->
+<div class="border-b border-border/80">
+<div class="px-3 pt-1.5 pb-0.5 flex items-center justify-between text-[10px] font-field-label uppercase text-muted/70">
+<span>Field: username</span>
+<span class="text-[9px] text-muted lowercase">unchanged</span>
+</div>
+<div class="grid grid-cols-2 text-xs font-data-value text-muted py-1 px-3">
+<div class="truncate pr-2 border-r border-border/60">fred@fdsconsulting.com</div>
+<div class="truncate pl-2">fred@fdsconsulting.com</div>
+</div>
+</div>
+<!-- Row 2: notes (Operator modified in v7) -->
+<div class="border-b border-border/80 bg-panel/20">
+<div class="px-3 pt-1.5 pb-0.5 flex items-center justify-between text-[10px] font-field-label uppercase text-muted/70">
+<span>Field: notes</span>
+<span class="text-[9px] text-amber">local edit</span>
+</div>
+<div class="grid grid-cols-2 text-xs font-data-value py-1.5 px-3 items-center">
+<div class="border-r border-border/60 pr-2">
+<span class="text-amber bg-amber/10 border border-amber/30 px-1.5 py-0.5 rounded text-[11px] block truncate">
+                      [edited: added API token scopes]
+                    </span>
+</div>
+<div class="pl-2 text-muted italic text-[11px]">
+                    (unchanged)
+                  </div>
+</div>
+</div>
+<!-- Row 3: password (Agent rotated in v8) -->
+<div class="bg-agent/5">
+<div class="px-3 pt-1.5 pb-0.5 flex items-center justify-between text-[10px] font-field-label uppercase text-muted/70">
+<span>Field: password</span>
+<span class="text-[9px] text-agent">agent rotation</span>
+</div>
+<div class="grid grid-cols-2 text-xs font-data-value py-1.5 px-3 items-center">
+<div class="border-r border-border/60 pr-2 text-muted truncate">
+<span>••••••••••••</span>
+<span class="text-[10px] text-muted/60 ml-1">(v7 base)</span>
+</div>
+<div class="pl-2 flex items-center space-x-1.5 truncate">
+<span class="text-text tracking-widest font-bold">••••••••••••</span>
+<span class="text-agent bg-agent/15 text-[10px] px-1 py-0.2 rounded border border-agent/30 font-field-label">
+                      [rotated by agent]
+                    </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Warning notice -->
+<div class="flex items-center space-x-1.5 text-[11px] font-field-label text-muted">
+<span class="material-symbols-outlined text-[13px] text-warn">warning</span>
+<span>Overwriting will permanently revert the agent's password rotation.</span>
+</div>
+</div>
+<!-- Modal Footer Actions -->
+<div class="px-4 py-2.5 bg-panel border-t border-border flex items-center justify-between">
+<button class="borderless text-muted hover:text-text font-metadata text-xs px-1 cursor-pointer transition-none" type="button">
+              Cancel
+            </button>
+<div class="flex items-center space-x-2">
+<button class="h-button-height px-3 bg-panel hover:bg-row-hover border border-border text-text font-metadata text-xs rounded transition-none cursor-pointer" type="button">
+                Overwrite with my changes
+              </button>
+<!-- Primary Action: Amber fill with dark text as specified in component design guidelines -->
+<button class="h-button-height px-3 bg-amber hover:bg-surface-tint text-surface font-metadata font-medium text-xs rounded transition-none cursor-pointer flex items-center space-x-1" type="button">
+<span class="material-symbols-outlined text-surface text-xs" style="font-size: 13px;">refresh</span>
+<span>Reload from vault</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+<!-- STATUS FOOTER BAR (Operational Status & Telemetry) -->
+</body></html>

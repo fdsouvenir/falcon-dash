@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash Vault - New Entry</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "warn": "#d8973c",
+            "inverse-surface": "#e5e1e4",
+            "on-surface-variant": "#d3c4b1",
+            "surface-tint": "#f5bd58",
+            "danger-dim": "#3a1f1c",
+            "outline": "#9c8f7d",
+            "on-primary": "#422c00",
+            "background": "#131315",
+            "on-tertiary-fixed": "#001e2d",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+            "text": "#e5e1e4",
+            "tertiary-container": "#86d1ff",
+            "primary-fixed-dim": "#f5bd58",
+            "agent": "#7aa2d6",
+            "tertiary-fixed-dim": "#84cffd",
+            "outline-variant": "#4f4536",
+            "surface-container-low": "#1b1b1d",
+            "on-background": "#e5e1e4",
+            "secondary-container": "#1a4877",
+            "row-hover": "#212124",
+            "muted": "#aaa9a3",
+            "secondary-fixed": "#d3e4ff",
+            "canvas": "#131315",
+            "surface": "#131315",
+            "on-secondary-container": "#90b8ed",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed": "#c6e7ff",
+            "on-error": "#690005",
+            "secondary": "#a1c9ff",
+            "on-secondary": "#00325b",
+            "primary-container": "#f7bf59",
+            "surface-bright": "#39393b",
+            "primary": "#ffe0b0",
+            "surface-container": "#1f1f21",
+            "tertiary": "#cae9ff",
+            "on-primary-fixed": "#271900",
+            "inverse-primary": "#7d5700",
+            "inverse-on-surface": "#303032",
+            "ok": "#6fbf87",
+            "border": "#353437",
+            "on-primary-container": "#6f4d00",
+            "on-tertiary-container": "#005a7d",
+            "on-tertiary": "#00344b",
+            "surface-container-lowest": "#0e0e10",
+            "secondary-fixed-dim": "#a1c9ff",
+            "panel": "#1b1b1d",
+            "primary-fixed": "#ffdeaa",
+            "on-secondary-fixed-variant": "#1a4877",
+            "danger": "#e2564a",
+            "surface-dim": "#131315",
+            "amber": "#f7bf59",
+            "surface-container-high": "#2a2a2c",
+            "on-primary-fixed-variant": "#5f4100",
+            "surface-variant": "#353437",
+            "on-surface": "#e5e1e4",
+            "surface-container-highest": "#353437",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "on-secondary-fixed": "#001c38"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "unit": "4px",
+            "row-height-entry": "40px",
+            "inspector-width": "360px",
+            "gutter-left": "16px",
+            "input-height": "32px",
+            "button-height": "28px",
+            "gap-max": "24px",
+            "rail-width": "240px",
+            "gap-section": "16px",
+            "row-height-group": "24px"
+          },
+          "fontFamily": {
+            "metadata": ["Space Grotesk"],
+            "entry-title": ["Space Grotesk"],
+            "data-value": ["Space Mono"],
+            "field-label": ["Space Mono"]
+          },
+          "fontSize": {
+            "metadata": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "entry-title": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "data-value": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "field-label": ["11px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Custom non-intrusive hairline scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131315;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #353437;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text font-metadata antialiased overflow-hidden h-screen w-screen selection:bg-amber selection:text-canvas">
+<!-- BACKGROUND VAULT WORKSPACE (Dimmed, Low Opacity for Custody Context) -->
+<div class="absolute inset-0 flex flex-col h-full w-full pointer-events-none select-none opacity-20 filter blur-[0.5px]">
+<!-- TopNavBar (Shared Component) -->
+<header class="flex justify-between items-center h-input-height px-gutter-left w-full bg-canvas dark:bg-canvas border-b border-border dark:border-border flat no shadows transition-colors duration-75">
+<div class="flex items-center gap-4">
+<span class="font-entry-title text-entry-title tracking-tight text-text dark:text-text font-bold">Falcon Dash Vault</span>
+<div class="flex items-center bg-canvas border border-border h-[26px] px-2 rounded w-64 text-muted">
+<span class="material-symbols-outlined mr-1.5 text-muted">search</span>
+<span class="font-data-value text-field-label">Search vault (Cmd+K)...</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-button-height px-2.5 bg-panel border border-border text-text rounded font-entry-title text-metadata flex items-center gap-1">
+<span class="material-symbols-outlined">sync</span>
+          Sync Vault
+        </button>
+<button class="h-button-height px-2.5 bg-amber text-canvas font-semibold rounded font-entry-title text-metadata flex items-center gap-1">
+<span class="material-symbols-outlined text-canvas">add</span>
+          New Entry
+        </button>
+<div class="flex items-center gap-1 border-l border-border pl-2">
+<span class="material-symbols-outlined text-muted p-1">terminal</span>
+<span class="material-symbols-outlined text-muted p-1">settings</span>
+<span class="material-symbols-outlined text-muted p-1">lock</span>
+</div>
+</div>
+</header>
+<!-- Main Workspace Frame -->
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="flex flex-col justify-between w-rail-width h-full py-unit bg-panel dark:bg-panel border-r border-border dark:border-border flat no shadows transition-colors duration-75 flex-shrink-0">
+<div class="flex flex-col">
+<!-- Header info -->
+<div class="px-4 py-2 border-b border-border mb-2 flex items-center justify-between">
+<div>
+<div class="font-entry-title text-entry-title text-text dark:text-text font-bold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-amber">key</span>
+                OPERATOR_VAULT
+              </div>
+<div class="font-field-label text-field-label text-muted">75 entries · 6 groups</div>
+</div>
+<button class="text-muted hover:text-text font-field-label text-metadata border border-border px-1.5 py-0.5 rounded">
+              New Group
+            </button>
+</div>
+<!-- Navigation items -->
+<nav class="flex flex-col space-y-0.5 px-1.5">
+<a class="flex items-center gap-2 h-7 rounded text-muted font-entry-title pl-2.5 hover:bg-row-hover" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="font-entry-title text-metadata">All Entries</span>
+</a>
+<a class="flex items-center gap-2 h-7 rounded text-muted font-entry-title pl-2.5 hover:bg-row-hover" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-entry-title text-metadata">Logins</span>
+</a>
+<a class="flex items-center gap-2 h-7 rounded text-muted font-entry-title pl-2.5 hover:bg-row-hover" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-entry-title text-metadata">Agent Tokens</span>
+</a>
+<a class="flex items-center gap-2 h-7 rounded border-l-2 border-amber bg-row-hover text-text font-entry-title pl-2" href="#">
+<span class="material-symbols-outlined text-amber">api</span>
+<span class="font-entry-title text-metadata">Services / APIs</span>
+</a>
+<a class="flex items-center gap-2 h-7 rounded text-muted font-entry-title pl-2.5 hover:bg-row-hover" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-entry-title text-metadata">Archive</span>
+</a>
+</nav>
+</div>
+<!-- Footer status -->
+<div class="px-3 py-2 border-t border-border flex flex-col gap-1 font-field-label text-field-label text-muted">75 entries · 6 groups</div>
+</aside>
+<!-- Center Entry List (Dense, Utilitarian) -->
+<main class="flex-1 bg-canvas flex flex-col overflow-hidden">
+<div class="h-8 border-b border-border px-4 flex items-center justify-between text-muted font-field-label text-field-label">
+<span>TITLE / HANDLE</span>
+<span>SECRET REF</span>
+<span>LAST MODIFIED</span>
+</div>
+<div class="divide-y divide-border">
+<div class="h-row-height-entry px-4 flex items-center justify-between hover:bg-row-hover">
+<div class="flex items-center gap-2 font-data-value text-data-value">
+<span class="material-symbols-outlined text-agent">terminal</span>
+              aws_infra_admin
+            </div>
+<span class="font-data-value text-field-label text-muted">ref://vault/aws/root_token</span>
+<span class="font-data-value text-field-label text-muted">14m ago</span>
+</div>
+<div class="h-row-height-entry px-4 flex items-center justify-between hover:bg-row-hover">
+<div class="flex items-center gap-2 font-data-value text-data-value">
+<span class="material-symbols-outlined text-muted">key</span>
+              cloudflare_dns_token
+            </div>
+<span class="font-data-value text-field-label text-muted">ref://vault/cf/edit_dns</span>
+<span class="font-data-value text-field-label text-muted">2h ago</span>
+</div>
+<div class="h-row-height-entry px-4 flex items-center justify-between bg-row-hover border-l-2 border-amber">
+<div class="flex items-center gap-2 font-data-value text-data-value text-text">
+<span class="material-symbols-outlined text-amber">api</span>
+              linode_prod_deployer
+            </div>
+<span class="font-data-value text-field-label text-muted">ref://vault/linode/api_rw</span>
+<span class="font-data-value text-field-label text-muted">1d ago</span>
+</div>
+<div class="h-row-height-entry px-4 flex items-center justify-between hover:bg-row-hover">
+<div class="flex items-center gap-2 font-data-value text-data-value">
+<span class="material-symbols-outlined text-agent">smart_toy</span>
+              openai_service_account
+            </div>
+<span class="font-data-value text-field-label text-muted">ref://vault/openai/sec_ops</span>
+<span class="font-data-value text-field-label text-muted">3d ago</span>
+</div>
+</div>
+</main>
+<!-- Inspector Panel (Right) -->
+<aside class="w-inspector-width border-l border-border bg-panel flex flex-col h-full flex-shrink-0">
+<div class="p-4 border-b border-border">
+<span class="font-field-label text-field-label text-muted">INSPECTOR</span>
+<div class="font-entry-title text-entry-title font-semibold text-text mt-1">linode_prod_deployer</div>
+</div>
+</aside>
+</div>
+</div>
+<!-- DIM OVERLAY BACKDROP -->
+<div class="fixed inset-0 bg-canvas/80 backdrop-blur-[2px] z-40 flex items-center justify-center p-4">
+<!-- CENTERED MODAL (Exactly 560px Wide, 8px Radius, #1b1b1d Panel) -->
+<div class="w-[560px] max-h-[942px] flex flex-col bg-panel border border-border rounded-xl shadow-2xl z-50 overflow-hidden relative">
+<!-- Modal Header: 48px Height -->
+<div class="h-12 px-4 border-b border-border flex items-center justify-between bg-panel flex-shrink-0">
+<h2 class="font-entry-title text-entry-title font-medium text-text">New entry</h2>
+<button aria-label="Close modal" class="w-7 h-7 flex items-center justify-center border border-border rounded hover:bg-row-hover text-muted hover:text-text transition-colors duration-75" title="Close">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+<!-- Modal Body (Scrollable Form Container) -->
+<div class="p-4 space-y-3.5 overflow-y-auto max-h-[calc(92vh-104px)]">
+<!-- Segmented Control: Login vs Agent Credential -->
+<!-- 1. TITLE -->
+<div class="space-y-1">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">TITLE</label>
+<input class="w-full h-input-height bg-canvas border border-border rounded px-2.5 font-data-value text-data-value text-text focus:outline-none focus:border-amber transition-colors duration-75" type="text" value="Linode API"/>
+</div>
+<!-- 2. GROUP (Dropdown OPEN state) -->
+<div class="space-y-1 relative">
+<div class="flex items-center justify-between">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">GROUP</label>
+<span class="font-data-value text-field-label text-muted">depth 2 of 5</span>
+</div>
+<!-- Trigger Input: Open state -->
+<div class="w-full h-input-height bg-canvas border border-amber rounded px-2 flex items-center justify-between cursor-pointer">
+<div class="flex items-center gap-1.5 font-data-value text-data-value text-text">
+<span class="material-symbols-outlined text-amber text-sm">folder_open</span>
+<span class="bg-surface-container px-1.5 py-0.5 rounded text-xs text-muted">Services</span>
+<span class="text-border">/</span>
+<span class="bg-surface-container px-1.5 py-0.5 rounded text-xs text-text font-medium">APIs</span>
+</div>
+<span class="material-symbols-outlined text-muted">expand_less</span>
+</div>
+<!-- Group Picker Dropdown Menu (Directly below trigger) -->
+<div class="w-full mt-1 bg-panel border border-border rounded-lg shadow-xl overflow-hidden z-20">
+<div class="p-1 space-y-0.5 font-data-value text-data-value">
+<!-- Group Item: Providers -->
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="material-symbols-outlined text-xs">folder</span>
+<span>Providers</span>
+</div>
+<span class="font-field-label text-field-label text-muted">12</span>
+</div>
+<!-- Group Item: Channels -->
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="material-symbols-outlined text-xs">folder</span>
+<span>Channels</span>
+</div>
+<span class="font-field-label text-field-label text-muted">8</span>
+</div>
+<!-- Group Item: Gateway -->
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="material-symbols-outlined text-xs">folder</span>
+<span>Gateway</span>
+</div>
+<span class="font-field-label text-field-label text-muted">6</span>
+</div>
+<!-- Group Item: Services (Expanded) -->
+<div class="space-y-0.5">
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-text font-medium">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs text-amber">expand_more</span>
+<span class="material-symbols-outlined text-xs text-amber">folder_open</span>
+<span>Services</span>
+</div>
+<span class="font-field-label text-field-label text-muted">18</span>
+</div>
+<!-- Child: APIs (SELECTED) -->
+<div class="flex items-center justify-between h-row-height-group pl-6 pr-2 bg-row-hover border-l-2 border-amber rounded-r cursor-pointer text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs text-amber">api</span>
+<span class="font-medium text-amber">APIs</span>
+<span class="text-[10px] font-field-label text-amber px-1 rounded bg-amber/10">current</span>
+</div>
+<span class="font-field-label text-field-label text-muted">9</span>
+</div>
+<!-- Child: Hosting -->
+<div class="flex items-center justify-between h-row-height-group pl-6 pr-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">dns</span>
+<span>Hosting</span>
+</div>
+<span class="font-field-label text-field-label text-muted">4</span>
+</div>
+</div>
+<!-- Group Item: Social -->
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="material-symbols-outlined text-xs">folder</span>
+<span>Social</span>
+</div>
+<span class="font-field-label text-field-label text-muted">6</span>
+</div>
+<!-- Group Item: Workloads -->
+<div class="flex items-center justify-between h-row-height-group px-2 hover:bg-row-hover rounded cursor-pointer text-muted hover:text-text">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="material-symbols-outlined text-xs">folder</span>
+<span>Workloads</span>
+</div>
+<span class="font-field-label text-field-label text-muted">10</span>
+</div>
+<!-- Hairline separator -->
+<div class="h-[1px] bg-border my-1"></div>
+<!-- Add Group CTA -->
+<div class="flex items-center gap-1.5 h-row-height-group px-2 text-muted hover:text-text hover:bg-row-hover rounded cursor-pointer font-entry-title text-metadata">
+<span class="material-symbols-outlined text-xs">add</span>
+<span>+ New group...</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. USERNAME -->
+<div class="space-y-1">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">USERNAME</label>
+<input class="w-full h-input-height bg-canvas border border-border rounded px-2.5 font-data-value text-data-value text-text focus:outline-none focus:border-amber transition-colors duration-75" type="text" value="fdsouvenir"/>
+</div>
+<!-- 4. PASSWORD -->
+<div class="space-y-1">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">PASSWORD</label>
+<div class="flex items-center gap-1.5">
+<div class="flex-1 relative">
+<input class="w-full h-input-height bg-canvas border border-border rounded px-2.5 font-data-value text-data-value tracking-widest text-text focus:outline-none focus:border-amber transition-colors duration-75" type="password" value="secretPassword123456"/>
+</div>
+<!-- Reveal toggle button -->
+<button class="h-button-height px-2 bg-panel border border-border rounded text-muted hover:text-text hover:bg-row-hover flex items-center gap-1 font-field-label text-field-label transition-colors duration-75" title="Reveal password" type="button">
+<span class="material-symbols-outlined text-sm">visibility</span>
+              Reveal
+            </button>
+<!-- Generate button -->
+<button class="h-button-height px-2 bg-panel border border-border rounded text-muted hover:text-text hover:bg-row-hover flex items-center gap-1 font-field-label text-field-label transition-colors duration-75" title="Generate password" type="button">
+<span class="material-symbols-outlined text-sm">autorenew</span>
+              Generate
+            </button>
+</div>
+</div>
+<!-- 5. URL -->
+<div class="space-y-1">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">URL</label>
+<input class="w-full h-input-height bg-canvas border border-border rounded px-2.5 font-data-value text-data-value text-text focus:outline-none focus:border-amber transition-colors duration-75" type="text" value="https://api.linode.com"/>
+</div>
+<!-- 6. NOTES -->
+<div class="space-y-1">
+<label class="block font-field-label text-field-label text-muted tracking-wider uppercase">NOTES</label>
+<textarea class="w-full bg-canvas border border-border rounded p-2 font-data-value text-data-value text-text placeholder:text-muted focus:outline-none focus:border-amber transition-colors duration-75 resize-none" placeholder="Optional" rows="3"></textarea>
+</div>
+<!-- Collapsed & Disabled Agent Access Section -->
+</div>
+<!-- Modal Footer -->
+<div class="h-14 px-4 border-t border-border bg-panel flex items-center justify-end gap-2 flex-shrink-0">
+<button class="h-button-height px-3 rounded bg-panel border border-border text-text font-entry-title text-metadata hover:bg-row-hover transition-colors duration-75" type="button">
+          Cancel
+        </button>
+<button class="h-button-height px-3.5 rounded bg-amber text-canvas font-entry-title text-metadata font-semibold hover:bg-amber/90 transition-colors duration-75 flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-sm text-canvas">check</span>
+          Create entry
+        </button>
+</div>
+</div>
+</div>
+</body></html>

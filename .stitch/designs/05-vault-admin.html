@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash — Vault</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface": "#e5e1e4",
+            "on-error": "#690005",
+            "text": "#e5e1e4",
+            "secondary-fixed-dim": "#a1c9ff",
+            "tertiary-fixed": "#c6e7ff",
+            "border": "#353437",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "surface-container-highest": "#353437",
+            "agent": "#7aa2d6",
+            "on-tertiary": "#00344b",
+            "surface-bright": "#39393b",
+            "surface-tint": "#f5bd58",
+            "surface-container": "#1f1f21",
+            "muted": "#aaa9a3",
+            "on-tertiary-fixed": "#001e2d",
+            "on-secondary-fixed-variant": "#1a4877",
+            "primary-fixed": "#ffdeaa",
+            "canvas": "#131315",
+            "secondary": "#a1c9ff",
+            "primary": "#ffe0b0",
+            "inverse-primary": "#7d5700",
+            "warn": "#d8973c",
+            "ok": "#6fbf87",
+            "on-secondary": "#00325b",
+            "error": "#ffb4ab",
+            "tertiary-container": "#86d1ff",
+            "surface-dim": "#131315",
+            "panel": "#1b1b1d",
+            "on-secondary-container": "#90b8ed",
+            "surface-container-lowest": "#0e0e10",
+            "amber": "#f7bf59",
+            "outline": "#9c8f7d",
+            "error-container": "#93000a",
+            "secondary-container": "#1a4877",
+            "on-primary-fixed": "#271900",
+            "surface-variant": "#353437",
+            "background": "#131315",
+            "on-secondary-fixed": "#001c38",
+            "on-primary-container": "#6f4d00",
+            "on-primary-fixed-variant": "#5f4100",
+            "tertiary-fixed-dim": "#84cffd",
+            "secondary-fixed": "#d3e4ff",
+            "on-tertiary-container": "#005a7d",
+            "inverse-on-surface": "#303032",
+            "danger": "#e2564a",
+            "surface-container-high": "#2a2a2c",
+            "on-background": "#e5e1e4",
+            "on-error-container": "#ffdad6",
+            "surface": "#131315",
+            "on-primary": "#422c00",
+            "danger-dim": "#3a1f1c",
+            "on-surface-variant": "#d3c4b1",
+            "primary-container": "#f7bf59",
+            "primary-fixed-dim": "#f5bd58",
+            "tertiary": "#cae9ff",
+            "surface-container-low": "#1b1b1d",
+            "inverse-surface": "#e5e1e4",
+            "outline-variant": "#4f4536"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "unit-2": "8px",
+            "unit-4": "16px",
+            "unit-6": "24px",
+            "button-height": "28px",
+            "unit-1": "4px",
+            "row-height": "40px",
+            "gutter": "16px",
+            "rail-width": "240px",
+            "input-height": "32px",
+            "unit-3": "12px",
+            "inspector-width": "360px"
+          },
+          "fontFamily": {
+            "metadata": ["ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+            "field-label": ["ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+            "mono-data": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
+            "entry-title": ["ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"]
+          },
+          "fontSize": {
+            "metadata": [
+              "12px",
+              {
+                "lineHeight": "16px",
+                "fontWeight": "400"
+              }
+            ],
+            "field-label": [
+              "11px",
+              {
+                "lineHeight": "16px",
+                "letterSpacing": "0.06em",
+                "fontWeight": "400"
+              }
+            ],
+            "mono-data": [
+              "12px",
+              {
+                "lineHeight": "16px",
+                "fontWeight": "400"
+              }
+            ],
+            "entry-title": [
+              "14px",
+              {
+                "lineHeight": "20px",
+                "fontWeight": "500"
+              }
+            ]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 16;
+      font-size: 14px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Custom scrollbar matching dark console aesthetics */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131315;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #353437;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4f4536;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text font-metadata text-metadata antialiased flex flex-col h-screen overflow-hidden select-none">
+<!-- Top Web Header (TopNavBar Anchor Execution) -->
+<header class="flex justify-between items-center w-full px-unit-4 h-10 border-b border-border bg-canvas z-40 shrink-0">
+<div class="flex items-center">
+<span class="font-entry-title text-entry-title text-text font-medium tracking-tight">Falcon Dash — Vault</span>
+</div>
+<div class="flex items-center gap-unit-3">
+<!-- Status Chip -->
+<div class="flex items-center gap-1.5 px-2 py-0.5 border border-border bg-panel text-muted font-metadata text-metadata">
+<span class="w-1.5 h-1.5 rounded-full bg-ok shrink-0"></span>
+<span>Unlocked</span>
+</div>
+<!-- Action Button -->
+<button class="h-button-height px-unit-3 bg-panel border border-border text-text font-metadata text-metadata transition-colors duration-150 ease-in-out hover:bg-surface-container-high focus:outline-none focus:border-amber" type="button">
+        Lock Vault
+      </button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<!-- Left Navigation Rail (SideNavBar Anchor Execution) -->
+<aside class="w-rail-width flex flex-col justify-between border-r border-border bg-panel shrink-0 z-30">
+<div class="flex flex-col">
+<!-- Vault Identity Block -->
+<div class="px-unit-3 py-unit-2 border-b border-border">
+<div class="font-mono-data text-field-label uppercase tracking-wider text-muted">VAULT-01</div>
+<div class="font-metadata text-field-label text-muted">MASTER CUSTODY</div>
+</div>
+<!-- Navigation items list -->
+<nav aria-label="Vault Management" class="flex flex-col py-1">
+<!-- Active Tab: Overview -->
+<a class="flex items-center gap-unit-2 px-unit-3 h-row-height bg-surface-container text-text border-l-2 border-amber font-medium transition-colors duration-100 ease-linear" href="#overview">
+<span class="material-symbols-outlined text-muted" data-icon="dashboard">dashboard</span>
+<span class="font-metadata text-metadata">Overview</span>
+</a>
+<!-- Inactive Tab: Recovery snapshots (3) -->
+<a class="flex items-center gap-unit-2 px-unit-3 h-row-height text-muted border-l-2 border-transparent hover:bg-surface-container-high hover:text-text transition-colors duration-100 ease-linear" href="#snapshots">
+<span class="material-symbols-outlined text-muted" data-icon="history_toggle_off">history_toggle_off</span>
+<span class="font-metadata text-metadata">Recovery snapshots (3)</span>
+</a>
+<!-- Inactive Tab: Access history (14) -->
+<a class="flex items-center gap-unit-2 px-unit-3 h-row-height text-muted border-l-2 border-transparent hover:bg-surface-container-high hover:text-text transition-colors duration-100 ease-linear" href="#history">
+<span class="material-symbols-outlined text-muted" data-icon="manage_history">manage_history</span>
+<span class="font-metadata text-metadata">Access history (14)</span>
+</a>
+<!-- Inactive Tab: Database -->
+<a class="flex items-center gap-unit-2 px-unit-3 h-row-height text-muted border-l-2 border-transparent hover:bg-surface-container-high hover:text-text transition-colors duration-100 ease-linear" href="#database">
+<span class="material-symbols-outlined text-muted" data-icon="database">database</span>
+<span class="font-metadata text-metadata">Database</span>
+</a>
+</nav>
+</div>
+<!-- Rail Footer Pin -->
+<div class="border-t border-border p-unit-2">
+<button class="w-full flex items-center gap-unit-2 px-unit-2 h-row-height text-muted hover:text-danger hover:bg-surface-container-high transition-colors duration-100 ease-linear focus:outline-none" type="button">
+<span class="material-symbols-outlined text-inherit" data-icon="lock">lock</span>
+<span class="font-metadata text-metadata">Lock Database</span>
+</button>
+</div>
+</aside>
+<!-- Main Workspace Content Column -->
+<main class="flex-1 bg-canvas overflow-y-auto p-6 md:p-8 space-y-8">
+<!-- Panel 1: Runtime custody status -->
+<section class="space-y-3" id="overview">
+<div>
+<h2 class="font-entry-title text-entry-title text-text font-medium">Runtime custody status</h2>
+<p class="font-metadata text-metadata text-muted mt-0.5">Runtime inspection, automatic snapshot ledger, and access log.</p>
+</div>
+<div class="bg-panel border border-border">
+<!-- Row 1: VAULT STATE -->
+<div class="flex items-center justify-between px-unit-4 h-row-height border-b border-border">
+<div class="w-32 shrink-0 font-field-label text-field-label text-muted uppercase">VAULT STATE</div>
+<div class="flex-1 flex items-center gap-2 font-mono-data text-mono-data text-text truncate pr-4">
+<span class="w-1.5 h-1.5 rounded-full bg-ok shrink-0"></span>
+<span>Unlocked (master key + key file verified)</span>
+</div>
+<div class="shrink-0">
+<button class="h-button-height px- unit-2 px-3 bg-panel border border-border text-danger hover:bg-danger hover:text-text transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                Lock now
+              </button>
+</div>
+</div>
+<!-- Row 2: DATABASE -->
+<div class="flex items-center justify-between px-unit-4 h-row-height border-b border-border">
+<div class="w-32 shrink-0 font-field-label text-field-label text-muted uppercase">DATABASE</div>
+<div class="flex-1 font-mono-data text-mono-data text-text truncate pr-4">
+              ~/.openclaw/passwords.kdbx
+            </div>
+<div class="shrink-0">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                Reveal path
+              </button>
+</div>
+</div>
+<!-- Row 3: KEY FILE -->
+<div class="flex items-center justify-between px-unit-4 h-row-height border-b border-border">
+<div class="w-32 shrink-0 font-field-label text-field-label text-muted uppercase">KEY FILE</div>
+<div class="flex-1 font-mono-data text-mono-data text-text truncate pr-4">
+              ~/.openclaw/vault.key
+            </div>
+<div class="shrink-0">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                Reveal path
+              </button>
+</div>
+</div>
+<!-- Row 4: ENTRIES -->
+<div class="flex items-center justify-between px-unit-4 h-row-height">
+<div class="w-32 shrink-0 font-field-label text-field-label text-muted uppercase">ENTRIES</div>
+<div class="flex-1 font-mono-data text-mono-data text-text truncate pr-4">
+              75 across 6 groups
+            </div>
+<div class="shrink-0">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                Browse
+              </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Panel 2: Recovery snapshots -->
+<section class="space-y-3" id="snapshots">
+<div>
+<h2 class="font-entry-title text-entry-title text-text font-medium">Recovery snapshots</h2>
+<p class="font-metadata text-metadata text-muted mt-0.5">A snapshot is taken automatically before any destructive operation.</p>
+</div>
+<div class="bg-panel border border-border overflow-x-auto">
+<table class="w-full border-collapse text-left">
+<thead>
+<tr class="border-b border-border text-muted font-field-label text-field-label uppercase">
+<th class="py-2 px-unit-4 font-normal w-24" scope="col">Taken</th>
+<th class="py-2 px-unit-4 font-normal" scope="col">Trigger</th>
+<th class="py-2 px-unit-4 font-normal w-24" scope="col">Entries</th>
+<th class="py-2 px-unit-4 font-normal w-28" scope="col">Size</th>
+<th class="py-2 px-unit-4 font-normal text-right w-24" scope="col">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Snapshot 1 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">6h ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">before remove_entry</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">75</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">412 KB</td>
+<td class="py-2 px-unit-4 text-right whitespace-nowrap">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                    Restore
+                  </button>
+</td>
+</tr>
+<!-- Snapshot 2 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">2d ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">before relocate</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">74</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">409 KB</td>
+<td class="py-2 px-unit-4 text-right whitespace-nowrap">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                    Restore
+                  </button>
+</td>
+</tr>
+<!-- Snapshot 3 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">9d ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">before adopt</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">74</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">409 KB</td>
+<td class="py-2 px-unit-4 text-right whitespace-nowrap">
+<button class="h-button-height px-3 bg-panel border border-border text-text hover:bg-surface-container-high transition-colors duration-150 focus:outline-none focus:border-amber font-metadata text-metadata" type="button">
+                    Restore
+                  </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Panel 3: Access history -->
+<section class="space-y-3 pb-8" id="history">
+<div class="flex items-center justify-between gap-4">
+<div>
+<h2 class="font-entry-title text-entry-title text-text font-medium">Access history</h2>
+</div>
+<div class="w-64">
+<input class="w-full h-input-height bg-canvas border border-border px-unit-3 text-text font-metadata text-metadata placeholder-muted focus:outline-none focus:border-amber" placeholder="Filter actors or paths" type="text"/>
+</div>
+</div>
+<div class="bg-panel border border-border overflow-x-auto">
+<table class="w-full border-collapse text-left">
+<thead>
+<tr class="border-b border-border text-muted font-field-label text-field-label uppercase">
+<th class="py-2 px-unit-4 font-normal w-24" scope="col">Time</th>
+<th class="py-2 px-unit-4 font-normal w-40" scope="col">Actor</th>
+<th class="py-2 px-unit-4 font-normal" scope="col">Entry</th>
+<th class="py-2 px-unit-4 font-normal w-24" scope="col">Action</th>
+<th class="py-2 px-unit-4 font-normal w-52" scope="col">Result</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- History 1 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">6h ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-agent whitespace-nowrap">agent:main</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">Services/APIs/Stitch MCP</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">read</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-ok whitespace-nowrap">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-ok" data-icon="check">check</span>
+<span>granted</span>
+</div>
+</td>
+</tr>
+<!-- History 2 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">8h ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text whitespace-nowrap">human:fdsouvenir</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">Social/Anthem Blue Cross</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">reveal</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-ok whitespace-nowrap">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-ok" data-icon="check">check</span>
+<span>granted</span>
+</div>
+</td>
+</tr>
+<!-- History 3 -->
+<tr class="hover:bg-surface-container-high transition-colors duration-100 h-row-height">
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted whitespace-nowrap">1d ago</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-agent whitespace-nowrap">agent:main</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-text">Gateway/Github PSK</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-muted">read</td>
+<td class="py-2 px-unit-4 font-mono-data text-mono-data text-warn whitespace-nowrap">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-warn" data-icon="block">block</span>
+<span>denied — vault locked</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+</body></html>

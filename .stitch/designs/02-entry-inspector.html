@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash Vault — Credential Inspector</title>
+<!-- Fonts: Space Mono & Space Grotesk -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary": "#a1c9ff",
+            "on-secondary-fixed": "#001c38",
+            "muted": "#aaa9a3",
+            "surface-bright": "#39393b",
+            "background": "#131315",
+            "on-surface-variant": "#d3c4b1",
+            "surface-container-lowest": "#0e0e10",
+            "tertiary": "#cae9ff",
+            "agent": "#7aa2d6",
+            "tertiary-fixed": "#c6e7ff",
+            "surface-container-highest": "#353437",
+            "text": "#e5e1e4",
+            "error-container": "#93000a",
+            "secondary-container": "#1a4877",
+            "on-primary-fixed": "#271900",
+            "row-hover": "#212124",
+            "panel": "#1b1b1d",
+            "inverse-on-surface": "#303032",
+            "danger-dim": "#3a1f1c",
+            "tertiary-container": "#86d1ff",
+            "secondary-fixed-dim": "#a1c9ff",
+            "amber": "#f7bf59",
+            "primary-fixed-dim": "#f5bd58",
+            "primary-container": "#f7bf59",
+            "outline": "#9c8f7d",
+            "on-secondary-container": "#90b8ed",
+            "on-tertiary": "#00344b",
+            "on-primary-container": "#6f4d00",
+            "surface-tint": "#f5bd58",
+            "on-surface": "#e5e1e4",
+            "border": "#353437",
+            "surface-container": "#1f1f21",
+            "on-tertiary-container": "#005a7d",
+            "inverse-surface": "#e5e1e4",
+            "warn": "#d8973c",
+            "on-secondary-fixed-variant": "#1a4877",
+            "tertiary-fixed-dim": "#84cffd",
+            "on-primary": "#422c00",
+            "secondary-fixed": "#d3e4ff",
+            "primary-fixed": "#ffdeaa",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "on-error": "#690005",
+            "on-primary-fixed-variant": "#5f4100",
+            "on-secondary": "#00325b",
+            "error": "#ffb4ab",
+            "primary": "#ffe0b0",
+            "on-background": "#e5e1e4",
+            "surface-variant": "#353437",
+            "outline-variant": "#4f4536",
+            "canvas": "#131315",
+            "inverse-primary": "#7d5700",
+            "on-error-container": "#ffdad6",
+            "danger": "#e2564a",
+            "ok": "#6fbf87",
+            "surface-container-high": "#2a2a2c",
+            "surface": "#131315",
+            "surface-container-low": "#1b1b1d",
+            "on-tertiary-fixed": "#001e2d",
+            "surface-dim": "#131315"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "gap-section": "16px",
+            "unit": "4px",
+            "gap-max": "24px",
+            "inspector-width": "360px",
+            "row-height-entry": "40px",
+            "button-height": "28px",
+            "row-height-group": "24px",
+            "gutter-left": "16px",
+            "rail-width": "240px",
+            "input-height": "32px"
+          },
+          "fontFamily": {
+            "field-label": ["Space Mono", "monospace"],
+            "metadata": ["Space Grotesk", "sans-serif"],
+            "entry-title": ["Space Grotesk", "sans-serif"],
+            "data-value": ["Space Mono", "monospace"]
+          },
+          "fontSize": {
+            "field-label": ["11px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "400" }],
+            "metadata": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "entry-title": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "data-value": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Custom scrollbar to keep strict terminal density */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131315;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #353437;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text font-metadata text-metadata antialiased select-none h-screen w-screen overflow-hidden flex flex-col">
+<!-- TOP APP BAR (from Shared Components JSON & Protocol) -->
+<header class="flex justify-between items-center h-row-height-entry px-4 w-full border-b border-border bg-panel flex-shrink-0 z-30">
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-amber" data-icon="shield">shield</span>
+<span class="font-entry-title text-entry-title tracking-wider uppercase font-semibold text-primary">FALCON DASH VAULT</span>
+</div>
+<!-- Quick Command Bar / Search -->
+<div class="relative w-64">
+<span class="absolute inset-y-0 left-2.5 flex items-center text-muted pointer-events-none">
+<span class="material-symbols-outlined text-muted" data-icon="search">search</span>
+</span>
+<input class="w-full h-button-height pl-8 pr-3 bg-canvas border border-border rounded text-data-value font-data-value text-text placeholder-muted focus:outline-none focus:border-amber text-xs" placeholder="Find credential, handle or tag... (⌘K)" type="text" value="Stitch"/>
+</div>
+<!-- Vault status indicator -->
+<div class="flex items-center space-x-2 pl-2 text-muted text-xs font-field-label">
+<span class="w-1.5 h-1.5 rounded-full bg-ok"></span>
+<span>LOCAL_DB: UNLOCKED</span>
+</div>
+</div>
+<!-- Navigation links & Trailing actions -->
+<div class="flex items-center space-x-4">
+<nav class="flex items-center space-x-4">
+<a class="text-amber border-b-2 border-amber font-medium h-row-height-entry flex items-center px-1 font-field-label text-field-label" href="#">All Entries</a>
+<a class="text-muted hover:text-text h-row-height-entry flex items-center px-1 font-field-label text-field-label" href="#">Audit Log</a>
+</nav>
+<div class="h-4 w-px bg-border"></div>
+<!-- Action controls -->
+<div class="flex items-center space-x-1">
+<button class="w-7 h-7 flex items-center justify-center text-muted hover:text-text hover:bg-row-hover rounded transition-colors duration-100" title="Sync Vault">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center text-muted hover:text-text hover:bg-row-hover rounded transition-colors duration-100" title="Terminal Client">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center text-muted hover:text-danger hover:bg-danger-dim rounded transition-colors duration-100" title="Lock Database">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center text-muted hover:text-text hover:bg-row-hover rounded transition-colors duration-100" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<!-- Primary Action -->
+<button class="h-button-height px-3 bg-amber hover:bg-surface-tint text-background font-entry-title text-field-label font-semibold rounded flex items-center space-x-1.5 transition-colors duration-100">
+<span class="material-symbols-outlined text-background text-sm" data-icon="add">add</span>
+<span>New Entry</span>
+</button>
+</div>
+</header>
+<!-- MAIN OPERATOR WORKSPACE (3-Pane Architecture) -->
+<div class="flex flex-1 w-full overflow-hidden relative">
+<!-- BACKDROP WRAPPER (Left 2/3 - Fixed 240px rail + Fluid table) with slight subdued opacity -->
+<div class="flex flex-1 h-full overflow-hidden opacity-45 pointer-events-none select-none transition-opacity duration-200">
+<!-- PANE 1: SideNavBar Group Rail (240px docked) -->
+<aside class="flex flex-col h-full w-rail-width border-r border-border bg-panel flex-shrink-0">
+<!-- Rail Header -->
+<div class="px-3 py-3 border-b border-border flex items-center justify-between">
+<div>
+<div class="font-field-label text-field-label uppercase tracking-widest text-muted">VAULT_DB_LOCAL</div>
+<div class="font-metadata text-metadata text-muted text-xs">75 CREDENTIALS</div>
+</div>
+<span class="material-symbols-outlined text-ok text-sm" data-icon="check_circle" title="KeePassXC Master Key Status">check_circle</span>
+</div>
+<!-- Groups Tree -->
+<div class="flex-1 overflow-y-auto py-2"><div class="px-3 py-1 font-field-label text-field-label text-muted uppercase tracking-wider text-[10px]">Vault Groups</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="folder">folder</span>
+<span>All entries</span>
+</div>
+<span class="font-field-label text-field-label text-muted">75</span>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="cloud">cloud</span>
+<span>Providers</span>
+</div>
+<span class="font-field-label text-field-label text-muted">12</span>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="hub">hub</span>
+<span>Channels</span>
+</div>
+<span class="font-field-label text-field-label text-muted">8</span>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="router">router</span>
+<span>Gateway</span>
+</div>
+<span class="font-field-label text-field-label text-muted">6</span>
+</div>
+<div>
+<div class="flex items-center justify-between px-3 h-row-height-group border-l-2 border-amber bg-row-hover text-text font-metadata text-metadata pl-2 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-amber text-sm" data-icon="expand_more">expand_more</span>
+<span class="material-symbols-outlined text-amber text-sm" data-icon="folder_open">folder_open</span>
+<span class="font-medium text-amber">Services</span>
+</div>
+<span class="font-field-label text-field-label text-amber">18</span>
+</div>
+<div class="flex items-center justify-between pr-3 h-row-height-group text-text hover:bg-row-hover font-metadata text-metadata pl-8 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-amber text-sm" data-icon="key">key</span>
+<span>APIs</span>
+</div>
+<span class="font-field-label text-field-label text-amber">9</span>
+</div>
+<div class="flex items-center justify-between pr-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-8 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="dns">dns</span>
+<span>Hosting</span>
+</div>
+<span class="font-field-label text-field-label text-muted">4</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="share">share</span>
+<span>Social</span>
+</div>
+<span class="font-field-label text-field-label text-muted">6</span>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+<span>Workloads</span>
+</div>
+<span class="font-field-label text-field-label text-muted">10</span>
+</div>
+<div class="flex items-center justify-between px-3 h-row-height-group text-muted hover:bg-row-hover font-metadata text-metadata pl-2.5 cursor-pointer">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+<span>Recycle Bin</span>
+</div>
+<span class="font-field-label text-field-label text-muted">3</span>
+</div></div>
+<!-- Rail Footer -->
+<div class="border-t border-border p-2 space-y-1">
+<button class="w-full flex items-center justify-between px-2 h-row-height-group text-muted hover:text-text text-xs">
+<span class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="tune">tune</span>
+<span>Settings</span>
+</span>
+</button>
+<button class="w-full flex items-center justify-between px-2 h-row-height-group text-muted hover:text-danger text-xs">
+<span class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="lock">lock</span>
+<span>Lock Database</span>
+</span>
+</button>
+</div>
+</aside>
+<!-- PANE 2: Fluid Center Entry Table -->
+<main class="flex-1 flex flex-col bg-canvas overflow-hidden">
+<!-- Table Column Headers -->
+<div class="flex items-center h-8 border-b border-border bg-panel px-4 text-muted font-field-label text-field-label uppercase tracking-wider text-[10px]"><div class="flex-1 flex-shrink-0">Title &amp; Handle</div></div>
+<!-- Entry List (14+ rows target, pure 40px row rhythm) -->
+<div class="flex-1 overflow-y-auto divide-y divide-border"><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="vpn_lock">vpn_lock</span><span>Cloudflare</span></div></div><div class="flex items-center h-row-height-entry px-4 bg-row-hover border-l-2 border-amber text-text text-xs"><div class="flex-1 flex items-center space-x-2 font-medium text-amber truncate"><span class="material-symbols-outlined text-amber text-sm" data-icon="smart_toy">smart_toy</span><span>Stitch MCP</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="home">home</span><span>Home-Assistant</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="terminal">terminal</span><span>GitHub Verlbot CLI</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="smart_toy">smart_toy</span><span>GitHub Verlbot</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="key">key</span><span>Github PSK</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="local_hospital">local_hospital</span><span>Anthem Blue Cross</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="lightbulb">lightbulb</span><span>GoVee Home</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="hotel">hotel</span><span>Marriott Bonvoy</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="sports_basketball">sports_basketball</span><span>KenPom Password</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="flight">flight</span><span>Vueling</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="pets">pets</span><span>Sniff Spots</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="dns">dns</span><span>Linode</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="cloud">cloud</span><span>Vultr</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="smart_toy">smart_toy</span><span>Discord Bot</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="smart_toy">smart_toy</span><span>Telegram Bot</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="cloud_queue">cloud_queue</span><span>Netlify</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="share">share</span><span>Reddit</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="key">key</span><span>Cloudflare API Token</span></div></div><div class="flex items-center h-row-height-entry px-4 text-text hover:bg-row-hover text-xs"><div class="flex-1 flex items-center space-x-2 font-medium truncate"><span class="material-symbols-outlined text-muted text-sm" data-icon="shield">shield</span><span>Vault Recovery Key</span></div></div></div>
+</main>
+</div>
+<!-- PANE 3: INSPECTOR PANEL (Right 360px docked overlay) -->
+<aside class="w-inspector-width h-full bg-panel border-l border-border flex flex-col flex-shrink-0 z-20 shadow-none">
+<!-- 1. Inspector Header -->
+<div class="p-4 border-b border-border flex-shrink-0">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<div class="flex items-center space-x-2">
+<h2 class="font-entry-title text-entry-title font-medium text-text">Stitch MCP</h2>
+<!-- Type Badge: Agent (16px pill) -->
+</div>
+<div class="font-field-label text-field-label text-muted select-all">Services/APIs/Stitch MCP</div>
+</div>
+<!-- Close 'X' Button -->
+<button class="w-7 h-7 flex items-center justify-center text-muted hover:text-text hover:bg-row-hover rounded transition-colors duration-100" onclick="console.log('Close Inspector')" title="Close Inspector">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<!-- Inspector Body Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto p-4 space-y-5">
+<!-- 2. FIELD GRID: STRICT THREE-COLUMN (Fixed 96px Label | Mono Value | Fixed Actions) -->
+<div class="space-y-3">
+<!-- Row 1: PASSWORD -->
+<div class="flex items-center justify-between min-h-[32px] gap-2">
+<!-- Col 1: Fixed 96px Label -->
+<div class="w-24 flex-shrink-0 font-field-label text-field-label uppercase text-muted">
+              PASSWORD
+            </div>
+<!-- Col 2: Flex-1 Monospace Masked Value -->
+<div class="flex-1 font-data-value text-data-value text-text tracking-wider truncate font-mono select-none" id="val-pwd">
+              ••••••••••••••••
+            </div>
+<!-- Col 3: Right-aligned 28px Actions -->
+<div class="flex items-center space-x-1 flex-shrink-0">
+<button class="h-button-height px-2 bg-panel border border-border hover:bg-row-hover text-text text-xs rounded flex items-center space-x-1 transition-colors duration-100" id="btn-reveal-pwd" onclick="togglePwd()" title="Reveal password">
+<span class="material-symbols-outlined text-muted" data-icon="visibility">visibility</span>
+<span class="font-field-label text-field-label">Reveal</span>
+</button>
+<button class="h-button-height w-7 flex items-center justify-center bg-panel border border-border hover:bg-row-hover text-text text-xs rounded transition-colors duration-100" id="btn-copy-pwd" onclick="copyFeedback(this, '••••••••••••••••')" title="Copy password to clipboard">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Row 2: USERNAME (Explicitly Missing/Unset Field) -->
+<div class="flex items-center justify-between min-h-[32px] gap-2 opacity-60">
+<!-- Col 1: Fixed 96px Label -->
+<div class="w-24 flex-shrink-0 font-field-label text-field-label uppercase text-muted">
+              USERNAME
+            </div>
+<!-- Col 2: Em-dash Muted Value -->
+<div class="flex-1 font-data-value text-data-value text-muted truncate select-none">
+              —
+            </div>
+<!-- Col 3: Disabled Actions (zero vertical drift) -->
+<div class="flex items-center space-x-1 flex-shrink-0">
+<button class="h-button-height px-2 bg-panel border border-border text-muted text-xs rounded flex items-center space-x-1 cursor-not-allowed opacity-40" disabled="" title="Field not present on this record">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="visibility_off">visibility_off</span>
+<span class="font-field-label text-field-label">Reveal</span>
+</button>
+<button class="h-button-height w-7 flex items-center justify-center bg-panel border border-border text-muted text-xs rounded cursor-not-allowed opacity-40" disabled="" title="Field not present">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Row 3: URL (Revealed State Demo with Countdown Badge) -->
+<div class="flex items-center justify-between min-h-[32px] gap-2">
+<!-- Col 1: Fixed 96px Label -->
+<div class="w-24 flex-shrink-0 font-field-label text-field-label uppercase text-muted">
+              URL
+            </div>
+<!-- Col 2: Revealed Monospace String + Auto-hide Countdown -->
+<div class="flex-1 flex flex-col justify-center min-w-0 pr-1">
+<span class="font-data-value text-data-value text-text truncate select-all">
+                https://stitch.googleapis.com/mcp
+              </span>
+<span class="font-field-label text-[10px] text-muted mt-0.5 flex items-center space-x-1">
+<span class="w-1 h-1 rounded-full bg-warn"></span>
+<span>auto-hides in 24s</span>
+</span>
+</div>
+<!-- Col 3: Active Hide Toggle + Copy -->
+<div class="flex items-center space-x-1 flex-shrink-0">
+<button class="h-button-height px-2 bg-panel border border-border hover:bg-row-hover text-text text-xs rounded flex items-center space-x-1 transition-colors duration-100" title="Hide URL">
+<span class="material-symbols-outlined text-amber text-sm" data-icon="visibility_off">visibility_off</span>
+<span class="font-field-label text-field-label text-amber">Hide</span>
+</button>
+<button class="h-button-height w-7 flex items-center justify-center bg-panel border border-border hover:bg-row-hover text-text text-xs rounded transition-colors duration-100" onclick="copyFeedback(this, 'https://stitch.googleapis.com/mcp')" title="Copy URL">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Row 4: NOTES -->
+<div class="flex items-center justify-between min-h-[32px] gap-2">
+<!-- Col 1: Fixed 96px Label -->
+<div class="w-24 flex-shrink-0 font-field-label text-field-label uppercase text-muted">
+              NOTES
+            </div>
+<!-- Col 2: Masked Value -->
+<div class="flex-1 font-data-value text-data-value text-text tracking-wider truncate font-mono select-none">
+              ••••••••••••••••
+            </div>
+<!-- Col 3: Actions -->
+<div class="flex items-center space-x-1 flex-shrink-0">
+<button class="h-button-height px-2 bg-panel border border-border hover:bg-row-hover text-text text-xs rounded flex items-center space-x-1 transition-colors duration-100" title="Reveal notes">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="visibility">visibility</span>
+<span class="font-field-label text-field-label">Reveal</span>
+</button>
+<button class="h-button-height w-7 flex items-center justify-center bg-panel border border-border hover:bg-row-hover text-text text-xs rounded transition-colors duration-100" onclick="copyFeedback(this, 'Notes data copied')" title="Copy notes">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 3. AGENT ACCESS SECTION -->
+<!-- 4. RECORD METADATA BLOCK -->
+<div class="pt-4 border-t border-border space-y-1 font-field-label text-field-label text-muted font-mono">
+<div class="flex justify-between">
+<span>Version:</span>
+<span class="text-text">4</span>
+</div>
+<div class="flex justify-between">
+<span>Modified:</span>
+<span class="text-text">6h ago</span>
+</div>
+<div class="flex justify-between">
+<span>UUID:</span>
+<span class="text-muted truncate select-all">e93b2a-7f1c-401e</span>
+</div>
+</div>
+</div>
+<!-- 5. FOOTER ACTION ROW (Pinned at bottom of panel) -->
+<div class="p-3 border-t border-border bg-panel flex items-center justify-between flex-shrink-0">
+<div class="flex items-center space-x-2">
+<!-- Primary Action: Edit -->
+<button class="h-button-height px-3 bg-amber hover:bg-surface-tint text-background font-metadata text-field-label font-medium rounded flex items-center space-x-1 transition-colors duration-100">
+<span class="material-symbols-outlined text-background text-sm" data-icon="edit">edit</span>
+<span>Edit</span>
+</button>
+<!-- Secondary Action: Move or rename -->
+<button class="h-button-height px-2.5 bg-panel border border-border hover:bg-row-hover text-text font-metadata text-field-label rounded flex items-center space-x-1 transition-colors duration-100">
+<span class="material-symbols-outlined text-muted text-sm" data-icon="drive_file_move">drive_file_move</span>
+<span>Move / rename</span>
+</button>
+</div>
+<!-- Destructive Action: Remove -->
+<button class="h-button-height px-2 text-danger hover:bg-danger-dim border border-transparent hover:border-danger/30 font-metadata text-field-label rounded transition-colors duration-100" onclick="confirm('Are you sure you want to remove credential Stitch MCP? This action is logged.')" title="Remove this credential">
+          Remove
+        </button>
+</div>
+</aside>
+</div>
+<!-- Micro-interactions JavaScript -->
+<script>
+    // Reveal Password micro-state
+    let pwdRevealed = false;
+    function togglePwd() {
+      const valEl = document.getElementById('val-pwd');
+      const btnEl = document.getElementById('btn-reveal-pwd');
+      pwdRevealed = !pwdRevealed;
+      
+      if (pwdRevealed) {
+        valEl.textContent = 'mcp_live_sec_89dfk129';
+        valEl.classList.remove('select-none');
+        btnEl.innerHTML = `
+          <span class="material-symbols-outlined text-amber text-sm" data-icon="visibility_off">visibility_off</span>
+          <span class="font-field-label text-field-label text-amber">Hide</span>
+        `;
+      } else {
+        valEl.textContent = '••••••••••••••••';
+        valEl.classList.add('select-none');
+        btnEl.innerHTML = `
+          <span class="material-symbols-outlined text-muted text-sm" data-icon="visibility">visibility</span>
+          <span class="font-field-label text-field-label">Reveal</span>
+        `;
+      }
+    }
+
+    // Inline copy 1.5s confirmation feedback
+    function copyFeedback(btn, value) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(value).catch(() => {});
+      }
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<span class="material-symbols-outlined text-ok text-sm" data-icon="check">check</span>`;
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+      }, 1500);
+    }
+  </script>
+</body></html>

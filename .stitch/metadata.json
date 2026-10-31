@@ -1,0 +1,50 @@
+{
+ "projectId": "73333385384825118",
+ "designSystemAssetId": "a43162df7de443489b7d93de906220ac",
+ "screens": {
+  "01-vault-browser": {
+   "id": "3b82a46803ee48ebaa8bc955f009bda8",
+   "name": "projects/73333385384825118/screens/3b82a46803ee48ebaa8bc955f009bda8",
+   "title": "Falcon Dash Vault - Workspace (Title, Group, Actions)",
+   "w": "2560",
+   "h": "2048"
+  },
+  "02-entry-inspector": {
+   "id": "f11bdff7a71246f0a1ecbc21083c8317",
+   "name": "projects/73333385384825118/screens/f11bdff7a71246f0a1ecbc21083c8317",
+   "title": "Falcon Dash Vault - Credential List Refined",
+   "w": "2560",
+   "h": "2048"
+  },
+  "03-entry-editor": {
+   "id": "79c01eb1ee1b496e891e7a1abca085c4",
+   "name": "projects/73333385384825118/screens/79c01eb1ee1b496e891e7a1abca085c4",
+   "title": "New entry \u2014 Credential Creation Modal",
+   "w": "2560",
+   "h": "2048"
+  },
+  "04-destructive-and-conflict": {
+   "id": "c6047e4055dd4fbe93be6ec6ebae5a18",
+   "name": "projects/73333385384825118/screens/c6047e4055dd4fbe93be6ec6ebae5a18",
+   "title": "Dangerous States: Remove Entry & Version Conflict",
+   "w": "2560",
+   "h": "2048"
+  },
+  "05-vault-admin": {
+   "id": "c076e3c0b2e04acb900f93bd816c5f5b",
+   "name": "projects/8430171183366571867/screens/c076e3c0b2e04acb900f93bd816c5f5b",
+   "title": "Falcon Dash \u2014 Vault Operations",
+   "w": "2560",
+   "h": "2048"
+  },
+  "06-narrow-viewport": {
+   "id": "a496e6e696344581954ddbc5614f904d",
+   "name": "projects/3550638351944495232/screens/a496e6e696344581954ddbc5614f904d",
+   "title": "Vault - Narrow Viewport (620px)",
+   "w": "2560",
+   "h": "2130"
+  }
+ },
+ "narrowProjectId": "3550638351944495232",
+ "operationsProjectId": "8430171183366571867"
+}

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash Vault</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-variant": "#353437",
+            "background": "#131315",
+            "on-error": "#690005",
+            "on-primary": "#422c00",
+            "on-background": "#e5e1e4",
+            "surface-bright": "#39393b",
+            "inverse-primary": "#7d5700",
+            "on-tertiary-container": "#005a7d",
+            "ok": "#6fbf87",
+            "secondary-fixed": "#d3e4ff",
+            "on-secondary-fixed": "#001c38",
+            "surface-container-highest": "#353437",
+            "on-secondary-fixed-variant": "#1a4877",
+            "secondary-container": "#1a4877",
+            "primary-fixed-dim": "#f5bd58",
+            "on-surface": "#e5e1e4",
+            "canvas": "#131315",
+            "on-surface-variant": "#d3c4b1",
+            "tertiary-fixed-dim": "#84cffd",
+            "text": "#e5e1e4",
+            "muted": "#aaa9a3",
+            "inverse-on-surface": "#303032",
+            "on-secondary-container": "#90b8ed",
+            "on-tertiary": "#00344b",
+            "secondary-fixed-dim": "#a1c9ff",
+            "danger": "#e2564a",
+            "surface-tint": "#f5bd58",
+            "on-primary-fixed": "#271900",
+            "surface-dim": "#131315",
+            "error": "#ffb4ab",
+            "agent": "#7aa2d6",
+            "on-error-container": "#ffdad6",
+            "primary-fixed": "#ffdeaa",
+            "outline": "#9c8f7d",
+            "on-secondary": "#00325b",
+            "amber": "#f7bf59",
+            "surface-container-lowest": "#0e0e10",
+            "danger-dim": "#3a1f1c",
+            "primary": "#ffe0b0",
+            "primary-container": "#f7bf59",
+            "warn": "#d8973c",
+            "inverse-surface": "#e5e1e4",
+            "on-tertiary-fixed": "#001e2d",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "border": "#353437",
+            "on-primary-container": "#6f4d00",
+            "surface-container": "#1f1f21",
+            "surface-container-high": "#2a2a2c",
+            "tertiary-container": "#86d1ff",
+            "tertiary": "#cae9ff",
+            "tertiary-fixed": "#c6e7ff",
+            "secondary": "#a1c9ff",
+            "outline-variant": "#4f4536",
+            "on-primary-fixed-variant": "#5f4100",
+            "surface-container-low": "#1b1b1d",
+            "error-container": "#93000a",
+            "surface": "#131315",
+            "panel": "#1b1b1d"
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          spacing: {
+            "row-height": "40px",
+            "radius": "6px",
+            "inspector-width": "360px",
+            "unit": "4px",
+            "rail-width": "240px",
+            "gutter": "16px"
+          },
+          fontFamily: {
+            "metadata": ["Geist", "sans-serif"],
+            "entry-title": ["Geist", "sans-serif"],
+            "mono-data": ["JetBrains Mono", "monospace"],
+            "field-label": ["Geist", "sans-serif"]
+          },
+          fontSize: {
+            "metadata": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "entry-title": ["14px", { lineHeight: "20px", fontWeight: "500" }],
+            "mono-data": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "field-label": ["11px", { lineHeight: "16px", letterSpacing: "0.06em", fontWeight: "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .material-symbols-outlined {
+      font-size: 16px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text font-metadata antialiased min-h-screen flex justify-center selection:bg-surface-variant selection:text-amber">
+<!-- Constrained Viewport Host -->
+<div class="relative w-full max-w-[620px] min-h-screen bg-canvas border-x border-border flex flex-col overflow-hidden shadow-2xl">
+<!-- Top Bar -->
+<header class="h-10 bg-surface border-b border-border flex items-center justify-between px-3 shrink-0 z-20">
+<div class="flex items-center gap-2.5">
+<button aria-label="Toggle rail" class="w-7 h-7 flex items-center justify-center rounded border border-transparent text-muted hover:text-text hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<span class="font-entry-title text-entry-title text-text tracking-tight">Vault</span>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-surface-container-low">
+<span class="w-1.5 h-1.5 rounded-full bg-ok shrink-0"></span>
+<span class="font-metadata text-metadata text-muted leading-none">Unlocked</span>
+</div>
+</header>
+<!-- Search Section -->
+<section class="px-3 pt-2.5 pb-2 shrink-0 bg-surface border-b border-border flex flex-col gap-2 z-10">
+<!-- Search Bar -->
+<div class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-2.5 text-muted pointer-events-none" data-icon="search">search</span>
+<input class="w-full h-8 pl-8 pr-3 text-metadata font-metadata bg-canvas text-text placeholder-muted rounded border border-border focus:border-amber focus:ring-0 focus:outline-none transition-colors" placeholder="Search 75 entries" type="text"/>
+</div>
+<!-- Compact Group Chips -->
+<nav aria-label="Groups" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface-container-high text-amber font-metadata text-metadata transition-colors" type="button">
+          Providers
+        </button>
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container transition-colors font-metadata text-metadata" type="button">
+          Channels
+        </button>
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container transition-colors font-metadata text-metadata" type="button">
+          Gateway
+        </button>
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container transition-colors font-metadata text-metadata" type="button">
+          Services
+        </button>
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container transition-colors font-metadata text-metadata" type="button">
+          Social
+        </button>
+<button class="shrink-0 h-6 px-2 flex items-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container transition-colors font-metadata text-metadata" type="button">
+          Workloads
+        </button>
+</nav>
+<!-- Breadcrumb Status Line -->
+<div class="flex items-center justify-between text-muted text-field-label font-mono-data uppercase tracking-wider pt-0.5">
+<span>All entries · 75</span>
+</div>
+</section>
+<!-- Main Entry List Canvas (Dimmed behind the raised inspector sheet) -->
+<main aria-hidden="true" class="flex-1 overflow-y-auto bg-canvas opacity-30 pointer-events-none select-none divide-y divide-border pb-96">
+<!-- 1. Cloudflare -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Cloudflare</span>
+<span class="font-mono-data text-mono-data text-muted truncate">fred@fdsconsulting.com</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 2. Stitch MCP (Selected Row Style) -->
+<div class="h-11 px-3 flex items-center justify-between bg-surface-container border-l-2 border-amber">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Stitch MCP</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Services/APIs</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 3. Home-Assistant -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Home-Assistant</span>
+<span class="font-mono-data text-mono-data text-muted truncate">admin</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 4. GitHub Verlbot CLI -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">GitHub Verlbot CLI</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Services/APIs</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 5. Github PSK -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Github PSK</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Gateway</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 6. Anthem Blue Cross -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Anthem Blue Cross</span>
+<span class="font-mono-data text-mono-data text-muted truncate">fdsouvenir</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 7. GoVee Home -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">GoVee Home</span>
+<span class="font-mono-data text-mono-data text-muted truncate">fdsouvenir</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 8. Marriott Bonvoy -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Marriott Bonvoy</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Travel/Loyalty</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 9. KenPom Password -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">KenPom Password</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Sports/Analytics</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 10. Linode -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Linode</span>
+<span class="font-mono-data text-mono-data text-muted truncate">fdsouvenir</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 11. Discord Bot -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Discord Bot</span>
+<span class="font-mono-data text-mono-data text-muted truncate">Channels</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- 12. Netlify -->
+<div class="h-11 px-3 flex items-center justify-between bg-canvas">
+<div class="flex flex-col justify-center min-w-0">
+<span class="font-entry-title text-entry-title text-text truncate">Netlify</span>
+<span class="font-mono-data text-mono-data text-muted truncate">fdsouvenir</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center text-muted rounded hover:bg-surface-container-high shrink-0" tabindex="-1" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</main>
+<!-- Raised Inspector Sheet -->
+<section aria-label="Secret Inspector" class="fixed bottom-0 inset-x-0 max-w-[620px] mx-auto z-40 bg-panel border-t border-x border-border rounded-t-xl shadow-2xl p-4 flex flex-col" role="region">
+<!-- Drag Handle -->
+<div aria-hidden="true" class="w-9 h-1 rounded-full bg-border mx-auto mb-3 shrink-0"></div>
+<!-- Header -->
+<div class="flex items-start justify-between pb-3.5 border-b border-border shrink-0">
+<div class="flex flex-col">
+<h2 class="font-entry-title text-text font-medium text-[16px] leading-5">Stitch MCP</h2>
+<span class="font-mono-data text-mono-data text-muted mt-0.5">Services/APIs/Stitch MCP</span>
+</div>
+<button aria-label="Close sheet" class="w-7 h-7 flex items-center justify-center rounded border border-transparent text-muted hover:text-text hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Three-Column Field Grid (96px label / flex value / actions) -->
+<div class="py-3 flex flex-col divide-y divide-border">
+<!-- PASSWORD Field -->
+<div class="py-2.5 flex items-center">
+<span class="w-24 shrink-0 font-field-label text-field-label text-muted">PASSWORD</span>
+<div class="flex-1 min-w-0 px-2 font-mono-data text-mono-data text-text tracking-wider truncate">
+            ••••••••••••••••
+          </div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="h-7 px-2.5 flex items-center rounded border border-border bg-surface text-text hover:bg-surface-container-high transition-colors font-metadata text-metadata" type="button">
+              Reveal
+            </button>
+<button aria-label="Copy password" class="w-7 h-7 flex items-center justify-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- USERNAME Field -->
+<div class="py-2.5 flex items-center">
+<span class="w-24 shrink-0 font-field-label text-field-label text-muted">USERNAME</span>
+<div class="flex-1 min-w-0 px-2 font-mono-data text-mono-data text-muted">
+            —
+          </div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="h-7 px-2.5 flex items-center rounded border border-border bg-canvas text-muted opacity-40 cursor-not-allowed font-metadata text-metadata" disabled="" title="No username" type="button">
+              Copy
+            </button>
+</div>
+</div>
+<!-- URL Field (Revealed with auto-hide timer) -->
+<div class="py-2.5 flex items-center">
+<span class="w-24 shrink-0 font-field-label text-field-label text-muted">URL</span>
+<div class="flex-1 min-w-0 px-2 flex flex-col justify-center">
+<span class="font-mono-data text-mono-data text-text truncate">https://stitch.googleapis.com/mcp</span>
+<span class="font-mono-data text-[11px] leading-4 text-muted">auto-hides in 24s</span>
+</div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="h-7 px-2.5 flex items-center rounded border border-border bg-surface text-text hover:bg-surface-container-high transition-colors font-metadata text-metadata" type="button">
+              Hide
+            </button>
+<button aria-label="Copy URL" class="w-7 h-7 flex items-center justify-center rounded border border-border bg-surface text-muted hover:text-text hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<!-- NOTES Field -->
+<div class="py-2.5 flex items-center">
+<span class="w-24 shrink-0 font-field-label text-field-label text-muted">NOTES</span>
+<div class="flex-1 min-w-0 px-2 font-mono-data text-mono-data text-muted tracking-wider truncate">
+            ••••••••••••••••••••
+          </div>
+<div class="flex items-center gap-1 shrink-0">
+<button class="h-7 px-2.5 flex items-center rounded border border-border bg-surface text-text hover:bg-surface-container-high transition-colors font-metadata text-metadata" type="button">
+              Reveal
+            </button>
+</div>
+</div>
+</div>
+<!-- Metadata Block -->
+<div class="pt-2 pb-3.5 border-t border-border flex items-center justify-between">
+<span class="font-mono-data text-[11px] leading-4 text-muted">Version 4 · Modified 6h ago</span>
+</div>
+<!-- Sheet Footer Actions -->
+<footer class="pt-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<button class="h-7 px-3 flex items-center rounded border border-border bg-surface text-text hover:bg-surface-container-high transition-colors font-metadata text-metadata" type="button">
+            Edit
+          </button>
+<button class="h-7 px-3 flex items-center rounded border border-border bg-surface text-text hover:bg-surface-container-high transition-colors font-metadata text-metadata" type="button">
+            Move or rename
+          </button>
+</div>
+<button class="h-7 px-2.5 flex items-center rounded border border-transparent text-danger hover:bg-danger-dim transition-colors font-metadata text-metadata" type="button">
+          Remove
+        </button>
+</footer>
+</section>
+</div>
+</body></html>

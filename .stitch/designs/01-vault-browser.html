@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Falcon Dash Vault - Operator Console</title>
+<!-- Fonts: Space Grotesk & Space Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-fixed-dim": "#84cffd",
+            "text": "#e5e1e4",
+            "on-tertiary": "#00344b",
+            "warn": "#d8973c",
+            "primary-fixed-dim": "#f5bd58",
+            "outline-variant": "#4f4536",
+            "primary-fixed": "#ffdeaa",
+            "border": "#353437",
+            "surface-container-low": "#1b1b1d",
+            "background": "#131315",
+            "secondary-container": "#1a4877",
+            "on-tertiary-fixed-variant": "#004c6b",
+            "on-background": "#e5e1e4",
+            "inverse-on-surface": "#303032",
+            "agent": "#7aa2d6",
+            "on-surface-variant": "#d3c4b1",
+            "canvas": "#131315",
+            "on-primary-fixed": "#271900",
+            "on-secondary-fixed": "#001c38",
+            "inverse-surface": "#e5e1e4",
+            "tertiary-fixed": "#c6e7ff",
+            "secondary-fixed": "#d3e4ff",
+            "on-surface": "#e5e1e4",
+            "on-tertiary-container": "#005a7d",
+            "on-secondary-fixed-variant": "#1a4877",
+            "surface-container-lowest": "#0e0e10",
+            "outline": "#9c8f7d",
+            "on-secondary-container": "#90b8ed",
+            "danger-dim": "#3a1f1c",
+            "on-secondary": "#00325b",
+            "on-primary": "#422c00",
+            "amber": "#f7bf59",
+            "panel": "#1b1b1d",
+            "error-container": "#93000a",
+            "surface-tint": "#f5bd58",
+            "surface-container-highest": "#353437",
+            "secondary-fixed-dim": "#a1c9ff",
+            "on-primary-container": "#6f4d00",
+            "inverse-primary": "#7d5700",
+            "on-error": "#690005",
+            "tertiary-container": "#86d1ff",
+            "surface-bright": "#39393b",
+            "row-hover": "#212124",
+            "primary-container": "#f7bf59",
+            "on-error-container": "#ffdad6",
+            "surface": "#131315",
+            "surface-container-high": "#2a2a2c",
+            "error": "#ffb4ab",
+            "ok": "#6fbf87",
+            "muted": "#aaa9a3",
+            "danger": "#e2564a",
+            "surface-container": "#1f1f21",
+            "surface-variant": "#353437",
+            "on-primary-fixed-variant": "#5f4100",
+            "on-tertiary-fixed": "#001e2d",
+            "surface-dim": "#131315",
+            "secondary": "#a1c9ff",
+            "tertiary": "#cae9ff",
+            "primary": "#ffe0b0"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "rail-width": "240px",
+            "unit": "4px",
+            "gutter-left": "16px",
+            "button-height": "28px",
+            "input-height": "32px",
+            "gap-section": "16px",
+            "inspector-width": "360px",
+            "gap-max": "24px",
+            "row-height-group": "24px",
+            "row-height-entry": "40px"
+          },
+          "fontFamily": {
+            "data-value": ["Space Mono", "monospace"],
+            "field-label": ["Space Mono", "monospace"],
+            "entry-title": ["Space Grotesk", "sans-serif"],
+            "metadata": ["Space Grotesk", "sans-serif"]
+          },
+          "fontSize": {
+            "data-value": [
+              "13px",
+              {
+                "lineHeight": "18px",
+                "fontWeight": "400"
+              }
+            ],
+            "field-label": [
+              "11px",
+              {
+                "lineHeight": "16px",
+                "letterSpacing": "0.06em",
+                "fontWeight": "400"
+              }
+            ],
+            "entry-title": [
+              "14px",
+              {
+                "lineHeight": "20px",
+                "fontWeight": "500"
+              }
+            ],
+            "metadata": [
+              "12px",
+              {
+                "lineHeight": "16px",
+                "fontWeight": "400"
+              }
+            ]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Hide scrollbars cleanly for operator density */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131315;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #353437;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #aaa9a3;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-text antialiased h-screen flex flex-col overflow-hidden select-none">
+<!-- COMMAND BAR (TOP NAVIGATION) -->
+<!-- Implements TopNavBar Anchor: docked full-width top-0 h-12 with command bar styling -->
+<header class="w-full flex items-center justify-between px-4 border-b border-border bg-canvas z-50 h-12 shrink-0">
+<!-- Left: Brand Title & Lock State Badge -->
+<div class="flex items-center gap-3 shrink-0">
+<div class="flex items-center gap-2">
+<span class="font-entry-title text-entry-title font-medium text-text tracking-tight flex items-center gap-1.5">
+<span class="material-symbols-outlined text-amber" data-icon="lock_open">lock_open</span>
+          Vault
+        </span>
+<span class="text-muted font-field-label text-field-label">/</span>
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-panel border border-border">
+<span class="w-1.5 h-1.5 rounded-full bg-ok animate-pulse"></span>
+<span class="font-field-label text-field-label text-text">Unlocked</span>
+</div>
+</div>
+</div>
+<!-- Center/Dominant: Prominent Search Input & Segmented Filters -->
+<div class="flex items-center gap-3 max-w-xl w-full mx-6">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" data-icon="search">search</span>
+<input autofocus="" class="w-full h-8 pl-8 pr-12 bg-canvas border border-border rounded text-text placeholder-muted font-data-value text-data-value focus:border-amber focus:outline-none transition-none" id="vault-search-input" placeholder="Search 75 entries" type="text"/>
+<kbd class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-panel border border-border rounded text-muted font-field-label text-[10px] pointer-events-none">⌘K</kbd>
+</div>
+<!-- Segmented Filter Controls from JSON ("All", "Logins", "Agent") -->
+</div>
+<!-- Right: Trailing Actions -->
+<div class="flex items-center gap-2 shrink-0">
+<button class="h-7 px-2.5 rounded bg-amber text-canvas font-entry-title text-entry-title font-medium flex items-center gap-1.5 hover:bg-primary-fixed-dim transition-none focus:outline-none">
+<span class="material-symbols-outlined text-canvas font-bold" data-icon="add">add</span>
+<span>New entry</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded border border-border bg-panel text-muted hover:text-text hover:bg-row-hover transition-none" title="Vault Settings &amp; Locking">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</header>
+<!-- MAIN OPERATOR WORKSPACE -->
+<div class="flex-1 flex overflow-hidden">
+<!-- LEFT RAIL: Fixed 240px width, #1b1b1d background, border-r #353437 -->
+<!-- Implements SideNavBar Anchor: docked left-0 top-12 bottom-0 w-rail-width -->
+<aside class="w-rail-width h-full flex flex-col justify-between py-2 border-r border-border bg-panel shrink-0 select-none">
+<!-- Top Group Hierarchy -->
+<div class="flex flex-col overflow-y-auto">
+<!-- Rail Header -->
+<div class="flex items-center justify-between px-3 pb-2 pt-1">
+<span class="font-field-label text-field-label uppercase text-muted tracking-wider">GROUPS</span>
+<button class="text-muted hover:text-text flex items-center" title="Add Group">
+<span class="material-symbols-outlined text-[14px]" data-icon="add">add</span>
+</button>
+</div>
+<!-- Group Tree Navigation (24px row-height) -->
+<nav class="flex flex-col font-metadata text-metadata text-text">
+<!-- All entries (Active: 2px amber left edge, row-hover background) -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-amber bg-row-hover text-text font-medium group transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="folder_open">folder_open</span>
+<span class="truncate">All entries</span>
+</div>
+<span class="font-data-value text-field-label text-muted">75</span>
+</a>
+<!-- Providers -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_right">arrow_right</span>
+<span class="truncate">Providers</span>
+</div>
+<span class="font-data-value text-field-label text-muted">12</span>
+</a>
+<!-- Channels -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_right">arrow_right</span>
+<span class="truncate">Channels</span>
+</div>
+<span class="font-data-value text-field-label text-muted">8</span>
+</a>
+<!-- Gateway -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_right">arrow_right</span>
+<span class="truncate">Gateway</span>
+</div>
+<span class="font-data-value text-field-label text-muted">6</span>
+</a>
+<!-- Services (Expanded) -->
+<div>
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-text hover:bg-row-hover transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+<span class="truncate">Services</span>
+</div>
+<span class="font-data-value text-field-label text-muted">18</span>
+</a>
+<!-- Nested Level 1: APIs (12px indent) -->
+<a class="h-6 flex items-center justify-between pl-6 pr-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[13px]" data-icon="terminal">terminal</span>
+<span class="truncate">APIs</span>
+</div>
+<span class="font-data-value text-field-label text-muted">9</span>
+</a>
+<!-- Nested Level 1: Hosting (12px indent) -->
+<a class="h-6 flex items-center justify-between pl-6 pr-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[13px]" data-icon="dns">dns</span>
+<span class="truncate">Hosting</span>
+</div>
+<span class="font-data-value text-field-label text-muted">4</span>
+</a>
+</div>
+<!-- Social -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_right">arrow_right</span>
+<span class="truncate">Social</span>
+</div>
+<span class="font-data-value text-field-label text-muted">6</span>
+</a>
+<!-- Workloads -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="arrow_right">arrow_right</span>
+<span class="truncate">Workloads</span>
+</div>
+<span class="font-data-value text-field-label text-muted">10</span>
+</a>
+<!-- Recycle Bin -->
+<a class="h-6 flex items-center justify-between px-3 border-l-2 border-transparent text-muted hover:bg-row-hover hover:text-text mt-2 transition-none" href="#">
+<div class="flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-muted text-[14px]" data-icon="delete">delete</span>
+<span class="truncate">Recycle Bin</span>
+</div>
+<span class="font-data-value text-field-label text-muted">3</span>
+</a>
+</nav>
+</div>
+<!-- Rail Bottom: Status & Quick Lock Toggle -->
+</aside>
+<!-- CENTER FLUID AREA: Dense Entry Grid -->
+<main class="flex-1 flex flex-col min-w-0 bg-canvas overflow-y-auto">
+<!-- Table Header Row (Fixed Baseline) -->
+<div class="grid grid-cols-12 gap-2 px-4 py-2 border-b border-border bg-canvas text-muted font-field-label text-field-label uppercase tracking-wider sticky top-0 z-10 select-none"><div class="col-span-8">TITLE</div>
+<div class="col-span-2">GROUP</div>
+<div class="col-span-2 text-right pr-2">ACTIONS</div></div>
+<!-- Entry List (Dense 40px rows, hairline separation) -->
+<div class="divide-y divide-border font-metadata text-metadata"><!-- 1. Cloudflare -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Cloudflare</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">Providers</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 2. Stitch MCP (Active / Selected Row with 2px Amber Left Edge) -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center bg-row-hover transition-none group cursor-pointer border-l-2 border-amber">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-amber font-medium flex items-center gap-1.5">
+<span>Stitch MCP</span>
+<span class="w-1.5 h-1.5 rounded-full bg-agent" title="Autonomous executor registered"></span>
+</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">Services/APIs</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-amber/40 bg-panel text-amber hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 3. Home-Assistant -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Home-Assistant</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">Workloads</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 4. GitHub Verlbot CLI -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">GitHub Verlbot CLI</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">Services/APIs</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 5. Anthem Blue Cross -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Anthem Blue Cross</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">Social</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 6. Marriott Bonvoy -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Marriott Bonvoy</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">—</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 7. KenPom Password -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">KenPom Password</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">—</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 8. Vueling -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Vueling</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">—</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 9. Sniff Spots -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent">
+<div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Sniff Spots</div>
+<div class="col-span-2 truncate font-data-value text-data-value text-muted">—</div>
+<div class="col-span-2 flex items-center justify-end gap-1">
+<button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret">
+<span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options">
+<span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- 10. Github PSK -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Github PSK</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Gateway</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 11. GitHub Verlbot -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">GitHub Verlbot</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Gateway</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 12. GoVee Home -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">GoVee Home</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Workloads</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 13. Linode -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Linode</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Providers</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 14. Vultr -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Vultr</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Providers</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 15. Discord Bot -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Discord Bot</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Channels</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 16. Telegram Bot -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Telegram Bot</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Channels</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 17. Netlify -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Netlify</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Services/Hosting</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div>
+<!-- 18. Reddit -->
+<div class="h-10 grid grid-cols-12 gap-2 px-4 items-center hover:bg-row-hover transition-none group cursor-pointer border-l-2 border-transparent"><div class="col-span-8 truncate font-entry-title text-entry-title text-text font-medium">Reddit</div><div class="col-span-2 truncate font-data-value text-data-value text-muted">Social</div><div class="col-span-2 flex items-center justify-end gap-1"><button class="h-6 px-2 rounded border border-border bg-panel text-muted hover:text-text font-field-label text-[11px] flex items-center gap-1 transition-none" onclick="copyFeedback(this)" title="Copy Secret"><span class="material-symbols-outlined text-[12px]" data-icon="content_copy">content_copy</span><span>Copy</span></button><button class="w-6 h-6 rounded border border-border bg-panel text-muted hover:text-text flex items-center justify-center transition-none" title="More Options"><span class="material-symbols-outlined text-[12px]" data-icon="more_horiz">more_horiz</span></button></div></div></div>
+<!-- Tactical Empty Space Padder -->
+<div class="flex-1 min-h-[48px]"></div>
+</main>
+<!-- RIGHT INSPECTOR (Fixed 360px width, selected item: Stitch MCP) -->
+</div>
+<!-- FOOTER STATUS BAR (Docked full-width bottom, 24px height) -->
+<!-- Implements Footer Anchor: docked full-width bottom-0 h-6 -->
+<footer class="w-full h-6 fixed bottom-0 left-0 right-0 flex items-center justify-between px-3 border-t border-border bg-canvas z-40 select-none"><div class="flex items-center gap-2"><span class="font-data-value text-field-label text-muted">75 entries · 6 groups · vault unlocked</span></div></footer>
+<!-- Micro-Interactions: Keyboard Shortcuts & Inline Copy Confirmation -->
+<script>
+    // Focus search with Command/Ctrl + K
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('vault-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+    });
+
+    // Inline copy confirmation (1.5s visual state update, zero alert dialogs)
+    function copyFeedback(button) {
+      const originalHtml = button.innerHTML;
+      button.innerHTML = '<span class="material-symbols-outlined text-[12px] text-ok">check</span><span class="text-ok">Copied</span>';
+      button.classList.add('border-ok');
+      
+      setTimeout(() => {
+        button.innerHTML = originalHtml;
+        button.classList.remove('border-ok');
+      }, 1500);
+    }
+
+    function copySecretFeedback(button) {
+      const originalHtml = button.innerHTML;
+      button.innerHTML = '<span class="material-symbols-outlined text-[13px] text-ok">check</span>';
+      setTimeout(() => {
+        button.innerHTML = originalHtml;
+      }, 1500);
+    }
+
+    function copyText(text, button) {
+      navigator.clipboard?.writeText(text);
+      copySecretFeedback(button);
+    }
+
+    function toggleMask(button) {
+      const icon = button.querySelector('.material-symbols-outlined');
+      if (icon) {
+        if (icon.textContent === 'visibility') {
+          icon.textContent = 'visibility_off';
+          button.classList.add('text-amber');
+          setTimeout(() => {
+            icon.textContent = 'visibility';
+            button.classList.remove('text-amber');
+          }, 15000);
+        } else {
+          icon.textContent = 'visibility';
+          button.classList.remove('text-amber');
+        }
+      }
+    }
+  </script>
+</body></html>
